@@ -2,8 +2,17 @@
 <html lang="en">
     <head>
         <title><%= title %></title>
-        <%- stylesheet_link_tag('bootstrap', 'style', 'bootstrap-responsive') %>
-        <%- javascript_include_tag('http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js', 'bootstrap', 'rails', 'application') %>
+        <link rel="stylesheet" href="<%= path %>stylesheets/bootstrap.css">
+        <link rel="stylesheet" href="<%= path %>stylesheets/style.css">
+
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+        <script type="text/javascript" src="<%= path %>javascripts/bootstrap.js">
+        </script>
+        <script type="text/javascript" src="<%= path %>javascripts/rails.js">
+        </script>
+        <script type="text/javascript" src="<%= path %>javascripts/application.js">
+        </script>
+
         <%- csrf_meta_tag() %>
     </head>
     <body>

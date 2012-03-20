@@ -9,10 +9,13 @@ before 'load note', ->
             next()
 , only: ['show', 'edit', 'update', 'destroy']
 
+
 action 'new', ->
     @note = new Note
     @title = 'New note'
-    render()
+    render
+        path: "../../"
+
 
 action 'create', ->
     Note.create body.Note, (err, note) =>
@@ -20,7 +23,8 @@ action 'create', ->
             flash 'error', 'Note can not be created'
             @note = note
             @title = 'New note'
-            render 'new'
+            render 'new',
+                "../../"
         else
             flash 'info', 'Note created'
             redirect path_to.notes
@@ -29,15 +33,18 @@ action 'index', ->
     Note.all (err, notes) =>
         @notes = notes
         @title = 'Notes index'
-        render()
+        render
+            path: ""
 
 action 'show', ->
     @title = 'Note show'
-    render()
+    render
+        path: "../../"
 
 action 'edit', ->
     @title = 'Note edit'
-    render()
+    render
+        path: "../../"
 
 action 'update', ->
     @note.updateAttributes body.Note, (err) =>
@@ -47,7 +54,8 @@ action 'update', ->
         else
             flash 'error', 'Note can not be updated'
             @title = 'Edit note details'
-            render 'edit'
+            render 'edit',
+                path: "../../"
 
 action 'destroy', ->
     @note.destroy (error) ->
