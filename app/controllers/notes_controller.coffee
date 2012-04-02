@@ -30,6 +30,7 @@ action 'create', ->
             redirect path_to.notes
 
 action 'index', ->
+    console.log "toto"
     Note.all (err, notes) =>
         @notes = notes
         @title = 'Notes index'
