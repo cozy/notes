@@ -3,66 +3,50 @@ load 'application'
 before 'load note', ->
     Note.find params.id, (err, note) =>
         if err
-            redirect path_to.notes
+            send error: 'An error occured', 500
+        else if note is null
+            send error: 'Note not found', 404
         else
             @note = note
             next()
-, only: ['show', 'edit', 'update', 'destroy']
+, only: ['update', 'destroy', 'show']
 
-
-action 'new', ->
-    @note = new Note
-    @title = 'New note'
-    render
-        path: "../../"
-
-
-action 'create', ->
-    Note.create body.Note, (err, note) =>
-        if err
-            flash 'error', 'Note can not be created'
-            @note = note
-            @title = 'New note'
-            render 'new',
-                "../../"
-        else
-            flash 'info', 'Note created'
-            redirect path_to.notes
 
 action 'index', ->
-    console.log "toto"
-    Note.all (err, notes) =>
-        @notes = notes
-        @title = 'Notes index'
-        render
-            path: ""
+   render
+       title: "Cozy Notes"
+
+action 'create', ->
+    note = new Note body
+    Note.create note, (err, note) =>
+        if err
+            send error: 'Note can not be created'
+        else
+            send note, 201
 
 action 'show', ->
-    @title = 'Note show'
-    render
-        path: "../../"
-
-action 'edit', ->
-    @title = 'Note edit'
-    render
-        path: "../../"
+    send @note, 200
 
 action 'update', ->
-    @note.updateAttributes body.Note, (err) =>
+    note = new Note body
+    @note.updateAttributes note, (err) =>
         if !err
-            flash 'info', 'Note updated'
-            redirect path_to.note(@note)
+            send success: 'Note updated'
         else
-            flash 'error', 'Note can not be updated'
-            @title = 'Edit note details'
-            render 'edit',
-                path: "../../"
+            console.log err
+            send error: 'Note can not be updated', 400
 
 action 'destroy', ->
-    @note.destroy (error) ->
-        if error
-            flash 'error', 'Can not destroy note'
+    @note.destroy (err) ->
+        if err
+            send error: 'Can not destroy note', 500
         else
-            flash 'info', 'Note successfully removed'
-        send "'" + path_to.notes + "'"
+            send success: 'Note succesfuly deleted'
+
+action 'all', ->
+    Note.all (err, notes) ->
+        if err
+            send error: "Retrieve notes failed.", 500
+        else
+            send length: notes.length, rows: notes
 
