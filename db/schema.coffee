@@ -7,3 +7,8 @@ Note = define 'Note', ->
     property 'tags', [String]
     property 'tagParent', String
 
+Tree = define 'Tree', ->
+    property 'type', String, default: "Note"
+    property 'struct', String
+
+
