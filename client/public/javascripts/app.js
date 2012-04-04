@@ -140,6 +140,25 @@
   }
 }));
 (this.require.define({
+  "views/templates/home": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<div');
+buf.push(attrs({ 'id':('content') }));
+buf.push('><div');
+buf.push(attrs({ 'id':('nav') }));
+buf.push('>nav</div><div');
+buf.push(attrs({ 'id':('editor') }));
+buf.push('>editor</div></div>');
+}
+return buf.join("");
+};
+  }
+}));
+(this.require.define({
   "views/home_view": function(exports, require, module) {
     (function() {
   var __hasProp = Object.prototype.hasOwnProperty,
@@ -157,6 +176,32 @@
 
     HomeView.prototype.render = function() {
       $(this.el).html(require('./templates/home'));
+      this.$("#nav").jstree({
+        json_data: {
+          data: [
+            {
+              data: "recipe",
+              metadata: {
+                id: 23
+              },
+              children: ["Child 1", "tert", "ret", "A Child 2"]
+            }, {
+              data: {
+                title: "Todo"
+              }
+            }
+          ]
+        },
+        themes: {
+          theme: "default",
+          dots: false,
+          icons: false
+        },
+        core: {
+          animation: 0
+        },
+        plugins: ["themes", "json_data", "ui"]
+      });
       return this;
     };
 
@@ -166,26 +211,5 @@
 
 }).call(this);
 
-  }
-}));
-(this.require.define({
-  "views/templates/home": function(exports, require, module) {
-    module.exports = function anonymous(locals, attrs, escape, rethrow) {
-var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
-var buf = [];
-with (locals || {}) {
-var interp;
-buf.push('<div');
-buf.push(attrs({ 'id':('content') }));
-buf.push('><h1>brunch</h1><h2>Welcome</h2><ul><li><a');
-buf.push(attrs({ 'href':("http://brunch.readthedocs.org/") }));
-buf.push('>Documentation</a></li><li><a');
-buf.push(attrs({ 'href':("https://github.com/brunch/brunch/issues") }));
-buf.push('>Github Issues</a></li><li><a');
-buf.push(attrs({ 'href':("https://github.com/brunch/todos") }));
-buf.push('>Todos Example App</a></li></ul></div>');
-}
-return buf.join("");
-};
   }
 }));

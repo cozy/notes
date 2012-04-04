@@ -4,8 +4,6 @@ body
   background: #91A2C0
   font: bold 18px "Helvetica Neue", Arial, Helvetica, sans-serif
 
-ul
-  list-style-type: none
 
 a, a:visited
   color: #F95A5A
@@ -14,20 +12,9 @@ a, a:visited
 a:hover
   color: #665248
 
-#home-view
-  width: 600px
-  height: 200px
-  margin: 20px auto
-
-  #content
-    background: #FFF
-    padding: 20px
-    border-radius: 4px
-
-/* Default font settings */
 body
-  font-size: 15px
-  color: #666
+  font-size: 16px
+  color: #444
   background: #fff
   font-family: "KievitPro", "ff-kievit-web-pro-1","ff-kievit-web-pro-2", "Helvetica Neue", Arial, Helvetica, sans-serif
 
@@ -63,27 +50,40 @@ ul, ol
   margin: 0 1.5em 1.5em 0
   list-style-type: none
 
-/* Style */
+html, body 
+  height 100%
+
+#home-view
+  height 100%
+
 #content
-  width: 605px
-  margin: 0 auto
-  margin-top: 40px
-  margin-bottom: 60px
+  height 100%
+  padding 0
 
-h1
-  background: #91A2C0
-  background-image: url('http://brunch.io/images/brunch.png')
-  background-repeat: no-repeat
-  background-position: 2px
-  color: #fff
-  width: 330px
-  padding-left: 138px
-  border-radius: 5px
+#toolbar
+  background #E9EAE5
 
-#props
-  position: relative
-  top: 36px
-  font-size: 18px
-  padding-left: 373px
-  color: #eee
-  font-style: italic
+#nav 
+  float left
+  height 100%
+  width 20%
+  min-width 200px
+  padding 10px
+  margin 0
+  background-color #E9EAE5
+
+#nav a
+  font-weight normal
+  text-transform lowercase
+  padding 7px
+  border 1px solid #E9EAE5
+
+
+#editor
+  width auto
+  height auto
+  height 100%
+  padding 0
+  margin 0 
+  background-color #ADA
+
