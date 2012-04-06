@@ -48,6 +48,32 @@
     };
   }
 }).call(this);(this.require.define({
+  "helpers": function(exports, require, module) {
+    (function() {
+
+  exports.BrunchApplication = (function() {
+
+    function BrunchApplication() {
+      var _this = this;
+      $(function() {
+        _this.initialize(_this);
+        return Backbone.history.start();
+      });
+    }
+
+    BrunchApplication.prototype.initialize = function() {
+      return null;
+    };
+
+    return BrunchApplication;
+
+  })();
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
   "initialize": function(exports, require, module) {
     (function() {
   var BrunchApplication, HomeView, MainRouter,
@@ -84,32 +110,6 @@
   }
 }));
 (this.require.define({
-  "helpers": function(exports, require, module) {
-    (function() {
-
-  exports.BrunchApplication = (function() {
-
-    function BrunchApplication() {
-      var _this = this;
-      $(function() {
-        _this.initialize(_this);
-        return Backbone.history.start();
-      });
-    }
-
-    BrunchApplication.prototype.initialize = function() {
-      return null;
-    };
-
-    return BrunchApplication;
-
-  })();
-
-}).call(this);
-
-  }
-}));
-(this.require.define({
   "routers/main_router": function(exports, require, module) {
     (function() {
   var __hasProp = Object.prototype.hasOwnProperty,
@@ -128,7 +128,8 @@
     };
 
     MainRouter.prototype.home = function() {
-      return $('body').html(app.homeView.render().el);
+      $('body').html(app.homeView.render().el);
+      return app.homeView.fetchData();
     };
 
     return MainRouter;
@@ -140,29 +141,13 @@
   }
 }));
 (this.require.define({
-  "views/templates/home": function(exports, require, module) {
-    module.exports = function anonymous(locals, attrs, escape, rethrow) {
-var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
-var buf = [];
-with (locals || {}) {
-var interp;
-buf.push('<div');
-buf.push(attrs({ 'id':('content') }));
-buf.push('><div');
-buf.push(attrs({ 'id':('nav') }));
-buf.push('>nav</div><div');
-buf.push(attrs({ 'id':('editor') }));
-buf.push('>editor</div></div>');
-}
-return buf.join("");
-};
-  }
-}));
-(this.require.define({
   "views/home_view": function(exports, require, module) {
     (function() {
-  var __hasProp = Object.prototype.hasOwnProperty,
+  var Tree,
+    __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Tree = require("./widgets/tree").Tree;
 
   exports.HomeView = (function(_super) {
 
@@ -176,33 +161,35 @@ return buf.join("");
 
     HomeView.prototype.render = function() {
       $(this.el).html(require('./templates/home'));
-      this.$("#nav").jstree({
-        json_data: {
-          data: [
-            {
-              data: "recipe",
-              metadata: {
-                id: 23
-              },
-              children: ["Child 1", "tert", "ret", "A Child 2"]
-            }, {
-              data: {
-                title: "Todo"
-              }
-            }
-          ]
-        },
-        themes: {
-          theme: "default",
-          dots: false,
-          icons: false
-        },
-        core: {
-          animation: 0
-        },
-        plugins: ["themes", "json_data", "ui"]
-      });
       return this;
+    };
+
+    HomeView.prototype.createFolder = function(path) {
+      return $.ajax({
+        type: "POST",
+        url: "tree",
+        data: {
+          path: path
+        },
+        error: function(data) {
+          if (data && data.msg) {
+            return alert(data.msg);
+          } else {
+            return alert("Server error occured.");
+          }
+        }
+      });
+    };
+
+    HomeView.prototype.fetchData = function() {
+      var _this = this;
+      return $.get("tree/", function(data) {
+        return _this.tree = new Tree(_this.$("#nav"), data, {
+          onCreate: _this.createFolder,
+          onRename: _this.createFolder,
+          onRemove: _this.createFolder
+        });
+      });
     };
 
     return HomeView;
@@ -211,5 +198,175 @@ return buf.join("");
 
 }).call(this);
 
+  }
+}));
+(this.require.define({
+  "views/widgets/tree": function(exports, require, module) {
+    (function() {
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  exports.Tree = (function() {
+
+    function Tree(treeElement, data, callbacks) {
+      this.convertData = __bind(this.convertData, this);
+      var tree,
+        _this = this;
+      treeElement.prepend(require('../templates/tree_buttons'));
+      tree = this.convertData(data);
+      this.treeEl = $("#tree");
+      this.t = this.treeEl.jstree({
+        plugins: ["themes", "json_data", "ui", "crrm", "dnd"],
+        json_data: tree,
+        themes: {
+          theme: "default",
+          dots: false,
+          icons: false
+        },
+        core: {
+          animation: 0
+        }
+      });
+      this.t.bind("create.jstree", function(e, data) {
+        var path;
+        path = _this._getPath(data);
+        return callbacks.onCreate(path);
+      });
+      this.t.bind("rename.jstree", function(e, data) {
+        var path;
+        path = _this._getPath(data);
+        return callbacks.onRename(path);
+      });
+      this.t.bind("remove.jstree", function(e, data) {
+        var path;
+        path = _this._getPath(data);
+        return callbacks.onRemove(path);
+      });
+      this.setListeners();
+    }
+
+    Tree.prototype.setListeners = function() {
+      var _this = this;
+      $("#tree-create").click(function() {
+        return _this.treeEl.jstree("create");
+      });
+      $("#tree-rename").click(function() {
+        return _this.treeEl.jstree("rename");
+      });
+      return $("#tree-remove").click(function() {
+        return _this.treeEl.jstree("remove");
+      });
+    };
+
+    Tree.prototype._getPath = function(data) {
+      var i, name, nodes, parent;
+      nodes = [this.slugify(data.rslt.name)];
+      parent = data.inst._get_parent(data.rslt.obj);
+      if (parent !== void 0 && parent.children !== void 0) {
+        name = parent.children("a:eq(0)").text();
+        nodes.unshift(this.slugify(name));
+        i = 0;
+        while (name && parent.parent() !== void 0 && parent.parent().parent() !== void 0 && i < 10) {
+          parent = parent.parent().parent();
+          i++;
+          if (parent !== void 0 && parent.children !== void 0) {
+            name = parent.children("a:eq(0)").text();
+            nodes.unshift(this.slugify(name));
+          }
+        }
+      }
+      if (nodes.length > 1) {
+        return nodes.join("/");
+      } else {
+        return "/" + (nodes.join("/"));
+      }
+    };
+
+    Tree.prototype.convertData = function(data) {
+      var tree;
+      tree = {
+        data: []
+      };
+      this.convertNode(tree, data);
+      if (tree.data.length === 0) tree.data = "loading...";
+      return tree;
+    };
+
+    Tree.prototype.convertNode = function(parentNode, node) {
+      var newNode, property, _results;
+      _results = [];
+      for (property in node) {
+        newNode = {
+          data: property,
+          children: []
+        };
+        if (parentNode.children === void 0) {
+          parentNode.data.push(newNode);
+        } else {
+          parentNode.children.push(newNode);
+        }
+        _results.push(this.convertNode(newNode, node[property]));
+      }
+      return _results;
+    };
+
+    Tree.prototype.slugify = function(s) {
+      var _slugify_hyphenate_re, _slugify_strip_re;
+      _slugify_strip_re = /[^\w\s-]/g;
+      _slugify_hyphenate_re = /[-\s]+/g;
+      s = s.replace(_slugify_strip_re, '').trim().toLowerCase();
+      s = s.replace(_slugify_hyphenate_re, '-');
+      return s;
+    };
+
+    return Tree;
+
+  })();
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
+  "views/templates/tree_buttons": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<div');
+buf.push(attrs({ 'id':('tree-buttons') }));
+buf.push('><button');
+buf.push(attrs({ 'id':('tree-create') }));
+buf.push('>Create</button><button');
+buf.push(attrs({ 'id':('tree-remove') }));
+buf.push('>Delete</button><button');
+buf.push(attrs({ 'id':('tree-rename') }));
+buf.push('>Rename</button></div><div');
+buf.push(attrs({ 'id':('tree') }));
+buf.push('></div>');
+}
+return buf.join("");
+};
+  }
+}));
+(this.require.define({
+  "views/templates/home": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<div');
+buf.push(attrs({ 'id':('content') }));
+buf.push('><div');
+buf.push(attrs({ 'id':('nav') }));
+buf.push('><div');
+buf.push(attrs({ 'id':('tree') }));
+buf.push('></div></div><div');
+buf.push(attrs({ 'id':('editor') }));
+buf.push('>editor</div></div>');
+}
+return buf.join("");
+};
   }
 }));

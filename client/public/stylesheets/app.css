@@ -3435,12 +3435,14 @@ a:focus,a:hover{color:#f95a5a;text-decoration:underline}
 a{color:#f95a5a;text-decoration:none}
 ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 html,body{height:100%}
+.spacer{clear:both}
 #home-view{height:100%}
 #content{height:100%;padding:0}
 #toolbar{background:#e9eae5}
-#nav{float:left;height:100%;width:20%;min-width:200px;padding:10px;margin:0;background-color:#e9eae5}
-#nav a{font-weight:normal;text-transform:lowercase;padding:7px;border:1px solid #e9eae5}
-#editor{width:auto;height:auto;height:100%;padding:0;margin:0;background-color:#ada}
+#nav{float:left;height:100%;width:20%;min-width:200px;margin:0;background-color:#e9eae5}
+#tree{padding:10px}
+#tree a{font-weight:normal;text-transform:lowercase;padding:7px;border:1px solid transparent}
+#editor{width:auto;height:100%;padding:0;margin:0;background-color:#ada}
 /* ==|== non-semantic helper classes ========================================
    Please define your styles before this section.
    ========================================================================== */

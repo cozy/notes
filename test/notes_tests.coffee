@@ -1,34 +1,6 @@
 request = require('request')
 should = require('should')
-
-host = "http://localhost:3000/"
-
-get = (path, callback) ->
-    request.get
-        uri: host + path
-        json: true
-        , callback
-
-post = (path, json, callback) ->
-    request
-        method: "POST"
-        uri: host + path
-        json: json
-        , callback
-
-put = (path, json, callback) ->
-    request
-        method: "PUT"
-        uri: host + path
-        json: json
-        , callback
-
-del = (path, callback) ->
-    request
-        method: "DELETE"
-        uri: host + path
-        json: true
-        , callback
+client = require('./client')
 
 
 clearDb = (callback) ->
@@ -69,7 +41,7 @@ describe "/all", ->
                 title: "Test note 01"
                 content: "Test content 01"
 
-            post "all/", note, (error, response, body) ->
+            client.post "all/", note, (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then a success is returned with a note with an id", ->
@@ -77,9 +49,10 @@ describe "/all", ->
             should.exist(bodyTest.id)
             responseTest.statusCode.should.equal 201
 
+
     describe "GET /all/ Get all notes", ->
         it "When I send a request to retrieve all notes", (done) ->
-            get "all/", (error, response, body) ->
+            client.get "all/", (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then I got expected note in a list", ->
@@ -92,7 +65,7 @@ describe "/all", ->
 
     describe "GET /all/:id Get a note", ->
         it "When I send a request to retrieve a given note", (done) ->
-            get "all/#{bodyTest.rows[0].id}", (error, response, body) ->
+            client.get "all/#{bodyTest.rows[0].id}", (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then I got expected note ", ->
@@ -107,11 +80,11 @@ describe "/all", ->
             title: "Test note 01 update"
 
         it "When I send a request to update a given note", (done) ->
-            put "all/#{bodyTest.id}", note, (error, response, body) ->
+            client.put "all/#{bodyTest.id}", note, (error, response, body) ->
                 handleResponse error, response, body, done
 
         it "And I send a request to retrieve a given note", (done) ->
-            get "all/#{bodyTest.id}", (error, response, body) ->
+            client.get "all/#{bodyTest.id}", (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then I got expected note ", ->
@@ -119,16 +92,15 @@ describe "/all", ->
             should.exist(bodyTest.title)
             bodyTest.title.should.equal "Test note 01 update"
 
-
             
     describe "DELETE /all/:id Update a note", ->
 
         it "When I send a request to delete a given note", (done) ->
-            del "all/#{bodyTest.id}", (error, response, body) ->
+            client.del "all/#{bodyTest.id}", (error, response, body) ->
                 handleResponse error, response, body, done
 
         it "And I send a request to retrieve a given note", (done) ->
-            get "all/#{bodyTest.id}", (error, response, body) ->
+            client.get "all/#{bodyTest.id}", (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then I got 404 error ", ->

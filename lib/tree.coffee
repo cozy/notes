@@ -1,11 +1,8 @@
-currentTree = null
-
-
 # JS object with some feature to add easily properties from a string 
 # representation.
 # JS object with properties like this :
 # 
-# root:
+# all:
 #   todo: {}
 #   recipe:
 #     dessert:
@@ -18,16 +15,21 @@ currentTree = null
 #
 class exports.Tree
 
-    # All trees have a root property called root
-    constructor: ->
-        @root = {}
+    # All trees have a root property called all
+    constructor: (struct) ->
+        if struct != undefined
+            @all = struct.all
+        else
+            @all = {}
 
     # Add a node to the tree. It needs the complete path to add a node.
     # If parent nodes does not exist, they are created too.
     addNode: (path) ->
         nodes = path.split("/")
+        nodes.shift() # remove empty char
+        nodes.shift() # remove all node
 
-        currentNode = @root
+        currentNode = @all
         for pathNode in nodes
             if currentNode[pathNode] != undefined
                 currentNode = currentNode[pathNode]
@@ -39,6 +41,8 @@ class exports.Tree
      # If exitsts, deletes node located at given path, else do nothing
     deleteNode: (path) ->
         nodes = path.split("/")
+        nodes.shift() # remove empty char
+        nodes.shift() # remove all node
 
         currentNode = @getNode path, 1
         delete currentNode[nodes.pop()] if currentNode != undefined
@@ -51,8 +55,10 @@ class exports.Tree
     getNode: (path, limit) ->
         limit = 0 if limit == undefined
         nodes = path.split("/")
+        nodes.shift() # remove empty char
+        nodes.shift() # remove all node
 
-        currentNode = @root
+        currentNode = @all
         while currentNode != undefined and nodes.length > limit
             currentNode = currentNode[nodes.shift()]
         

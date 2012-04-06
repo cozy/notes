@@ -10,41 +10,41 @@ describe "Tree tools", ->
         it "When I create a new tree", ->
             tree = new Tree
         it "I have a tree with just one root", ->
-            should.exist tree.root
+            should.exist tree.all
 
     describe "Add a node", ->
         it "When I add a node called 'recipe'", ->
-            tree.addNode "recipe"
+            tree.addNode "/all/recipe"
         it "And I add a node called 'todo'", ->
-            tree.addNode "todo"
+            tree.addNode "/all/todo"
         it "Then I have a property recipe and a property todo in my tree.", ->
-            should.exist tree.root.recipe
-            should.exist tree.root.todo
-        it "When I add a node called 'recipe/dessert/brownie'", ->
-            tree.addNode "recipe/dessert/brownie"
+            should.exist tree.all.recipe
+            should.exist tree.all.todo
+        it "When I add a node called '/all/recipe/dessert/brownie'", ->
+            tree.addNode "/all/recipe/dessert/brownie"
         it "Then I have a property recipe.dessert.brownie in my tree.", ->
-            should.exist tree.root.recipe.dessert.brownie
+            should.exist tree.all.recipe.dessert.brownie
 
     describe "Get a node", ->
         it "When I get a node called 'todo'", ->
             retrievedNode = tree.getNode "todo"
         it "Then I have an empty object", ->
             should.exist retrievedNode
-        it "When I get a node called 'recipe/dessert'", ->
-            retrievedNode = tree.getNode "recipe/dessert"
+        it "When I get a node called '/all/recipe/dessert'", ->
+            retrievedNode = tree.getNode "/all/recipe/dessert"
         it "Then I have an object with brownie as property", ->
             should.exist retrievedNode.brownie
 
     describe "Delete a node", ->
-        it "When I delete a node called 'todo'", ->
-            tree.deleteNode "todo"
-        it "Then node called 'todo' should not exist", ->
-            should.not.exist tree.root.todo
-        it "When I delete a node called 'recipe/dessert'", ->
-            tree.deleteNode "recipe/dessert"
-        it "Then node called 'recipe/dessert' should not exist", ->
-            should.not.exist tree.root.recipe.dessert
-            should.exist tree.root.recipe
+        it "When I delete a node called '/all/todo'", ->
+            tree.deleteNode "/all/todo"
+        it "Then node called '/all/todo' should not exist", ->
+            should.not.exist tree.all.todo
+        it "When I delete a node called '/all/recipe/dessert'", ->
+            tree.deleteNode "/all/recipe/dessert"
+        it "Then node called '/all/recipe/dessert' should not exist", ->
+            should.not.exist tree.all.recipe.dessert
+            should.exist tree.all.recipe
 
 
 

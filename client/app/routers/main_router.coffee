@@ -4,3 +4,4 @@ class exports.MainRouter extends Backbone.Router
 
   home: ->
     $('body').html app.homeView.render().el
+    app.homeView.fetchData()

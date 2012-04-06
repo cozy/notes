@@ -1,23 +1,27 @@
-class exports.HomeView extends Backbone.View
-  id: 'home-view'
+Tree = require("./widgets/tree").Tree
 
-  render: ->
-    $(@el).html require('./templates/home')
-    @.$("#nav").jstree
-	    json_data:
-            data: [
-                data: "recipe"
-                metadata: id : 23
-                children: [ "Child 1", "tert", "ret", "A Child 2" ]
-            ,
-                data :
-                    title: "Todo"
-            ]
-        themes:
-            theme: "default"
-            dots: false
-            icons: false
-        core:
-            animation: 0
-	    plugins: [ "themes", "json_data", "ui" ]
-    this
+class exports.HomeView extends Backbone.View
+    id: 'home-view'
+
+    render: ->
+        $(@el).html require('./templates/home')
+        this
+
+    createFolder: (path) ->
+        $.ajax
+            type:"POST"
+            url: "tree"
+            data: path: path
+            error: (data) ->
+                if data and data.msg
+                    alert data.msg
+                else
+                    alert "Server error occured."
+
+    fetchData: ->
+        $.get "tree/", (data) =>
+            @tree = new Tree @.$("#nav"), data,
+                onCreate: @createFolder
+                onRename: @createFolder
+                onRemove: @createFolder
+

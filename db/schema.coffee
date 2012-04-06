@@ -10,5 +10,6 @@ Note = define 'Note', ->
 Tree = define 'Tree', ->
     property 'type', String, default: "Note"
     property 'struct', String
+    property 'lastModificationDate', Date, default: Date
 
 
