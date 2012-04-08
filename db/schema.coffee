@@ -6,6 +6,7 @@ Note = define 'Note', ->
     property 'content': String
     property 'tags', [String]
     property 'tagParent', String
+    property 'path', String
 
 Tree = define 'Tree', ->
     property 'type', String, default: "Note"
