@@ -1,5 +1,5 @@
 DataTree = require('../../lib/tree').Tree
-
+slugify = require('../../client/app/helpers').slugify
 
 before 'load tree', ->
     Tree.all (err, trees) =>
@@ -48,7 +48,7 @@ action 'create', ->
 
 action 'update', ->
     if body.newName != undefined
-        newName = body.newName
+        newName = slugify body.newName
         data = new DataTree JSON.parse(@tree.struct)
         data.updateNode @path, newName
         tree = new Tree
@@ -58,7 +58,7 @@ action 'update', ->
                 console.log err
                 send error: "An error occured while node was created", 500
             else
-                send success: "Node succesfully deleted", 200
+                send success: "Node succesfully updated", 200
     else
         send error: "No new name sent", 400
 
