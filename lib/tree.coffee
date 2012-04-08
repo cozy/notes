@@ -64,6 +64,19 @@ class exports.Tree
         
         currentNode
 
+    updateNode: (path, newName) ->
+        nodes = path.split("/")
+        nodes.shift() # remove empty char
+        nodes.shift() # remove all node
+
+        currentNode = @getNode path, 2
+        if currentNode != undefined
+            node = nodes.pop()
+            currentNode[newName] = currentNode[node]
+            delete currentNode[node] if currentNode != undefined
+        node
+
+
     # Json representation of the tree
     toJson: ->
         JSON.stringify(@)

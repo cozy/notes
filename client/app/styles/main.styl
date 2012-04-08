@@ -1,5 +1,15 @@
 @import 'nib'
 
+shadow()
+  -moz-box-shadow: arguments
+  -webkit-box-shadow: arguments
+  box-shadow: arguments
+
+rounded-border()
+  -webkit-border-radius: arguments
+  -moz-border-radius: arguments
+  border-radius: arguments
+
 body
   background: #91A2C0
   font: bold 18px "Helvetica Neue", Arial, Helvetica, sans-serif
@@ -63,30 +73,81 @@ html, body
   height 100%
   padding 0
 
-#toolbar
-  background #E9EAE5
-
 #nav
   float left
   height 100%
   width 20%
-  min-width 200px
+  min-width 300px
   margin 0
-  background-color #E9EAE5
+  background-color #ebe5e2
+  box-shadow 0 0 5px #002200
 
 #tree
+  font-size 12
   padding 10px
+  border-top 1px solid white
+  background-color #ebe5e2
+  color #6d3100
+
+
+#tree li
+  padding 0
+#tree ins
+  width 14px
 
 #tree a
-  font-weight normal
   text-transform lowercase
-  padding 7px
+  padding 3px 5px
+  margin 2px 0px
   border 1px solid transparent
+  font-weight bold
+  color #3d2100
+
+#tree a.jstree-clicked
+  background #ffdd97  
+
+#tree a:hover
+  shadow 1px 1px 1px #666622
+  background #F4E1B9
+
+#tree-buttons
+  padding-top 10px
+  border-bottom 1px solid #AAA
+  background-color #ebe5e2
+
+#tree-buttons div
+  display inline
+  padding 6px 10px
+  margin-left 8px
+  background-repeat no-repeat
+  background-position center
+  cursor pointer
+
+#tree-buttons i
+  margin-top 3px
+  margin-right 5px
+
+#tree-buttons .spacer
+  display block
+
+#tree-buttons div.button:hover
+  background: -moz-linear-gradient(center top , #ffdd97 0%, #ffb338 100%) repeat scroll 0 0 transparent
+
+#tree-buttons div.button
+  background: -moz-linear-gradient(center top , #E4D1A9 0%, #E4C199 100%) repeat scroll 0 0 transparent
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 1px 1px rgba(0, 0, 0, 0.35);
+  color #6d3100
+  rounded-border 2px 2px 2px 2px
+
+#tree-buttons div.button:active
+  background: -moz-linear-gradient(center top , #f4cc86 0%,  #eaa328 100%) repeat scroll 0 0 transparent
+  box-shadow: 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35);
+
 
 #editor
   width auto
   height 100%
   padding 0
   margin 0 
-  background-color #ADA
+  background-color #E4D1A9 /*ADA*/
 

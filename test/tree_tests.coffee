@@ -44,3 +44,21 @@ describe "/tree", ->
         it "Then I have a tree that contains path /all/recipe/dessert/brownie", ->
             tree = new DataTree bodyTest
             should.exist tree.all.recipe.dessert.brownie
+
+     describe "DELETE /tree Delte given node", ->
+
+        it "When I delete node /all/recipe/dessert", (done) ->
+            client.del "tree/", path: "/all/recipe/dessert", (error, response, body) ->
+                storeResponse error, response, body, done
+
+        it "Then a 200 success response is returned", ->
+            responseTest.statusCode.should.equal 200
+
+        it "When I retrieve tree from /tree", (done) ->
+            client.get "tree/", (error, response, body) ->
+                storeResponse error, response, body, done
+
+        it "Then I have a tree that contains only path /all/recipe", ->
+            tree = new DataTree bodyTest
+            should.exist tree.all.recipe
+            should.not.exist tree.all.recipe.dessert

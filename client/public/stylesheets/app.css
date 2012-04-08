@@ -3438,11 +3438,21 @@ html,body{height:100%}
 .spacer{clear:both}
 #home-view{height:100%}
 #content{height:100%;padding:0}
-#toolbar{background:#e9eae5}
-#nav{float:left;height:100%;width:20%;min-width:200px;margin:0;background-color:#e9eae5}
-#tree{padding:10px}
-#tree a{font-weight:normal;text-transform:lowercase;padding:7px;border:1px solid transparent}
-#editor{width:auto;height:100%;padding:0;margin:0;background-color:#ada}
+#nav{float:left;height:100%;width:20%;min-width:300px;margin:0;background-color:#ebe5e2;-webkit-box-shadow:0 0 5px #020;-moz-box-shadow:0 0 5px #020;box-shadow:0 0 5px #020}
+#tree{font-size:12;padding:10px;border-top:1px solid #fff;background-color:#ebe5e2;color:#6d3100}
+#tree li{padding:0}
+#tree ins{width:14px}
+#tree a{text-transform:lowercase;padding:3px 5px;margin:2px 0;border:1px solid transparent;font-weight:bold;color:#3d2100}
+#tree a.jstree-clicked{background:#ffdd97}
+#tree a:hover{-moz-box-shadow:1px 1px 1px #662;-webkit-box-shadow:1px 1px 1px #662;-webkit-box-shadow:1px 1px 1px #662;-moz-box-shadow:1px 1px 1px #662;box-shadow:1px 1px 1px #662;background:#f4e1b9}
+#tree-buttons{padding-top:10px;border-bottom:1px solid #aaa;background-color:#ebe5e2}
+#tree-buttons div{display:inline;padding:6px 10px;margin-left:8px;background-repeat:no-repeat;background-position:center;cursor:pointer}
+#tree-buttons i{margin-top:3px;margin-right:5px}
+#tree-buttons .spacer{display:block}
+#tree-buttons div.button:hover{background:-moz-linear-gradient(center top,#ffdd97 0%,#ffb338 100%) repeat scroll 0 0 transparent}
+#tree-buttons div.button{background:-moz-linear-gradient(center top,#e4d1a9 0%,#e4c199 100%) repeat scroll 0 0 transparent;-webkit-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,0 1px 1px rgba(0,0,0,0.35);-moz-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,0 1px 1px rgba(0,0,0,0.35);box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,0 1px 1px rgba(0,0,0,0.35);color:#6d3100;-webkit-border-radius:2px 2px 2px 2px;-moz-border-radius:2px 2px 2px 2px;-webkit-border-radius:2px 2px 2px 2px;-moz-border-radius:2px 2px 2px 2px;border-radius:2px 2px 2px 2px}
+#tree-buttons div.button:active{background:-moz-linear-gradient(center top,#f4cc86 0%,#eaa328 100%) repeat scroll 0 0 transparent;-webkit-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-moz-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35)}
+#editor{width:auto;height:100%;padding:0;margin:0;background-color:#e4d1a9;}
 /* ==|== non-semantic helper classes ========================================
    Please define your styles before this section.
    ========================================================================== */

@@ -18,16 +18,39 @@ before 'load tree', ->
             @tree = trees[0]
             next()
 
+before 'load path', ->
+    @path = body.path
+
+    if @path != undefined
+        next()
+    else
+        send error: "No path sent", 400
+, only: ['update', 'destroy', 'create']
+
+
 
 action 'tree', ->
     send JSON.parse(@tree.struct)
 
-action 'create', ->
-    path = body.path
 
-    if path != undefined
+action 'create', ->
+    data = new DataTree JSON.parse(@tree.struct)
+    data.addNode @path
+    tree = new Tree
+        struct: data.toJson(),
+    @tree.updateAttributes tree, (err) ->
+        if err
+            console.log err
+            send error: "An error occured while node was created", 500
+        else
+            send success: "Node created", 201
+
+
+action 'update', ->
+    if body.newName != undefined
+        newName = body.newName
         data = new DataTree JSON.parse(@tree.struct)
-        data.addNode path
+        data.updateNode @path, newName
         tree = new Tree
             struct: data.toJson(),
         @tree.updateAttributes tree, (err) ->
@@ -35,25 +58,23 @@ action 'create', ->
                 console.log err
                 send error: "An error occured while node was created", 500
             else
-                send success: "Node created", 201
-
+                send success: "Node succesfully deleted", 200
     else
-        send error: "No path sent", 400
+        send error: "No new name sent", 400
 
-
-action 'update', ->
-    @note.updateAttributes note, (err) =>
-        if !err
-            send success: 'Note updated'
-        else
-            console.log err
-            send error: 'Note can not be updated', 400
 
 action 'destroy', ->
-    @note.destroy (err) ->
+    data = new DataTree JSON.parse(@tree.struct)
+    data.deleteNode @path
+    tree = new Tree
+        struct: data.toJson(),
+    @tree.updateAttributes tree, (err) ->
         if err
-            send error: 'Can not destroy note', 500
+            console.log err
+            send error: "An error occured while node was created", 500
         else
-            send success: 'Note succesfuly deleted'
+            send success: "Node succesfully deleted", 200
+
+
 
 

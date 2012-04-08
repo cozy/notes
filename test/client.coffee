@@ -22,11 +22,11 @@ exports.put = (path, json, callback) ->
         json: json
         , callback
 
-exports.del = (path, callback) ->
+exports.del = (path, json, callback) ->
     request
         method: "DELETE"
         uri: host + path
-        json: true
+        json: json
         , callback
 
 

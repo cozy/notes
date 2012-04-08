@@ -46,5 +46,14 @@ describe "Tree tools", ->
             should.not.exist tree.all.recipe.dessert
             should.exist tree.all.recipe
 
+    describe "Update a node", ->
+        it "When I update a node called '/all/recipe' with '/all/recipes/'", ->
+            tree.addNode "/all/recipe/dessert"
+            tree.updateNode "/all/recipe", "recipes"
+            console.log tree
+        it "Then node called '/all/recipe' should not exist", ->
+            should.not.exist tree.all.recipe
+        it "And node called '/all/recipes/dessert' should exist", ->
+            should.exist tree.all.recipes.dessert
 
 
