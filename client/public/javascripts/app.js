@@ -48,6 +48,41 @@
     };
   }
 }).call(this);(this.require.define({
+  "helpers": function(exports, require, module) {
+    (function() {
+
+  exports.BrunchApplication = (function() {
+
+    function BrunchApplication() {
+      var _this = this;
+      $(function() {
+        _this.initialize(_this);
+        return Backbone.history.start();
+      });
+    }
+
+    BrunchApplication.prototype.initialize = function() {
+      return null;
+    };
+
+    return BrunchApplication;
+
+  })();
+
+  exports.slugify = function(string) {
+    var _slugify_hyphenate_re, _slugify_strip_re;
+    _slugify_strip_re = /[^\w\s-]/g;
+    _slugify_hyphenate_re = /[-\s]+/g;
+    string = string.replace(_slugify_strip_re, '').trim().toLowerCase();
+    string = string.replace(_slugify_hyphenate_re, '-');
+    return string;
+  };
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
   "initialize": function(exports, require, module) {
     (function() {
   var BrunchApplication, HomeView, MainRouter,
@@ -78,41 +113,6 @@
   })(BrunchApplication);
 
   window.app = new exports.Application;
-
-}).call(this);
-
-  }
-}));
-(this.require.define({
-  "helpers": function(exports, require, module) {
-    (function() {
-
-  exports.BrunchApplication = (function() {
-
-    function BrunchApplication() {
-      var _this = this;
-      $(function() {
-        _this.initialize(_this);
-        return Backbone.history.start();
-      });
-    }
-
-    BrunchApplication.prototype.initialize = function() {
-      return null;
-    };
-
-    return BrunchApplication;
-
-  })();
-
-  exports.slugify = function(string) {
-    var _slugify_hyphenate_re, _slugify_strip_re;
-    _slugify_strip_re = /[^\w\s-]/g;
-    _slugify_hyphenate_re = /[-\s]+/g;
-    string = string.replace(_slugify_strip_re, '').trim().toLowerCase();
-    string = string.replace(_slugify_hyphenate_re, '-');
-    return string;
-  };
 
 }).call(this);
 
@@ -150,108 +150,6 @@
   }
 }));
 (this.require.define({
-  "views/home_view": function(exports, require, module) {
-    (function() {
-  var Tree,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  Tree = require("./widgets/tree").Tree;
-
-  exports.HomeView = (function(_super) {
-
-    __extends(HomeView, _super);
-
-    function HomeView() {
-      this.deleteFolder = __bind(this.deleteFolder, this);
-      this.renameFolder = __bind(this.renameFolder, this);
-      this.createFolder = __bind(this.createFolder, this);
-      HomeView.__super__.constructor.apply(this, arguments);
-    }
-
-    HomeView.prototype.id = 'home-view';
-
-    HomeView.prototype.sendTreeRequest = function(type, data) {
-      return $.ajax({
-        type: type,
-        url: "tree",
-        data: data,
-        error: function(data) {
-          if (data && data.msg) {
-            return alert(data.msg);
-          } else {
-            return alert("Server error occured.");
-          }
-        }
-      });
-    };
-
-    HomeView.prototype.createFolder = function(path) {
-      return this.sendTreeRequest("POST", {
-        path: path
-      });
-    };
-
-    HomeView.prototype.renameFolder = function(path, newName) {
-      return this.sendTreeRequest("PUT", {
-        path: path,
-        newName: newName
-      });
-    };
-
-    HomeView.prototype.deleteFolder = function(path) {
-      return this.sendTreeRequest("DELETE", {
-        path: path
-      });
-    };
-
-    HomeView.prototype.render = function() {
-      $(this.el).html(require('./templates/home'));
-      return this;
-    };
-
-    HomeView.prototype.fetchData = function() {
-      var _this = this;
-      return $.get("tree/", function(data) {
-        return _this.tree = new Tree(_this.$("#nav"), data, {
-          onCreate: _this.createFolder,
-          onRename: _this.renameFolder,
-          onRemove: _this.deleteFolder
-        });
-      });
-    };
-
-    return HomeView;
-
-  })(Backbone.View);
-
-}).call(this);
-
-  }
-}));
-(this.require.define({
-  "views/templates/home": function(exports, require, module) {
-    module.exports = function anonymous(locals, attrs, escape, rethrow) {
-var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
-var buf = [];
-with (locals || {}) {
-var interp;
-buf.push('<div');
-buf.push(attrs({ 'id':('content') }));
-buf.push('><div');
-buf.push(attrs({ 'id':('nav') }));
-buf.push('><div');
-buf.push(attrs({ 'id':('tree') }));
-buf.push('></div></div><div');
-buf.push(attrs({ 'id':('editor') }));
-buf.push('></div></div>');
-}
-return buf.join("");
-};
-  }
-}));
-(this.require.define({
   "views/templates/tree_buttons": function(exports, require, module) {
     module.exports = function anonymous(locals, attrs, escape, rethrow) {
 var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
@@ -278,6 +176,146 @@ buf.push('></div></div>');
 }
 return buf.join("");
 };
+  }
+}));
+(this.require.define({
+  "views/templates/home": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<div');
+buf.push(attrs({ 'id':('content') }));
+buf.push('><div');
+buf.push(attrs({ 'id':('nav') }));
+buf.push('><div');
+buf.push(attrs({ 'id':('tree') }));
+buf.push('></div></div><div');
+buf.push(attrs({ 'id':('editor') }));
+buf.push('></div></div>');
+}
+return buf.join("");
+};
+  }
+}));
+(this.require.define({
+  "collections/notes": function(exports, require, module) {
+    (function() {
+  var Application,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Application = require("models/application").Application;
+
+  exports.NotesCollection = (function(_super) {
+
+    __extends(NotesCollection, _super);
+
+    NotesCollection.prototype.model = Application;
+
+    NotesCollection.prototype.url = 'notes/';
+
+    function NotesCollection() {
+      NotesCollection.__super__.constructor.call(this);
+    }
+
+    NotesCollection.prototype.parse = function(response) {
+      return response.rows;
+    };
+
+    return NotesCollection;
+
+  })(Backbone.Collection);
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
+  "views/home_view": function(exports, require, module) {
+    (function() {
+  var Tree,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Tree = require("./widgets/tree").Tree;
+
+  exports.HomeView = (function(_super) {
+
+    __extends(HomeView, _super);
+
+    function HomeView() {
+      this.selectFolder = __bind(this.selectFolder, this);
+      this.deleteFolder = __bind(this.deleteFolder, this);
+      this.renameFolder = __bind(this.renameFolder, this);
+      this.createFolder = __bind(this.createFolder, this);
+      HomeView.__super__.constructor.apply(this, arguments);
+    }
+
+    HomeView.prototype.id = 'home-view';
+
+    HomeView.prototype.sendTreeRequest = function(type, data) {
+      return $.ajax({
+        type: type,
+        url: "tree",
+        data: data,
+        error: function(data) {
+          if (data && data.msg) {
+            return alert(data.msg);
+          } else {
+            return alert("Server error occured.");
+          }
+        }
+      });
+    };
+
+    HomeView.prototype.createFolder = function(path, name) {
+      return this.sendTreeRequest("POST", {
+        path: path,
+        name: name
+      });
+    };
+
+    HomeView.prototype.renameFolder = function(path, newName) {
+      return this.sendTreeRequest("PUT", {
+        path: path,
+        newName: newName
+      });
+    };
+
+    HomeView.prototype.deleteFolder = function(path) {
+      return this.sendTreeRequest("DELETE", {
+        path: path
+      });
+    };
+
+    HomeView.prototype.selectFolder = function(path) {};
+
+    HomeView.prototype.render = function() {
+      $(this.el).html(require('./templates/home'));
+      return this;
+    };
+
+    HomeView.prototype.fetchData = function() {
+      var _this = this;
+      return $.get("tree/", function(data) {
+        return _this.tree = new Tree(_this.$("#nav"), data, {
+          onCreate: _this.createFolder,
+          onRename: _this.renameFolder,
+          onRemove: _this.deleteFolder,
+          onSelect: _this.selectFolder
+        });
+      });
+    };
+
+    return HomeView;
+
+  })(Backbone.View);
+
+}).call(this);
+
   }
 }));
 (this.require.define({
@@ -339,17 +377,22 @@ return buf.join("");
       this.widget.bind("create.jstree", function(e, data) {
         var path;
         path = _this._getPath(data);
-        return callbacks.onCreate(path);
+        return callbacks.onCreate(path, data.rslt.name);
       });
       this.widget.bind("rename.jstree", function(e, data) {
         var path;
         path = _this._getPath(data, data.rslt.old_name);
         return callbacks.onRename(path, data.rslt.new_name);
       });
-      return this.widget.bind("remove.jstree", function(e, data) {
+      this.widget.bind("remove.jstree", function(e, data) {
         var path;
         path = _this._getPath(data);
         return callbacks.onRemove(path);
+      });
+      return this.widget.bind("select_node.jstree", function(e, data) {
+        var path;
+        path = _this._getPath(data);
+        return callbacks.onSelect(path);
       });
     };
 
@@ -382,11 +425,9 @@ return buf.join("");
       var newNode, property, _results;
       _results = [];
       for (property in nodeToConvert) {
+        if (!(property !== "name")) continue;
         newNode = {
-          data: property,
-          attr: {
-            id: "tree-node-" + property
-          },
+          data: nodeToConvert[property].name,
           children: []
         };
         if (parentNode.children === void 0) {

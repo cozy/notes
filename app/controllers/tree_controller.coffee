@@ -35,20 +35,28 @@ action 'tree', ->
 
 action 'create', ->
     data = new DataTree JSON.parse(@tree.struct)
-    data.addNode @path
+    name = body.name
+    data.addNode @path, name
     tree = new Tree
         struct: data.toJson(),
-    @tree.updateAttributes tree, (err) ->
+    @tree.updateAttributes tree, (err) =>
         if err
             console.log err
             send error: "An error occured while node was created", 500
         else
-            send success: "Node created", 201
+            note = new Note
+                path: @path
+                humanPath: @path.split("/")
+            Note.create note, (err, note) =>
+                    if err
+                        send error: 'Note can not be created'
+                    else
+                        send note, 201
 
 
 action 'update', ->
     if body.newName != undefined
-        newName = slugify body.newName
+        newName = body.newName
         data = new DataTree JSON.parse(@tree.struct)
         data.updateNode @path, newName
         tree = new Tree

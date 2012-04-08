@@ -20,8 +20,10 @@ class exports.HomeView extends Backbone.View
                     alert "Server error occured."
 
     # Create a new folder inside currently selected node.
-    createFolder: (path) =>
-        @sendTreeRequest "POST", path: path
+    createFolder: (path, name) =>
+        @sendTreeRequest "POST",
+            path: path
+            name: name
         
     # Rename currently selected node.
     renameFolder: (path, newName) =>
@@ -32,6 +34,8 @@ class exports.HomeView extends Backbone.View
     # Delete currently selected node.
     deleteFolder: (path) =>
         @sendTreeRequest "DELETE", path: path
+
+    selectFolder: (path) =>
 
 
     # Initializers
@@ -47,4 +51,5 @@ class exports.HomeView extends Backbone.View
                 onCreate: @createFolder
                 onRename: @renameFolder
                 onRemove: @deleteFolder
+                onSelect: @selectFolder
 

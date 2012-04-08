@@ -1,3 +1,5 @@
+slugify = require('../client/app/helpers').slugify
+
 # JS object with some feature to add easily properties from a string 
 # representation.
 # JS object with properties like this :
@@ -20,11 +22,11 @@ class exports.Tree
         if struct != undefined
             @all = struct.all
         else
-            @all = {}
+            @all = name: "All"
 
     # Add a node to the tree. It needs the complete path to add a node.
     # If parent nodes does not exist, they are created too.
-    addNode: (path) ->
+    addNode: (path, name) ->
         nodes = path.split("/")
         nodes.shift() # remove empty char
         nodes.shift() # remove all node
@@ -36,6 +38,7 @@ class exports.Tree
             else
                 currentNode[pathNode] = {}
                 currentNode = currentNode[pathNode]
+        currentNode.name = name
         this
 
      # If exitsts, deletes node located at given path, else do nothing
@@ -69,11 +72,13 @@ class exports.Tree
         nodes.shift() # remove empty char
         nodes.shift() # remove all node
 
-        currentNode = @getNode path, 2
+        currentNode = @getNode path, 1
         if currentNode != undefined
             node = nodes.pop()
-            currentNode[newName] = currentNode[node]
+            currentNode[slugify newName] = currentNode[node]
             delete currentNode[node] if currentNode != undefined
+            currentNode[slugify newName].name = newName
+
         node
 
 

@@ -35,7 +35,7 @@ describe "/tree", ->
         it "Then a 201 success response is returned", ->
             responseTest.statusCode.should.equal 201
 
-    describe "GET /tree Retrieve current", ->
+    describe "GET /tree Retrieve current tree", ->
 
         it "When I retrieve tree from /tree", (done) ->
             client.get "tree/", (error, response, body) ->
@@ -62,3 +62,18 @@ describe "/tree", ->
             tree = new DataTree bodyTest
             should.exist tree.all.recipe
             should.not.exist tree.all.recipe.dessert
+
+    describe "PUT /tree Retrieve current", ->
+
+        it "When I retrieve tree from /tree", (done) ->
+            data =
+                path: "/all/recipes"
+                newName: "main dishes"
+                
+            client.put "tree/", data, (error, response, body) ->
+                storeResponse error, response, body, done
+
+        it "Then I have a tree that contains path /all/main-dishes", ->
+            tree = new DataTree bodyTest
+            should.exist tree.all.main_dishes
+

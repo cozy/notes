@@ -42,7 +42,7 @@ class exports.Tree
 
         @widget.bind "create.jstree", (e, data) =>
             path = @_getPath data
-            callbacks.onCreate path
+            callbacks.onCreate path, data.rslt.name
 
         @widget.bind "rename.jstree", (e, data) =>
             path = @_getPath data, data.rslt.old_name
@@ -52,6 +52,9 @@ class exports.Tree
             path = @_getPath data
             callbacks.onRemove path
 
+        @widget.bind "select_node.jstree", (e, data) =>
+            path = @_getPath data
+            callbacks.onSelect path
 
 
     # data.inst = tree instance
@@ -81,11 +84,9 @@ class exports.Tree
         tree
 
     _convertNode: (parentNode, nodeToConvert) ->
-        for property of nodeToConvert
+        for property of nodeToConvert when property isnt "name"
             newNode =
-                data: property
-                attr:
-                    id: "tree-node-#{property}"
+                data: nodeToConvert[property].name
                 children: []
 
             if parentNode.children == undefined
