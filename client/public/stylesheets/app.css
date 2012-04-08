@@ -3438,7 +3438,7 @@ html,body{height:100%}
 .spacer{clear:both}
 #home-view{height:100%}
 #content{height:100%;padding:0}
-#nav{float:left;height:100%;width:20%;min-width:300px;margin:0;background-color:#ebe5e2;-webkit-box-shadow:0 0 5px #020;-moz-box-shadow:0 0 5px #020;box-shadow:0 0 5px #020}
+#nav{float:left;height:100%;width:20%;min-width:320px;margin:0;background-color:#ebe5e2;-webkit-box-shadow:0 0 5px #020;-moz-box-shadow:0 0 5px #020;box-shadow:0 0 5px #020}
 #tree{font-size:12;padding:10px;border-top:1px solid #fff;background-color:#ebe5e2;color:#6d3100}
 #tree li{padding:0}
 #tree ins{width:14px}
@@ -3450,7 +3450,7 @@ html,body{height:100%}
 #tree-buttons i{margin-top:3px;margin-right:5px}
 #tree-buttons .spacer{display:block}
 #tree-buttons div.button:hover{background:-moz-linear-gradient(center top,#ffdd97 0%,#ffb338 100%) repeat scroll 0 0 transparent}
-#tree-buttons div.button{background:-moz-linear-gradient(center top,#e4d1a9 0%,#e4c199 100%) repeat scroll 0 0 transparent;-webkit-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,0 1px 1px rgba(0,0,0,0.35);-moz-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,0 1px 1px rgba(0,0,0,0.35);box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,0 1px 1px rgba(0,0,0,0.35);color:#6d3100;-webkit-border-radius:2px 2px 2px 2px;-moz-border-radius:2px 2px 2px 2px;-webkit-border-radius:2px 2px 2px 2px;-moz-border-radius:2px 2px 2px 2px;border-radius:2px 2px 2px 2px}
+#tree-buttons div.button{background:-moz-linear-gradient(center top,#e4d1a9 0%,#e4c199 100%) repeat scroll 0 0 transparent;-webkit-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);-moz-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);color:#6d3100;border:1px solid #3d2100;-webkit-border-radius:2px 2px 2px 2px;-moz-border-radius:2px 2px 2px 2px;-webkit-border-radius:2px 2px 2px 2px;-moz-border-radius:2px 2px 2px 2px;border-radius:2px 2px 2px 2px}
 #tree-buttons div.button:active{background:-moz-linear-gradient(center top,#f4cc86 0%,#eaa328 100%) repeat scroll 0 0 transparent;-webkit-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-moz-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35)}
 #editor{width:auto;height:100%;padding:0;margin:0;background-color:#e4d1a9;}
 /* ==|== non-semantic helper classes ========================================
