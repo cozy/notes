@@ -10,10 +10,6 @@ rounded-border()
   -moz-border-radius: arguments
   border-radius: arguments
 
-body
-  background: #91A2C0
-  font: bold 18px "Helvetica Neue", Arial, Helvetica, sans-serif
-
 
 a, a:visited
   color: #F95A5A
@@ -23,10 +19,9 @@ a:hover
   color: #665248
 
 body
-  font-size: 16px
   color: #444
-  background: #fff
-  font-family: "KievitPro", "ff-kievit-web-pro-1","ff-kievit-web-pro-2", "Helvetica Neue", Arial, Helvetica, sans-serif
+  background-color #E4D1A9
+  font: bold 16px "Helvetica Neue", Arial, Helvetica, sans-serif
 
 /* Headings */
 h1, h2, h3, h4, h5
@@ -76,11 +71,11 @@ html, body
 #nav
   float left
   height 100%
-  width 20%
-  min-width 320px
+  width 320px
   margin 0
+  padding 0
   background-color #ebe5e2
-  box-shadow 0 0 5px #002200
+  shadow 0 0 5px #002200
 
 #tree
   font-size 12
@@ -111,9 +106,9 @@ html, body
   background #F4E1B9
 
 #tree-buttons
-  padding-top 10px
   border-bottom 1px solid #AAA
   background-color #ebe5e2
+  margin-top 16px
 
 #tree-buttons div
   display inline
@@ -142,13 +137,25 @@ html, body
 
 #tree-buttons div.button:active
   background: -moz-linear-gradient(center top , #f4cc86 0%,  #eaa328 100%) repeat scroll 0 0 transparent
-  box-shadow: 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35);
+  shadow: 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35);
 
 
 #editor
-  width auto
-  height 100%
-  padding 0
   margin 0 
-  background-color #E4D1A9 /*ADA*/
+  margin-left 320px
+  padding 10px
+  height auto
+  background-color #E4D1A9
+
+#editor h2
+  clear: none
+  padding 0
+  margin 0
+
+.note-full
+  background white
+  shadow 0 0 5px #220000
+  border 1px solid #ebe5e2
+  padding 10px
+
 

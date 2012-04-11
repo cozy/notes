@@ -26,7 +26,7 @@ class exports.Tree
 
     # Add a node to the tree. It needs the complete path to add a node.
     # If parent nodes does not exist, they are created too.
-    addNode: (path, name) ->
+    addNode: (path, name, id) ->
         nodes = path.split("/")
         nodes.shift() # remove empty char
         nodes.shift() # remove all node
@@ -39,6 +39,7 @@ class exports.Tree
                 currentNode[pathNode] = {}
                 currentNode = currentNode[pathNode]
         currentNode.name = name
+        currentNode.id = id
         this
 
      # If exitsts, deletes node located at given path, else do nothing

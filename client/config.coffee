@@ -19,10 +19,12 @@ exports.config =
       # even if they are not present here.
       order:
         before: [
-          'vendor/scripts/console-helper.js',
-          'vendor/scripts/jquery-1.7.1.js',
-          'vendor/scripts/underscore-1.3.1.js',
+          'vendor/scripts/console-helper.js'
+          'vendor/scripts/jquery-1.7.1.js'
+          'vendor/scripts/underscore-1.3.1.js'
           'vendor/scripts/backbone-0.9.1.js'
+          'vendor/scripts/jquery.jstree.js'
+          'vendor/scripts/jquery.layout-1.2.0.js'
         ]
 
     stylesheets:
@@ -32,7 +34,10 @@ exports.config =
         before: ['vendor/styles/normalize.css',
                  'vendor/styles/bootstrap.css'
                 ]
-        after: ['vendor/styles/helpers.css']
+        after: [
+            'vendor/styles/helpers.css'
+            'vendor/styles/layout-default.css'
+        ]
 
     templates:
       defaultExtension: 'jade'

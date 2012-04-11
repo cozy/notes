@@ -1,4 +1,6 @@
 Tree = require("./widgets/tree").Tree
+NoteWidget = require("./note_view").NoteWidget
+Note = require("../models/note").Note
 
 # Main view that manages interaction between toolbar, navigation and notes
 class exports.HomeView extends Backbone.View
@@ -35,17 +37,35 @@ class exports.HomeView extends Backbone.View
     deleteFolder: (path) =>
         @sendTreeRequest "DELETE", path: path
 
-    selectFolder: (path) =>
+    selectFolder: (path, id) =>
+        if id?
+            $.get "all/#{id}", (data) =>
+                note = new Note data
+                @renderNote note
 
+    renderNote: (note) ->
+        @noteArea.html null
+        noteWidget = new NoteWidget note
+        @noteArea.append noteWidget.render()
 
     # Initializers
 
     render: ->
         $(@el).html require('./templates/home')
+
+        #borderLayout = jLayout.border
+        #    west:   $ "#nav"
+        #    center: $ "#editor"
+        #    vgap: 5
+
+        #borderLayout.layout $('#content')
+        #$('#home-view').layout()
         this
 
     # Fetch data loads notre tree and configure it.
     fetchData: ->
+        @noteArea = $("#editor")
+        #$("#nav").resizable()
         $.get "tree/", (data) =>
             @tree = new Tree @.$("#nav"), data,
                 onCreate: @createFolder

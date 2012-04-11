@@ -11611,129 +11611,7 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
     throw new Error('A "url" property or function must be specified');
   };
 
-}).call(this);
-var jade = (function(exports){
-/*!
- * Jade - runtime
- * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
- * MIT Licensed
- */
-
-/**
- * Lame Array.isArray() polyfill for now.
- */
-
-if (!Array.isArray) {
-  Array.isArray = function(arr){
-    return '[object Array]' == Object.prototype.toString.call(arr);
-  };
-}
-
-/**
- * Lame Object.keys() polyfill for now.
- */
-
-if (!Object.keys) {
-  Object.keys = function(obj){
-    var arr = [];
-    for (var key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        arr.push(key);
-      }
-    }
-    return arr;
-  } 
-}
-
-/**
- * Render the given attributes object.
- *
- * @param {Object} obj
- * @return {String}
- * @api private
- */
-
-exports.attrs = function attrs(obj){
-  var buf = []
-    , terse = obj.terse;
-  delete obj.terse;
-  var keys = Object.keys(obj)
-    , len = keys.length;
-  if (len) {
-    buf.push('');
-    for (var i = 0; i < len; ++i) {
-      var key = keys[i]
-        , val = obj[key];
-      if ('boolean' == typeof val || null == val) {
-        if (val) {
-          terse
-            ? buf.push(key)
-            : buf.push(key + '="' + key + '"');
-        }
-      } else if ('class' == key && Array.isArray(val)) {
-        buf.push(key + '="' + exports.escape(val.join(' ')) + '"');
-      } else {
-        buf.push(key + '="' + exports.escape(val) + '"');
-      }
-    }
-  }
-  return buf.join(' ');
-};
-
-/**
- * Escape the given string of `html`.
- *
- * @param {String} html
- * @return {String}
- * @api private
- */
-
-exports.escape = function escape(html){
-  return String(html)
-    .replace(/&(?!\w+;)/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-};
-
-/**
- * Re-throw the given `err` in context to the
- * the jade in `filename` at the given `lineno`.
- *
- * @param {Error} err
- * @param {String} filename
- * @param {String} lineno
- * @api private
- */
-
-exports.rethrow = function rethrow(err, filename, lineno){
-  if (!filename) throw err;
-
-  var context = 3
-    , str = require('fs').readFileSync(filename, 'utf8')
-    , lines = str.split('\n')
-    , start = Math.max(lineno - context, 0)
-    , end = Math.min(lines.length, lineno + context); 
-
-  // Error context
-  var context = lines.slice(start, end).map(function(line, i){
-    var curr = i + start + 1;
-    return (curr == lineno ? '  > ' : '    ')
-      + curr
-      + '| '
-      + line;
-  }).join('\n');
-
-  // Alter exception message
-  err.path = filename;
-  err.message = (filename || 'Jade') + ':' + lineno 
-    + '\n' + context + '\n\n' + err.message;
-  throw err;
-};
-
-  return exports;
-
-})({});/*
+}).call(this);/*
  * jsTree 1.0-rc3
  * http://jstree.com/
  *
@@ -16283,4 +16161,2829 @@ exports.rethrow = function rethrow(err, filename, lineno){
 })(jQuery);
 //*/
 
+})();/*
+ * jquery.layout 1.2.0
+ *
+ * Copyright (c) 2008 
+ *   Fabrizio Balliano (http://www.fabrizioballiano.net)
+ *   Kevin Dalman (http://allpro.net)
+ *
+ * Dual licensed under the GPL (http://www.gnu.org/licenses/gpl.html)
+ * and MIT (http://www.opensource.org/licenses/mit-license.php) licenses.
+ *
+ * $Date: 2008-12-27 02:17:22 +0100 (sab, 27 dic 2008) $
+ * $Rev: 203 $
+ * 
+ * NOTE: For best code readability, view this with a fixed-space font and tabs equal to 4-chars
+ */
+(function($) {
+
+$.fn.layout = function (opts) {
+
+/*
+ * ###########################
+ *   WIDGET CONFIG & OPTIONS
+ * ###########################
+ */
+
+	// DEFAULTS for options
+	var 
+		prefix = "ui-layout-" // prefix for ALL selectors and classNames
+	,	defaults = { //	misc default values
+			paneClass:				prefix+"pane"		// ui-layout-pane
+		,	resizerClass:			prefix+"resizer"	// ui-layout-resizer
+		,	togglerClass:			prefix+"toggler"	// ui-layout-toggler
+		,	togglerInnerClass:		prefix+""			// ui-layout-open / ui-layout-closed
+		,	buttonClass:			prefix+"button"		// ui-layout-button
+		,	contentSelector:		"."+prefix+"content"// ui-layout-content
+		,	contentIgnoreSelector:	"."+prefix+"ignore"	// ui-layout-mask 
+		}
+	;
+
+	// DEFAULT PANEL OPTIONS - CHANGE IF DESIRED
+	var options = {
+		name:						""			// FUTURE REFERENCE - not used right now
+	,	scrollToBookmarkOnLoad:		true		// after creating a layout, scroll to bookmark in URL (.../page.htm#myBookmark)
+	,	defaults: { // default options for 'all panes' - will be overridden by 'per-pane settings'
+			applyDefaultStyles: 	false		// apply basic styles directly to resizers & buttons? If not, then stylesheet must handle it
+		,	closable:				true		// pane can open & close
+		,	resizable:				true		// when open, pane can be resized 
+		,	slidable:				true		// when closed, pane can 'slide' open over other panes - closes on mouse-out
+		//,	paneSelector:			[ ]			// MUST be pane-specific!
+		,	contentSelector:		defaults.contentSelector	// INNER div/element to auto-size so only it scrolls, not the entire pane!
+		,	contentIgnoreSelector:	defaults.contentIgnoreSelector	// elem(s) to 'ignore' when measuring 'content'
+		,	paneClass:				defaults.paneClass		// border-Pane - default: 'ui-layout-pane'
+		,	resizerClass:			defaults.resizerClass	// Resizer Bar		- default: 'ui-layout-resizer'
+		,	togglerClass:			defaults.togglerClass	// Toggler Button	- default: 'ui-layout-toggler'
+		,	buttonClass:			defaults.buttonClass	// CUSTOM Buttons	- default: 'ui-layout-button-toggle/-open/-close/-pin'
+		,	resizerDragOpacity:		1			// option for ui.draggable
+		//,	resizerCursor:			""			// MUST be pane-specific - cursor when over resizer-bar
+		,	maskIframesOnResize:	true		// true = all iframes OR = iframe-selector(s) - adds masking-div during resizing/dragging
+		//,	size:					100			// inital size of pane - defaults are set 'per pane'
+		,	minSize:				0			// when manually resizing a pane
+		,	maxSize:				0			// ditto, 0 = no limit
+		,	spacing_open:			6			// space between pane and adjacent panes - when pane is 'open'
+		,	spacing_closed:			6			// ditto - when pane is 'closed'
+		,	togglerLength_open:		50			// Length = WIDTH of toggler button on north/south edges - HEIGHT on east/west edges
+		,	togglerLength_closed: 	50			// 100% OR -1 means 'full height/width of resizer bar' - 0 means 'hidden'
+		,	togglerAlign_open:		"center"	// top/left, bottom/right, center, OR...
+		,	togglerAlign_closed:	"center"	// 1 => nn = offset from top/left, -1 => -nn == offset from bottom/right
+		,	togglerTip_open:		"Close"		// Toggler tool-tip (title)
+		,	togglerTip_closed:		"Open"		// ditto
+		,	resizerTip:				"Resize"	// Resizer tool-tip (title)
+		,	sliderTip:				"Slide Open" // resizer-bar triggers 'sliding' when pane is closed
+		,	sliderCursor:			"pointer"	// cursor when resizer-bar will trigger 'sliding'
+		,	slideTrigger_open:		"click"		// click, dblclick, mouseover
+		,	slideTrigger_close:		"mouseout"	// click, mouseout
+		,	hideTogglerOnSlide:		false		// when pane is slid-open, should the toggler show?
+		,	togglerContent_open:	""			// text or HTML to put INSIDE the toggler
+		,	togglerContent_closed:	""			// ditto
+		,	showOverflowOnHover:	false		// will bind allowOverflow() utility to pane.onMouseOver
+		,	enableCursorHotkey:		true		// enabled 'cursor' hotkeys
+		//,	customHotkey:			""			// MUST be pane-specific - EITHER a charCode OR a character
+		,	customHotkeyModifier:	"SHIFT"		// either 'SHIFT', 'CTRL' or 'CTRL+SHIFT' - NOT 'ALT'
+		//	NOTE: fxSss_open & fxSss_close options (eg: fxName_open) are auto-generated if not passed
+		,	fxName:					"slide" 	// ('none' or blank), slide, drop, scale
+		,	fxSpeed:				null		// slow, normal, fast, 200, nnn - if passed, will OVERRIDE fxSettings.duration
+		,	fxSettings:				{}			// can be passed, eg: { easing: "easeOutBounce", duration: 1500 }
+		,	initClosed:				false		// true = init pane as 'closed'
+		,	initHidden: 			false 		// true = init pane as 'hidden' - no resizer or spacing
+		
+		/*	callback options do not have to be set - listed here for reference only
+		,	onshow_start:			""			// CALLBACK when pane STARTS to Show	- BEFORE onopen/onhide_start
+		,	onshow_end:				""			// CALLBACK when pane ENDS being Shown	- AFTER  onopen/onhide_end
+		,	onhide_start:			""			// CALLBACK when pane STARTS to Close	- BEFORE onclose_start
+		,	onhide_end:				""			// CALLBACK when pane ENDS being Closed	- AFTER  onclose_end
+		,	onopen_start:			""			// CALLBACK when pane STARTS to Open
+		,	onopen_end:				""			// CALLBACK when pane ENDS being Opened
+		,	onclose_start:			""			// CALLBACK when pane STARTS to Close
+		,	onclose_end:			""			// CALLBACK when pane ENDS being Closed
+		,	onresize_start:			""			// CALLBACK when pane STARTS to be ***MANUALLY*** Resized
+		,	onresize_end:			""			// CALLBACK when pane ENDS being Resized ***FOR ANY REASON***
+		*/
+		}
+	,	north: {
+			paneSelector:			"."+prefix+"north" // default = .ui-layout-north
+		,	size:					"auto"
+		,	resizerCursor:			"n-resize"
+		}
+	,	south: {
+			paneSelector:			"."+prefix+"south" // default = .ui-layout-south
+		,	size:					"auto"
+		,	resizerCursor:			"s-resize"
+		}
+	,	east: {
+			paneSelector:			"."+prefix+"east" // default = .ui-layout-east
+		,	size:					200
+		,	resizerCursor:			"e-resize"
+		}
+	,	west: {
+			paneSelector:			"."+prefix+"west" // default = .ui-layout-west
+		,	size:					200
+		,	resizerCursor:			"w-resize"
+		}
+	,	center: {
+			paneSelector:			"."+prefix+"center" // default = .ui-layout-center
+		}
+
+	};
+
+
+	var effects = { // LIST *PREDEFINED EFFECTS* HERE, even if effect has no settings
+		slide:	{
+			all:	{ duration:  "fast"	} // eg: duration: 1000, easing: "easeOutBounce"
+		,	north:	{ direction: "up"	}
+		,	south:	{ direction: "down"	}
+		,	east:	{ direction: "right"}
+		,	west:	{ direction: "left"	}
+		}
+	,	drop:	{
+			all:	{ duration:  "slow"	} // eg: duration: 1000, easing: "easeOutQuint"
+		,	north:	{ direction: "up"	}
+		,	south:	{ direction: "down"	}
+		,	east:	{ direction: "right"}
+		,	west:	{ direction: "left"	}
+		}
+	,	scale:	{
+			all:	{ duration:  "fast"	}
+		}
+	};
+
+
+	// STATIC, INTERNAL CONFIG - DO NOT CHANGE THIS!
+	var config = {
+		allPanes:		"north,south,east,west,center"
+	,	borderPanes:	"north,south,east,west"
+	,	zIndex: { // set z-index values here
+			resizer_normal:	1		// normal z-index for resizer-bars
+		,	pane_normal:	2		// normal z-index for panes
+		,	mask:			4		// overlay div used to mask pane(s) during resizing
+		,	sliding:		100		// applied to both the pane and its resizer when a pane is 'slid open'
+		,	resizing:		10000	// applied to the CLONED resizer-bar when being 'dragged'
+		,	animation:		10000	// applied to the pane when being animated - not applied to the resizer
+		}
+	,	resizers: {
+			cssReq: {
+				position: 	"absolute"
+			,	padding: 	0
+			,	margin: 	0
+			,	fontSize:	"1px"
+			,	textAlign:	"left" // to counter-act "center" alignment!
+			,	overflow: 	"hidden" // keep toggler button from overflowing
+			,	zIndex: 	1
+			}
+		,	cssDef: { // DEFAULT CSS - applied if: options.PANE.applyDefaultStyles=true
+				background: "#DDD"
+			,	border:		"none"
+			}
+		}
+	,	togglers: {
+			cssReq: {
+				position: 	"absolute"
+			,	display: 	"block"
+			,	padding: 	0
+			,	margin: 	0
+			,	overflow:	"hidden"
+			,	textAlign:	"center"
+			,	fontSize:	"1px"
+			,	cursor: 	"pointer"
+			,	zIndex: 	1
+			}
+		,	cssDef: { // DEFAULT CSS - applied if: options.PANE.applyDefaultStyles=true
+				background: "#AAA"
+			}
+		}
+	,	content: {
+			cssReq: {
+				overflow:	"auto"
+			}
+		,	cssDef: {}
+		}
+	,	defaults: { // defaults for ALL panes - overridden by 'per-pane settings' below
+			cssReq: {
+				position: 	"absolute"
+			,	margin:		0
+			,	zIndex: 	2
+			}
+		,	cssDef: {
+				padding:	"10px"
+			,	background:	"#FFF"
+			,	border:		"1px solid #BBB"
+			,	overflow:	"auto"
+			}
+		}
+	,	north: {
+			edge:			"top"
+		,	sizeType:		"height"
+		,	dir:			"horz"
+		,	cssReq: {
+				top: 		0
+			,	bottom: 	"auto"
+			,	left: 		0
+			,	right: 		0
+			,	width: 		"auto"
+			//	height: 	DYNAMIC
+			}
+		}
+	,	south: {
+			edge:			"bottom"
+		,	sizeType:		"height"
+		,	dir:			"horz"
+		,	cssReq: {
+				top: 		"auto"
+			,	bottom: 	0
+			,	left: 		0
+			,	right: 		0
+			,	width: 		"auto"
+			//	height: 	DYNAMIC
+			}
+		}
+	,	east: {
+			edge:			"right"
+		,	sizeType:		"width"
+		,	dir:			"vert"
+		,	cssReq: {
+				left: 		"auto"
+			,	right: 		0
+			,	top: 		"auto" // DYNAMIC
+			,	bottom: 	"auto" // DYNAMIC
+			,	height: 	"auto"
+			//	width: 		DYNAMIC
+			}
+		}
+	,	west: {
+			edge:			"left"
+		,	sizeType:		"width"
+		,	dir:			"vert"
+		,	cssReq: {
+				left: 		0
+			,	right: 		"auto"
+			,	top: 		"auto" // DYNAMIC
+			,	bottom: 	"auto" // DYNAMIC
+			,	height: 	"auto"
+			//	width: 		DYNAMIC
+			}
+		}
+	,	center: {
+			dir:			"center"
+		,	cssReq: {
+				left: 		"auto" // DYNAMIC
+			,	right: 		"auto" // DYNAMIC
+			,	top: 		"auto" // DYNAMIC
+			,	bottom: 	"auto" // DYNAMIC
+			,	height: 	"auto"
+			,	width: 		"auto"
+			}
+		}
+	};
+
+
+	// DYNAMIC DATA
+	var state = {
+		// generate random 'ID#' to identify layout - used to create global namespace for timers
+		id:			Math.floor(Math.random() * 10000)
+	,	container:	{}
+	,	north:		{}
+	,	south:		{}
+	,	east:		{}
+	,	west:		{}
+	,	center:		{}
+	};
+
+
+	var 
+		altEdge = {
+			top:	"bottom"
+		,	bottom: "top"
+		,	left:	"right"
+		,	right:	"left"
+		}
+	,	altSide = {
+			north:	"south"
+		,	south:	"north"
+		,	east: 	"west"
+		,	west: 	"east"
+		}
+	;
+
+
+/*
+ * ###########################
+ *  INTERNAL HELPER FUNCTIONS
+ * ###########################
+ */
+
+	/**
+	 * isStr
+	 *
+	 * Returns true if passed param is EITHER a simple string OR a 'string object' - otherwise returns false
+	 */
+	var isStr = function (o) {
+		if (typeof o == "string")
+			return true;
+		else if (typeof o == "object") {
+			try {
+				var match = o.constructor.toString().match(/string/i); 
+				return (match !== null);
+			} catch (e) {} 
+		}
+		return false;
+	};
+
+	/**
+	 * str
+	 *
+	 * Returns a simple string if the passed param is EITHER a simple string OR a 'string object',
+	 *  else returns the original object
+	 */
+	var str = function (o) {
+		if (typeof o == "string" || isStr(o)) return $.trim(o); // trim converts 'String object' to a simple string
+		else return o;
+	};
+
+	/**
+	 * min / max
+	 *
+	 * Alias for Math.min/.max to simplify coding
+	 */
+	var min = function (x,y) { return Math.min(x,y); };
+	var max = function (x,y) { return Math.max(x,y); };
+
+	/**
+	 * transformData
+	 *
+	 * Processes the options passed in and transforms them into the format used by layout()
+	 * Missing keys are added, and converts the data if passed in 'flat-format' (no sub-keys)
+	 * In flat-format, pane-specific-settings are prefixed like: north__optName  (2-underscores)
+	 * To update effects, options MUST use nested-keys format, with an effects key
+	 *
+	 * @callers  initOptions()
+	 * @params  JSON  d  Data/options passed by user - may be a single level or nested levels
+	 * @returns JSON  Creates a data struture that perfectly matches 'options', ready to be imported
+	 */
+	var transformData = function (d) {
+		var json = { defaults:{fxSettings:{}}, north:{fxSettings:{}}, south:{fxSettings:{}}, east:{fxSettings:{}}, west:{fxSettings:{}}, center:{fxSettings:{}} };
+		d = d || {};
+		if (d.effects || d.defaults || d.north || d.south || d.west || d.east || d.center)
+			json = $.extend( json, d ); // already in json format - add to base keys
+		else
+			// convert 'flat' to 'nest-keys' format - also handles 'empty' user-options
+			$.each( d, function (key,val) {
+				a = key.split("__");
+				json[ a[1] ? a[0] : "defaults" ][ a[1] ? a[1] : a[0] ] = val;
+			});
+		return json;
+	};
+
+	/**
+	 * setFlowCallback
+	 *
+	 * Set an INTERNAL callback to avoid simultaneous animation
+	 * Runs only if needed and only if all callbacks are not 'already set'!
+	 *
+	 * @param String   action  Either 'open' or 'close'
+	 * @pane  String   pane    A valid border-pane name, eg 'west'
+	 * @pane  Boolean  param   Extra param for callback (optional)
+	 */
+	var setFlowCallback = function (action, pane, param) {
+		var
+			cb = action +","+ pane +","+ (param ? 1 : 0)
+		,	cP, cbPane
+		;
+		$.each(c.borderPanes.split(","), function (i,p) {
+			if (c[p].isMoving) {
+				bindCallback(p); // TRY to bind a callback
+				return false; // BREAK
+			}
+		});
+
+		function bindCallback (p, test) {
+			cP = c[p];
+			if (!cP.doCallback) {
+				cP.doCallback = true;
+				cP.callback = cb;
+			}
+			else { // try to 'chain' this callback
+				cpPane = cP.callback.split(",")[1]; // 2nd param is 'pane'
+				if (cpPane != p && cpPane != pane) // callback target NOT 'itself' and NOT 'this pane'
+					bindCallback (cpPane, true); // RECURSE
+			}
+		}
+	};
+
+	/**
+	 * execFlowCallback
+	 *
+	 * RUN the INTERNAL callback for this pane - if one exists
+	 *
+	 * @param String   action  Either 'open' or 'close'
+	 * @pane  String   pane    A valid border-pane name, eg 'west'
+	 * @pane  Boolean  param   Extra param for callback (optional)
+	 */
+	var execFlowCallback = function (pane) {
+		var cP = c[pane];
+
+		// RESET flow-control flaGs
+		c.isLayoutBusy = false;
+		delete cP.isMoving;
+		if (!cP.doCallback || !cP.callback) return;
+
+		cP.doCallback = false; // RESET logic flag
+
+		// EXECUTE the callback
+		var
+			cb = cP.callback.split(",")
+		,	param = (cb[2] > 0 ? true : false)
+		;
+		if (cb[0] == "open")
+			open( cb[1], param  );
+		else if (cb[0] == "close")
+			close( cb[1], param );
+
+		if (!cP.doCallback) cP.callback = null; // RESET - unless callback above enabled it again!
+	};
+
+	/**
+	 * execUserCallback
+	 *
+	 * Executes a Callback function after a trigger event, like resize, open or close
+	 *
+	 * @param String  pane   This is passed only so we can pass the 'pane object' to the callback
+	 * @param String  v_fn  Accepts a function name, OR a comma-delimited array: [0]=function name, [1]=argument
+	 */
+	var execUserCallback = function (pane, v_fn) {
+		if (!v_fn) return;
+		var fn;
+		try {
+			if (typeof v_fn == "function")
+				fn = v_fn;	
+			else if (typeof v_fn != "string")
+				return;
+			else if (v_fn.indexOf(",") > 0) {
+				// function name cannot contain a comma, so must be a function name AND a 'name' parameter
+				var
+					args = v_fn.split(",")
+				,	fn = eval(args[0])
+				;
+				if (typeof fn=="function" && args.length > 1)
+					return fn(args[1]); // pass the argument parsed from 'list'
+			}
+			else // just the name of an external function?
+				fn = eval(v_fn);
+
+			if (typeof fn=="function")
+				// pass data: pane-name, pane-element, pane-state, pane-options, and layout-name
+				return fn( pane, $Ps[pane], $.extend({},state[pane]), $.extend({},options[pane]), options.name );
+		}
+		catch (ex) {}
+	};
+
+	/**
+	 * cssNum
+	 *
+	 * Returns the 'current CSS value' for an element - returns 0 if property does not exist
+	 *
+	 * @callers  Called by many methods
+	 * @param jQuery  $Elem  Must pass a jQuery object - first element is processed
+	 * @param String  property  The name of the CSS property, eg: top, width, etc.
+	 * @returns Variant  Usually is used to get an integer value for position (top, left) or size (height, width)
+	 */
+	var cssNum = function ($E, prop) {
+		var
+			val = 0
+		,	hidden = false
+		,	visibility = ""
+		;
+		if (!$.browser.msie) { // IE CAN read dimensions of 'hidden' elements - FF CANNOT
+			if ($.curCSS($E[0], "display", true) == "none") {
+				hidden = true;
+				visibility = $.curCSS($E[0], "visibility", true); // SAVE current setting
+				$E.css({ display: "block", visibility: "hidden" }); // show element 'invisibly' so we can measure it
+			}
+		}
+
+		val = parseInt($.curCSS($E[0], prop, true), 10) || 0;
+
+		if (hidden) { // WAS hidden, so put back the way it was
+			$E.css({ display: "none" });
+			if (visibility && visibility != "hidden")
+				$E.css({ visibility: visibility }); // reset 'visibility'
+		}
+
+		return val;
+	};
+
+	/**
+	 * cssW / cssH / cssSize
+	 *
+	 * Contains logic to check boxModel & browser, and return the correct width/height for the current browser/doctype
+	 *
+	 * @callers  initPanes(), sizeMidPanes(), initHandles(), sizeHandles()
+	 * @param Variant  elem  Can accept a 'pane' (east, west, etc) OR a DOM object OR a jQuery object
+	 * @param Integer  outerWidth/outerHeight  (optional) Can pass a width, allowing calculations BEFORE element is resized
+	 * @returns Integer  Returns the innerHeight of the elem by subtracting padding and borders
+	 *
+	 * @TODO  May need to add additional logic to handle more browser/doctype variations?
+	 */
+	var cssW = function (e, outerWidth) {
+		var $E;
+		if (isStr(e)) {
+			e = str(e);
+			$E = $Ps[e];
+		}
+		else
+			$E = $(e);
+
+		// a 'calculated' outerHeight can be passed so borders and/or padding are removed if needed
+		if (outerWidth <= 0)
+			return 0;
+		else if (!(outerWidth>0))
+			outerWidth = isStr(e) ? getPaneSize(e) : $E.outerWidth();
+
+		if (!$.boxModel)
+			return outerWidth;
+
+		else // strip border and padding size from outerWidth to get CSS Width
+			return outerWidth
+				- cssNum($E, "paddingLeft")		
+				- cssNum($E, "paddingRight")
+				- ($.curCSS($E[0], "borderLeftStyle", true) == "none" ? 0 : cssNum($E, "borderLeftWidth"))
+				- ($.curCSS($E[0], "borderRightStyle", true) == "none" ? 0 : cssNum($E, "borderRightWidth"))
+			;
+	};
+	var cssH = function (e, outerHeight) {
+		var $E;
+		if (isStr(e)) {
+			e = str(e);
+			$E = $Ps[e];
+		}
+		else
+			$E = $(e);
+
+		// a 'calculated' outerHeight can be passed so borders and/or padding are removed if needed
+		if (outerHeight <= 0)
+			return 0;
+		else if (!(outerHeight>0))
+			outerHeight = (isStr(e)) ? getPaneSize(e) : $E.outerHeight();
+
+		if (!$.boxModel)
+			return outerHeight;
+
+		else // strip border and padding size from outerHeight to get CSS Height
+			return outerHeight
+				- cssNum($E, "paddingTop")
+				- cssNum($E, "paddingBottom")
+				- ($.curCSS($E[0], "borderTopStyle", true) == "none" ? 0 : cssNum($E, "borderTopWidth"))
+				- ($.curCSS($E[0], "borderBottomStyle", true) == "none" ? 0 : cssNum($E, "borderBottomWidth"))
+			;
+	};
+	var cssSize = function (pane, outerSize) {
+		if (c[pane].dir=="horz") // pane = north or south
+			return cssH(pane, outerSize);
+		else // pane = east or west
+			return cssW(pane, outerSize);
+	};
+
+	/**
+	 * getPaneSize
+	 *
+	 * Calculates the current 'size' (width or height) of a border-pane - optionally with 'pane spacing' added
+	 *
+	 * @returns Integer  Returns EITHER Width for east/west panes OR Height for north/south panes - adjusted for boxModel & browser
+	 */
+	var getPaneSize = function (pane, inclSpace) {
+		var 
+			$P	= $Ps[pane]
+		,	o	= options[pane]
+		,	s	= state[pane]
+		,	oSp	= (inclSpace ? o.spacing_open : 0)
+		,	cSp	= (inclSpace ? o.spacing_closed : 0)
+		;
+		if (!$P || s.isHidden)
+			return 0;
+		else if (s.isClosed || (s.isSliding && inclSpace))
+			return cSp;
+		else if (c[pane].dir == "horz")
+			return $P.outerHeight() + oSp;
+		else // dir == "vert"
+			return $P.outerWidth() + oSp;
+	};
+
+	var setPaneMinMaxSizes = function (pane) {
+		var 
+			d				= cDims
+		,	edge			= c[pane].edge
+		,	dir				= c[pane].dir
+		,	o				= options[pane]
+		,	s				= state[pane]
+		,	$P				= $Ps[pane]
+		,	$altPane		= $Ps[ altSide[pane] ]
+		,	paneSpacing		= o.spacing_open
+		,	altPaneSpacing	= options[ altSide[pane] ].spacing_open
+		,	altPaneSize		= (!$altPane ? 0 : (dir=="horz" ? $altPane.outerHeight() : $altPane.outerWidth()))
+		,	containerSize	= (dir=="horz" ? d.innerHeight : d.innerWidth)
+		//	limitSize prevents this pane from 'overlapping' opposite pane - even if opposite pane is currently closed
+		,	limitSize		= containerSize - paneSpacing - altPaneSize - altPaneSpacing
+		,	minSize			= s.minSize || 0
+		,	maxSize			= Math.min(s.maxSize || 9999, limitSize)
+		,	minPos, maxPos	// used to set resizing limits
+		;
+		switch (pane) {
+			case "north":	minPos = d.offsetTop + minSize;
+							maxPos = d.offsetTop + maxSize;
+							break;
+			case "west":	minPos = d.offsetLeft + minSize;
+							maxPos = d.offsetLeft + maxSize;
+							break;
+			case "south":	minPos = d.offsetTop + d.innerHeight - maxSize;
+							maxPos = d.offsetTop + d.innerHeight - minSize;
+							break;
+			case "east":	minPos = d.offsetLeft + d.innerWidth - maxSize;
+							maxPos = d.offsetLeft + d.innerWidth - minSize;
+							break;
+		}
+		// save data to pane-state
+		$.extend(s, { minSize: minSize, maxSize: maxSize, minPosition: minPos, maxPosition: maxPos });
+	};
+
+	/**
+	 * getPaneDims
+	 *
+	 * Returns data for setting the size/position of center pane. Date is also used to set Height for east/west panes
+	 *
+	 * @returns JSON  Returns a hash of all dimensions: top, bottom, left, right, (outer) width and (outer) height
+	 */
+	var getPaneDims = function () {
+		var d = {
+			top:	getPaneSize("north", true) // true = include 'spacing' value for p
+		,	bottom:	getPaneSize("south", true)
+		,	left:	getPaneSize("west", true)
+		,	right:	getPaneSize("east", true)
+		,	width:	0
+		,	height:	0
+		};
+
+		with (d) {
+			width 	= cDims.innerWidth - left - right;
+			height 	= cDims.innerHeight - bottom - top;
+			// now add the 'container border/padding' to get final positions - relative to the container
+			top		+= cDims.top;
+			bottom	+= cDims.bottom;
+			left	+= cDims.left;
+			right	+= cDims.right;
+		}
+
+		return d;
+	};
+
+
+	/**
+	 * getElemDims
+	 *
+	 * Returns data for setting size of an element (container or a pane).
+	 *
+	 * @callers  create(), onWindowResize() for container, plus others for pane
+	 * @returns JSON  Returns a hash of all dimensions: top, bottom, left, right, outerWidth, innerHeight, etc
+	 */
+	var getElemDims = function ($E) {
+		var
+			d = {} // dimensions hash
+		,	e, b, p // edge, border, padding
+		;
+
+		$.each("Left,Right,Top,Bottom".split(","), function () {
+			e = str(this);
+			b = d["border" +e] = cssNum($E, "border"+e+"Width");
+			p = d["padding"+e] = cssNum($E, "padding"+e);
+			d["offset" +e] = b + p; // total offset of content from outer edge
+			// if BOX MODEL, then 'position' = PADDING (ignore borderWidth)
+			if ($E == $Container)
+				d[e.toLowerCase()] = ($.boxModel ? p : 0); 
+		});
+
+		d.innerWidth  = d.outerWidth  = $E.outerWidth();
+		d.innerHeight = d.outerHeight = $E.outerHeight();
+		if ($.boxModel) {
+			d.innerWidth  -= (d.offsetLeft + d.offsetRight);
+			d.innerHeight -= (d.offsetTop  + d.offsetBottom);
+		}
+
+		return d;
+	};
+
+
+	var setTimer = function (pane, action, fn, ms) {
+		var
+			Layout = window.layout = window.layout || {}
+		,	Timers = Layout.timers = Layout.timers || {}
+		,	name = "layout_"+ state.id +"_"+ pane +"_"+ action // UNIQUE NAME for every layout-pane-action
+		;
+		if (Timers[name]) return; // timer already set!
+		else Timers[name] = setTimeout(fn, ms);
+	};
+
+	var clearTimer = function (pane, action) {
+		var
+			Layout = window.layout = window.layout || {}
+		,	Timers = Layout.timers = Layout.timers || {}
+		,	name = "layout_"+ state.id +"_"+ pane +"_"+ action // UNIQUE NAME for every layout-pane-action
+		;
+		if (Timers[name]) {
+			clearTimeout( Timers[name] );
+			delete Timers[name];
+			return true;
+		}
+		else
+			return false;
+	};
+
+
+/*
+ * ###########################
+ *   INITIALIZATION METHODS
+ * ###########################
+ */
+
+	/**
+	 * create
+	 *
+	 * Initialize the layout - called automatically whenever an instance of layout is created
+	 *
+	 * @callers  NEVER explicity called
+	 * @returns  An object pointer to the instance created
+	 */
+	var create = function () {
+		// initialize config/options
+		initOptions();
+
+		// initialize all objects
+		initContainer();	// set CSS as needed and init state.container dimensions
+		initPanes();		// size & position all panes
+		initHandles();		// create and position all resize bars & togglers buttons
+		initResizable();	// activate resizing on all panes where resizable=true
+		sizeContent("all");	// AFTER panes & handles have been initialized, size 'content' divs
+
+		if (options.scrollToBookmarkOnLoad)
+			with (self.location) if (hash) replace( hash ); // scrollTo Bookmark
+
+		// bind hotkey function - keyDown - if required
+		initHotkeys();
+
+		// bind resizeAll() for 'this layout instance' to window.resize event
+		$(window).resize(function () {
+			var timerID = "timerLayout_"+state.id;
+			if (window[timerID]) clearTimeout(window[timerID]);
+			window[timerID] = null;
+			if (true || $.browser.msie) // use a delay for IE because the resize event fires repeatly
+				window[timerID] = setTimeout(resizeAll, 100);
+			else // most other browsers have a built-in delay before firing the resize event
+				resizeAll(); // resize all layout elements NOW!
+		});
+	};
+
+	/**
+	 * initContainer
+	 *
+	 * Validate and initialize container CSS and events
+	 *
+	 * @callers  create()
+	 */
+	var initContainer = function () {
+		try { // format html/body if this is a full page layout
+			if ($Container[0].tagName == "BODY") {
+				$("html").css({
+					height:		"100%"
+				,	overflow:	"hidden"
+				});
+				$("body").css({
+					position:	"relative"
+				,	height:		"100%"
+				,	overflow:	"hidden"
+				,	margin:		0
+				,	padding:	0		// TODO: test whether body-padding could be handled?
+				,	border:		"none"	// a body-border creates problems because it cannot be measured!
+				});
+			}
+			else { // set required CSS - overflow and position
+				var
+					CSS	= { overflow: "hidden" } // make sure container will not 'scroll'
+				,	p	= $Container.css("position")
+				,	h	= $Container.css("height")
+				;
+				// if this is a NESTED layout, then outer-pane ALREADY has position and height
+				if (!$Container.hasClass("ui-layout-pane")) {
+					if (!p || "fixed,absolute,relative".indexOf(p) < 0)
+						CSS.position = "relative"; // container MUST have a 'position'
+					if (!h || h=="auto")
+						CSS.height = "100%"; // container MUST have a 'height'
+				}
+				$Container.css( CSS );
+			}
+		} catch (ex) {}
+
+		// get layout-container dimensions (updated when necessary)
+		cDims = state.container = getElemDims( $Container ); // update data-pointer too
+	};
+
+	/**
+	 * initHotkeys
+	 *
+	 * Bind layout hotkeys - if options enabled
+	 *
+	 * @callers  create()
+	 */
+	var initHotkeys = function () {
+		// bind keyDown to capture hotkeys, if option enabled for ANY pane
+		$.each(c.borderPanes.split(","), function (i,pane) {
+			var o = options[pane];
+			if (o.enableCursorHotkey || o.customHotkey) {
+				$(document).keydown( keyDown ); // only need to bind this ONCE
+				return false; // BREAK - binding was done
+			}
+		});
+	};
+
+	/**
+	 * initOptions
+	 *
+	 * Build final CONFIG and OPTIONS data
+	 *
+	 * @callers  create()
+	 */
+	var initOptions = function () {
+		// simplify logic by making sure passed 'opts' var has basic keys
+		opts = transformData( opts );
+
+		// update default effects, if case user passed key
+		if (opts.effects) {
+			$.extend( effects, opts.effects );
+			delete opts.effects;
+		}
+
+		// see if any 'global options' were specified
+		$.each("name,scrollToBookmarkOnLoad".split(","), function (idx,key) {
+			if (opts[key] !== undefined)
+				options[key] = opts[key];
+			else if (opts.defaults[key] !== undefined) {
+				options[key] = opts.defaults[key];
+				delete opts.defaults[key];
+			}
+		});
+
+		// remove any 'defaults' that MUST be set 'per-pane'
+		$.each("paneSelector,resizerCursor,customHotkey".split(","),
+			function (idx,key) { delete opts.defaults[key]; } // is OK if key does not exist
+		);
+
+		// now update options.defaults
+		$.extend( options.defaults, opts.defaults );
+		// make sure required sub-keys exist
+		//if (typeof options.defaults.fxSettings != "object") options.defaults.fxSettings = {};
+
+		// merge all config & options for the 'center' pane
+		c.center = $.extend( true, {}, c.defaults, c.center );
+		$.extend( options.center, opts.center );
+		// Most 'default options' do not apply to 'center', so add only those that DO
+		var o_Center = $.extend( true, {}, options.defaults, opts.defaults, options.center ); // TEMP data
+		$.each("paneClass,contentSelector,contentIgnoreSelector,applyDefaultStyles,showOverflowOnHover".split(","),
+			function (idx,key) { options.center[key] = o_Center[key]; }
+		);
+
+		var defs = options.defaults;
+
+		// create a COMPLETE set of options for EACH border-pane
+		$.each(c.borderPanes.split(","), function(i,pane) {
+			// apply 'pane-defaults' to CONFIG.PANE
+			c[pane] = $.extend( true, {}, c.defaults, c[pane] );
+			// apply 'pane-defaults' +  user-options to OPTIONS.PANE
+			o = options[pane] = $.extend( true, {}, options.defaults, options[pane], opts.defaults, opts[pane] );
+
+			// make sure we have base-classes
+			if (!o.paneClass)		o.paneClass		= defaults.paneClass;
+			if (!o.resizerClass)	o.resizerClass	= defaults.resizerClass;
+			if (!o.togglerClass)	o.togglerClass	= defaults.togglerClass;
+
+			// create FINAL fx options for each pane, ie: options.PANE.fxName/fxSpeed/fxSettings[_open|_close]
+			$.each(["_open","_close",""], function (i,n) { 
+				var
+					sName		= "fxName"+n
+				,	sSpeed		= "fxSpeed"+n
+				,	sSettings	= "fxSettings"+n
+				;
+				// recalculate fxName according to specificity rules
+				o[sName] =
+					opts[pane][sName]		// opts.west.fxName_open
+				||	opts[pane].fxName		// opts.west.fxName
+				||	opts.defaults[sName]	// opts.defaults.fxName_open
+				||	opts.defaults.fxName	// opts.defaults.fxName
+				||	o[sName]				// options.west.fxName_open
+				||	o.fxName				// options.west.fxName
+				||	defs[sName]				// options.defaults.fxName_open
+				||	defs.fxName				// options.defaults.fxName
+				||	"none"
+				;
+				// validate fxName to be sure is a valid effect
+				var fxName = o[sName];
+				if (fxName == "none" || !$.effects || !$.effects[fxName] || (!effects[fxName] && !o[sSettings] && !o.fxSettings))
+					fxName = o[sName] = "none"; // effect not loaded, OR undefined FX AND fxSettings not passed
+				// set vars for effects subkeys to simplify logic
+				var
+					fx = effects[fxName]	|| {} // effects.slide
+				,	fx_all	= fx.all		|| {} // effects.slide.all
+				,	fx_pane	= fx[pane]		|| {} // effects.slide.west
+				;
+				// RECREATE the fxSettings[_open|_close] keys using specificity rules
+				o[sSettings] = $.extend(
+					{}
+				,	fx_all						// effects.slide.all
+				,	fx_pane						// effects.slide.west
+				,	defs.fxSettings || {}		// options.defaults.fxSettings
+				,	defs[sSettings] || {}		// options.defaults.fxSettings_open
+				,	o.fxSettings				// options.west.fxSettings
+				,	o[sSettings]				// options.west.fxSettings_open
+				,	opts.defaults.fxSettings	// opts.defaults.fxSettings
+				,	opts.defaults[sSettings] || {} // opts.defaults.fxSettings_open
+				,	opts[pane].fxSettings		// opts.west.fxSettings
+				,	opts[pane][sSettings] || {}	// opts.west.fxSettings_open
+				);
+				// recalculate fxSpeed according to specificity rules
+				o[sSpeed] =
+					opts[pane][sSpeed]		// opts.west.fxSpeed_open
+				||	opts[pane].fxSpeed		// opts.west.fxSpeed (pane-default)
+				||	opts.defaults[sSpeed]	// opts.defaults.fxSpeed_open
+				||	opts.defaults.fxSpeed	// opts.defaults.fxSpeed
+				||	o[sSpeed]				// options.west.fxSpeed_open
+				||	o[sSettings].duration	// options.west.fxSettings_open.duration
+				||	o.fxSpeed				// options.west.fxSpeed
+				||	o.fxSettings.duration	// options.west.fxSettings.duration
+				||	defs.fxSpeed			// options.defaults.fxSpeed
+				||	defs.fxSettings.duration// options.defaults.fxSettings.duration
+				||	fx_pane.duration		// effects.slide.west.duration
+				||	fx_all.duration			// effects.slide.all.duration
+				||	"normal"				// DEFAULT
+				;
+				// DEBUG: if (pane=="east") debugData( $.extend({}, {speed: o[sSpeed], fxSettings_duration: o[sSettings].duration}, o[sSettings]), pane+"."+sName+" = "+fxName );
+			});
+		});
+	};
+
+	/**
+	 * initPanes
+	 *
+	 * Initialize module objects, styling, size and position for all panes
+	 *
+	 * @callers  create()
+	 */
+	var initPanes = function () {
+		// NOTE: do north & south FIRST so we can measure their height - do center LAST
+		$.each(c.allPanes.split(","), function() {
+			var 
+				pane	= str(this)
+			,	o		= options[pane]
+			,	s		= state[pane]
+			,	fx		= s.fx
+			,	dir		= c[pane].dir
+			//	if o.size is not > 0, then we will use MEASURE the pane and use that as it's 'size'
+			,	size	= o.size=="auto" || isNaN(o.size) ? 0 : o.size
+			,	minSize	= o.minSize || 1
+			,	maxSize	= o.maxSize || 9999
+			,	spacing	= o.spacing_open || 0
+			,	sel		= o.paneSelector
+			,	isIE6	= ($.browser.msie && $.browser.version < 7)
+			,	CSS		= {}
+			,	$P, $C
+			;
+			$Cs[pane] = false; // init
+
+			if (sel.substr(0,1)==="#") // ID selector
+				// NOTE: elements selected 'by ID' DO NOT have to be 'children'
+				$P = $Ps[pane] = $Container.find(sel+":first");
+			else { // class or other selector
+				$P = $Ps[pane] = $Container.children(sel+":first");
+				// look for the pane nested inside a 'form' element
+				if (!$P.length) $P = $Ps[pane] = $Container.children("form:first").children(sel+":first");
+			}
+
+			if (!$P.length) {
+				$Ps[pane] = false; // logic
+				return true; // SKIP to next
+			}
+
+			// add basic classes & attributes
+			$P
+				.attr("pane", pane) // add pane-identifier
+				.addClass( o.paneClass +" "+ o.paneClass+"-"+pane ) // default = "ui-layout-pane ui-layout-pane-west" - may be a dupe of 'paneSelector'
+			;
+
+			// init pane-logic vars, etc.
+			if (pane != "center") {
+				s.isClosed  = false; // true = pane is closed
+				s.isSliding = false; // true = pane is currently open by 'sliding' over adjacent panes
+				s.isResizing= false; // true = pane is in process of being resized
+				s.isHidden	= false; // true = pane is hidden - no spacing, resizer or toggler is visible!
+				s.noRoom	= false; // true = pane 'automatically' hidden due to insufficient room - will unhide automatically
+				// create special keys for internal use
+				c[pane].pins = [];   // used to track and sync 'pin-buttons' for border-panes
+			}
+
+			CSS = $.extend({ visibility: "visible", display: "block" }, c.defaults.cssReq, c[pane].cssReq );
+			if (o.applyDefaultStyles) $.extend( CSS, c.defaults.cssDef, c[pane].cssDef ); // cosmetic defaults
+			$P.css(CSS); // add base-css BEFORE 'measuring' to calc size & position
+			CSS = {};	// reset var
+
+			// set css-position to account for container borders & padding
+			switch (pane) {
+				case "north": 	CSS.top 	= cDims.top;
+								CSS.left 	= cDims.left;
+								CSS.right	= cDims.right;
+								break;
+				case "south": 	CSS.bottom	= cDims.bottom;
+								CSS.left 	= cDims.left;
+								CSS.right 	= cDims.right;
+								break;
+				case "west": 	CSS.left 	= cDims.left; // top, bottom & height set by sizeMidPanes()
+								break;
+				case "east": 	CSS.right 	= cDims.right; // ditto
+								break;
+				case "center":	// top, left, width & height set by sizeMidPanes()
+			}
+
+			if (dir == "horz") { // north or south pane
+				if (size === 0 || size == "auto") {
+					$P.css({ height: "auto" });
+					size = $P.outerHeight();
+				}
+				size = max(size, minSize);
+				size = min(size, maxSize);
+				size = min(size, cDims.innerHeight - spacing);
+				CSS.height = max(1, cssH(pane, size));
+				s.size = size; // update state
+				// make sure minSize is sufficient to avoid errors
+				s.maxSize = maxSize; // init value
+				s.minSize = max(minSize, size - CSS.height + 1); // = pane.outerHeight when css.height = 1px
+				// handle IE6
+				//if (isIE6) CSS.width = cssW($P, cDims.innerWidth);
+				$P.css(CSS); // apply size & position
+			}
+			else if (dir == "vert") { // east or west pane
+				if (size === 0 || size == "auto") {
+					$P.css({ width: "auto", float: "left" }); // float = FORCE pane to auto-size
+					size = $P.outerWidth();
+					$P.css({ float: "none" }); // RESET
+				}
+				size = max(size, minSize);
+				size = min(size, maxSize);
+				size = min(size, cDims.innerWidth - spacing);
+				CSS.width = max(1, cssW(pane, size));
+				s.size = size; // update state
+				s.maxSize = maxSize; // init value
+				// make sure minSize is sufficient to avoid errors
+				s.minSize = max(minSize, size - CSS.width + 1); // = pane.outerWidth when css.width = 1px
+				$P.css(CSS); // apply size - top, bottom & height set by sizeMidPanes
+				sizeMidPanes(pane, null, true); // true = onInit
+			}
+			else if (pane == "center") {
+				$P.css(CSS); // top, left, width & height set by sizeMidPanes...
+				sizeMidPanes("center", null, true); // true = onInit
+			}
+
+			// close or hide the pane if specified in settings
+			if (o.initClosed && o.closable) {
+				$P.hide().addClass("closed");
+				s.isClosed = true;
+			}
+			else if (o.initHidden || o.initClosed) {
+				hide(pane, true); // will be completely invisible - no resizer or spacing
+				s.isHidden = true;
+			}
+			else
+				$P.addClass("open");
+
+			// check option for auto-handling of pop-ups & drop-downs
+			if (o.showOverflowOnHover)
+				$P.hover( allowOverflow, resetOverflow );
+
+			/*
+			 *	see if this pane has a 'content element' that we need to auto-size
+			 */
+			if (o.contentSelector) {
+				$C = $Cs[pane] = $P.children(o.contentSelector+":first"); // match 1-element only
+				if (!$C.length) {
+					$Cs[pane] = false;
+					return true; // SKIP to next
+				}
+				$C.css( c.content.cssReq );
+				if (o.applyDefaultStyles) $C.css( c.content.cssDef ); // cosmetic defaults
+				// NO PANE-SCROLLING when there is a content-div
+				$P.css({ overflow: "hidden" });
+			}
+		});
+	};
+
+	/**
+	 * initHandles
+	 *
+	 * Initialize module objects, styling, size and position for all resize bars and toggler buttons
+	 *
+	 * @callers  create()
+	 */
+	var initHandles = function () {
+		// create toggler DIVs for each pane, and set object pointers for them, eg: $R.north = north toggler DIV
+		$.each(c.borderPanes.split(","), function() {
+			var 
+				pane	= str(this)
+			,	o		= options[pane]
+			,	s		= state[pane]
+			,	rClass	= o.resizerClass
+			,	tClass	= o.togglerClass
+			,	$P		= $Ps[pane]
+			;
+			$Rs[pane] = false; // INIT
+			$Ts[pane] = false;
+
+			if (!$P || (!o.closable && !o.resizable)) return; // pane does not exist - skip
+
+			var 
+				edge	= c[pane].edge
+			,	isOpen	= $P.is(":visible")
+			,	spacing	= (isOpen ? o.spacing_open : o.spacing_closed)
+			,	_pane	= "-"+ pane // used for classNames
+			,	_state	= (isOpen ? "-open" : "-closed") // used for classNames
+			,	$R, $T
+			;
+			// INIT RESIZER BAR
+			$R = $Rs[pane] = $("<span></span>");
+	
+			if (isOpen && o.resizable)
+				; // this is handled by initResizable
+			else if (!isOpen && o.slidable)
+				$R.attr("title", o.sliderTip).css("cursor", o.sliderCursor);
+	
+			$R
+				// if paneSelector is an ID, then create a matching ID for the resizer, eg: "#paneLeft" => "paneLeft-resizer"
+				.attr("id", (o.paneSelector.substr(0,1)=="#" ? o.paneSelector.substr(1) + "-resizer" : ""))
+				.attr("resizer", pane) // so we can read this from the resizer
+				.css(c.resizers.cssReq) // add base/required styles
+				// POSITION of resizer bar - allow for container border & padding
+				.css(edge, cDims[edge] + getPaneSize(pane))
+				// ADD CLASSNAMES - eg: class="resizer resizer-west resizer-open"
+				.addClass( rClass +" "+ rClass+_pane +" "+ rClass+_state +" "+ rClass+_pane+_state )
+				.appendTo($Container) // append DIV to container
+			;
+			 // ADD VISUAL STYLES
+			if (o.applyDefaultStyles)
+				$R.css(c.resizers.cssDef);
+
+			if (o.closable) {
+				// INIT COLLAPSER BUTTON
+				$T = $Ts[pane] = $("<div></div>");
+				$T
+					// if paneSelector is an ID, then create a matching ID for the resizer, eg: "#paneLeft" => "paneLeft-toggler"
+					.attr("id", (o.paneSelector.substr(0,1)=="#" ? o.paneSelector.substr(1) + "-toggler" : ""))
+					.css(c.togglers.cssReq) // add base/required styles
+					.attr("title", (isOpen ? o.togglerTip_open : o.togglerTip_closed))
+					.click(function(evt){ toggle(pane); evt.stopPropagation(); })
+					.mouseover(function(evt){ evt.stopPropagation(); }) // prevent resizer event
+					// ADD CLASSNAMES - eg: class="toggler toggler-west toggler-west-open"
+					.addClass( tClass +" "+ tClass+_pane +" "+ tClass+_state +" "+ tClass+_pane+_state )
+					.appendTo($R) // append SPAN to resizer DIV
+				;
+
+				// ADD INNER-SPANS TO TOGGLER
+				if (o.togglerContent_open) // ui-layout-open
+					$("<span>"+ o.togglerContent_open +"</span>")
+						.addClass("content content-open")
+						.css("display", s.isClosed ? "none" : "block")
+						.appendTo( $T )
+					;
+				if (o.togglerContent_closed) // ui-layout-closed
+					$("<span>"+ o.togglerContent_closed +"</span>")
+						.addClass("content content-closed")
+						.css("display", s.isClosed ? "block" : "none")
+						.appendTo( $T )
+					;
+
+				 // ADD BASIC VISUAL STYLES
+				if (o.applyDefaultStyles)
+					$T.css(c.togglers.cssDef);
+
+				if (!isOpen) bindStartSlidingEvent(pane, true); // will enable if state.PANE.isSliding = true
+			}
+
+		});
+
+		// SET ALL HANDLE SIZES & LENGTHS
+		sizeHandles("all", true); // true = onInit
+	};
+
+	/**
+	 * initResizable
+	 *
+	 * Add resize-bars to all panes that specify it in options
+	 *
+	 * @dependancies  $.fn.resizable - will abort if not found
+	 * @callers  create()
+	 */
+	var initResizable = function () {
+		var
+			draggingAvailable = (typeof $.fn.draggable == "function")
+		,	minPosition, maxPosition, edge // set in start()
+		;
+
+		$.each(c.borderPanes.split(","), function() {
+			var 
+				pane	= str(this)
+			,	o		= options[pane]
+			,	s		= state[pane]
+			;
+			if (!draggingAvailable || !$Ps[pane] || !o.resizable) {
+				o.resizable = false;
+				return true; // skip to next
+			}
+
+			var 
+				rClass				= o.resizerClass
+			//	'drag' classes are applied to the ORIGINAL resizer-bar while dragging is in process
+			,	dragClass			= rClass+"-drag"			// resizer-drag
+			,	dragPaneClass		= rClass+"-"+pane+"-drag"	// resizer-north-drag
+			//	'dragging' class is applied to the CLONED resizer-bar while it is being dragged
+			,	draggingClass		= rClass+"-dragging"		// resizer-dragging
+			,	draggingPaneClass	= rClass+"-"+pane+"-dragging" // resizer-north-dragging
+			,	draggingClassSet	= false 					// logic var
+			,	$P 					= $Ps[pane]
+			,	$R					= $Rs[pane]
+			;
+
+			if (!s.isClosed)
+				$R
+					.attr("title", o.resizerTip)
+					.css("cursor", o.resizerCursor) // n-resize, s-resize, etc
+				;
+
+			$R.draggable({
+				containment:	$Container[0] // limit resizing to layout container
+			,	axis:			(c[pane].dir=="horz" ? "y" : "x") // limit resizing to horz or vert axis
+			,	delay:			200
+			,	distance:		1
+			//	basic format for helper - style it using class: .ui-draggable-dragging
+			,	helper:			"clone"
+			,	opacity:		o.resizerDragOpacity
+			//,	iframeFix:		o.draggableIframeFix // TODO: consider using when bug is fixed
+			,	zIndex:			c.zIndex.resizing
+
+			,	start: function (e, ui) {
+					// onresize_start callback - will CANCEL hide if returns false
+					// TODO: CONFIRM that dragging can be cancelled like this???
+					if (false === execUserCallback(pane, o.onresize_start)) return false;
+
+					s.isResizing = true; // prevent pane from closing while resizing
+					clearTimer(pane, "closeSlider"); // just in case already triggered
+
+					$R.addClass( dragClass +" "+ dragPaneClass ); // add drag classes
+					draggingClassSet = false; // reset logic var - see drag()
+
+					// SET RESIZING LIMITS - used in drag()
+					var resizerWidth = (pane=="east" || pane=="south" ? o.spacing_open : 0);
+					setPaneMinMaxSizes(pane); // update pane-state
+					s.minPosition -= resizerWidth;
+					s.maxPosition -= resizerWidth;
+					edge = (c[pane].dir=="horz" ? "top" : "left");
+
+					// MASK PANES WITH IFRAMES OR OTHER TROUBLESOME ELEMENTS
+					$(o.maskIframesOnResize === true ? "iframe" : o.maskIframesOnResize).each(function() {					
+						$('<div class="ui-layout-mask"/>')
+							.css({
+								background:	"#fff"
+							,	opacity:	"0.001"
+							,	zIndex:		9
+							,	position:	"absolute"
+							,	width:		this.offsetWidth+"px"
+							,	height:		this.offsetHeight+"px"
+							})
+							.css($(this).offset()) // top & left
+							.appendTo(this.parentNode) // put div INSIDE pane to avoid zIndex issues
+						;
+					});
+				}
+
+			,	drag: function (e, ui) {
+					if (!draggingClassSet) { // can only add classes after clone has been added to the DOM
+						$(".ui-draggable-dragging")
+							.addClass( draggingClass +" "+ draggingPaneClass ) // add dragging classes
+							.children().css("visibility","hidden") // hide toggler inside dragged resizer-bar
+						;
+						draggingClassSet = true;
+						// draggable bug!? RE-SET zIndex to prevent E/W resize-bar showing through N/S pane!
+						if (s.isSliding) $Ps[pane].css("zIndex", c.zIndex.sliding);
+					}
+					// CONTAIN RESIZER-BAR TO RESIZING LIMITS
+					if		(ui.position[edge] < s.minPosition) ui.position[edge] = s.minPosition;
+					else if (ui.position[edge] > s.maxPosition) ui.position[edge] = s.maxPosition;
+				}
+
+			,	stop: function (e, ui) {
+					var 
+						dragPos	= ui.position
+					,	resizerPos
+					,	newSize
+					;
+					$R.removeClass( dragClass +" "+ dragPaneClass ); // remove drag classes
+	
+					switch (pane) {
+						case "north":	resizerPos = dragPos.top; break;
+						case "west":	resizerPos = dragPos.left; break;
+						case "south":	resizerPos = cDims.outerHeight - dragPos.top - $R.outerHeight(); break;
+						case "east":	resizerPos = cDims.outerWidth - dragPos.left - $R.outerWidth(); break;
+					}
+					// remove container margin from resizer position to get the pane size
+					newSize = resizerPos - cDims[ c[pane].edge ];
+
+					sizePane(pane, newSize);
+
+					// UN-MASK PANES MASKED IN drag.start
+					$("div.ui-layout-mask").remove(); // Remove iframe masks	
+
+					s.isResizing = false;
+				}
+
+			});
+		});
+	};
+
+
+
+/*
+ * ###########################
+ *       ACTION METHODS
+ * ###########################
+ */
+
+	/**
+	 * hide / show
+	 *
+	 * Completely 'hides' a pane, including its spacing - as if it does not exist
+	 * The pane is not actually 'removed' from the source, so can use 'show' to un-hide it
+	 *
+	 * @param String  pane   The pane being hidden, ie: north, south, east, or west
+	 */
+	var hide = function (pane, onInit) {
+		var
+			o	= options[pane]
+		,	s	= state[pane]
+		,	$P	= $Ps[pane]
+		,	$R	= $Rs[pane]
+		;
+		if (!$P || s.isHidden) return; // pane does not exist OR is already hidden
+
+		// onhide_start callback - will CANCEL hide if returns false
+		if (false === execUserCallback(pane, o.onhide_start)) return;
+
+		s.isSliding = false; // just in case
+
+		// now hide the elements
+		if ($R) $R.hide(); // hide resizer-bar
+		if (onInit || s.isClosed) {
+			s.isClosed = true; // to trigger open-animation on show()
+			s.isHidden  = true;
+			$P.hide(); // no animation when loading page
+			sizeMidPanes(c[pane].dir == "horz" ? "all" : "center");
+			execUserCallback(pane, o.onhide_end || o.onhide);
+		}
+		else {
+			s.isHiding = true; // used by onclose
+			close(pane, false); // adjust all panes to fit
+			//s.isHidden  = true; - will be set by close - if not cancelled
+		}
+	};
+
+	var show = function (pane, openPane) {
+		var
+			o	= options[pane]
+		,	s	= state[pane]
+		,	$P	= $Ps[pane]
+		,	$R	= $Rs[pane]
+		;
+		if (!$P || !s.isHidden) return; // pane does not exist OR is not hidden
+
+		// onhide_start callback - will CANCEL hide if returns false
+		if (false === execUserCallback(pane, o.onshow_start)) return;
+
+		s.isSliding = false; // just in case
+		s.isShowing = true; // used by onopen/onclose
+		//s.isHidden  = false; - will be set by open/close - if not cancelled
+
+		// now show the elements
+		if ($R && o.spacing_open > 0) $R.show();
+		if (openPane === false)
+			close(pane, true); // true = force
+		else
+			open(pane); // adjust all panes to fit
+	};
+
+
+	/**
+	 * toggle
+	 *
+	 * Toggles a pane open/closed by calling either open or close
+	 *
+	 * @param String  pane   The pane being toggled, ie: north, south, east, or west
+	 */
+	var toggle = function (pane) {
+		var s = state[pane];
+		if (s.isHidden)
+			show(pane); // will call 'open' after unhiding it
+		else if (s.isClosed)
+			open(pane);
+		else
+			close(pane);
+	};
+
+	/**
+	 * close
+	 *
+	 * Close the specified pane (animation optional), and resize all other panes as needed
+	 *
+	 * @param String  pane   The pane being closed, ie: north, south, east, or west
+	 */
+	var close = function (pane, force, noAnimation) {
+		var 
+			$P		= $Ps[pane]
+		,	$R		= $Rs[pane]
+		,	$T		= $Ts[pane]
+		,	o		= options[pane]
+		,	s		= state[pane]
+		,	doFX	= !noAnimation && !s.isClosed && (o.fxName_close != "none")
+		,	edge	= c[pane].edge
+		,	rClass	= o.resizerClass
+		,	tClass	= o.togglerClass
+		,	_pane	= "-"+ pane // used for classNames
+		,	_open	= "-open"
+		,	_sliding= "-sliding"
+		,	_closed	= "-closed"
+		// 	transfer logic vars to temp vars
+		,	isShowing = s.isShowing
+		,	isHiding = s.isHiding
+		;
+		// now clear the logic vars
+		delete s.isShowing;
+		delete s.isHiding;
+
+		if (!$P || (!o.resizable && !o.closable)) return; // invalid request
+		else if (!force && s.isClosed && !isShowing) return; // already closed
+
+		if (c.isLayoutBusy) { // layout is 'busy' - probably with an animation
+			setFlowCallback("close", pane, force); // set a callback for this action, if possible
+			return; // ABORT 
+		}
+
+		// onclose_start callback - will CANCEL hide if returns false
+		// SKIP if just 'showing' a hidden pane as 'closed'
+		if (!isShowing && false === execUserCallback(pane, o.onclose_start)) return;
+
+		// SET flow-control flags
+		c[pane].isMoving = true;
+		c.isLayoutBusy = true;
+
+		s.isClosed = true;
+		// update isHidden BEFORE sizing panes
+		if (isHiding) s.isHidden = true;
+		else if (isShowing) s.isHidden = false;
+
+		// sync any 'pin buttons'
+		syncPinBtns(pane, false);
+
+		// resize panes adjacent to this one
+		if (!s.isSliding) sizeMidPanes(c[pane].dir == "horz" ? "all" : "center");
+
+		// if this pane has a resizer bar, move it now
+		if ($R) {
+			$R
+				.css(edge, cDims[edge]) // move the resizer bar
+				.removeClass( rClass+_open +" "+ rClass+_pane+_open )
+				.removeClass( rClass+_sliding +" "+ rClass+_pane+_sliding )
+				.addClass( rClass+_closed +" "+ rClass+_pane+_closed )
+			;
+			// DISABLE 'resizing' when closed - do this BEFORE bindStartSlidingEvent
+			if (o.resizable)
+				$R
+					.draggable("disable")
+					.css("cursor", "default")
+					.attr("title","")
+				;
+			// if pane has a toggler button, adjust that too
+			if ($T) {
+				$T
+					.removeClass( tClass+_open +" "+ tClass+_pane+_open )
+					.addClass( tClass+_closed +" "+ tClass+_pane+_closed )
+					.attr("title", o.togglerTip_closed) // may be blank
+				;
+			}
+			sizeHandles(); // resize 'length' and position togglers for adjacent panes
+		}
+
+		// ANIMATE 'CLOSE' - if no animation, then was ALREADY shown above
+		if (doFX) {
+			lockPaneForFX(pane, true); // need to set left/top so animation will work
+			$P.hide( o.fxName_close, o.fxSettings_close, o.fxSpeed_close, function () {
+				lockPaneForFX(pane, false); // undo
+				if (!s.isClosed) return; // pane was opened before animation finished!
+				close_2();
+			});
+		}
+		else {
+			$P.hide(); // just hide pane NOW
+			close_2();
+		}
+
+		// SUBROUTINE
+		function close_2 () {
+			bindStartSlidingEvent(pane, true); // will enable if state.PANE.isSliding = true
+
+			// onclose callback - UNLESS just 'showing' a hidden pane as 'closed'
+			if (!isShowing)	execUserCallback(pane, o.onclose_end || o.onclose);
+			// onhide OR onshow callback
+			if (isShowing)	execUserCallback(pane, o.onshow_end || o.onshow);
+			if (isHiding)	execUserCallback(pane, o.onhide_end || o.onhide);
+
+			// internal flow-control callback
+			execFlowCallback(pane);
+		}
+	};
+
+	/**
+	 * open
+	 *
+	 * Open the specified pane (animation optional), and resize all other panes as needed
+	 *
+	 * @param String  pane   The pane being opened, ie: north, south, east, or west
+	 */
+	var open = function (pane, slide, noAnimation) {
+		var 
+			$P		= $Ps[pane]
+		,	$R		= $Rs[pane]
+		,	$T		= $Ts[pane]
+		,	o		= options[pane]
+		,	s		= state[pane]
+		,	doFX	= !noAnimation && s.isClosed && (o.fxName_open != "none")
+		,	edge	= c[pane].edge
+		,	rClass	= o.resizerClass
+		,	tClass	= o.togglerClass
+		,	_pane	= "-"+ pane // used for classNames
+		,	_open	= "-open"
+		,	_closed	= "-closed"
+		,	_sliding= "-sliding"
+		// 	transfer logic var to temp var
+		,	isShowing = s.isShowing
+		;
+		// now clear the logic var
+		delete s.isShowing;
+
+		if (!$P || (!o.resizable && !o.closable)) return; // invalid request
+		else if (!s.isClosed && !s.isSliding) return; // already open
+
+		// pane can ALSO be unhidden by just calling show(), so handle this scenario
+		if (s.isHidden && !isShowing) {
+			show(pane, true);
+			return;
+		}
+
+		if (c.isLayoutBusy) { // layout is 'busy' - probably with an animation
+			setFlowCallback("open", pane, slide); // set a callback for this action, if possible
+			return; // ABORT
+		}
+
+		// onopen_start callback - will CANCEL hide if returns false
+		if (false === execUserCallback(pane, o.onopen_start)) return;
+
+		// SET flow-control flags
+		c[pane].isMoving = true;
+		c.isLayoutBusy = true;
+
+		// 'PIN PANE' - stop sliding
+		if (s.isSliding && !slide) // !slide = 'open pane normally' - NOT sliding
+			bindStopSlidingEvents(pane, false); // will set isSliding=false
+
+		s.isClosed = false;
+		// update isHidden BEFORE sizing panes
+		if (isShowing) s.isHidden = false;
+
+		// Container size may have changed - shrink the pane if now 'too big'
+		setPaneMinMaxSizes(pane); // update pane-state
+		if (s.size > s.maxSize) // pane is too big! resize it before opening
+			$P.css( c[pane].sizeType, max(1, cssSize(pane, s.maxSize)) );
+
+		bindStartSlidingEvent(pane, false); // remove trigger event from resizer-bar
+
+		if (doFX) { // ANIMATE
+			lockPaneForFX(pane, true); // need to set left/top so animation will work
+			$P.show( o.fxName_open, o.fxSettings_open, o.fxSpeed_open, function() {
+				lockPaneForFX(pane, false); // undo
+				if (s.isClosed) return; // pane was closed before animation finished!
+				open_2(); // continue
+			});
+		}
+		else {// no animation
+			$P.show();	// just show pane and...
+			open_2();	// continue
+		}
+
+		// SUBROUTINE
+		function open_2 () {
+			// NOTE: if isSliding, then other panes are NOT 'resized'
+			if (!s.isSliding) // resize all panes adjacent to this one
+				sizeMidPanes(c[pane].dir=="vert" ? "center" : "all");
+
+			// if this pane has a toggler, move it now
+			if ($R) {
+				$R
+					.css(edge, cDims[edge] + getPaneSize(pane)) // move the toggler
+					.removeClass( rClass+_closed +" "+ rClass+_pane+_closed )
+					.addClass( rClass+_open +" "+ rClass+_pane+_open )
+					.addClass( !s.isSliding ? "" : rClass+_sliding +" "+ rClass+_pane+_sliding )
+				;
+				if (o.resizable)
+					$R
+						.draggable("enable")
+						.css("cursor", o.resizerCursor)
+						.attr("title", o.resizerTip)
+					;
+				else
+					$R.css("cursor", "default"); // n-resize, s-resize, etc
+				// if pane also has a toggler button, adjust that too
+				if ($T) {
+					$T
+						.removeClass( tClass+_closed +" "+ tClass+_pane+_closed )
+						.addClass( tClass+_open +" "+ tClass+_pane+_open )
+						.attr("title", o.togglerTip_open) // may be blank
+					;
+				}
+				sizeHandles("all"); // resize resizer & toggler sizes for all panes
+			}
+
+			// resize content every time pane opens - to be sure
+			sizeContent(pane);
+
+			// sync any 'pin buttons'
+			syncPinBtns(pane, !s.isSliding);
+
+			// onopen callback
+			execUserCallback(pane, o.onopen_end || o.onopen);
+
+			// onshow callback
+			if (isShowing) execUserCallback(pane, o.onshow_end || o.onshow);
+
+			// internal flow-control callback
+			execFlowCallback(pane);
+		}
+	};
+	
+
+	/**
+	 * lockPaneForFX
+	 *
+	 * Must set left/top on East/South panes so animation will work properly
+	 *
+	 * @param String  pane  The pane to lock, 'east' or 'south' - any other is ignored!
+	 * @param Boolean  doLock  true = set left/top, false = remove
+	 */
+	var lockPaneForFX = function (pane, doLock) {
+		var $P = $Ps[pane];
+		if (doLock) {
+			$P.css({ zIndex: c.zIndex.animation }); // overlay all elements during animation
+			if (pane=="south")
+				$P.css({ top: cDims.top + cDims.innerHeight - $P.outerHeight() });
+			else if (pane=="east")
+				$P.css({ left: cDims.left + cDims.innerWidth - $P.outerWidth() });
+		}
+		else {
+			if (!state[pane].isSliding) $P.css({ zIndex: c.zIndex.pane_normal });
+			if (pane=="south")
+				$P.css({ top: "auto" });
+			else if (pane=="east")
+				$P.css({ left: "auto" });
+		}
+	};
+
+
+	/**
+	 * bindStartSlidingEvent
+	 *
+	 * Toggle sliding functionality of a specific pane on/off by adding removing 'slide open' trigger
+	 *
+	 * @callers  open(), close()
+	 * @param String  pane  The pane to enable/disable, 'north', 'south', etc.
+	 * @param Boolean  enable  Enable or Disable sliding?
+	 */
+	var bindStartSlidingEvent = function (pane, enable) {
+		var 
+			o		= options[pane]
+		,	$R		= $Rs[pane]
+		,	trigger	= o.slideTrigger_open
+		;
+		if (!$R || !o.slidable) return;
+		// make sure we have a valid event
+		if (trigger != "click" && trigger != "dblclick" && trigger != "mouseover") trigger = "click";
+		$R
+			// add or remove trigger event
+			[enable ? "bind" : "unbind"](trigger, slideOpen)
+			// set the appropriate cursor & title/tip
+			.css("cursor", (enable ? o.sliderCursor: "default"))
+			.attr("title", (enable ? o.sliderTip : ""))
+		;
+	};
+
+	/**
+	 * bindStopSlidingEvents
+	 *
+	 * Add or remove 'mouseout' events to 'slide close' when pane is 'sliding' open or closed
+	 * Also increases zIndex when pane is sliding open
+	 * See bindStartSlidingEvent for code to control 'slide open'
+	 *
+	 * @callers  slideOpen(), slideClosed()
+	 * @param String  pane  The pane to process, 'north', 'south', etc.
+	 * @param Boolean  isOpen  Is pane open or closed?
+	 */
+	var bindStopSlidingEvents = function (pane, enable) {
+		var 
+			o		= options[pane]
+		,	s		= state[pane]
+		,	trigger	= o.slideTrigger_close
+		,	action	= (enable ? "bind" : "unbind") // can't make 'unbind' work! - see disabled code below
+		,	$P		= $Ps[pane]
+		,	$R		= $Rs[pane]
+		;
+
+		s.isSliding = enable; // logic
+		clearTimer(pane, "closeSlider"); // just in case
+
+		// raise z-index when sliding
+		$P.css({ zIndex: (enable ? c.zIndex.sliding : c.zIndex.pane_normal) });
+		$R.css({ zIndex: (enable ? c.zIndex.sliding : c.zIndex.resizer_normal) });
+
+		// make sure we have a valid event
+		if (trigger != "click" && trigger != "mouseout") trigger = "mouseout";
+
+		// when trigger is 'mouseout', must cancel timer when mouse moves between 'pane' and 'resizer'
+		if (enable) { // BIND trigger events
+			$P.bind(trigger, slideClosed );
+			$R.bind(trigger, slideClosed );
+			if (trigger = "mouseout") {
+				$P.bind("mouseover", cancelMouseOut );
+				$R.bind("mouseover", cancelMouseOut );
+			}
+		}
+		else { // UNBIND trigger events
+			// TODO: why does unbind of a 'single function' not work reliably?
+			//$P[action](trigger, slideClosed );
+			$P.unbind(trigger);
+			$R.unbind(trigger);
+			if (trigger = "mouseout") {
+				//$P[action]("mouseover", cancelMouseOut );
+				$P.unbind("mouseover");
+				$R.unbind("mouseover");
+				clearTimer(pane, "closeSlider");
+			}
+		}
+
+		// SUBROUTINE for mouseout timer clearing
+		function cancelMouseOut (evt) {
+			clearTimer(pane, "closeSlider");
+			evt.stopPropagation();
+		}
+	};
+
+	var slideOpen = function () {
+		var pane = $(this).attr("resizer"); // attr added by initHandles
+		if (state[pane].isClosed) { // skip if already open!
+			bindStopSlidingEvents(pane, true); // pane is opening, so BIND trigger events to close it
+			open(pane, true); // true = slide - ie, called from here!
+		}
+	};
+
+	var slideClosed = function () {
+		var
+			$E = $(this)
+		,	pane = $E.attr("pane") || $E.attr("resizer")
+		,	o = options[pane]
+		,	s = state[pane]
+		;
+		if (s.isClosed || s.isResizing)
+			return; // skip if already closed OR in process of resizing
+		else if (o.slideTrigger_close == "click")
+			close_NOW(); // close immediately onClick
+		else // trigger = mouseout - use a delay
+			setTimer(pane, "closeSlider", close_NOW, 300); // .3 sec delay
+
+		// SUBROUTINE for timed close
+		function close_NOW () {
+			bindStopSlidingEvents(pane, false); // pane is being closed, so UNBIND trigger events
+			if (!s.isClosed) close(pane); // skip if already closed!
+		}
+	};
+
+
+	/**
+	 * sizePane
+	 *
+	 * @callers  initResizable.stop()
+	 * @param String  pane   The pane being resized - usually west or east, but potentially north or south
+	 * @param Integer  newSize  The new size for this pane - will be validated
+	 */
+	var sizePane = function (pane, size) {
+		// TODO: accept "auto" as size, and size-to-fit pane content
+		var 
+			edge	= c[pane].edge
+		,	dir		= c[pane].dir
+		,	o		= options[pane]
+		,	s		= state[pane]
+		,	$P		= $Ps[pane]
+		,	$R		= $Rs[pane]
+		;
+		// calculate 'current' min/max sizes
+		setPaneMinMaxSizes(pane); // update pane-state
+		// compare/update calculated min/max to user-options
+		s.minSize = max(s.minSize, o.minSize);
+		if (o.maxSize > 0) s.maxSize = min(s.maxSize, o.maxSize);
+		// validate passed size
+		size = max(size, s.minSize);
+		size = min(size, s.maxSize);
+		s.size = size; // update state
+
+		// move the resizer bar and resize the pane
+		$R.css( edge, size + cDims[edge] );
+		$P.css( c[pane].sizeType, max(1, cssSize(pane, size)) );
+
+		// resize all the adjacent panes, and adjust their toggler buttons
+		if (!s.isSliding) sizeMidPanes(dir=="horz" ? "all" : "center");
+		sizeHandles();
+		sizeContent(pane);
+		execUserCallback(pane, o.onresize_end || o.onresize);
+	};
+
+	/**
+	 * sizeMidPanes
+	 *
+	 * @callers  create(), open(), close(), onWindowResize()
+	 */
+	var sizeMidPanes = function (panes, overrideDims, onInit) {
+		if (!panes || panes == "all") panes = "east,west,center";
+
+		var d = getPaneDims();
+		if (overrideDims) $.extend( d, overrideDims );
+
+		$.each(panes.split(","), function() {
+			if (!$Ps[this]) return; // NO PANE - skip
+			var 
+				pane	= str(this)
+			,	o		= options[pane]
+			,	s		= state[pane]
+			,	$P		= $Ps[pane]
+			,	$R		= $Rs[pane]
+			,	hasRoom	= true
+			,	CSS		= {}
+			;
+
+			if (pane == "center") {
+				d = getPaneDims(); // REFRESH Dims because may have just 'unhidden' East or West pane after a 'resize'
+				CSS = $.extend( {}, d ); // COPY ALL of the paneDims
+				CSS.width  = max(1, cssW(pane, CSS.width));
+				CSS.height = max(1, cssH(pane, CSS.height));
+				hasRoom = (CSS.width > 1 && CSS.height > 1);
+				/*
+				 * Extra CSS for IE6 or IE7 in Quirks-mode - add 'width' to NORTH/SOUTH panes
+				 * Normally these panes have only 'left' & 'right' positions so pane auto-sizes
+				 */
+				if ($.browser.msie && (!$.boxModel || $.browser.version < 7)) {
+					if ($Ps.north) $Ps.north.css({ width: cssW($Ps.north, cDims.innerWidth) });
+					if ($Ps.south) $Ps.south.css({ width: cssW($Ps.south, cDims.innerWidth) });
+				}
+			}
+			else { // for east and west, set only the height
+				CSS.top = d.top;
+				CSS.bottom = d.bottom;
+				CSS.height = max(1, cssH(pane, d.height));
+				hasRoom = (CSS.height > 1);
+			}
+
+			if (hasRoom) {
+				$P.css(CSS);
+				if (s.noRoom) {
+					s.noRoom = false;
+					if (s.isHidden) return;
+					else show(pane, !s.isClosed);
+					/* OLD CODE - keep until sure line above works right!
+					if (!s.isClosed) $P.show(); // in case was previously hidden due to NOT hasRoom
+					if ($R) $R.show();
+					*/
+				}
+				if (!onInit) {
+					sizeContent(pane);
+					execUserCallback(pane, o.onresize_end || o.onresize);
+				}
+			}
+			else if (!s.noRoom) { // no room for pane, so just hide it (if not already)
+				s.noRoom = true; // update state
+				if (s.isHidden) return;
+				if (onInit) { // skip onhide callback and other logic onLoad
+					$P.hide();
+					if ($R) $R.hide();
+				}
+				else hide(pane);
+			}
+		});
+	};
+
+
+	var sizeContent = function (panes) {
+		if (!panes || panes == "all") panes = c.allPanes;
+
+		$.each(panes.split(","), function() {
+			if (!$Cs[this]) return; // NO CONTENT - skip
+			var 
+				pane	= str(this)
+			,	ignore	= options[pane].contentIgnoreSelector
+			,	$P		= $Ps[pane]
+			,	$C		= $Cs[pane]
+			,	e_C		= $C[0]		// DOM element
+			,	height	= cssH($P);	// init to pane.innerHeight
+			;
+			$P.children().each(function() {
+				if (this == e_C) return; // Content elem - skip
+				var $E = $(this);
+				if (!ignore || !$E.is(ignore))
+					height -= $E.outerHeight();
+			});
+			if (height > 0)
+				height = cssH($C, height);
+			if (height < 1)
+				$C.hide(); // no room for content!
+			else
+				$C.css({ height: height }).show();
+		});
+	};
+
+
+	/**
+	 * sizeHandles
+	 *
+	 * Called every time a pane is opened, closed, or resized to slide the togglers to 'center' and adjust their length if necessary
+	 *
+	 * @callers  initHandles(), open(), close(), resizeAll()
+	 */
+	var sizeHandles = function (panes, onInit) {
+		if (!panes || panes == "all") panes = c.borderPanes;
+
+		$.each(panes.split(","), function() {
+			var 
+				pane	= str(this)
+			,	o		= options[pane]
+			,	s		= state[pane]
+			,	$P		= $Ps[pane]
+			,	$R		= $Rs[pane]
+			,	$T		= $Ts[pane]
+			;
+			if (!$P || !$R || (!o.resizable && !o.closable)) return; // skip
+
+			var 
+				dir			= c[pane].dir
+			,	_state		= (s.isClosed ? "_closed" : "_open")
+			,	spacing		= o["spacing"+ _state]
+			,	togAlign	= o["togglerAlign"+ _state]
+			,	togLen		= o["togglerLength"+ _state]
+			,	paneLen
+			,	offset
+			,	CSS = {}
+			;
+			if (spacing == 0) {
+				$R.hide();
+				return;
+			}
+			else if (!s.noRoom && !s.isHidden) // skip if resizer was hidden for any reason
+				$R.show(); // in case was previously hidden
+
+			// Resizer Bar is ALWAYS same width/height of pane it is attached to
+			if (dir == "horz") { // north/south
+				paneLen = $P.outerWidth();
+				$R.css({
+					width:	max(1, cssW($R, paneLen)) // account for borders & padding
+				,	height:	max(1, cssH($R, spacing)) // ditto
+				,	left:	cssNum($P, "left")
+				});
+			}
+			else { // east/west
+				paneLen = $P.outerHeight();
+				$R.css({
+					height:	max(1, cssH($R, paneLen)) // account for borders & padding
+				,	width:	max(1, cssW($R, spacing)) // ditto
+				,	top:	cDims.top + getPaneSize("north", true)
+				//,	top:	cssNum($Ps["center"], "top")
+				});
+				
+			}
+
+			if ($T) {
+				if (togLen == 0 || (s.isSliding && o.hideTogglerOnSlide)) {
+					$T.hide(); // always HIDE the toggler when 'sliding'
+					return;
+				}
+				else
+					$T.show(); // in case was previously hidden
+
+				if (!(togLen > 0) || togLen == "100%" || togLen > paneLen) {
+					togLen = paneLen;
+					offset = 0;
+				}
+				else { // calculate 'offset' based on options.PANE.togglerAlign_open/closed
+					if (typeof togAlign == "string") {
+						switch (togAlign) {
+							case "top":
+							case "left":	offset = 0;
+											break;
+							case "bottom":
+							case "right":	offset = paneLen - togLen;
+											break;
+							case "middle":
+							case "center":
+							default:		offset = Math.floor((paneLen - togLen) / 2); // 'default' catches typos
+						}
+					}
+					else { // togAlign = number
+						var x = parseInt(togAlign); //
+						if (togAlign >= 0) offset = x;
+						else offset = paneLen - togLen + x; // NOTE: x is negative!
+					}
+				}
+
+				var
+					$TC_o = (o.togglerContent_open   ? $T.children(".content-open") : false)
+				,	$TC_c = (o.togglerContent_closed ? $T.children(".content-closed")   : false)
+				,	$TC   = (s.isClosed ? $TC_c : $TC_o)
+				;
+				if ($TC_o) $TC_o.css("display", s.isClosed ? "none" : "block");
+				if ($TC_c) $TC_c.css("display", s.isClosed ? "block" : "none");
+
+				if (dir == "horz") { // north/south
+					var width = cssW($T, togLen);
+					$T.css({
+						width:	max(0, width)  // account for borders & padding
+					,	height:	max(1, cssH($T, spacing)) // ditto
+					,	left:	offset // TODO: VERIFY that toggler  positions correctly for ALL values
+					});
+					if ($TC) // CENTER the toggler content SPAN
+						$TC.css("marginLeft", Math.floor((width-$TC.outerWidth())/2)); // could be negative
+				}
+				else { // east/west
+					var height = cssH($T, togLen);
+					$T.css({
+						height:	max(0, height)  // account for borders & padding
+					,	width:	max(1, cssW($T, spacing)) // ditto
+					,	top:	offset // POSITION the toggler
+					});
+					if ($TC) // CENTER the toggler content SPAN
+						$TC.css("marginTop", Math.floor((height-$TC.outerHeight())/2)); // could be negative
+				}
+
+
+			}
+
+			// DONE measuring and sizing this resizer/toggler, so can be 'hidden' now
+			if (onInit && o.initHidden) {
+				$R.hide();
+				if ($T) $T.hide();
+			}
+		});
+	};
+
+
+	/**
+	 * resizeAll
+	 *
+	 * @callers  window.onresize(), callbacks or custom code
+	 */
+	var resizeAll = function () {
+		var
+			oldW	= cDims.innerWidth
+		,	oldH	= cDims.innerHeight
+		;
+		cDims = state.container = getElemDims($Container); // UPDATE container dimensions
+
+		var
+			checkH	= (cDims.innerHeight < oldH)
+		,	checkW	= (cDims.innerWidth < oldW)
+		,	s, dir
+		;
+
+		if (checkH || checkW)
+			// NOTE special order for sizing: S-N-E-W
+			$.each(["south","north","east","west"], function(i,pane) {
+				s = state[pane];
+				dir = c[pane].dir;
+				if (!s.isClosed && ((checkH && dir=="horz") || (checkW && dir=="vert"))) {
+					setPaneMinMaxSizes(pane); // update pane-state
+					// shrink pane if 'too big' to fit
+					if (s.size > s.maxSize)
+						sizePane(pane, s.maxSize);
+				}
+			});
+
+		sizeMidPanes("all");
+		sizeHandles("all"); // reposition the toggler elements
+	};
+
+
+	/**
+	 * keyDown
+	 *
+	 * Capture keys when enableCursorHotkey - toggle pane if hotkey pressed
+	 *
+	 * @callers  document.keydown()
+	 */
+	function keyDown (evt) {
+		if (!evt) return true;
+		var code = evt.keyCode;
+		if (code < 33) return true; // ignore special keys: ENTER, TAB, etc
+
+		var
+			PANE = {
+				38: "north" // Up Cursor
+			,	40: "south" // Down Cursor
+			,	37: "west"  // Left Cursor
+			,	39: "east"  // Right Cursor
+			}
+		,	isCursorKey = (code >= 37 && code <= 40)
+		,	ALT = evt.altKey // no worky!
+		,	SHIFT = evt.shiftKey
+		,	CTRL = evt.ctrlKey
+		,	pane = false
+		,	s, o, k, m, el
+		;
+
+		if (!CTRL && !SHIFT)
+			return true; // no modifier key - abort
+		else if (isCursorKey && options[PANE[code]].enableCursorHotkey) // valid cursor-hotkey
+			pane = PANE[code];
+		else // check to see if this matches a custom-hotkey
+			$.each(c.borderPanes.split(","), function(i,p) { // loop each pane to check its hotkey
+				o = options[p];
+				k = o.customHotkey;
+				m = o.customHotkeyModifier; // if missing or invalid, treated as "CTRL+SHIFT"
+				if ((SHIFT && m=="SHIFT") || (CTRL && m=="CTRL") || (CTRL && SHIFT)) { // Modifier matches
+					if (k && code == (isNaN(k) || k <= 9 ? k.toUpperCase().charCodeAt(0) : k)) { // Key matches
+						pane = p;
+						return false; // BREAK
+					}
+				}
+			});
+
+		if (!pane) return true; // no hotkey - abort
+
+		// validate pane
+		o = options[pane]; // get pane options
+		s = state[pane]; // get pane options
+		if (!o.enableCursorHotkey || s.isHidden || !$Ps[pane]) return true;
+
+		// see if user is in a 'form field' because may be 'selecting text'!
+		el = evt.target || evt.srcElement;
+		if (el && SHIFT && isCursorKey && (el.tagName=="TEXTAREA" || (el.tagName=="INPUT" && (code==37 || code==39))))
+			return true; // allow text-selection
+
+		// SYNTAX NOTES
+		// use "returnValue=false" to abort keystroke but NOT abort function - can run another command afterwards
+		// use "return false" to abort keystroke AND abort function
+		toggle(pane);
+		evt.stopPropagation();
+		evt.returnValue = false; // CANCEL key
+		return false;
+	};
+
+
+/*
+ * ###########################
+ *     UTILITY METHODS
+ *   called externally only
+ * ###########################
+ */
+
+	function allowOverflow (elem) {
+		if (this && this.tagName) elem = this; // BOUND to element
+		var $P;
+		if (typeof elem=="string")
+			$P = $Ps[elem];
+		else {
+			if ($(elem).attr("pane")) $P = $(elem);
+			else $P = $(elem).parents("div[pane]:first");
+		}
+		if (!$P.length) return; // INVALID
+
+		var
+			pane	= $P.attr("pane")
+		,	s		= state[pane]
+		;
+
+		// if pane is already raised, then reset it before doing it again!
+		// this would happen if allowOverflow is attached to BOTH the pane and an element 
+		if (s.cssSaved)
+			resetOverflow(pane); // reset previous CSS before continuing
+
+		// if pane is raised by sliding or resizing, or it's closed, then abort
+		if (s.isSliding || s.isResizing || s.isClosed) {
+			s.cssSaved = false;
+			return;
+		}
+
+		var
+			newCSS	= { zIndex: (c.zIndex.pane_normal + 1) }
+		,	curCSS	= {}
+		,	of		= $P.css("overflow")
+		,	ofX		= $P.css("overflowX")
+		,	ofY		= $P.css("overflowY")
+		;
+		// determine which, if any, overflow settings need to be changed
+		if (of != "visible") {
+			curCSS.overflow = of;
+			newCSS.overflow = "visible";
+		}
+		if (ofX && ofX != "visible" && ofX != "auto") {
+			curCSS.overflowX = ofX;
+			newCSS.overflowX = "visible";
+		}
+		if (ofY && ofY != "visible" && ofY != "auto") {
+			curCSS.overflowY = ofX;
+			newCSS.overflowY = "visible";
+		}
+
+		// save the current overflow settings - even if blank!
+		s.cssSaved = curCSS;
+
+		// apply new CSS to raise zIndex and, if necessary, make overflow 'visible'
+		$P.css( newCSS );
+
+		// make sure the zIndex of all other panes is normal
+		$.each(c.allPanes.split(","), function(i, p) {
+			if (p != pane) resetOverflow(p);
+		});
+
+	};
+
+	function resetOverflow (elem) {
+		if (this && this.tagName) elem = this; // BOUND to element
+		var $P;
+		if (typeof elem=="string")
+			$P = $Ps[elem];
+		else {
+			if ($(elem).hasClass("ui-layout-pane")) $P = $(elem);
+			else $P = $(elem).parents("div[pane]:first");
+		}
+		if (!$P.length) return; // INVALID
+
+		var
+			pane	= $P.attr("pane")
+		,	s		= state[pane]
+		,	CSS		= s.cssSaved || {}
+		;
+		// reset the zIndex
+		if (!s.isSliding && !s.isResizing)
+			$P.css("zIndex", c.zIndex.pane_normal);
+
+		// reset Overflow - if necessary
+		$P.css( CSS );
+
+		// clear var
+		s.cssSaved = false;
+	};
+
+
+	/**
+	* getBtn
+	*
+	* Helper function to validate params received by addButton utilities
+	*
+	* @param String   selector 	jQuery selector for button, eg: ".ui-layout-north .toggle-button"
+	* @param String   pane 		Name of the pane the button is for: 'north', 'south', etc.
+	* @returns  If both params valid, the element matching 'selector' in a jQuery wrapper - otherwise 'false'
+	*/
+	function getBtn(selector, pane, action) {
+		var
+			$E = $(selector)
+		,	err = "Error Adding Button \n\nInvalid "
+		;
+		if (!$E.length) // element not found
+			alert(err+"selector: "+ selector);
+		else if (c.borderPanes.indexOf(pane) == -1) // invalid 'pane' sepecified
+			alert(err+"pane: "+ pane);
+		else { // VALID
+			var btn = options[pane].buttonClass +"-"+ action;
+			$E.addClass( btn +" "+ btn +"-"+ pane );
+			return $E;
+		}
+		return false;  // INVALID
+	};
+
+
+	/**
+	* addToggleBtn
+	*
+	* Add a custom Toggler button for a pane
+	*
+	* @param String   selector 	jQuery selector for button, eg: ".ui-layout-north .toggle-button"
+	* @param String   pane 		Name of the pane the button is for: 'north', 'south', etc.
+	*/
+	function addToggleBtn (selector, pane) {
+		var $E = getBtn(selector, pane, "toggle");
+		if ($E)
+			$E
+				.attr("title", state[pane].isClosed ? "Open" : "Close")
+				.click(function (evt) {
+					toggle(pane);
+					evt.stopPropagation();
+				})
+			;
+	};
+
+	/**
+	* addOpenBtn
+	*
+	* Add a custom Open button for a pane
+	*
+	* @param String   selector 	jQuery selector for button, eg: ".ui-layout-north .open-button"
+	* @param String   pane 		Name of the pane the button is for: 'north', 'south', etc.
+	*/
+	function addOpenBtn (selector, pane) {
+		var $E = getBtn(selector, pane, "open");
+		if ($E)
+			$E
+				.attr("title", "Open")
+				.click(function (evt) {
+					open(pane);
+					evt.stopPropagation();
+				})
+			;
+	};
+
+	/**
+	* addCloseBtn
+	*
+	* Add a custom Close button for a pane
+	*
+	* @param String   selector 	jQuery selector for button, eg: ".ui-layout-north .close-button"
+	* @param String   pane 		Name of the pane the button is for: 'north', 'south', etc.
+	*/
+	function addCloseBtn (selector, pane) {
+		var $E = getBtn(selector, pane, "close");
+		if ($E)
+			$E
+				.attr("title", "Close")
+				.click(function (evt) {
+					close(pane);
+					evt.stopPropagation();
+				})
+			;
+	};
+
+	/**
+	* addPinBtn
+	*
+	* Add a custom Pin button for a pane
+	*
+	* Four classes are added to the element, based on the paneClass for the associated pane...
+	* Assuming the default paneClass and the pin is 'up', these classes are added for a west-pane pin:
+	*  - ui-layout-pane-pin
+	*  - ui-layout-pane-west-pin
+	*  - ui-layout-pane-pin-up
+	*  - ui-layout-pane-west-pin-up
+	*
+	* @param String   selector 	jQuery selector for button, eg: ".ui-layout-north .ui-layout-pin"
+	* @param String   pane 		Name of the pane the pin is for: 'north', 'south', etc.
+	*/
+	function addPinBtn (selector, pane) {
+		var $E = getBtn(selector, pane, "pin");
+		if ($E) {
+			var s = state[pane];
+			$E.click(function (evt) {
+				setPinState($(this), pane, (s.isSliding || s.isClosed));
+				if (s.isSliding || s.isClosed) open( pane ); // change from sliding to open
+				else close( pane ); // slide-closed
+				evt.stopPropagation();
+			});
+			// add up/down pin attributes and classes
+			setPinState ($E, pane, (!s.isClosed && !s.isSliding));
+			// add this pin to the pane data so we can 'sync it' automatically
+			// PANE.pins key is an array so we can store multiple pins for each pane
+			c[pane].pins.push( selector ); // just save the selector string
+		}
+	};
+
+	/**
+	* syncPinBtns
+	*
+	* INTERNAL function to sync 'pin buttons' when pane is opened or closed
+	* Unpinned means the pane is 'sliding' - ie, over-top of the adjacent panes
+	*
+	* @callers  open(), close()
+	* @params  pane   These are the params returned to callbacks by layout()
+	* @params  doPin  True means set the pin 'down', False means 'up'
+	*/
+	function syncPinBtns (pane, doPin) {
+		$.each(c[pane].pins, function (i, selector) {
+			setPinState($(selector), pane, doPin);
+		});
+	};
+
+	/**
+	* setPinState
+	*
+	* Change the class of the pin button to make it look 'up' or 'down'
+	*
+	* @callers  addPinBtn(), syncPinBtns()
+	* @param Element  $Pin		The pin-span element in a jQuery wrapper
+	* @param Boolean  doPin		True = set the pin 'down', False = set it 'up'
+	* @param String   pinClass	The root classname for pins - will add '-up' or '-down' suffix
+	*/
+	function setPinState ($Pin, pane, doPin) {
+		var updown = $Pin.attr("pin");
+		if (updown && doPin == (updown=="down")) return; // already in correct state
+		var
+			root	= options[pane].buttonClass
+		,	class1	= root +"-pin"
+		,	class2	= class1 +"-"+ pane
+		,	UP1		= class1 + "-up"
+		,	UP2		= class2 + "-up"
+		,	DN1		= class1 + "-down"
+		,	DN2		= class2 + "-down"
+		;
+		$Pin
+			.attr("pin", doPin ? "down" : "up") // logic
+			.attr("title", doPin ? "Un-Pin" : "Pin")
+			.removeClass( doPin ? UP1 : DN1 ) 
+			.removeClass( doPin ? UP2 : DN2 ) 
+			.addClass( doPin ? DN1 : UP1 ) 
+			.addClass( doPin ? DN2 : UP2 ) 
+		;
+	};
+
+
+/*
+ * ###########################
+ * CREATE/RETURN BORDER-LAYOUT
+ * ###########################
+ */
+
+	// init global vars
+	var 
+		$Container = $(this).css({ overflow: "hidden" }) // Container elem
+	,	$Ps		= {} // Panes x4	- set in initPanes()
+	,	$Cs		= {} // Content x4	- set in initPanes()
+	,	$Rs		= {} // Resizers x4	- set in initHandles()
+	,	$Ts		= {} // Togglers x4	- set in initHandles()
+	//	object aliases
+	,	c		= config // alias for config hash
+	,	cDims	= state.container // alias for easy access to 'container dimensions'
+	;
+
+	// create the border layout NOW
+	create();
+
+	// return object pointers to expose data & option Properties, and primary action Methods
+	return {
+		options:		options			// property - options hash
+	,	state:			state			// property - dimensions hash
+	,	panes:			$Ps				// property - object pointers for ALL panes: panes.north, panes.center
+	,	toggle:			toggle			// method - pass a 'pane' ("north", "west", etc)
+	,	open:			open			// method - ditto
+	,	close:			close			// method - ditto
+	,	hide:			hide			// method - ditto
+	,	show:			show			// method - ditto
+	,	resizeContent:	sizeContent		// method - ditto
+	,	sizePane:		sizePane		// method - pass a 'pane' AND a 'size' in pixels
+	,	resizeAll:		resizeAll		// method - no parameters
+	,	addToggleBtn:	addToggleBtn	// utility - pass element selector and 'pane'
+	,	addOpenBtn:		addOpenBtn		// utility - ditto
+	,	addCloseBtn:	addCloseBtn		// utility - ditto
+	,	addPinBtn:		addPinBtn		// utility - ditto
+	,	allowOverflow:	allowOverflow	// utility - pass calling element
+	,	resetOverflow:	resetOverflow	// utility - ditto
+	,	cssWidth:		cssW
+	,	cssHeight:		cssH
+	};
+
+}
+})( jQuery );
+var jade = (function(exports){
+/*!
+ * Jade - runtime
+ * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+ * MIT Licensed
+ */
+
+/**
+ * Lame Array.isArray() polyfill for now.
+ */
+
+if (!Array.isArray) {
+  Array.isArray = function(arr){
+    return '[object Array]' == Object.prototype.toString.call(arr);
+  };
+}
+
+/**
+ * Lame Object.keys() polyfill for now.
+ */
+
+if (!Object.keys) {
+  Object.keys = function(obj){
+    var arr = [];
+    for (var key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        arr.push(key);
+      }
+    }
+    return arr;
+  } 
+}
+
+/**
+ * Render the given attributes object.
+ *
+ * @param {Object} obj
+ * @return {String}
+ * @api private
+ */
+
+exports.attrs = function attrs(obj){
+  var buf = []
+    , terse = obj.terse;
+  delete obj.terse;
+  var keys = Object.keys(obj)
+    , len = keys.length;
+  if (len) {
+    buf.push('');
+    for (var i = 0; i < len; ++i) {
+      var key = keys[i]
+        , val = obj[key];
+      if ('boolean' == typeof val || null == val) {
+        if (val) {
+          terse
+            ? buf.push(key)
+            : buf.push(key + '="' + key + '"');
+        }
+      } else if ('class' == key && Array.isArray(val)) {
+        buf.push(key + '="' + exports.escape(val.join(' ')) + '"');
+      } else {
+        buf.push(key + '="' + exports.escape(val) + '"');
+      }
+    }
+  }
+  return buf.join(' ');
+};
+
+/**
+ * Escape the given string of `html`.
+ *
+ * @param {String} html
+ * @return {String}
+ * @api private
+ */
+
+exports.escape = function escape(html){
+  return String(html)
+    .replace(/&(?!\w+;)/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+};
+
+/**
+ * Re-throw the given `err` in context to the
+ * the jade in `filename` at the given `lineno`.
+ *
+ * @param {Error} err
+ * @param {String} filename
+ * @param {String} lineno
+ * @api private
+ */
+
+exports.rethrow = function rethrow(err, filename, lineno){
+  if (!filename) throw err;
+
+  var context = 3
+    , str = require('fs').readFileSync(filename, 'utf8')
+    , lines = str.split('\n')
+    , start = Math.max(lineno - context, 0)
+    , end = Math.min(lines.length, lineno + context); 
+
+  // Error context
+  var context = lines.slice(start, end).map(function(line, i){
+    var curr = i + start + 1;
+    return (curr == lineno ? '  > ' : '    ')
+      + curr
+      + '| '
+      + line;
+  }).join('\n');
+
+  // Alter exception message
+  err.path = filename;
+  err.message = (filename || 'Jade') + ':' + lineno 
+    + '\n' + context + '\n\n' + err.message;
+  throw err;
+};
+
+  return exports;
+
+})({});/*!
+ * jLayout Border Layout - JavaScript Layout Algorithms v0.4
+ *
+ * Licensed under the new BSD License.
+ * Copyright 2008-2009, Bram Stein
+ * All rights reserved.
+ */
+/*global jLayout */
+(function () {
+	jLayout = typeof jLayout === 'undefined' ? {} : jLayout;
+
+	jLayout.border = function (spec) {
+		var my = {},
+			that = {},
+			east = spec.east,
+			west = spec.west,
+			north = spec.north,
+			south = spec.south,
+			center = spec.center;
+
+		my.hgap = spec.hgap || 0;
+		my.vgap = spec.vgap || 0;
+
+		that.items = function () {
+			var items = [];
+			if (east) {
+				items.push(east);
+			}
+
+			if (west) {
+				items.push(west);
+			}
+
+			if (north) {
+				items.push(north);
+			}
+
+			if (south) {
+				items.push(south);
+			}
+
+			if (center) {
+				items.push(center);
+			}
+			return items;
+		};		
+
+		that.layout = function (container) {
+			var size = container.bounds(),
+				insets = container.insets(),
+				top = insets.top,
+				bottom = size.height - insets.bottom,
+				left = insets.left,
+				right = size.width - insets.right,
+				tmp;
+
+			if (north && north.isVisible()) {
+				tmp = north.preferredSize();
+				north.bounds({'x': left, 'y': top, 'width': right - left, 'height': tmp.height});
+				north.doLayout();
+
+				top += tmp.height + my.vgap;
+			}
+			if (south && south.isVisible()) {
+				tmp = south.preferredSize();
+				south.bounds({'x': left, 'y': bottom - tmp.height, 'width': right - left, 'height': tmp.height});
+				south.doLayout();
+
+				bottom -= tmp.height + my.vgap;
+			}
+			if (east && east.isVisible()) {
+				tmp = east.preferredSize();
+				east.bounds({'x': right - tmp.width, 'y': top, 'width': tmp.width, 'height': bottom - top});
+				east.doLayout();
+
+				right -= tmp.width + my.hgap;
+			}
+			if (west && west.isVisible()) {
+				tmp = west.preferredSize();
+				west.bounds({'x': left, 'y': top, 'width': tmp.width, 'height': bottom - top});
+				west.doLayout();
+
+				left += tmp.width + my.hgap;
+			}
+			if (center && center.isVisible()) {
+				center.bounds({'x': left, 'y': top, 'width': right - left, 'height': bottom - top});
+				center.doLayout();
+			}
+			return container;
+		};
+
+		function typeLayout(type) {
+			return function (container) {
+				var insets = container.insets(),
+					width = 0,
+					height = 0,
+					type_size;
+
+				if (east && east.isVisible()) {
+					type_size = east[type + 'Size']();
+					width += type_size.width + my.hgap;
+					height = type_size.height;
+				}
+				if (west && west.isVisible()) {
+					type_size = west[type + 'Size']();
+					width += type_size.width + my.hgap;
+					height = Math.max(type_size.height, height);
+				}
+				if (center && center.isVisible()) {
+					type_size = center[type + 'Size']();
+					width += type_size.width;
+					height = Math.max(type_size.height, height);
+				}
+				if (north && north.isVisible()) {
+					type_size = north[type + 'Size']();
+					width = Math.max(type_size.width, width);
+					height += type_size.height + my.vgap;
+				}
+				if (south && south.isVisible()) {
+					type_size = south[type + 'Size']();
+					width = Math.max(type_size.width, width);
+					height += type_size.height + my.vgap;
+				}
+
+				return {
+					'width': width + insets.left + insets.right, 
+					'height': height + insets.top + insets.bottom
+				};
+			};
+		}
+		that.preferred = typeLayout('preferred');
+		that.minimum = typeLayout('minimum');
+		that.maximum = typeLayout('maximum');
+		return that;
+	};
 })();
+/*!
+ * jQuery UI 1.8.18
+ *
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI
+ */(function(a,b){function d(b){return!a(b).parents().andSelf().filter(function(){return a.curCSS(this,"visibility")==="hidden"||a.expr.filters.hidden(this)}).length}function c(b,c){var e=b.nodeName.toLowerCase();if("area"===e){var f=b.parentNode,g=f.name,h;if(!b.href||!g||f.nodeName.toLowerCase()!=="map")return!1;h=a("img[usemap=#"+g+"]")[0];return!!h&&d(h)}return(/input|select|textarea|button|object/.test(e)?!b.disabled:"a"==e?b.href||c:c)&&d(b)}a.ui=a.ui||{};a.ui.version||(a.extend(a.ui,{version:"1.8.18",keyCode:{ALT:18,BACKSPACE:8,CAPS_LOCK:20,COMMA:188,COMMAND:91,COMMAND_LEFT:91,COMMAND_RIGHT:93,CONTROL:17,DELETE:46,DOWN:40,END:35,ENTER:13,ESCAPE:27,HOME:36,INSERT:45,LEFT:37,MENU:93,NUMPAD_ADD:107,NUMPAD_DECIMAL:110,NUMPAD_DIVIDE:111,NUMPAD_ENTER:108,NUMPAD_MULTIPLY:106,NUMPAD_SUBTRACT:109,PAGE_DOWN:34,PAGE_UP:33,PERIOD:190,RIGHT:39,SHIFT:16,SPACE:32,TAB:9,UP:38,WINDOWS:91}}),a.fn.extend({propAttr:a.fn.prop||a.fn.attr,_focus:a.fn.focus,focus:function(b,c){return typeof b=="number"?this.each(function(){var d=this;setTimeout(function(){a(d).focus(),c&&c.call(d)},b)}):this._focus.apply(this,arguments)},scrollParent:function(){var b;a.browser.msie&&/(static|relative)/.test(this.css("position"))||/absolute/.test(this.css("position"))?b=this.parents().filter(function(){return/(relative|absolute|fixed)/.test(a.curCSS(this,"position",1))&&/(auto|scroll)/.test(a.curCSS(this,"overflow",1)+a.curCSS(this,"overflow-y",1)+a.curCSS(this,"overflow-x",1))}).eq(0):b=this.parents().filter(function(){return/(auto|scroll)/.test(a.curCSS(this,"overflow",1)+a.curCSS(this,"overflow-y",1)+a.curCSS(this,"overflow-x",1))}).eq(0);return/fixed/.test(this.css("position"))||!b.length?a(document):b},zIndex:function(c){if(c!==b)return this.css("zIndex",c);if(this.length){var d=a(this[0]),e,f;while(d.length&&d[0]!==document){e=d.css("position");if(e==="absolute"||e==="relative"||e==="fixed"){f=parseInt(d.css("zIndex"),10);if(!isNaN(f)&&f!==0)return f}d=d.parent()}}return 0},disableSelection:function(){return this.bind((a.support.selectstart?"selectstart":"mousedown")+".ui-disableSelection",function(a){a.preventDefault()})},enableSelection:function(){return this.unbind(".ui-disableSelection")}}),a.each(["Width","Height"],function(c,d){function h(b,c,d,f){a.each(e,function(){c-=parseFloat(a.curCSS(b,"padding"+this,!0))||0,d&&(c-=parseFloat(a.curCSS(b,"border"+this+"Width",!0))||0),f&&(c-=parseFloat(a.curCSS(b,"margin"+this,!0))||0)});return c}var e=d==="Width"?["Left","Right"]:["Top","Bottom"],f=d.toLowerCase(),g={innerWidth:a.fn.innerWidth,innerHeight:a.fn.innerHeight,outerWidth:a.fn.outerWidth,outerHeight:a.fn.outerHeight};a.fn["inner"+d]=function(c){if(c===b)return g["inner"+d].call(this);return this.each(function(){a(this).css(f,h(this,c)+"px")})},a.fn["outer"+d]=function(b,c){if(typeof b!="number")return g["outer"+d].call(this,b);return this.each(function(){a(this).css(f,h(this,b,!0,c)+"px")})}}),a.extend(a.expr[":"],{data:function(b,c,d){return!!a.data(b,d[3])},focusable:function(b){return c(b,!isNaN(a.attr(b,"tabindex")))},tabbable:function(b){var d=a.attr(b,"tabindex"),e=isNaN(d);return(e||d>=0)&&c(b,!e)}}),a(function(){var b=document.body,c=b.appendChild(c=document.createElement("div"));c.offsetHeight,a.extend(c.style,{minHeight:"100px",height:"auto",padding:0,borderWidth:0}),a.support.minHeight=c.offsetHeight===100,a.support.selectstart="onselectstart"in c,b.removeChild(c).style.display="none"}),a.extend(a.ui,{plugin:{add:function(b,c,d){var e=a.ui[b].prototype;for(var f in d)e.plugins[f]=e.plugins[f]||[],e.plugins[f].push([c,d[f]])},call:function(a,b,c){var d=a.plugins[b];if(!!d&&!!a.element[0].parentNode)for(var e=0;e<d.length;e++)a.options[d[e][0]]&&d[e][1].apply(a.element,c)}},contains:function(a,b){return document.compareDocumentPosition?a.compareDocumentPosition(b)&16:a!==b&&a.contains(b)},hasScroll:function(b,c){if(a(b).css("overflow")==="hidden")return!1;var d=c&&c==="left"?"scrollLeft":"scrollTop",e=!1;if(b[d]>0)return!0;b[d]=1,e=b[d]>0,b[d]=0;return e},isOverAxis:function(a,b,c){return a>b&&a<b+c},isOver:function(b,c,d,e,f,g){return a.ui.isOverAxis(b,d,f)&&a.ui.isOverAxis(c,e,g)}}))})(jQuery);/*!
+ * jQuery UI Widget 1.8.18
+ *
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI/Widget
+ */(function(a,b){if(a.cleanData){var c=a.cleanData;a.cleanData=function(b){for(var d=0,e;(e=b[d])!=null;d++)try{a(e).triggerHandler("remove")}catch(f){}c(b)}}else{var d=a.fn.remove;a.fn.remove=function(b,c){return this.each(function(){c||(!b||a.filter(b,[this]).length)&&a("*",this).add([this]).each(function(){try{a(this).triggerHandler("remove")}catch(b){}});return d.call(a(this),b,c)})}}a.widget=function(b,c,d){var e=b.split(".")[0],f;b=b.split(".")[1],f=e+"-"+b,d||(d=c,c=a.Widget),a.expr[":"][f]=function(c){return!!a.data(c,b)},a[e]=a[e]||{},a[e][b]=function(a,b){arguments.length&&this._createWidget(a,b)};var g=new c;g.options=a.extend(!0,{},g.options),a[e][b].prototype=a.extend(!0,g,{namespace:e,widgetName:b,widgetEventPrefix:a[e][b].prototype.widgetEventPrefix||b,widgetBaseClass:f},d),a.widget.bridge(b,a[e][b])},a.widget.bridge=function(c,d){a.fn[c]=function(e){var f=typeof e=="string",g=Array.prototype.slice.call(arguments,1),h=this;e=!f&&g.length?a.extend.apply(null,[!0,e].concat(g)):e;if(f&&e.charAt(0)==="_")return h;f?this.each(function(){var d=a.data(this,c),f=d&&a.isFunction(d[e])?d[e].apply(d,g):d;if(f!==d&&f!==b){h=f;return!1}}):this.each(function(){var b=a.data(this,c);b?b.option(e||{})._init():a.data(this,c,new d(e,this))});return h}},a.Widget=function(a,b){arguments.length&&this._createWidget(a,b)},a.Widget.prototype={widgetName:"widget",widgetEventPrefix:"",options:{disabled:!1},_createWidget:function(b,c){a.data(c,this.widgetName,this),this.element=a(c),this.options=a.extend(!0,{},this.options,this._getCreateOptions(),b);var d=this;this.element.bind("remove."+this.widgetName,function(){d.destroy()}),this._create(),this._trigger("create"),this._init()},_getCreateOptions:function(){return a.metadata&&a.metadata.get(this.element[0])[this.widgetName]},_create:function(){},_init:function(){},destroy:function(){this.element.unbind("."+this.widgetName).removeData(this.widgetName),this.widget().unbind("."+this.widgetName).removeAttr("aria-disabled").removeClass(this.widgetBaseClass+"-disabled "+"ui-state-disabled")},widget:function(){return this.element},option:function(c,d){var e=c;if(arguments.length===0)return a.extend({},this.options);if(typeof c=="string"){if(d===b)return this.options[c];e={},e[c]=d}this._setOptions(e);return this},_setOptions:function(b){var c=this;a.each(b,function(a,b){c._setOption(a,b)});return this},_setOption:function(a,b){this.options[a]=b,a==="disabled"&&this.widget()[b?"addClass":"removeClass"](this.widgetBaseClass+"-disabled"+" "+"ui-state-disabled").attr("aria-disabled",b);return this},enable:function(){return this._setOption("disabled",!1)},disable:function(){return this._setOption("disabled",!0)},_trigger:function(b,c,d){var e,f,g=this.options[b];d=d||{},c=a.Event(c),c.type=(b===this.widgetEventPrefix?b:this.widgetEventPrefix+b).toLowerCase(),c.target=this.element[0],f=c.originalEvent;if(f)for(e in f)e in c||(c[e]=f[e]);this.element.trigger(c,d);return!(a.isFunction(g)&&g.call(this.element[0],c,d)===!1||c.isDefaultPrevented())}}})(jQuery);/*!
+ * jQuery UI Mouse 1.8.18
+ *
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI/Mouse
+ *
+ * Depends:
+ *	jquery.ui.widget.js
+ */(function(a,b){var c=!1;a(document).mouseup(function(a){c=!1}),a.widget("ui.mouse",{options:{cancel:":input,option",distance:1,delay:0},_mouseInit:function(){var b=this;this.element.bind("mousedown."+this.widgetName,function(a){return b._mouseDown(a)}).bind("click."+this.widgetName,function(c){if(!0===a.data(c.target,b.widgetName+".preventClickEvent")){a.removeData(c.target,b.widgetName+".preventClickEvent"),c.stopImmediatePropagation();return!1}}),this.started=!1},_mouseDestroy:function(){this.element.unbind("."+this.widgetName)},_mouseDown:function(b){if(!c){this._mouseStarted&&this._mouseUp(b),this._mouseDownEvent=b;var d=this,e=b.which==1,f=typeof this.options.cancel=="string"&&b.target.nodeName?a(b.target).closest(this.options.cancel).length:!1;if(!e||f||!this._mouseCapture(b))return!0;this.mouseDelayMet=!this.options.delay,this.mouseDelayMet||(this._mouseDelayTimer=setTimeout(function(){d.mouseDelayMet=!0},this.options.delay));if(this._mouseDistanceMet(b)&&this._mouseDelayMet(b)){this._mouseStarted=this._mouseStart(b)!==!1;if(!this._mouseStarted){b.preventDefault();return!0}}!0===a.data(b.target,this.widgetName+".preventClickEvent")&&a.removeData(b.target,this.widgetName+".preventClickEvent"),this._mouseMoveDelegate=function(a){return d._mouseMove(a)},this._mouseUpDelegate=function(a){return d._mouseUp(a)},a(document).bind("mousemove."+this.widgetName,this._mouseMoveDelegate).bind("mouseup."+this.widgetName,this._mouseUpDelegate),b.preventDefault(),c=!0;return!0}},_mouseMove:function(b){if(a.browser.msie&&!(document.documentMode>=9)&&!b.button)return this._mouseUp(b);if(this._mouseStarted){this._mouseDrag(b);return b.preventDefault()}this._mouseDistanceMet(b)&&this._mouseDelayMet(b)&&(this._mouseStarted=this._mouseStart(this._mouseDownEvent,b)!==!1,this._mouseStarted?this._mouseDrag(b):this._mouseUp(b));return!this._mouseStarted},_mouseUp:function(b){a(document).unbind("mousemove."+this.widgetName,this._mouseMoveDelegate).unbind("mouseup."+this.widgetName,this._mouseUpDelegate),this._mouseStarted&&(this._mouseStarted=!1,b.target==this._mouseDownEvent.target&&a.data(b.target,this.widgetName+".preventClickEvent",!0),this._mouseStop(b));return!1},_mouseDistanceMet:function(a){return Math.max(Math.abs(this._mouseDownEvent.pageX-a.pageX),Math.abs(this._mouseDownEvent.pageY-a.pageY))>=this.options.distance},_mouseDelayMet:function(a){return this.mouseDelayMet},_mouseStart:function(a){},_mouseDrag:function(a){},_mouseStop:function(a){},_mouseCapture:function(a){return!0}})})(jQuery);/*
+ * jQuery UI Position 1.8.18
+ *
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI/Position
+ */(function(a,b){a.ui=a.ui||{};var c=/left|center|right/,d=/top|center|bottom/,e="center",f={},g=a.fn.position,h=a.fn.offset;a.fn.position=function(b){if(!b||!b.of)return g.apply(this,arguments);b=a.extend({},b);var h=a(b.of),i=h[0],j=(b.collision||"flip").split(" "),k=b.offset?b.offset.split(" "):[0,0],l,m,n;i.nodeType===9?(l=h.width(),m=h.height(),n={top:0,left:0}):i.setTimeout?(l=h.width(),m=h.height(),n={top:h.scrollTop(),left:h.scrollLeft()}):i.preventDefault?(b.at="left top",l=m=0,n={top:b.of.pageY,left:b.of.pageX}):(l=h.outerWidth(),m=h.outerHeight(),n=h.offset()),a.each(["my","at"],function(){var a=(b[this]||"").split(" ");a.length===1&&(a=c.test(a[0])?a.concat([e]):d.test(a[0])?[e].concat(a):[e,e]),a[0]=c.test(a[0])?a[0]:e,a[1]=d.test(a[1])?a[1]:e,b[this]=a}),j.length===1&&(j[1]=j[0]),k[0]=parseInt(k[0],10)||0,k.length===1&&(k[1]=k[0]),k[1]=parseInt(k[1],10)||0,b.at[0]==="right"?n.left+=l:b.at[0]===e&&(n.left+=l/2),b.at[1]==="bottom"?n.top+=m:b.at[1]===e&&(n.top+=m/2),n.left+=k[0],n.top+=k[1];return this.each(function(){var c=a(this),d=c.outerWidth(),g=c.outerHeight(),h=parseInt(a.curCSS(this,"marginLeft",!0))||0,i=parseInt(a.curCSS(this,"marginTop",!0))||0,o=d+h+(parseInt(a.curCSS(this,"marginRight",!0))||0),p=g+i+(parseInt(a.curCSS(this,"marginBottom",!0))||0),q=a.extend({},n),r;b.my[0]==="right"?q.left-=d:b.my[0]===e&&(q.left-=d/2),b.my[1]==="bottom"?q.top-=g:b.my[1]===e&&(q.top-=g/2),f.fractions||(q.left=Math.round(q.left),q.top=Math.round(q.top)),r={left:q.left-h,top:q.top-i},a.each(["left","top"],function(c,e){a.ui.position[j[c]]&&a.ui.position[j[c]][e](q,{targetWidth:l,targetHeight:m,elemWidth:d,elemHeight:g,collisionPosition:r,collisionWidth:o,collisionHeight:p,offset:k,my:b.my,at:b.at})}),a.fn.bgiframe&&c.bgiframe(),c.offset(a.extend(q,{using:b.using}))})},a.ui.position={fit:{left:function(b,c){var d=a(window),e=c.collisionPosition.left+c.collisionWidth-d.width()-d.scrollLeft();b.left=e>0?b.left-e:Math.max(b.left-c.collisionPosition.left,b.left)},top:function(b,c){var d=a(window),e=c.collisionPosition.top+c.collisionHeight-d.height()-d.scrollTop();b.top=e>0?b.top-e:Math.max(b.top-c.collisionPosition.top,b.top)}},flip:{left:function(b,c){if(c.at[0]!==e){var d=a(window),f=c.collisionPosition.left+c.collisionWidth-d.width()-d.scrollLeft(),g=c.my[0]==="left"?-c.elemWidth:c.my[0]==="right"?c.elemWidth:0,h=c.at[0]==="left"?c.targetWidth:-c.targetWidth,i=-2*c.offset[0];b.left+=c.collisionPosition.left<0?g+h+i:f>0?g+h+i:0}},top:function(b,c){if(c.at[1]!==e){var d=a(window),f=c.collisionPosition.top+c.collisionHeight-d.height()-d.scrollTop(),g=c.my[1]==="top"?-c.elemHeight:c.my[1]==="bottom"?c.elemHeight:0,h=c.at[1]==="top"?c.targetHeight:-c.targetHeight,i=-2*c.offset[1];b.top+=c.collisionPosition.top<0?g+h+i:f>0?g+h+i:0}}}},a.offset.setOffset||(a.offset.setOffset=function(b,c){/static/.test(a.curCSS(b,"position"))&&(b.style.position="relative");var d=a(b),e=d.offset(),f=parseInt(a.curCSS(b,"top",!0),10)||0,g=parseInt(a.curCSS(b,"left",!0),10)||0,h={top:c.top-e.top+f,left:c.left-e.left+g};"using"in c?c.using.call(b,h):d.css(h)},a.fn.offset=function(b){var c=this[0];if(!c||!c.ownerDocument)return null;if(b)return this.each(function(){a.offset.setOffset(this,b)});return h.call(this)}),function(){var b=document.getElementsByTagName("body")[0],c=document.createElement("div"),d,e,g,h,i;d=document.createElement(b?"div":"body"),g={visibility:"hidden",width:0,height:0,border:0,margin:0,background:"none"},b&&a.extend(g,{position:"absolute",left:"-1000px",top:"-1000px"});for(var j in g)d.style[j]=g[j];d.appendChild(c),e=b||document.documentElement,e.insertBefore(d,e.firstChild),c.style.cssText="position: absolute; left: 10.7432222px; top: 10.432325px; height: 30px; width: 201px;",h=a(c).offset(function(a,b){return b}).offset(),d.innerHTML="",e.removeChild(d),i=h.top+h.left+(b?2e3:0),f.fractions=i>21&&i<22}()})(jQuery);/*
+ * jQuery UI Draggable 1.8.18
+ *
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI/Draggables
+ *
+ * Depends:
+ *	jquery.ui.core.js
+ *	jquery.ui.mouse.js
+ *	jquery.ui.widget.js
+ */(function(a,b){a.widget("ui.draggable",a.ui.mouse,{widgetEventPrefix:"drag",options:{addClasses:!0,appendTo:"parent",axis:!1,connectToSortable:!1,containment:!1,cursor:"auto",cursorAt:!1,grid:!1,handle:!1,helper:"original",iframeFix:!1,opacity:!1,refreshPositions:!1,revert:!1,revertDuration:500,scope:"default",scroll:!0,scrollSensitivity:20,scrollSpeed:20,snap:!1,snapMode:"both",snapTolerance:20,stack:!1,zIndex:!1},_create:function(){this.options.helper=="original"&&!/^(?:r|a|f)/.test(this.element.css("position"))&&(this.element[0].style.position="relative"),this.options.addClasses&&this.element.addClass("ui-draggable"),this.options.disabled&&this.element.addClass("ui-draggable-disabled"),this._mouseInit()},destroy:function(){if(!!this.element.data("draggable")){this.element.removeData("draggable").unbind(".draggable").removeClass("ui-draggable ui-draggable-dragging ui-draggable-disabled"),this._mouseDestroy();return this}},_mouseCapture:function(b){var c=this.options;if(this.helper||c.disabled||a(b.target).is(".ui-resizable-handle"))return!1;this.handle=this._getHandle(b);if(!this.handle)return!1;c.iframeFix&&a(c.iframeFix===!0?"iframe":c.iframeFix).each(function(){a('<div class="ui-draggable-iframeFix" style="background: #fff;"></div>').css({width:this.offsetWidth+"px",height:this.offsetHeight+"px",position:"absolute",opacity:"0.001",zIndex:1e3}).css(a(this).offset()).appendTo("body")});return!0},_mouseStart:function(b){var c=this.options;this.helper=this._createHelper(b),this._cacheHelperProportions(),a.ui.ddmanager&&(a.ui.ddmanager.current=this),this._cacheMargins(),this.cssPosition=this.helper.css("position"),this.scrollParent=this.helper.scrollParent(),this.offset=this.positionAbs=this.element.offset(),this.offset={top:this.offset.top-this.margins.top,left:this.offset.left-this.margins.left},a.extend(this.offset,{click:{left:b.pageX-this.offset.left,top:b.pageY-this.offset.top},parent:this._getParentOffset(),relative:this._getRelativeOffset()}),this.originalPosition=this.position=this._generatePosition(b),this.originalPageX=b.pageX,this.originalPageY=b.pageY,c.cursorAt&&this._adjustOffsetFromHelper(c.cursorAt),c.containment&&this._setContainment();if(this._trigger("start",b)===!1){this._clear();return!1}this._cacheHelperProportions(),a.ui.ddmanager&&!c.dropBehaviour&&a.ui.ddmanager.prepareOffsets(this,b),this.helper.addClass("ui-draggable-dragging"),this._mouseDrag(b,!0),a.ui.ddmanager&&a.ui.ddmanager.dragStart(this,b);return!0},_mouseDrag:function(b,c){this.position=this._generatePosition(b),this.positionAbs=this._convertPositionTo("absolute");if(!c){var d=this._uiHash();if(this._trigger("drag",b,d)===!1){this._mouseUp({});return!1}this.position=d.position}if(!this.options.axis||this.options.axis!="y")this.helper[0].style.left=this.position.left+"px";if(!this.options.axis||this.options.axis!="x")this.helper[0].style.top=this.position.top+"px";a.ui.ddmanager&&a.ui.ddmanager.drag(this,b);return!1},_mouseStop:function(b){var c=!1;a.ui.ddmanager&&!this.options.dropBehaviour&&(c=a.ui.ddmanager.drop(this,b)),this.dropped&&(c=this.dropped,this.dropped=!1);if((!this.element[0]||!this.element[0].parentNode)&&this.options.helper=="original")return!1;if(this.options.revert=="invalid"&&!c||this.options.revert=="valid"&&c||this.options.revert===!0||a.isFunction(this.options.revert)&&this.options.revert.call(this.element,c)){var d=this;a(this.helper).animate(this.originalPosition,parseInt(this.options.revertDuration,10),function(){d._trigger("stop",b)!==!1&&d._clear()})}else this._trigger("stop",b)!==!1&&this._clear();return!1},_mouseUp:function(b){this.options.iframeFix===!0&&a("div.ui-draggable-iframeFix").each(function(){this.parentNode.removeChild(this)}),a.ui.ddmanager&&a.ui.ddmanager.dragStop(this,b);return a.ui.mouse.prototype._mouseUp.call(this,b)},cancel:function(){this.helper.is(".ui-draggable-dragging")?this._mouseUp({}):this._clear();return this},_getHandle:function(b){var c=!this.options.handle||!a(this.options.handle,this.element).length?!0:!1;a(this.options.handle,this.element).find("*").andSelf().each(function(){this==b.target&&(c=!0)});return c},_createHelper:function(b){var c=this.options,d=a.isFunction(c.helper)?a(c.helper.apply(this.element[0],[b])):c.helper=="clone"?this.element.clone().removeAttr("id"):this.element;d.parents("body").length||d.appendTo(c.appendTo=="parent"?this.element[0].parentNode:c.appendTo),d[0]!=this.element[0]&&!/(fixed|absolute)/.test(d.css("position"))&&d.css("position","absolute");return d},_adjustOffsetFromHelper:function(b){typeof b=="string"&&(b=b.split(" ")),a.isArray(b)&&(b={left:+b[0],top:+b[1]||0}),"left"in b&&(this.offset.click.left=b.left+this.margins.left),"right"in b&&(this.offset.click.left=this.helperProportions.width-b.right+this.margins.left),"top"in b&&(this.offset.click.top=b.top+this.margins.top),"bottom"in b&&(this.offset.click.top=this.helperProportions.height-b.bottom+this.margins.top)},_getParentOffset:function(){this.offsetParent=this.helper.offsetParent();var b=this.offsetParent.offset();this.cssPosition=="absolute"&&this.scrollParent[0]!=document&&a.ui.contains(this.scrollParent[0],this.offsetParent[0])&&(b.left+=this.scrollParent.scrollLeft(),b.top+=this.scrollParent.scrollTop());if(this.offsetParent[0]==document.body||this.offsetParent[0].tagName&&this.offsetParent[0].tagName.toLowerCase()=="html"&&a.browser.msie)b={top:0,left:0};return{top:b.top+(parseInt(this.offsetParent.css("borderTopWidth"),10)||0),left:b.left+(parseInt(this.offsetParent.css("borderLeftWidth"),10)||0)}},_getRelativeOffset:function(){if(this.cssPosition=="relative"){var a=this.element.position();return{top:a.top-(parseInt(this.helper.css("top"),10)||0)+this.scrollParent.scrollTop(),left:a.left-(parseInt(this.helper.css("left"),10)||0)+this.scrollParent.scrollLeft()}}return{top:0,left:0}},_cacheMargins:function(){this.margins={left:parseInt(this.element.css("marginLeft"),10)||0,top:parseInt(this.element.css("marginTop"),10)||0,right:parseInt(this.element.css("marginRight"),10)||0,bottom:parseInt(this.element.css("marginBottom"),10)||0}},_cacheHelperProportions:function(){this.helperProportions={width:this.helper.outerWidth(),height:this.helper.outerHeight()}},_setContainment:function(){var b=this.options;b.containment=="parent"&&(b.containment=this.helper[0].parentNode);if(b.containment=="document"||b.containment=="window")this.containment=[b.containment=="document"?0:a(window).scrollLeft()-this.offset.relative.left-this.offset.parent.left,b.containment=="document"?0:a(window).scrollTop()-this.offset.relative.top-this.offset.parent.top,(b.containment=="document"?0:a(window).scrollLeft())+a(b.containment=="document"?document:window).width()-this.helperProportions.width-this.margins.left,(b.containment=="document"?0:a(window).scrollTop())+(a(b.containment=="document"?document:window).height()||document.body.parentNode.scrollHeight)-this.helperProportions.height-this.margins.top];if(!/^(document|window|parent)$/.test(b.containment)&&b.containment.constructor!=Array){var c=a(b.containment),d=c[0];if(!d)return;var e=c.offset(),f=a(d).css("overflow")!="hidden";this.containment=[(parseInt(a(d).css("borderLeftWidth"),10)||0)+(parseInt(a(d).css("paddingLeft"),10)||0),(parseInt(a(d).css("borderTopWidth"),10)||0)+(parseInt(a(d).css("paddingTop"),10)||0),(f?Math.max(d.scrollWidth,d.offsetWidth):d.offsetWidth)-(parseInt(a(d).css("borderLeftWidth"),10)||0)-(parseInt(a(d).css("paddingRight"),10)||0)-this.helperProportions.width-this.margins.left-this.margins.right,(f?Math.max(d.scrollHeight,d.offsetHeight):d.offsetHeight)-(parseInt(a(d).css("borderTopWidth"),10)||0)-(parseInt(a(d).css("paddingBottom"),10)||0)-this.helperProportions.height-this.margins.top-this.margins.bottom],this.relative_container=c}else b.containment.constructor==Array&&(this.containment=b.containment)},_convertPositionTo:function(b,c){c||(c=this.position);var d=b=="absolute"?1:-1,e=this.options,f=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,g=/(html|body)/i.test(f[0].tagName);return{top:c.top+this.offset.relative.top*d+this.offset.parent.top*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollTop():g?0:f.scrollTop())*d),left:c.left+this.offset.relative.left*d+this.offset.parent.left*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():g?0:f.scrollLeft())*d)}},_generatePosition:function(b){var c=this.options,d=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,e=/(html|body)/i.test(d[0].tagName),f=b.pageX,g=b.pageY;if(this.originalPosition){var h;if(this.containment){if(this.relative_container){var i=this.relative_container.offset();h=[this.containment[0]+i.left,this.containment[1]+i.top,this.containment[2]+i.left,this.containment[3]+i.top]}else h=this.containment;b.pageX-this.offset.click.left<h[0]&&(f=h[0]+this.offset.click.left),b.pageY-this.offset.click.top<h[1]&&(g=h[1]+this.offset.click.top),b.pageX-this.offset.click.left>h[2]&&(f=h[2]+this.offset.click.left),b.pageY-this.offset.click.top>h[3]&&(g=h[3]+this.offset.click.top)}if(c.grid){var j=c.grid[1]?this.originalPageY+Math.round((g-this.originalPageY)/c.grid[1])*c.grid[1]:this.originalPageY;g=h?j-this.offset.click.top<h[1]||j-this.offset.click.top>h[3]?j-this.offset.click.top<h[1]?j+c.grid[1]:j-c.grid[1]:j:j;var k=c.grid[0]?this.originalPageX+Math.round((f-this.originalPageX)/c.grid[0])*c.grid[0]:this.originalPageX;f=h?k-this.offset.click.left<h[0]||k-this.offset.click.left>h[2]?k-this.offset.click.left<h[0]?k+c.grid[0]:k-c.grid[0]:k:k}}return{top:g-this.offset.click.top-this.offset.relative.top-this.offset.parent.top+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollTop():e?0:d.scrollTop()),left:f-this.offset.click.left-this.offset.relative.left-this.offset.parent.left+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():e?0:d.scrollLeft())}},_clear:function(){this.helper.removeClass("ui-draggable-dragging"),this.helper[0]!=this.element[0]&&!this.cancelHelperRemoval&&this.helper.remove(),this.helper=null,this.cancelHelperRemoval=!1},_trigger:function(b,c,d){d=d||this._uiHash(),a.ui.plugin.call(this,b,[c,d]),b=="drag"&&(this.positionAbs=this._convertPositionTo("absolute"));return a.Widget.prototype._trigger.call(this,b,c,d)},plugins:{},_uiHash:function(a){return{helper:this.helper,position:this.position,originalPosition:this.originalPosition,offset:this.positionAbs}}}),a.extend(a.ui.draggable,{version:"1.8.18"}),a.ui.plugin.add("draggable","connectToSortable",{start:function(b,c){var d=a(this).data("draggable"),e=d.options,f=a.extend({},c,{item:d.element});d.sortables=[],a(e.connectToSortable).each(function(){var c=a.data(this,"sortable");c&&!c.options.disabled&&(d.sortables.push({instance:c,shouldRevert:c.options.revert}),c.refreshPositions(),c._trigger("activate",b,f))})},stop:function(b,c){var d=a(this).data("draggable"),e=a.extend({},c,{item:d.element});a.each(d.sortables,function(){this.instance.isOver?(this.instance.isOver=0,d.cancelHelperRemoval=!0,this.instance.cancelHelperRemoval=!1,this.shouldRevert&&(this.instance.options.revert=!0),this.instance._mouseStop(b),this.instance.options.helper=this.instance.options._helper,d.options.helper=="original"&&this.instance.currentItem.css({top:"auto",left:"auto"})):(this.instance.cancelHelperRemoval=!1,this.instance._trigger("deactivate",b,e))})},drag:function(b,c){var d=a(this).data("draggable"),e=this,f=function(b){var c=this.offset.click.top,d=this.offset.click.left,e=this.positionAbs.top,f=this.positionAbs.left,g=b.height,h=b.width,i=b.top,j=b.left;return a.ui.isOver(e+c,f+d,i,j,g,h)};a.each(d.sortables,function(f){this.instance.positionAbs=d.positionAbs,this.instance.helperProportions=d.helperProportions,this.instance.offset.click=d.offset.click,this.instance._intersectsWith(this.instance.containerCache)?(this.instance.isOver||(this.instance.isOver=1,this.instance.currentItem=a(e).clone().removeAttr("id").appendTo(this.instance.element).data("sortable-item",!0),this.instance.options._helper=this.instance.options.helper,this.instance.options.helper=function(){return c.helper[0]},b.target=this.instance.currentItem[0],this.instance._mouseCapture(b,!0),this.instance._mouseStart(b,!0,!0),this.instance.offset.click.top=d.offset.click.top,this.instance.offset.click.left=d.offset.click.left,this.instance.offset.parent.left-=d.offset.parent.left-this.instance.offset.parent.left,this.instance.offset.parent.top-=d.offset.parent.top-this.instance.offset.parent.top,d._trigger("toSortable",b),d.dropped=this.instance.element,d.currentItem=d.element,this.instance.fromOutside=d),this.instance.currentItem&&this.instance._mouseDrag(b)):this.instance.isOver&&(this.instance.isOver=0,this.instance.cancelHelperRemoval=!0,this.instance.options.revert=!1,this.instance._trigger("out",b,this.instance._uiHash(this.instance)),this.instance._mouseStop(b,!0),this.instance.options.helper=this.instance.options._helper,this.instance.currentItem.remove(),this.instance.placeholder&&this.instance.placeholder.remove(),d._trigger("fromSortable",b),d.dropped=!1)})}}),a.ui.plugin.add("draggable","cursor",{start:function(b,c){var d=a("body"),e=a(this).data("draggable").options;d.css("cursor")&&(e._cursor=d.css("cursor")),d.css("cursor",e.cursor)},stop:function(b,c){var d=a(this).data("draggable").options;d._cursor&&a("body").css("cursor",d._cursor)}}),a.ui.plugin.add("draggable","opacity",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("opacity")&&(e._opacity=d.css("opacity")),d.css("opacity",e.opacity)},stop:function(b,c){var d=a(this).data("draggable").options;d._opacity&&a(c.helper).css("opacity",d._opacity)}}),a.ui.plugin.add("draggable","scroll",{start:function(b,c){var d=a(this).data("draggable");d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"&&(d.overflowOffset=d.scrollParent.offset())},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=!1;if(d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"){if(!e.axis||e.axis!="x")d.overflowOffset.top+d.scrollParent[0].offsetHeight-b.pageY<e.scrollSensitivity?d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop+e.scrollSpeed:b.pageY-d.overflowOffset.top<e.scrollSensitivity&&(d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop-e.scrollSpeed);if(!e.axis||e.axis!="y")d.overflowOffset.left+d.scrollParent[0].offsetWidth-b.pageX<e.scrollSensitivity?d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft+e.scrollSpeed:b.pageX-d.overflowOffset.left<e.scrollSensitivity&&(d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft-e.scrollSpeed)}else{if(!e.axis||e.axis!="x")b.pageY-a(document).scrollTop()<e.scrollSensitivity?f=a(document).scrollTop(a(document).scrollTop()-e.scrollSpeed):a(window).height()-(b.pageY-a(document).scrollTop())<e.scrollSensitivity&&(f=a(document).scrollTop(a(document).scrollTop()+e.scrollSpeed));if(!e.axis||e.axis!="y")b.pageX-a(document).scrollLeft()<e.scrollSensitivity?f=a(document).scrollLeft(a(document).scrollLeft()-e.scrollSpeed):a(window).width()-(b.pageX-a(document).scrollLeft())<e.scrollSensitivity&&(f=a(document).scrollLeft(a(document).scrollLeft()+e.scrollSpeed))}f!==!1&&a.ui.ddmanager&&!e.dropBehaviour&&a.ui.ddmanager.prepareOffsets(d,b)}}),a.ui.plugin.add("draggable","snap",{start:function(b,c){var d=a(this).data("draggable"),e=d.options;d.snapElements=[],a(e.snap.constructor!=String?e.snap.items||":data(draggable)":e.snap).each(function(){var b=a(this),c=b.offset();this!=d.element[0]&&d.snapElements.push({item:this,width:b.outerWidth(),height:b.outerHeight(),top:c.top,left:c.left})})},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=e.snapTolerance,g=c.offset.left,h=g+d.helperProportions.width,i=c.offset.top,j=i+d.helperProportions.height;for(var k=d.snapElements.length-1;k>=0;k--){var l=d.snapElements[k].left,m=l+d.snapElements[k].width,n=d.snapElements[k].top,o=n+d.snapElements[k].height;if(!(l-f<g&&g<m+f&&n-f<i&&i<o+f||l-f<g&&g<m+f&&n-f<j&&j<o+f||l-f<h&&h<m+f&&n-f<i&&i<o+f||l-f<h&&h<m+f&&n-f<j&&j<o+f)){d.snapElements[k].snapping&&d.options.snap.release&&d.options.snap.release.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=!1;continue}if(e.snapMode!="inner"){var p=Math.abs(n-j)<=f,q=Math.abs(o-i)<=f,r=Math.abs(l-h)<=f,s=Math.abs(m-g)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n-d.helperProportions.height,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l-d.helperProportions.width}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m}).left-d.margins.left)}var t=p||q||r||s;if(e.snapMode!="outer"){var p=Math.abs(n-i)<=f,q=Math.abs(o-j)<=f,r=Math.abs(l-g)<=f,s=Math.abs(m-h)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o-d.helperProportions.height,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m-d.helperProportions.width}).left-d.margins.left)}!d.snapElements[k].snapping&&(p||q||r||s||t)&&d.options.snap.snap&&d.options.snap.snap.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=p||q||r||s||t}}}),a.ui.plugin.add("draggable","stack",{start:function(b,c){var d=a(this).data("draggable").options,e=a.makeArray(a(d.stack)).sort(function(b,c){return(parseInt(a(b).css("zIndex"),10)||0)-(parseInt(a(c).css("zIndex"),10)||0)});if(!!e.length){var f=parseInt(e[0].style.zIndex)||0;a(e).each(function(a){this.style.zIndex=f+a}),this[0].style.zIndex=f+e.length}}}),a.ui.plugin.add("draggable","zIndex",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("zIndex")&&(e._zIndex=d.css("zIndex")),d.css("zIndex",e.zIndex)},stop:function(b,c){var d=a(this).data("draggable").options;d._zIndex&&a(c.helper).css("zIndex",d._zIndex)}})})(jQuery);/*
+ * jQuery UI Resizable 1.8.18
+ *
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI/Resizables
+ *
+ * Depends:
+ *	jquery.ui.core.js
+ *	jquery.ui.mouse.js
+ *	jquery.ui.widget.js
+ */(function(a,b){a.widget("ui.resizable",a.ui.mouse,{widgetEventPrefix:"resize",options:{alsoResize:!1,animate:!1,animateDuration:"slow",animateEasing:"swing",aspectRatio:!1,autoHide:!1,containment:!1,ghost:!1,grid:!1,handles:"e,s,se",helper:!1,maxHeight:null,maxWidth:null,minHeight:10,minWidth:10,zIndex:1e3},_create:function(){var b=this,c=this.options;this.element.addClass("ui-resizable"),a.extend(this,{_aspectRatio:!!c.aspectRatio,aspectRatio:c.aspectRatio,originalElement:this.element,_proportionallyResizeElements:[],_helper:c.helper||c.ghost||c.animate?c.helper||"ui-resizable-helper":null}),this.element[0].nodeName.match(/canvas|textarea|input|select|button|img/i)&&(this.element.wrap(a('<div class="ui-wrapper" style="overflow: hidden;"></div>').css({position:this.element.css("position"),width:this.element.outerWidth(),height:this.element.outerHeight(),top:this.element.css("top"),left:this.element.css("left")})),this.element=this.element.parent().data("resizable",this.element.data("resizable")),this.elementIsWrapper=!0,this.element.css({marginLeft:this.originalElement.css("marginLeft"),marginTop:this.originalElement.css("marginTop"),marginRight:this.originalElement.css("marginRight"),marginBottom:this.originalElement.css("marginBottom")}),this.originalElement.css({marginLeft:0,marginTop:0,marginRight:0,marginBottom:0}),this.originalResizeStyle=this.originalElement.css("resize"),this.originalElement.css("resize","none"),this._proportionallyResizeElements.push(this.originalElement.css({position:"static",zoom:1,display:"block"})),this.originalElement.css({margin:this.originalElement.css("margin")}),this._proportionallyResize()),this.handles=c.handles||(a(".ui-resizable-handle",this.element).length?{n:".ui-resizable-n",e:".ui-resizable-e",s:".ui-resizable-s",w:".ui-resizable-w",se:".ui-resizable-se",sw:".ui-resizable-sw",ne:".ui-resizable-ne",nw:".ui-resizable-nw"}:"e,s,se");if(this.handles.constructor==String){this.handles=="all"&&(this.handles="n,e,s,w,se,sw,ne,nw");var d=this.handles.split(",");this.handles={};for(var e=0;e<d.length;e++){var f=a.trim(d[e]),g="ui-resizable-"+f,h=a('<div class="ui-resizable-handle '+g+'"></div>');/sw|se|ne|nw/.test(f)&&h.css({zIndex:++c.zIndex}),"se"==f&&h.addClass("ui-icon ui-icon-gripsmall-diagonal-se"),this.handles[f]=".ui-resizable-"+f,this.element.append(h)}}this._renderAxis=function(b){b=b||this.element;for(var c in this.handles){this.handles[c].constructor==String&&(this.handles[c]=a(this.handles[c],this.element).show());if(this.elementIsWrapper&&this.originalElement[0].nodeName.match(/textarea|input|select|button/i)){var d=a(this.handles[c],this.element),e=0;e=/sw|ne|nw|se|n|s/.test(c)?d.outerHeight():d.outerWidth();var f=["padding",/ne|nw|n/.test(c)?"Top":/se|sw|s/.test(c)?"Bottom":/^e$/.test(c)?"Right":"Left"].join("");b.css(f,e),this._proportionallyResize()}if(!a(this.handles[c]).length)continue}},this._renderAxis(this.element),this._handles=a(".ui-resizable-handle",this.element).disableSelection(),this._handles.mouseover(function(){if(!b.resizing){if(this.className)var a=this.className.match(/ui-resizable-(se|sw|ne|nw|n|e|s|w)/i);b.axis=a&&a[1]?a[1]:"se"}}),c.autoHide&&(this._handles.hide(),a(this.element).addClass("ui-resizable-autohide").hover(function(){c.disabled||(a(this).removeClass("ui-resizable-autohide"),b._handles.show())},function(){c.disabled||b.resizing||(a(this).addClass("ui-resizable-autohide"),b._handles.hide())})),this._mouseInit()},destroy:function(){this._mouseDestroy();var b=function(b){a(b).removeClass("ui-resizable ui-resizable-disabled ui-resizable-resizing").removeData("resizable").unbind(".resizable").find(".ui-resizable-handle").remove()};if(this.elementIsWrapper){b(this.element);var c=this.element;c.after(this.originalElement.css({position:c.css("position"),width:c.outerWidth(),height:c.outerHeight(),top:c.css("top"),left:c.css("left")})).remove()}this.originalElement.css("resize",this.originalResizeStyle),b(this.originalElement);return this},_mouseCapture:function(b){var c=!1;for(var d in this.handles)a(this.handles[d])[0]==b.target&&(c=!0);return!this.options.disabled&&c},_mouseStart:function(b){var d=this.options,e=this.element.position(),f=this.element;this.resizing=!0,this.documentScroll={top:a(document).scrollTop(),left:a(document).scrollLeft()},(f.is(".ui-draggable")||/absolute/.test(f.css("position")))&&f.css({position:"absolute",top:e.top,left:e.left}),this._renderProxy();var g=c(this.helper.css("left")),h=c(this.helper.css("top"));d.containment&&(g+=a(d.containment).scrollLeft()||0,h+=a(d.containment).scrollTop()||0),this.offset=this.helper.offset(),this.position={left:g,top:h},this.size=this._helper?{width:f.outerWidth(),height:f.outerHeight()}:{width:f.width(),height:f.height()},this.originalSize=this._helper?{width:f.outerWidth(),height:f.outerHeight()}:{width:f.width(),height:f.height()},this.originalPosition={left:g,top:h},this.sizeDiff={width:f.outerWidth()-f.width(),height:f.outerHeight()-f.height()},this.originalMousePosition={left:b.pageX,top:b.pageY},this.aspectRatio=typeof d.aspectRatio=="number"?d.aspectRatio:this.originalSize.width/this.originalSize.height||1;var i=a(".ui-resizable-"+this.axis).css("cursor");a("body").css("cursor",i=="auto"?this.axis+"-resize":i),f.addClass("ui-resizable-resizing"),this._propagate("start",b);return!0},_mouseDrag:function(b){var c=this.helper,d=this.options,e={},f=this,g=this.originalMousePosition,h=this.axis,i=b.pageX-g.left||0,j=b.pageY-g.top||0,k=this._change[h];if(!k)return!1;var l=k.apply(this,[b,i,j]),m=a.browser.msie&&a.browser.version<7,n=this.sizeDiff;this._updateVirtualBoundaries(b.shiftKey);if(this._aspectRatio||b.shiftKey)l=this._updateRatio(l,b);l=this._respectSize(l,b),this._propagate("resize",b),c.css({top:this.position.top+"px",left:this.position.left+"px",width:this.size.width+"px",height:this.size.height+"px"}),!this._helper&&this._proportionallyResizeElements.length&&this._proportionallyResize(),this._updateCache(l),this._trigger("resize",b,this.ui());return!1},_mouseStop:function(b){this.resizing=!1;var c=this.options,d=this;if(this._helper){var e=this._proportionallyResizeElements,f=e.length&&/textarea/i.test(e[0].nodeName),g=f&&a.ui.hasScroll(e[0],"left")?0:d.sizeDiff.height,h=f?0:d.sizeDiff.width,i={width:d.helper.width()-h,height:d.helper.height()-g},j=parseInt(d.element.css("left"),10)+(d.position.left-d.originalPosition.left)||null,k=parseInt(d.element.css("top"),10)+(d.position.top-d.originalPosition.top)||null;c.animate||this.element.css(a.extend(i,{top:k,left:j})),d.helper.height(d.size.height),d.helper.width(d.size.width),this._helper&&!c.animate&&this._proportionallyResize()}a("body").css("cursor","auto"),this.element.removeClass("ui-resizable-resizing"),this._propagate("stop",b),this._helper&&this.helper.remove();return!1},_updateVirtualBoundaries:function(a){var b=this.options,c,e,f,g,h;h={minWidth:d(b.minWidth)?b.minWidth:0,maxWidth:d(b.maxWidth)?b.maxWidth:Infinity,minHeight:d(b.minHeight)?b.minHeight:0,maxHeight:d(b.maxHeight)?b.maxHeight:Infinity};if(this._aspectRatio||a)c=h.minHeight*this.aspectRatio,f=h.minWidth/this.aspectRatio,e=h.maxHeight*this.aspectRatio,g=h.maxWidth/this.aspectRatio,c>h.minWidth&&(h.minWidth=c),f>h.minHeight&&(h.minHeight=f),e<h.maxWidth&&(h.maxWidth=e),g<h.maxHeight&&(h.maxHeight=g);this._vBoundaries=h},_updateCache:function(a){var b=this.options;this.offset=this.helper.offset(),d(a.left)&&(this.position.left=a.left),d(a.top)&&(this.position.top=a.top),d(a.height)&&(this.size.height=a.height),d(a.width)&&(this.size.width=a.width)},_updateRatio:function(a,b){var c=this.options,e=this.position,f=this.size,g=this.axis;d(a.height)?a.width=a.height*this.aspectRatio:d(a.width)&&(a.height=a.width/this.aspectRatio),g=="sw"&&(a.left=e.left+(f.width-a.width),a.top=null),g=="nw"&&(a.top=e.top+(f.height-a.height),a.left=e.left+(f.width-a.width));return a},_respectSize:function(a,b){var c=this.helper,e=this._vBoundaries,f=this._aspectRatio||b.shiftKey,g=this.axis,h=d(a.width)&&e.maxWidth&&e.maxWidth<a.width,i=d(a.height)&&e.maxHeight&&e.maxHeight<a.height,j=d(a.width)&&e.minWidth&&e.minWidth>a.width,k=d(a.height)&&e.minHeight&&e.minHeight>a.height;j&&(a.width=e.minWidth),k&&(a.height=e.minHeight),h&&(a.width=e.maxWidth),i&&(a.height=e.maxHeight);var l=this.originalPosition.left+this.originalSize.width,m=this.position.top+this.size.height,n=/sw|nw|w/.test(g),o=/nw|ne|n/.test(g);j&&n&&(a.left=l-e.minWidth),h&&n&&(a.left=l-e.maxWidth),k&&o&&(a.top=m-e.minHeight),i&&o&&(a.top=m-e.maxHeight);var p=!a.width&&!a.height;p&&!a.left&&a.top?a.top=null:p&&!a.top&&a.left&&(a.left=null);return a},_proportionallyResize:function(){var b=this.options;if(!!this._proportionallyResizeElements.length){var c=this.helper||this.element;for(var d=0;d<this._proportionallyResizeElements.length;d++){var e=this._proportionallyResizeElements[d];if(!this.borderDif){var f=[e.css("borderTopWidth"),e.css("borderRightWidth"),e.css("borderBottomWidth"),e.css("borderLeftWidth")],g=[e.css("paddingTop"),e.css("paddingRight"),e.css("paddingBottom"),e.css("paddingLeft")];this.borderDif=a.map(f,function(a,b){var c=parseInt(a,10)||0,d=parseInt(g[b],10)||0;return c+d})}if(a.browser.msie&&(!!a(c).is(":hidden")||!!a(c).parents(":hidden").length))continue;e.css({height:c.height()-this.borderDif[0]-this.borderDif[2]||0,width:c.width()-this.borderDif[1]-this.borderDif[3]||0})}}},_renderProxy:function(){var b=this.element,c=this.options;this.elementOffset=b.offset();if(this._helper){this.helper=this.helper||a('<div style="overflow:hidden;"></div>');var d=a.browser.msie&&a.browser.version<7,e=d?1:0,f=d?2:-1;this.helper.addClass(this._helper).css({width:this.element.outerWidth()+f,height:this.element.outerHeight()+f,position:"absolute",left:this.elementOffset.left-e+"px",top:this.elementOffset.top-e+"px",zIndex:++c.zIndex}),this.helper.appendTo("body").disableSelection()}else this.helper=this.element},_change:{e:function(a,b,c){return{width:this.originalSize.width+b}},w:function(a,b,c){var d=this.options,e=this.originalSize,f=this.originalPosition;return{left:f.left+b,width:e.width-b}},n:function(a,b,c){var d=this.options,e=this.originalSize,f=this.originalPosition;return{top:f.top+c,height:e.height-c}},s:function(a,b,c){return{height:this.originalSize.height+c}},se:function(b,c,d){return a.extend(this._change.s.apply(this,arguments),this._change.e.apply(this,[b,c,d]))},sw:function(b,c,d){return a.extend(this._change.s.apply(this,arguments),this._change.w.apply(this,[b,c,d]))},ne:function(b,c,d){return a.extend(this._change.n.apply(this,arguments),this._change.e.apply(this,[b,c,d]))},nw:function(b,c,d){return a.extend(this._change.n.apply(this,arguments),this._change.w.apply(this,[b,c,d]))}},_propagate:function(b,c){a.ui.plugin.call(this,b,[c,this.ui()]),b!="resize"&&this._trigger(b,c,this.ui())},plugins:{},ui:function(){return{originalElement:this.originalElement,element:this.element,helper:this.helper,position:this.position,size:this.size,originalSize:this.originalSize,originalPosition:this.originalPosition}}}),a.extend(a.ui.resizable,{version:"1.8.18"}),a.ui.plugin.add("resizable","alsoResize",{start:function(b,c){var d=a(this).data("resizable"),e=d.options,f=function(b){a(b).each(function(){var b=a(this);b.data("resizable-alsoresize",{width:parseInt(b.width(),10),height:parseInt(b.height(),10),left:parseInt(b.css("left"),10),top:parseInt(b.css("top"),10)})})};typeof e.alsoResize=="object"&&!e.alsoResize.parentNode?e.alsoResize.length?(e.alsoResize=e.alsoResize[0],f(e.alsoResize)):a.each(e.alsoResize,function(a){f(a)}):f(e.alsoResize)},resize:function(b,c){var d=a(this).data("resizable"),e=d.options,f=d.originalSize,g=d.originalPosition,h={height:d.size.height-f.height||0,width:d.size.width-f.width||0,top:d.position.top-g.top||0,left:d.position.left-g.left||0},i=function(b,d){a(b).each(function(){var b=a(this),e=a(this).data("resizable-alsoresize"),f={},g=d&&d.length?d:b.parents(c.originalElement[0]).length?["width","height"]:["width","height","top","left"];a.each(g,function(a,b){var c=(e[b]||0)+(h[b]||0);c&&c>=0&&(f[b]=c||null)}),b.css(f)})};typeof e.alsoResize=="object"&&!e.alsoResize.nodeType?a.each(e.alsoResize,function(a,b){i(a,b)}):i(e.alsoResize)},stop:function(b,c){a(this).removeData("resizable-alsoresize")}}),a.ui.plugin.add("resizable","animate",{stop:function(b,c){var d=a(this).data("resizable"),e=d.options,f=d._proportionallyResizeElements,g=f.length&&/textarea/i.test(f[0].nodeName),h=g&&a.ui.hasScroll(f[0],"left")?0:d.sizeDiff.height,i=g?0:d.sizeDiff.width,j={width:d.size.width-i,height:d.size.height-h},k=parseInt(d.element.css("left"),10)+(d.position.left-d.originalPosition.left)||null,l=parseInt(d.element.css("top"),10)+(d.position.top-d.originalPosition.top)||null;d.element.animate(a.extend(j,l&&k?{top:l,left:k}:{}),{duration:e.animateDuration,easing:e.animateEasing,step:function(){var c={width:parseInt(d.element.css("width"),10),height:parseInt(d.element.css("height"),10),top:parseInt(d.element.css("top"),10),left:parseInt(d.element.css("left"),10)};f&&f.length&&a(f[0]).css({width:c.width,height:c.height}),d._updateCache(c),d._propagate("resize",b)}})}}),a.ui.plugin.add("resizable","containment",{start:function(b,d){var e=a(this).data("resizable"),f=e.options,g=e.element,h=f.containment,i=h instanceof a?h.get(0):/parent/.test(h)?g.parent().get(0):h;if(!!i){e.containerElement=a(i);if(/document/.test(h)||h==document)e.containerOffset={left:0,top:0},e.containerPosition={left:0,top:0},e.parentData={element:a(document),left:0,top:0,width:a(document).width(),height:a(document).height()||document.body.parentNode.scrollHeight};else{var j=a(i),k=[];a(["Top","Right","Left","Bottom"]).each(function(a,b){k[a]=c(j.css("padding"+b))}),e.containerOffset=j.offset(),e.containerPosition=j.position(),e.containerSize={height:j.innerHeight()-k[3],width:j.innerWidth()-k[1]};var l=e.containerOffset,m=e.containerSize.height,n=e.containerSize.width,o=a.ui.hasScroll(i,"left")?i.scrollWidth:n,p=a.ui.hasScroll(i)?i.scrollHeight:m;e.parentData={element:i,left:l.left,top:l.top,width:o,height:p}}}},resize:function(b,c){var d=a(this).data("resizable"),e=d.options,f=d.containerSize,g=d.containerOffset,h=d.size,i=d.position,j=d._aspectRatio||b.shiftKey,k={top:0,left:0},l=d.containerElement;l[0]!=document&&/static/.test(l.css("position"))&&(k=g),i.left<(d._helper?g.left:0)&&(d.size.width=d.size.width+(d._helper?d.position.left-g.left:d.position.left-k.left),j&&(d.size.height=d.size.width/e.aspectRatio),d.position.left=e.helper?g.left:0),i.top<(d._helper?g.top:0)&&(d.size.height=d.size.height+(d._helper?d.position.top-g.top:d.position.top),j&&(d.size.width=d.size.height*e.aspectRatio),d.position.top=d._helper?g.top:0),d.offset.left=d.parentData.left+d.position.left,d.offset.top=d.parentData.top+d.position.top;var m=Math.abs((d._helper?d.offset.left-k.left:d.offset.left-k.left)+d.sizeDiff.width),n=Math.abs((d._helper?d.offset.top-k.top:d.offset.top-g.top)+d.sizeDiff.height),o=d.containerElement.get(0)==d.element.parent().get(0),p=/relative|absolute/.test(d.containerElement.css("position"));o&&p&&(m-=d.parentData.left),m+d.size.width>=d.parentData.width&&(d.size.width=d.parentData.width-m,j&&(d.size.height=d.size.width/d.aspectRatio)),n+d.size.height>=d.parentData.height&&(d.size.height=d.parentData.height-n,j&&(d.size.width=d.size.height*d.aspectRatio))},stop:function(b,c){var d=a(this).data("resizable"),e=d.options,f=d.position,g=d.containerOffset,h=d.containerPosition,i=d.containerElement,j=a(d.helper),k=j.offset(),l=j.outerWidth()-d.sizeDiff.width,m=j.outerHeight()-d.sizeDiff.height;d._helper&&!e.animate&&/relative/.test(i.css("position"))&&a(this).css({left:k.left-h.left-g.left,width:l,height:m}),d._helper&&!e.animate&&/static/.test(i.css("position"))&&a(this).css({left:k.left-h.left-g.left,width:l,height:m})}}),a.ui.plugin.add("resizable","ghost",{start:function(b,c){var d=a(this).data("resizable"),e=d.options,f=d.size;d.ghost=d.originalElement.clone(),d.ghost.css({opacity:.25,display:"block",position:"relative",height:f.height,width:f.width,margin:0,left:0,top:0}).addClass("ui-resizable-ghost").addClass(typeof e.ghost=="string"?e.ghost:""),d.ghost.appendTo(d.helper)},resize:function(b,c){var d=a(this).data("resizable"),e=d.options;d.ghost&&d.ghost.css({position:"relative",height:d.size.height,width:d.size.width})},stop:function(b,c){var d=a(this).data("resizable"),e=d.options;d.ghost&&d.helper&&d.helper.get(0).removeChild(d.ghost.get(0))}}),a.ui.plugin.add("resizable","grid",{resize:function(b,c){var d=a(this).data("resizable"),e=d.options,f=d.size,g=d.originalSize,h=d.originalPosition,i=d.axis,j=e._aspectRatio||b.shiftKey;e.grid=typeof e.grid=="number"?[e.grid,e.grid]:e.grid;var k=Math.round((f.width-g.width)/(e.grid[0]||1))*(e.grid[0]||1),l=Math.round((f.height-g.height)/(e.grid[1]||1))*(e.grid[1]||1);/^(se|s|e)$/.test(i)?(d.size.width=g.width+k,d.size.height=g.height+l):/^(ne)$/.test(i)?(d.size.width=g.width+k,d.size.height=g.height+l,d.position.top=h.top-l):/^(sw)$/.test(i)?(d.size.width=g.width+k,d.size.height=g.height+l,d.position.left=h.left-k):(d.size.width=g.width+k,d.size.height=g.height+l,d.position.top=h.top-l,d.position.left=h.left-k)}});var c=function(a){return parseInt(a,10)||0},d=function(a){return!isNaN(parseInt(a,10))}})(jQuery);

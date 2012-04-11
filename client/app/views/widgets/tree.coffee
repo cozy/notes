@@ -32,6 +32,8 @@ class exports.Tree
     setToolbar: (navEl) ->
         navEl.prepend require('../templates/tree_buttons')
 
+    # Bind listeners given in parameters with comment events (creation,
+    # update, deletion, selection).
     setListeners: (callbacks) ->
         $("#tree-create").click =>
             @treeEl.jstree("create")
@@ -54,27 +56,26 @@ class exports.Tree
 
         @widget.bind "select_node.jstree", (e, data) =>
             path = @_getPath data
-            callbacks.onSelect path
+            callbacks.onSelect path, data.rslt.obj.data("id")
 
 
+    # Returns path to node for a given node.
     # data.inst = tree instance
     _getPath: (data, nodeName) ->
-        if nodeName == undefined
-            nodeName = data.inst.get_text data.rslt.obj
+        nodeName = data.inst.get_text data.rslt.obj if nodeName == undefined
         nodes = [slugify nodeName]
         parent = data.rslt.parent
-        if parent == undefined # rename does not load parent
-            parent = data.inst._get_parent data.rslt.obj
+        parent = data.inst._get_parent data.rslt.obj if parent == undefined
 
-        name = "start"
+        name = "all"
         while name and parent != undefined and parent.children != undefined
             name = parent.children("a:eq(0)").text()
             nodes.unshift slugify(name)
             parent = parent.parent().parent()
 
-        "#{nodes.join("/")}"
+        nodes.join("/")
        
-
+    # Convert tree coming from server to jstree format.
     _convertData: (data) =>
         tree =
             data: []
@@ -83,10 +84,14 @@ class exports.Tree
         tree.data = "loading..." if tree.data.length == 0
         tree
 
+    # Convert a node coming from node server to jstree format. Then convertNode
+    # is called recursively on node children.
     _convertNode: (parentNode, nodeToConvert) ->
-        for property of nodeToConvert when property isnt "name"
+        for property of nodeToConvert when property isnt "name" and property isnt "id"
             newNode =
                 data: nodeToConvert[property].name
+                metadata:
+                    id: nodeToConvert[property].id
                 children: []
 
             if parentNode.children == undefined
