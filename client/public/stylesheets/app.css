@@ -3437,7 +3437,7 @@ html,body{height:100%}
 .spacer{clear:both}
 #home-view{height:100%}
 #content{height:100%;padding:0}
-#nav{float:left;height:100%;width:320px;margin:0;padding:0;background-color:#ebe5e2;-moz-box-shadow:0 0 5px #020;-webkit-box-shadow:0 0 5px #020;-webkit-box-shadow:0 0 5px #020;-moz-box-shadow:0 0 5px #020;box-shadow:0 0 5px #020}
+#nav{margin:0;padding:0;background-color:#ebe5e2;-moz-box-shadow:0 0 3px #020;-webkit-box-shadow:0 0 3px #020;-webkit-box-shadow:0 0 3px #020;-moz-box-shadow:0 0 3px #020;box-shadow:0 0 3px #020}
 #tree{font-size:12;padding:10px;border-top:1px solid #fff;background-color:#ebe5e2;color:#6d3100}
 #tree li{padding:0}
 #tree ins{width:14px}
@@ -3453,7 +3453,7 @@ html,body{height:100%}
 #tree-buttons div.button:active{background:-moz-linear-gradient(center top,#f4cc86 0%,#eaa328 100%) repeat scroll 0 0 transparent;-moz-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-moz-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35)}
 #editor{margin:0;margin-left:320px;padding:10px;height:auto;background-color:#e4d1a9}
 #editor h2{clear:none;padding:0;margin:0}
-.note-full{background:#fff;-moz-box-shadow:0 0 5px #200;-webkit-box-shadow:0 0 5px #200;-webkit-box-shadow:0 0 5px #200;-moz-box-shadow:0 0 5px #200;box-shadow:0 0 5px #200;border:1px solid #ebe5e2;padding:10px}
+.note-full{background:#fff;-moz-box-shadow:2px 2px 5px #644;-webkit-box-shadow:2px 2px 5px #644;-webkit-box-shadow:2px 2px 5px #644;-moz-box-shadow:2px 2px 5px #644;box-shadow:2px 2px 5px #644;border:1px solid #ebe5e2;padding:10px;-webkit-border-radius:3px;-moz-border-radius:3px;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px}
 /* ==|== non-semantic helper classes ========================================
    Please define your styles before this section.
    ========================================================================== */
