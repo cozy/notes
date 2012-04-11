@@ -5,11 +5,6 @@ shadow()
   -webkit-box-shadow: arguments
   box-shadow: arguments
 
-rounded-border()
-  -webkit-border-radius: arguments
-  -moz-border-radius: arguments
-  border-radius: arguments
-
 
 a, a:visited
   color: #F95A5A
@@ -123,18 +118,18 @@ html, body
   display block
 
 #tree-buttons div.button:hover
-  background: -moz-linear-gradient(center top , #ffdd97 0%, #ffb338 100%) repeat scroll 0 0 transparent
+  background: linear-gradient(top , #ffdd97 0%, #ffb338 100%)
 
 #tree-buttons div.button
-  background: -moz-linear-gradient(center top , #E4D1A9 0%, #E4C199 100%) repeat scroll 0 0 transparent
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 1px 1px 1px rgba(0, 0, 0, 0.35);
+  background linear-gradient(top, #E4D1A9 0%, #E4C199 100%)
+  shadow 0 1px 0 rgba(255, 255, 255, 0.12) inset, 1px 1px 1px rgba(0, 0, 0, 0.35)
   color #6d3100
   border 1px solid #3d2100
-  rounded-border 2px 2px 2px 2px
+  border-radius 2px 2px 2px 2px
 
 #tree-buttons div.button:active
-  background: -moz-linear-gradient(center top , #f4cc86 0%,  #eaa328 100%) repeat scroll 0 0 transparent
-  shadow: 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35);
+  background linear-gradient(top , #f4cc86 0%,  #eaa328 100%)
+  shadow 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35)
 
 
 #editor
@@ -154,5 +149,5 @@ html, body
   shadow 2px 2px 5px #644
   border 1px solid #ebe5e2
   padding 10px
-  rounded-border 3px
+  border-radius 3px
 
