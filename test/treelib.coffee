@@ -7,11 +7,13 @@ retrievedNode = null
 
 describe "Tree tools", ->
 
+
     describe "Create new tree", ->
         it "When I create a new tree", ->
             tree = new Tree
         it "I have a tree with just one root", ->
             should.exist tree.all
+
 
     describe "Add a node", ->
         it "When I add a node called 'Recipe'", ->
@@ -27,6 +29,7 @@ describe "Tree tools", ->
         it "Then I have a property recipe.dessert.brownie in my tree.", ->
             should.exist tree.all.recipe.dessert.brownie
             tree.all.recipe.dessert.brownie.name.should.equal "Brownie"
+
 
     describe "Get a node", ->
         it "When I get a node called 'todo'", ->
@@ -55,6 +58,7 @@ describe "Tree tools", ->
         it "Then node called '/all/recipe/dessert' should not exist", ->
             should.not.exist tree.all.recipe.dessert
             should.exist tree.all.recipe
+
 
     describe "Update a node", ->
         it "When I update a node called '/all/recipe' with '/all/recipes/'", ->
