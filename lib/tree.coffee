@@ -27,26 +27,45 @@ class exports.Tree
     # Add a node to the tree. It needs the complete path to add a node.
     # If parent nodes does not exist, they are created too.
     addNode: (path, name, id) ->
-        nodes = path.split("/")
-        nodes.shift() # remove empty char
-        nodes.shift() # remove all node
+        nodes = @_getCleanPath path
 
         currentNode = @all
         for pathNode in nodes
+            pathNode = pathNode.replace("/-/g", "_")
             if currentNode[pathNode] != undefined
                 currentNode = currentNode[pathNode]
             else
                 currentNode[pathNode] = {}
                 currentNode = currentNode[pathNode]
-        currentNode.name = name
-        currentNode.id = id
+
+        newProperty = slugify(name).replace("/-/g", "_")
+        currentNode[newProperty] =
+            name: name
+            id: id
         this
+    
+
+    # Return path as array and with human name instead of node name.
+    getHumanPath: (path) ->
+        nodes = @_getCleanPath path
+        humanPath = []
+
+        currentNode = @all
+        console.log nodes
+        for pathNode in nodes
+            pathNode = pathNode.replace("/-/g", "_")
+            humanPath.push(currentNode.name)
+            if currentNode[pathNode]?
+                currentNode = currentNode[pathNode]
+
+        if currentNode?
+            humanPath.push(currentNode.name)
+
+        return humanPath
 
      # If exitsts, deletes node located at given path, else do nothing
     deleteNode: (path) ->
-        nodes = path.split("/")
-        nodes.shift() # remove empty char
-        nodes.shift() # remove all node
+        nodes = @_getCleanPath path
 
         currentNode = @getNode path, 1
         delete currentNode[nodes.pop()] if currentNode != undefined
@@ -58,29 +77,36 @@ class exports.Tree
     # Default limit is 0
     getNode: (path, limit) ->
         limit = 0 if limit == undefined
-        nodes = path.split("/")
-        nodes.shift() # remove empty char
-        nodes.shift() # remove all node
+        nodes = @_getCleanPath path
 
         currentNode = @all
         while currentNode != undefined and nodes.length > limit
-            currentNode = currentNode[nodes.shift()]
+            currentNode = currentNode[nodes.shift().replace("/-/g", "_")]
         
         currentNode
 
+
+    # Change both human and machine node name.
     updateNode: (path, newName) ->
-        nodes = path.split("/")
-        nodes.shift() # remove empty char
-        nodes.shift() # remove all node
+        nodes = @_getCleanPath path
 
         currentNode = @getNode path, 1
         if currentNode != undefined
             node = nodes.pop()
-            currentNode[slugify newName] = currentNode[node]
+            slug = slugify(newName).replace("/-/g", "_")
+            currentNode[slug] = currentNode[node]
             delete currentNode[node] if currentNode != undefined
-            currentNode[slugify newName].name = newName
+            currentNode[slug].name = newName
 
         node
+    
+
+    # Transform string path to array path while removing first node (all node).
+    _getCleanPath: (path) ->
+        nodes = path.split("/")
+        nodes.shift() # remove empty char
+        nodes.shift() # remove all node
+        nodes
 
 
     # Json representation of the tree
