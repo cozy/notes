@@ -39,7 +39,7 @@ class exports.HomeView extends Backbone.View
 
     selectFolder: (path, id) =>
         if id?
-            $.get "all/#{id}", (data) =>
+            $.get "notes/#{id}", (data) =>
                 note = new Note data
                 @renderNote note
 

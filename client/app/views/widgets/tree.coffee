@@ -44,18 +44,19 @@ class exports.Tree
 
         @widget.bind "create.jstree", (e, data) =>
             path = @_getPath data
-            callbacks.onCreate path, data.rslt.name
+            path.pop()
+            callbacks.onCreate path.join("/"), data.rslt.name
 
         @widget.bind "rename.jstree", (e, data) =>
-            path = @_getPath data, data.rslt.old_name
+            path = @_getStringPath data, data.rslt.old_name
             callbacks.onRename path, data.rslt.new_name
 
         @widget.bind "remove.jstree", (e, data) =>
-            path = @_getPath data
+            path = @_getStringPath data
             callbacks.onRemove path
 
         @widget.bind "select_node.jstree", (e, data) =>
-            path = @_getPath data
+            path = @_getStringPath data
             callbacks.onSelect path, data.rslt.obj.data("id")
 
 
@@ -72,8 +73,10 @@ class exports.Tree
             name = parent.children("a:eq(0)").text()
             nodes.unshift slugify(name)
             parent = parent.parent().parent()
+        nodes
 
-        nodes.join("/")
+    _getStringPath: (data, nodeName) ->
+        @_getPath(data, nodeName).join("/")
        
     # Convert tree coming from server to jstree format.
     _convertData: (data) =>
