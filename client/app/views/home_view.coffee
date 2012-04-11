@@ -52,20 +52,11 @@ class exports.HomeView extends Backbone.View
 
     render: ->
         $(@el).html require('./templates/home')
-
-        #borderLayout = jLayout.border
-        #    west:   $ "#nav"
-        #    center: $ "#editor"
-        #    vgap: 5
-
-        #borderLayout.layout $('#content')
-        #$('#home-view').layout()
         this
 
     # Fetch data loads notre tree and configure it.
     fetchData: ->
         @noteArea = $("#editor")
-        #$("#nav").resizable()
         $.get "tree/", (data) =>
             @tree = new Tree @.$("#nav"), data,
                 onCreate: @createFolder
