@@ -94,6 +94,8 @@ class exports.Tree
             nodePath = "-#{path}#{property.replace(/_/g, "-")}"
             newNode =
                 data: nodeToConvert[property].name
+                metadata:
+                    id: nodeToConvert[property].id
                 attr:
                     id: "tree-node#{nodePath}"
                 children: []

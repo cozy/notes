@@ -35,6 +35,7 @@ class exports.HomeView extends Backbone.View
         
     # Delete currently selected node.
     deleteFolder: (path) =>
+        @noteArea.html null
         @sendTreeRequest "DELETE", path: path
 
     selectFolder: (path, id) =>

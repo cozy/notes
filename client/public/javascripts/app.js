@@ -48,33 +48,31 @@
     };
   }
 }).call(this);(this.require.define({
-  "collections/notes": function(exports, require, module) {
+  "models/note": function(exports, require, module) {
     (function() {
-  var Application,
+  var BaseModel,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  Application = require("models/application").Application;
+  BaseModel = require("models/models").BaseModel;
 
-  exports.NotesCollection = (function(_super) {
+  exports.Note = (function(_super) {
 
-    __extends(NotesCollection, _super);
+    __extends(Note, _super);
 
-    NotesCollection.prototype.model = Application;
+    Note.prototype.url = '/all/';
 
-    NotesCollection.prototype.url = 'notes/';
-
-    function NotesCollection() {
-      NotesCollection.__super__.constructor.call(this);
+    function Note(note) {
+      var property;
+      Note.__super__.constructor.call(this);
+      for (property in note) {
+        this[property] = note[property];
+      }
     }
 
-    NotesCollection.prototype.parse = function(response) {
-      return response.rows;
-    };
+    return Note;
 
-    return NotesCollection;
-
-  })(Backbone.Collection);
+  })(BaseModel);
 
 }).call(this);
 
@@ -164,113 +162,6 @@
   }
 }));
 (this.require.define({
-  "views/home_view": function(exports, require, module) {
-    (function() {
-  var Note, NoteWidget, Tree,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  Tree = require("./widgets/tree").Tree;
-
-  NoteWidget = require("./note_view").NoteWidget;
-
-  Note = require("../models/note").Note;
-
-  exports.HomeView = (function(_super) {
-
-    __extends(HomeView, _super);
-
-    function HomeView() {
-      this.selectFolder = __bind(this.selectFolder, this);
-      this.deleteFolder = __bind(this.deleteFolder, this);
-      this.renameFolder = __bind(this.renameFolder, this);
-      this.createFolder = __bind(this.createFolder, this);
-      HomeView.__super__.constructor.apply(this, arguments);
-    }
-
-    HomeView.prototype.id = 'home-view';
-
-    HomeView.prototype.sendTreeRequest = function(type, data) {
-      return $.ajax({
-        type: type,
-        url: "tree",
-        data: data,
-        error: function(data) {
-          if (data && data.msg) {
-            return alert(data.msg);
-          } else {
-            return alert("Server error occured.");
-          }
-        }
-      });
-    };
-
-    HomeView.prototype.createFolder = function(path, name) {
-      return this.sendTreeRequest("POST", {
-        path: path,
-        name: name
-      });
-    };
-
-    HomeView.prototype.renameFolder = function(path, newName) {
-      return this.sendTreeRequest("PUT", {
-        path: path,
-        newName: newName
-      });
-    };
-
-    HomeView.prototype.deleteFolder = function(path) {
-      return this.sendTreeRequest("DELETE", {
-        path: path
-      });
-    };
-
-    HomeView.prototype.selectFolder = function(path, id) {
-      var _this = this;
-      if (id != null) {
-        return $.get("notes/" + id, function(data) {
-          var note;
-          note = new Note(data);
-          return _this.renderNote(note);
-        });
-      }
-    };
-
-    HomeView.prototype.renderNote = function(note) {
-      var noteWidget;
-      this.noteArea.html(null);
-      noteWidget = new NoteWidget(note);
-      return this.noteArea.append(noteWidget.render());
-    };
-
-    HomeView.prototype.render = function() {
-      $(this.el).html(require('./templates/home'));
-      return this;
-    };
-
-    HomeView.prototype.fetchData = function() {
-      var _this = this;
-      this.noteArea = $("#editor");
-      return $.get("tree/", function(data) {
-        return _this.tree = new Tree(_this.$("#nav"), data, {
-          onCreate: _this.createFolder,
-          onRename: _this.renameFolder,
-          onRemove: _this.deleteFolder,
-          onSelect: _this.selectFolder
-        });
-      });
-    };
-
-    return HomeView;
-
-  })(Backbone.View);
-
-}).call(this);
-
-  }
-}));
-(this.require.define({
   "views/note_view": function(exports, require, module) {
     (function() {
   var template,
@@ -347,6 +238,39 @@
   }
 }));
 (this.require.define({
+  "collections/notes": function(exports, require, module) {
+    (function() {
+  var Application,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Application = require("models/application").Application;
+
+  exports.NotesCollection = (function(_super) {
+
+    __extends(NotesCollection, _super);
+
+    NotesCollection.prototype.model = Application;
+
+    NotesCollection.prototype.url = 'notes/';
+
+    function NotesCollection() {
+      NotesCollection.__super__.constructor.call(this);
+    }
+
+    NotesCollection.prototype.parse = function(response) {
+      return response.rows;
+    };
+
+    return NotesCollection;
+
+  })(Backbone.Collection);
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
   "helpers": function(exports, require, module) {
     (function() {
 
@@ -376,37 +300,6 @@
     string = string.replace(_slugify_hyphenate_re, '-');
     return string;
   };
-
-}).call(this);
-
-  }
-}));
-(this.require.define({
-  "models/note": function(exports, require, module) {
-    (function() {
-  var BaseModel,
-    __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  BaseModel = require("models/models").BaseModel;
-
-  exports.Note = (function(_super) {
-
-    __extends(Note, _super);
-
-    Note.prototype.url = '/all/';
-
-    function Note(note) {
-      var property;
-      Note.__super__.constructor.call(this);
-      for (property in note) {
-        this[property] = note[property];
-      }
-    }
-
-    return Note;
-
-  })(BaseModel);
 
 }).call(this);
 
@@ -589,6 +482,9 @@ return buf.join("");
         nodePath = "-" + path + (property.replace(/_/g, "-"));
         newNode = {
           data: nodeToConvert[property].name,
+          metadata: {
+            id: nodeToConvert[property].id
+          },
           attr: {
             id: "tree-node" + nodePath
           },
@@ -607,6 +503,114 @@ return buf.join("");
     return Tree;
 
   })();
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
+  "views/home_view": function(exports, require, module) {
+    (function() {
+  var Note, NoteWidget, Tree,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  Tree = require("./widgets/tree").Tree;
+
+  NoteWidget = require("./note_view").NoteWidget;
+
+  Note = require("../models/note").Note;
+
+  exports.HomeView = (function(_super) {
+
+    __extends(HomeView, _super);
+
+    function HomeView() {
+      this.selectFolder = __bind(this.selectFolder, this);
+      this.deleteFolder = __bind(this.deleteFolder, this);
+      this.renameFolder = __bind(this.renameFolder, this);
+      this.createFolder = __bind(this.createFolder, this);
+      HomeView.__super__.constructor.apply(this, arguments);
+    }
+
+    HomeView.prototype.id = 'home-view';
+
+    HomeView.prototype.sendTreeRequest = function(type, data) {
+      return $.ajax({
+        type: type,
+        url: "tree",
+        data: data,
+        error: function(data) {
+          if (data && data.msg) {
+            return alert(data.msg);
+          } else {
+            return alert("Server error occured.");
+          }
+        }
+      });
+    };
+
+    HomeView.prototype.createFolder = function(path, name) {
+      return this.sendTreeRequest("POST", {
+        path: path,
+        name: name
+      });
+    };
+
+    HomeView.prototype.renameFolder = function(path, newName) {
+      return this.sendTreeRequest("PUT", {
+        path: path,
+        newName: newName
+      });
+    };
+
+    HomeView.prototype.deleteFolder = function(path) {
+      this.noteArea.html(null);
+      return this.sendTreeRequest("DELETE", {
+        path: path
+      });
+    };
+
+    HomeView.prototype.selectFolder = function(path, id) {
+      var _this = this;
+      if (id != null) {
+        return $.get("notes/" + id, function(data) {
+          var note;
+          note = new Note(data);
+          return _this.renderNote(note);
+        });
+      }
+    };
+
+    HomeView.prototype.renderNote = function(note) {
+      var noteWidget;
+      this.noteArea.html(null);
+      noteWidget = new NoteWidget(note);
+      return this.noteArea.append(noteWidget.render());
+    };
+
+    HomeView.prototype.render = function() {
+      $(this.el).html(require('./templates/home'));
+      return this;
+    };
+
+    HomeView.prototype.fetchData = function() {
+      var _this = this;
+      this.noteArea = $("#editor");
+      return $.get("tree/", function(data) {
+        return _this.tree = new Tree(_this.$("#nav"), data, {
+          onCreate: _this.createFolder,
+          onRename: _this.renameFolder,
+          onRemove: _this.deleteFolder,
+          onSelect: _this.selectFolder
+        });
+      });
+    };
+
+    return HomeView;
+
+  })(Backbone.View);
 
 }).call(this);
 
