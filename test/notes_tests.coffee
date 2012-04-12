@@ -32,16 +32,18 @@ handleResponse = (error, response, body, done) ->
         false.should.be.ok()
     done()
 
-describe "/all", ->
+describe "/notes", ->
 
 
-    describe "POST /all Create a note", ->
+    describe "POST /notes Create a note", ->
         it "When I send data for a note creation", (done) ->
             note =
                 title: "Test note 01"
                 content: "Test content 01"
+                path: "/all/test-note-01"
 
-            client.post "all/", note, (error, response, body) ->
+
+            client.post "notes/", note, (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then a success is returned with a note with an id", ->
@@ -50,9 +52,9 @@ describe "/all", ->
             responseTest.statusCode.should.equal 201
 
 
-    describe "GET /all/ Get all notes", ->
+    describe "GET /notes/ Get all notes", ->
         it "When I send a request to retrieve all notes", (done) ->
-            client.get "all/", (error, response, body) ->
+            client.get "notes/", (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then I got expected note in a list", ->
@@ -63,9 +65,25 @@ describe "/all", ->
             responseTest.statusCode.should.equal 200
 
 
-    describe "GET /all/:id Get a note", ->
+
+    describe "POST /notes/path Get all notes with given path", ->
+        it "When I send a request to retrieve all notes", (done) ->
+            client.post "notes/path", path: "/all/test-note-01", \
+                        (error, response, body) ->
+                storeResponse error, response, body, done
+
+        it "Then I got expected note in a list", ->
+            should.exist(bodyTest)
+            should.exist(bodyTest.rows)
+            bodyTest.rows.length.should.equal 1
+            bodyTest.rows[0].title.should.equal "Test note 01"
+            responseTest.statusCode.should.equal 200
+
+
+    describe "GET /notes/:id Get a note", ->
         it "When I send a request to retrieve a given note", (done) ->
-            client.get "all/#{bodyTest.rows[0].id}", (error, response, body) ->
+            client.get "notes/#{bodyTest.rows[0].id}", \
+                       (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then I got expected note ", ->
@@ -75,16 +93,16 @@ describe "/all", ->
             responseTest.statusCode.should.equal 200
 
             
-    describe "PUT /all/:id Update a note", ->
+    describe "PUT /notes/:id Update a note", ->
         note =
             title: "Test note 01 update"
 
         it "When I send a request to update a given note", (done) ->
-            client.put "all/#{bodyTest.id}", note, (error, response, body) ->
+            client.put "notes/#{bodyTest.id}", note, (error, response, body) ->
                 handleResponse error, response, body, done
 
         it "And I send a request to retrieve a given note", (done) ->
-            client.get "all/#{bodyTest.id}", (error, response, body) ->
+            client.get "notes/#{bodyTest.id}", (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then I got expected note ", ->
@@ -93,14 +111,14 @@ describe "/all", ->
             bodyTest.title.should.equal "Test note 01 update"
 
             
-    describe "DELETE /all/:id Update a note", ->
+    describe "DELETE /notes/:id Delete a note", ->
 
         it "When I send a request to delete a given note", (done) ->
-            client.del "all/#{bodyTest.id}", (error, response, body) ->
+            client.del "notes/#{bodyTest.id}", (error, response, body) ->
                 handleResponse error, response, body, done
 
         it "And I send a request to retrieve a given note", (done) ->
-            client.get "all/#{bodyTest.id}", (error, response, body) ->
+            client.get "notes/#{bodyTest.id}", (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then I got 404 error ", ->

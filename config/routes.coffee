@@ -1,10 +1,11 @@
 exports.routes = (map) ->
     map.get '/', 'notes#index'
-    map.get '/notes/:path', 'notes#all'
-    map.post '/all', 'notes#create'
-    map.get '/all/:id', 'notes#show'
-    map.put '/all/:id', 'notes#update'
-    map.del '/all/:id', 'notes#destroy'
+    map.get '/notes', 'notes#all'
+    map.post '/notes', 'notes#create'
+    map.post '/notes/path', 'notes#allForPath'
+    map.get '/notes/:id', 'notes#show'
+    map.put '/notes/:id', 'notes#update'
+    map.del '/notes/:id', 'notes#destroy'
 
     map.get '/tree', 'tree#tree'
     map.post '/tree', 'tree#create'

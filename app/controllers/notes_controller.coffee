@@ -1,6 +1,3 @@
-load 'application'
-
-
 before 'load note', ->
     Note.find params.id, (err, note) =>
         if err
@@ -45,12 +42,25 @@ action 'destroy', ->
         else
             send success: 'Note succesfuly deleted'
 
+
+
+returnNote = (err, notes) ->
+    if err
+        console.log err
+        send error: "Retrieve notes failed.", 500
+    else
+        send length: notes.length, rows: notes
+
+
 action 'all', ->
-    console.log params.path
-    Note.all (err, notes) ->
-        if err
-            console.log err
-            send error: "Retrieve notes failed.", 500
-        else
-            send length: notes.length, rows: notes
+    Note.all returnNote
+
+action 'allForPath', ->
+    console.log body.path
+    @path = body.path
+    slashReg = new RegExp "/", "g"
+    reg = "^#{@path.replace(slashReg, "\/")}"
+
+    Note.all { where: { path: { regex: reg } } }, returnNote
+
 
