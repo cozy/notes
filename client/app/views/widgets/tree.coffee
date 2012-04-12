@@ -83,23 +83,25 @@ class exports.Tree
         tree =
             data: []
 
-        @_convertNode tree, data
+        @_convertNode tree, data, ""
         tree.data = "loading..." if tree.data.length == 0
         tree
 
     # Convert a node coming from node server to jstree format. Then convertNode
     # is called recursively on node children.
-    _convertNode: (parentNode, nodeToConvert) ->
+    _convertNode: (parentNode, nodeToConvert, path) ->
         for property of nodeToConvert when property isnt "name" and property isnt "id"
+            nodePath = "-#{path}#{property.replace(/_/g, "-")}"
             newNode =
                 data: nodeToConvert[property].name
-                metadata:
-                    id: nodeToConvert[property].id
+                attr:
+                    id: "tree-node#{nodePath}"
                 children: []
 
             if parentNode.children == undefined
                 parentNode.data.push newNode
             else
                 parentNode.children.push newNode
-            @_convertNode newNode, nodeToConvert[property]
+
+            @_convertNode newNode, nodeToConvert[property], nodePath
 

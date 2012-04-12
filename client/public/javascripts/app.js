@@ -48,26 +48,33 @@
     };
   }
 }).call(this);(this.require.define({
-  "models/models": function(exports, require, module) {
+  "collections/notes": function(exports, require, module) {
     (function() {
-  var __hasProp = Object.prototype.hasOwnProperty,
+  var Application,
+    __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  exports.BaseModel = (function(_super) {
+  Application = require("models/application").Application;
 
-    __extends(BaseModel, _super);
+  exports.NotesCollection = (function(_super) {
 
-    function BaseModel() {
-      BaseModel.__super__.constructor.apply(this, arguments);
+    __extends(NotesCollection, _super);
+
+    NotesCollection.prototype.model = Application;
+
+    NotesCollection.prototype.url = 'notes/';
+
+    function NotesCollection() {
+      NotesCollection.__super__.constructor.call(this);
     }
 
-    BaseModel.prototype.isNew = function() {
-      return this.id === void 0;
+    NotesCollection.prototype.parse = function(response) {
+      return response.rows;
     };
 
-    return BaseModel;
+    return NotesCollection;
 
-  })(Backbone.Model);
+  })(Backbone.Collection);
 
 }).call(this);
 
@@ -112,8 +119,11 @@
 (this.require.define({
   "routers/main_router": function(exports, require, module) {
     (function() {
-  var __hasProp = Object.prototype.hasOwnProperty,
+  var slugify,
+    __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  slugify = require("helpers").slugify;
 
   exports.MainRouter = (function(_super) {
 
@@ -127,6 +137,10 @@
       '': 'home'
     };
 
+    MainRouter.prototype.initialize = function() {
+      return this.route(/^note\/(.*?)$/, 'note');
+    };
+
     MainRouter.prototype.home = function() {
       $('body').html(app.homeView.render().el);
       $('#home-view').layout({
@@ -135,6 +149,10 @@
         resizable: true
       });
       return app.homeView.fetchData();
+    };
+
+    MainRouter.prototype.note = function(path) {
+      return this.home();
     };
 
     return MainRouter;
@@ -303,31 +321,26 @@
   }
 }));
 (this.require.define({
-  "models/note": function(exports, require, module) {
+  "models/models": function(exports, require, module) {
     (function() {
-  var BaseModel,
-    __hasProp = Object.prototype.hasOwnProperty,
+  var __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  BaseModel = require("models/models").BaseModel;
+  exports.BaseModel = (function(_super) {
 
-  exports.Note = (function(_super) {
+    __extends(BaseModel, _super);
 
-    __extends(Note, _super);
-
-    Note.prototype.url = '/all/';
-
-    function Note(note) {
-      var property;
-      Note.__super__.constructor.call(this);
-      for (property in note) {
-        this[property] = note[property];
-      }
+    function BaseModel() {
+      BaseModel.__super__.constructor.apply(this, arguments);
     }
 
-    return Note;
+    BaseModel.prototype.isNew = function() {
+      return this.id === void 0;
+    };
 
-  })(BaseModel);
+    return BaseModel;
+
+  })(Backbone.Model);
 
 }).call(this);
 
@@ -369,33 +382,31 @@
   }
 }));
 (this.require.define({
-  "collections/notes": function(exports, require, module) {
+  "models/note": function(exports, require, module) {
     (function() {
-  var Application,
+  var BaseModel,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  Application = require("models/application").Application;
+  BaseModel = require("models/models").BaseModel;
 
-  exports.NotesCollection = (function(_super) {
+  exports.Note = (function(_super) {
 
-    __extends(NotesCollection, _super);
+    __extends(Note, _super);
 
-    NotesCollection.prototype.model = Application;
+    Note.prototype.url = '/all/';
 
-    NotesCollection.prototype.url = 'notes/';
-
-    function NotesCollection() {
-      NotesCollection.__super__.constructor.call(this);
+    function Note(note) {
+      var property;
+      Note.__super__.constructor.call(this);
+      for (property in note) {
+        this[property] = note[property];
+      }
     }
 
-    NotesCollection.prototype.parse = function(response) {
-      return response.rows;
-    };
+    return Note;
 
-    return NotesCollection;
-
-  })(Backbone.Collection);
+  })(BaseModel);
 
 }).call(this);
 
@@ -438,6 +449,25 @@ var buf = [];
 with (locals || {}) {
 var interp;
 buf.push('<h2>' + escape((interp = note.title) == null ? '' : interp) + '</h2><p>' + escape((interp = note.path) == null ? '' : interp) + '</p>');
+}
+return buf.join("");
+};
+  }
+}));
+(this.require.define({
+  "views/templates/home": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<div');
+buf.push(attrs({ 'id':('nav'), "class": ('ui-layout-west') }));
+buf.push('><div');
+buf.push(attrs({ 'id':('tree') }));
+buf.push('></div></div><div');
+buf.push(attrs({ 'id':('editor'), "class": ('ui-layout-center') }));
+buf.push('></div>');
 }
 return buf.join("");
 };
@@ -546,20 +576,21 @@ return buf.join("");
       tree = {
         data: []
       };
-      this._convertNode(tree, data);
+      this._convertNode(tree, data, "");
       if (tree.data.length === 0) tree.data = "loading...";
       return tree;
     };
 
-    Tree.prototype._convertNode = function(parentNode, nodeToConvert) {
-      var newNode, property, _results;
+    Tree.prototype._convertNode = function(parentNode, nodeToConvert, path) {
+      var newNode, nodePath, property, _results;
       _results = [];
       for (property in nodeToConvert) {
         if (!(property !== "name" && property !== "id")) continue;
+        nodePath = "-" + path + (property.replace(/_/g, "-"));
         newNode = {
           data: nodeToConvert[property].name,
-          metadata: {
-            id: nodeToConvert[property].id
+          attr: {
+            id: "tree-node" + nodePath
           },
           children: []
         };
@@ -568,7 +599,7 @@ return buf.join("");
         } else {
           parentNode.children.push(newNode);
         }
-        _results.push(this._convertNode(newNode, nodeToConvert[property]));
+        _results.push(this._convertNode(newNode, nodeToConvert[property], nodePath));
       }
       return _results;
     };
@@ -579,24 +610,5 @@ return buf.join("");
 
 }).call(this);
 
-  }
-}));
-(this.require.define({
-  "views/templates/home": function(exports, require, module) {
-    module.exports = function anonymous(locals, attrs, escape, rethrow) {
-var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
-var buf = [];
-with (locals || {}) {
-var interp;
-buf.push('<div');
-buf.push(attrs({ 'id':('nav'), "class": ('ui-layout-west') }));
-buf.push('><div');
-buf.push(attrs({ 'id':('tree') }));
-buf.push('></div></div><div');
-buf.push(attrs({ 'id':('editor'), "class": ('ui-layout-center') }));
-buf.push('></div>');
-}
-return buf.join("");
-};
   }
 }));
