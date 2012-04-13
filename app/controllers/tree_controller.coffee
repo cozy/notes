@@ -63,6 +63,7 @@ action 'create', ->
 
     note = new Note
         path: "#{@path}/#{slugify name}"
+        title: name
         humanPath: humanPath
 
     Note.create note, (err, note) =>
