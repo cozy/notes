@@ -31,14 +31,14 @@ class exports.Tree
 
         currentNode = @all
         for pathNode in nodes
-            pathNode = pathNode.replace("/-/g", "_")
+            pathNode = pathNode.replace(/-/g, "_")
             if currentNode[pathNode] != undefined
                 currentNode = currentNode[pathNode]
             else
                 currentNode[pathNode] = {}
                 currentNode = currentNode[pathNode]
 
-        newProperty = slugify(name).replace("/-/g", "_")
+        newProperty = slugify(name).replace(/-/g, "_")
         currentNode[newProperty] =
             name: name
             id: id
@@ -53,7 +53,7 @@ class exports.Tree
         currentNode = @all
         console.log nodes
         for pathNode in nodes
-            pathNode = pathNode.replace("/-/g", "_")
+            pathNode = pathNode.replace(/-/g, "_")
             humanPath.push(currentNode.name)
             if currentNode[pathNode]?
                 currentNode = currentNode[pathNode]
@@ -81,7 +81,7 @@ class exports.Tree
 
         currentNode = @all
         while currentNode != undefined and nodes.length > limit
-            currentNode = currentNode[nodes.shift().replace("/-/g", "_")]
+            currentNode = currentNode[nodes.shift().replace(/-/g, "_")]
         
         currentNode
 
@@ -89,11 +89,14 @@ class exports.Tree
     # Change both human and machine node name.
     updateNode: (path, newName) ->
         nodes = @_getCleanPath path
+        console.log nodes
 
         currentNode = @getNode path, 1
         if currentNode != undefined
             node = nodes.pop()
-            slug = slugify(newName).replace("/-/g", "_")
+            slug = slugify(newName)
+            slug = slug.replace(/-/g, "_")
+            node = node.replace(/-/g, "_")
             currentNode[slug] = currentNode[node]
             delete currentNode[node] if currentNode != undefined
             currentNode[slug].name = newName
