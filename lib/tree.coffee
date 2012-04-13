@@ -68,7 +68,8 @@ class exports.Tree
         nodes = @_getCleanPath path
 
         currentNode = @getNode path, 1
-        delete currentNode[nodes.pop()] if currentNode != undefined
+        nodeName = nodes.pop().replace(/-/g, "_")
+        delete currentNode[nodeName] if currentNode != undefined
 
         this
         

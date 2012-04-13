@@ -11,8 +11,20 @@ class exports.Tree
         tree = @_convertData data
         @treeEl = $("#tree")
         @widget = @treeEl.jstree
-            plugins: [ "themes", "json_data", "ui", "crrm", "unique", "sort" ]
+            plugins: [
+                "themes", "json_data", "ui", "crrm",
+                "unique", "sort", "cookies", "types"
+            ]
             json_data: tree
+            types:
+                "default":
+                    valid_children: "default"
+                "root":
+                    valid_children: null #"default"
+                    delete_node: false
+                    rename_node: false
+                    move_node: false
+                    start_drag: false
             ui:
                 select_limit: 1
                 initially_select: [ "tree-node-all" ]
@@ -22,7 +34,7 @@ class exports.Tree
                 icons: false
             core:
                 animation: 0
-                initially_open: ["tree-node-all" ]
+                initially_open: [ "tree-node-all" ]
             unique:
                 error_callback: (node, p, func) ->
                     alert "A note has already that name: '#{node}'"
@@ -45,7 +57,7 @@ class exports.Tree
         @widget.bind "create.jstree", (e, data) =>
             path = @_getPath data
             path.pop()
-            callbacks.onCreate path.join("/"), data.rslt.name
+            callbacks.onCreate path.join("/"), data
 
         @widget.bind "rename.jstree", (e, data) =>
             path = @_getStringPath data, data.rslt.old_name
@@ -81,9 +93,14 @@ class exports.Tree
     # Convert tree coming from server to jstree format.
     _convertData: (data) =>
         tree =
-            data: []
+            data:
+                data: "all"
+                attr:
+                    id: "tree-node-all"
+                    rel: "root"
+                children: []
 
-        @_convertNode tree, data, ""
+        @_convertNode tree.data, data.all, "all-"
         tree.data = "loading..." if tree.data.length == 0
         tree
 
@@ -98,6 +115,7 @@ class exports.Tree
                     id: nodeToConvert[property].id
                 attr:
                     id: "tree-node#{nodePath}"
+                    rel: "default"
                 children: []
 
             if parentNode.children == undefined

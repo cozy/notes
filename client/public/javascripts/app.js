@@ -48,31 +48,33 @@
     };
   }
 }).call(this);(this.require.define({
-  "models/note": function(exports, require, module) {
+  "collections/notes": function(exports, require, module) {
     (function() {
-  var BaseModel,
+  var Application,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  BaseModel = require("models/models").BaseModel;
+  Application = require("models/application").Application;
 
-  exports.Note = (function(_super) {
+  exports.NotesCollection = (function(_super) {
 
-    __extends(Note, _super);
+    __extends(NotesCollection, _super);
 
-    Note.prototype.url = '/all/';
+    NotesCollection.prototype.model = Application;
 
-    function Note(note) {
-      var property;
-      Note.__super__.constructor.call(this);
-      for (property in note) {
-        this[property] = note[property];
-      }
+    NotesCollection.prototype.url = 'notes/';
+
+    function NotesCollection() {
+      NotesCollection.__super__.constructor.call(this);
     }
 
-    return Note;
+    NotesCollection.prototype.parse = function(response) {
+      return response.rows;
+    };
 
-  })(BaseModel);
+    return NotesCollection;
+
+  })(Backbone.Collection);
 
 }).call(this);
 
@@ -109,53 +111,6 @@
   })(BrunchApplication);
 
   window.app = new exports.Application;
-
-}).call(this);
-
-  }
-}));
-(this.require.define({
-  "routers/main_router": function(exports, require, module) {
-    (function() {
-  var slugify,
-    __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  slugify = require("helpers").slugify;
-
-  exports.MainRouter = (function(_super) {
-
-    __extends(MainRouter, _super);
-
-    function MainRouter() {
-      MainRouter.__super__.constructor.apply(this, arguments);
-    }
-
-    MainRouter.prototype.routes = {
-      '': 'home'
-    };
-
-    MainRouter.prototype.initialize = function() {
-      return this.route(/^note\/(.*?)$/, 'note');
-    };
-
-    MainRouter.prototype.home = function() {
-      $('body').html(app.homeView.render().el);
-      $('#home-view').layout({
-        size: "310",
-        minSize: "310",
-        resizable: true
-      });
-      return app.homeView.fetchData();
-    };
-
-    MainRouter.prototype.note = function(path) {
-      return this.home();
-    };
-
-    return MainRouter;
-
-  })(Backbone.Router);
 
 }).call(this);
 
@@ -212,6 +167,53 @@
   }
 }));
 (this.require.define({
+  "routers/main_router": function(exports, require, module) {
+    (function() {
+  var slugify,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  slugify = require("helpers").slugify;
+
+  exports.MainRouter = (function(_super) {
+
+    __extends(MainRouter, _super);
+
+    function MainRouter() {
+      MainRouter.__super__.constructor.apply(this, arguments);
+    }
+
+    MainRouter.prototype.routes = {
+      '': 'home'
+    };
+
+    MainRouter.prototype.initialize = function() {
+      return this.route(/^note\/(.*?)$/, 'note');
+    };
+
+    MainRouter.prototype.home = function() {
+      $('body').html(app.homeView.render().el);
+      $('#home-view').layout({
+        size: "310",
+        minSize: "310",
+        resizable: true
+      });
+      return app.homeView.fetchData();
+    };
+
+    MainRouter.prototype.note = function(path) {
+      return this.home();
+    };
+
+    return MainRouter;
+
+  })(Backbone.Router);
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
   "models/models": function(exports, require, module) {
     (function() {
   var __hasProp = Object.prototype.hasOwnProperty,
@@ -238,33 +240,31 @@
   }
 }));
 (this.require.define({
-  "collections/notes": function(exports, require, module) {
+  "models/note": function(exports, require, module) {
     (function() {
-  var Application,
+  var BaseModel,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  Application = require("models/application").Application;
+  BaseModel = require("models/models").BaseModel;
 
-  exports.NotesCollection = (function(_super) {
+  exports.Note = (function(_super) {
 
-    __extends(NotesCollection, _super);
+    __extends(Note, _super);
 
-    NotesCollection.prototype.model = Application;
+    Note.prototype.url = '/all/';
 
-    NotesCollection.prototype.url = 'notes/';
-
-    function NotesCollection() {
-      NotesCollection.__super__.constructor.call(this);
+    function Note(note) {
+      var property;
+      Note.__super__.constructor.call(this);
+      for (property in note) {
+        this[property] = note[property];
+      }
     }
 
-    NotesCollection.prototype.parse = function(response) {
-      return response.rows;
-    };
+    return Note;
 
-    return NotesCollection;
-
-  })(Backbone.Collection);
+  })(BaseModel);
 
 }).call(this);
 
@@ -335,19 +335,6 @@ return buf.join("");
   }
 }));
 (this.require.define({
-  "views/templates/note": function(exports, require, module) {
-    module.exports = function anonymous(locals, attrs, escape, rethrow) {
-var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
-var buf = [];
-with (locals || {}) {
-var interp;
-buf.push('<h2>' + escape((interp = note.title) == null ? '' : interp) + '</h2><p>' + escape((interp = note.path) == null ? '' : interp) + '</p>');
-}
-return buf.join("");
-};
-  }
-}));
-(this.require.define({
   "views/templates/home": function(exports, require, module) {
     module.exports = function anonymous(locals, attrs, escape, rethrow) {
 var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
@@ -361,6 +348,19 @@ buf.push(attrs({ 'id':('tree') }));
 buf.push('></div></div><div');
 buf.push(attrs({ 'id':('editor'), "class": ('ui-layout-center') }));
 buf.push('></div>');
+}
+return buf.join("");
+};
+  }
+}));
+(this.require.define({
+  "views/templates/note": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<p>' + escape((interp = note.humanPath.split(",").join(" / ")) == null ? '' : interp) + '</p><h2>' + escape((interp = note.title) == null ? '' : interp) + '</h2>');
 }
 return buf.join("");
 };
@@ -383,8 +383,20 @@ return buf.join("");
       tree = this._convertData(data);
       this.treeEl = $("#tree");
       this.widget = this.treeEl.jstree({
-        plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort"],
+        plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort", "cookies", "types"],
         json_data: tree,
+        types: {
+          "default": {
+            valid_children: "default"
+          },
+          "root": {
+            valid_children: null,
+            delete_node: false,
+            rename_node: false,
+            move_node: false,
+            start_drag: false
+          }
+        },
         ui: {
           select_limit: 1,
           initially_select: ["tree-node-all"]
@@ -426,7 +438,7 @@ return buf.join("");
         var path;
         path = _this._getPath(data);
         path.pop();
-        return callbacks.onCreate(path.join("/"), data.rslt.name);
+        return callbacks.onCreate(path.join("/"), data);
       });
       this.widget.bind("rename.jstree", function(e, data) {
         var path;
@@ -467,9 +479,16 @@ return buf.join("");
     Tree.prototype._convertData = function(data) {
       var tree;
       tree = {
-        data: []
+        data: {
+          data: "all",
+          attr: {
+            id: "tree-node-all",
+            rel: "root"
+          },
+          children: []
+        }
       };
-      this._convertNode(tree, data, "");
+      this._convertNode(tree.data, data.all, "all-");
       if (tree.data.length === 0) tree.data = "loading...";
       return tree;
     };
@@ -486,7 +505,8 @@ return buf.join("");
             id: nodeToConvert[property].id
           },
           attr: {
-            id: "tree-node" + nodePath
+            id: "tree-node" + nodePath,
+            rel: "default"
           },
           children: []
         };
@@ -536,11 +556,12 @@ return buf.join("");
 
     HomeView.prototype.id = 'home-view';
 
-    HomeView.prototype.sendTreeRequest = function(type, data) {
+    HomeView.prototype.sendTreeRequest = function(type, data, callback) {
       return $.ajax({
         type: type,
         url: "tree",
         data: data,
+        success: callback,
         error: function(data) {
           if (data && data.msg) {
             return alert(data.msg);
@@ -551,18 +572,25 @@ return buf.join("");
       });
     };
 
-    HomeView.prototype.createFolder = function(path, name) {
+    HomeView.prototype.createFolder = function(path, data) {
+      var _this = this;
       return this.sendTreeRequest("POST", {
         path: path,
-        name: name
+        name: data.rslt.name
+      }, function(note) {
+        data.rslt.obj.data("id", note.id);
+        data.inst.deselect_all();
+        return data.inst.select_node(data.rslt.obj);
       });
     };
 
     HomeView.prototype.renameFolder = function(path, newName) {
-      return this.sendTreeRequest("PUT", {
-        path: path,
-        newName: newName
-      });
+      if (newName != null) {
+        return this.sendTreeRequest("PUT", {
+          path: path,
+          newName: newName
+        });
+      }
     };
 
     HomeView.prototype.deleteFolder = function(path) {
@@ -580,6 +608,8 @@ return buf.join("");
           note = new Note(data);
           return _this.renderNote(note);
         });
+      } else {
+        return this.noteArea.html(null);
       }
     };
 

@@ -10,11 +10,12 @@ class exports.HomeView extends Backbone.View
     # Tree functions
 
     # Send a request for a tree modification.
-    sendTreeRequest: (type, data) ->
+    sendTreeRequest: (type, data, callback) ->
         $.ajax
             type: type
             url: "tree"
             data: data
+            success: callback
             error: (data) ->
                 if data and data.msg
                     alert data.msg
@@ -22,16 +23,21 @@ class exports.HomeView extends Backbone.View
                     alert "Server error occured."
 
     # Create a new folder inside currently selected node.
-    createFolder: (path, name) =>
+    createFolder: (path, data) =>
         @sendTreeRequest "POST",
             path: path
-            name: name
-        
+            name: data.rslt.name
+            , (note) =>
+                data.rslt.obj.data("id", note.id)
+                data.inst.deselect_all()
+                data.inst.select_node(data.rslt.obj)
+
     # Rename currently selected node.
     renameFolder: (path, newName) =>
-        @sendTreeRequest "PUT",
-            path: path
-            newName: newName
+        if newName?
+            @sendTreeRequest "PUT",
+                path: path
+                newName: newName
         
     # Delete currently selected node.
     deleteFolder: (path) =>
@@ -43,6 +49,9 @@ class exports.HomeView extends Backbone.View
             $.get "notes/#{id}", (data) =>
                 note = new Note data
                 @renderNote note
+        else
+            @noteArea.html null
+
 
     renderNote: (note) ->
         @noteArea.html null
