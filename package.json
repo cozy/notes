@@ -5,8 +5,8 @@
 , "dependencies":
   { "jade":             ">= 0"
   , "jade-ext":         ">= 0"
-  , "express":          ">= 2.2.2"
-  , "connect":          ">= 1.4.2"
+  , "express":          "= 2.5.8"
+  , "connect":          "= 1.8.6"
   , "railway":          ">= 0.1.6"
   , "coffee-script":    ">= 1.1.1"
   , "mime":             ">= 1.2.2"
@@ -16,6 +16,7 @@
   , "eyes":          ">= 0"
   , "request":          ">= 0"
   , "nodeunit":         ">= 0"
+  , "should":         ">= 0"
   , "sinon":            ">= 0"
   }
 , "scripts":
