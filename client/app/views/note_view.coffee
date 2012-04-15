@@ -21,15 +21,20 @@ class exports.NoteWidget extends Backbone.View
     ### configuration ###
 
     render: ->
-        $(@el).html(template(note: @model))
-        @el.id = "note-#{@model.id}"
+        $("#note-full-breadcrump").html @model.humanPath.split(",").join(" / ")
+        $("#note-full-title").html @model.title
+        $("#note-full-content").val @model.content
+
         @el
 
-    setEditor: ->
+    @setEditor: (changeCallback) ->
         CKEDITOR.editorConfig = (config) ->
             config.removePlugins = 'scayt,menubutton,contextmenu'
+            config.extraPlugins = 'onchange'
+            config.minimumChangeMilliseconds=1000
 
-        $("textarea#note-content").ckeditor ->
+
+        $("#note-full-content").ckeditor ->
                 $(".cke_toolbar").hide()
             ,
             toolbar_Cozy: [[
@@ -40,5 +45,13 @@ class exports.NoteWidget extends Backbone.View
             toolbar: 'Cozy'
             uiColor : 'white'
 
-        CKEDITOR.on 'onChange', (e) ->
-            alert "change"
+
+        editor = $("#note-full-content").ckeditorGet()
+        editor.on "focus", (event) ->
+            $(".cke_toolbar").show()
+        editor.on "focusout", (event) ->
+            $(".cke_toolbar").hide()
+        editor.on "change", changeCallback
+
+        editor = $("textarea#note-full-content")
+        editor

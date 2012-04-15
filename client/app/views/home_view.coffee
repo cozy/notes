@@ -49,15 +49,24 @@ class exports.HomeView extends Backbone.View
             $.get "notes/#{id}", (data) =>
                 note = new Note data
                 @renderNote note
+                @noteFull.show()
         else
-            @noteArea.html null
+            @noteFull.hide()
 
 
     renderNote: (note) ->
-        @noteArea.html null
-        noteWidget = new NoteWidget note
-        @noteArea.append noteWidget.render()
-        noteWidget.setEditor()
+        @currentNote = note
+        noteWidget = new NoteWidget @currentNote
+
+        if @editor == undefined
+            @editor == NoteWidget.setEditor @onNoteChange
+
+        noteWidget.render()
+
+    onNoteChange: (event) =>
+        @currentNote.content = $("#note-full-content").val()
+        @currentNote.url = "/notes/#{@currentNote.id}"
+        @currentNote.save content: $("#note-full-content").val()
 
     # Initializers
 
@@ -68,6 +77,8 @@ class exports.HomeView extends Backbone.View
     # Fetch data loads notre tree and configure it.
     fetchData: ->
         @noteArea = $("#editor")
+        @noteFull = $("#note-full")
+        @noteFull.hide()
         $.get "tree/", (data) =>
             @tree = new Tree @.$("#nav"), data,
                 onCreate: @createFolder
