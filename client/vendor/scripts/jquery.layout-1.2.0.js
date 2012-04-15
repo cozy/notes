@@ -59,7 +59,7 @@ $.fn.layout = function (opts) {
 		//,	size:					100			// inital size of pane - defaults are set 'per pane'
 		,	minSize:				0			// when manually resizing a pane
 		,	maxSize:				0			// ditto, 0 = no limit
-		,	spacing_open:			6			// space between pane and adjacent panes - when pane is 'open'
+		,	spacing_open:			4			// space between pane and adjacent panes - when pane is 'open'
 		,	spacing_closed:			6			// ditto - when pane is 'closed'
 		,	togglerLength_open:		50			// Length = WIDTH of toggler button on north/south edges - HEIGHT on east/west edges
 		,	togglerLength_closed: 	50			// 100% OR -1 means 'full height/width of resizer bar' - 0 means 'hidden'
@@ -117,7 +117,7 @@ $.fn.layout = function (opts) {
 	,	west: {
 			paneSelector:			"."+prefix+"west" // default = .ui-layout-west
 		,	size:					200
-		,	resizerCursor:			"w-resize"
+		,	resizerCursor:			"e-resize"
 		}
 	,	center: {
 			paneSelector:			"."+prefix+"center" // default = .ui-layout-center

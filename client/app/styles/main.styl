@@ -6,6 +6,10 @@ shadow()
   box-shadow: arguments
 
 
+bgcolornav = #f3ece4
+bgcolorbuttons = #9399b3
+bgclearcolorbuttons = #A3A9D3
+
 a, a:visited
   color: #F95A5A
   text-decoration: none
@@ -66,14 +70,14 @@ html, body
 #nav
   margin 0
   padding 0
-  background-color #ebe5e2
+  background-color bgcolornav
   shadow 0 0 3px #002200 
 
 #tree
   font-size 12
   padding 10px
   border-top 1px solid white
-  background-color #ebe5e2
+  background-color bgcolornav
   color #6d3100
 
 
@@ -121,9 +125,9 @@ html, body
   background: linear-gradient(top , #ffdd97 0%, #ffb338 100%)
 
 #tree-buttons div.button
-  background linear-gradient(top, #E4D1A9 0%, #E4C199 100%)
+  background linear-gradient(top, bgcolorbuttons 0%, bgclearcolorbuttons 100%)
   shadow 0 1px 0 rgba(255, 255, 255, 0.12) inset, 1px 1px 1px rgba(0, 0, 0, 0.35)
-  color #6d3100
+  color black
   border 1px solid #3d2100
   border-radius 2px 2px 2px 2px
 
@@ -137,12 +141,9 @@ html, body
   margin-left 320px
   padding 10px
   height auto
-  background-color #E4D1A9
+  background-color #9f857a
 
-#editor h2
-  clear: none
-  padding 0
-  margin 0
+/* Notes */
 
 .note-full
   background white
@@ -150,4 +151,33 @@ html, body
   border 1px solid #ebe5e2
   padding 10px
   border-radius 3px
+
+.note-full h2
+  padding 0
+  margin-bottom 20px
+
+.cke_toolbox_collapser
+  display none
+
+#cke_bottom_note-content
+  display none
+  
+.cke_resizer
+  display none
+
+#cke_note-content
+  padding 0
+
+.cke_wrapper 
+  padding 0
+
+.cke_contents
+  margin 0
+
+.cke_toolbar 
+  display none
+
+.ui-layout-resizer-open:hover
+  background #ffdd97
+
 

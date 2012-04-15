@@ -115,7 +115,7 @@ describe "/tree", ->
      describe "DELETE /tree Delete given node", ->
 
         it "When I delete node /all/recipe/dessert", (done) ->
-            client.del "tree/", path: "/all/recipe/dessert", (error, response, body) ->
+            client.del "tree/", path: "/all/main-dishes/dessert", (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then a 200 success response is returned", ->
@@ -125,13 +125,13 @@ describe "/tree", ->
             client.get "tree/", (error, response, body) ->
                 storeResponse error, response, body, done
 
-        it "Then I have a tree that contains only path /all/recipe", ->
+        it "Then I have a tree that contains only path /all/main-dishes", ->
             tree = new DataTree bodyTest
             should.exist tree.all.recipe
             should.not.exist tree.all.recipe.dessert
 
         it "When I send a request to get notes with dessert path", (done) ->
-            client.post "notes/path", path: "/all/recipe/dessert", \
+            client.post "notes/path", path: "/all/main-dishes/dessert", \
                         (error, response, body) ->
                 storeResponse error, response, body, done
 

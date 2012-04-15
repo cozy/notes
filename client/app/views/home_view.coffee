@@ -57,6 +57,7 @@ class exports.HomeView extends Backbone.View
         @noteArea.html null
         noteWidget = new NoteWidget note
         @noteArea.append noteWidget.render()
+        noteWidget.setEditor()
 
     # Initializers
 
