@@ -26,8 +26,7 @@ action 'show', ->
     send @note, 200
 
 action 'update', ->
-    note = new Note body
-    @note.updateAttributes note, (err) =>
+    @note.updateAttributes body, (err) =>
         if err
             console.log err
             send error: 'Note can not be updated', 400
