@@ -48,18 +48,42 @@
     };
   }
 }).call(this);(this.require.define({
-  "views/templates/note": function(exports, require, module) {
-    module.exports = function anonymous(locals, attrs, escape, rethrow) {
-var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
-var buf = [];
-with (locals || {}) {
-var interp;
-buf.push('<p>' + escape((interp = note.humanPath.split(",").join(" / ")) == null ? '' : interp) + '</p><h2>' + escape((interp = note.title) == null ? '' : interp) + '</h2><textarea');
-buf.push(attrs({ 'id':('note-content') }));
-buf.push('></textarea>');
-}
-return buf.join("");
-};
+  "models/note": function(exports, require, module) {
+    (function() {
+  var BaseModel,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  BaseModel = require("models/models").BaseModel;
+
+  exports.Note = (function(_super) {
+
+    __extends(Note, _super);
+
+    Note.prototype.url = '/notes/';
+
+    function Note(note) {
+      var property;
+      Note.__super__.constructor.call(this);
+      for (property in note) {
+        this[property] = note[property];
+      }
+    }
+
+    Note.prototype.saveContent = function(content) {
+      this.content = content;
+      this.url = "/notes/" + this.id;
+      return this.save({
+        content: this.content
+      });
+    };
+
+    return Note;
+
+  })(BaseModel);
+
+}).call(this);
+
   }
 }));
 (this.require.define({
@@ -99,47 +123,212 @@ return buf.join("");
   }
 }));
 (this.require.define({
-  "routers/main_router": function(exports, require, module) {
+  "views/home_view": function(exports, require, module) {
     (function() {
-  var slugify,
+  var Note, NoteWidget, Tree,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  slugify = require("helpers").slugify;
+  Tree = require("./widgets/tree").Tree;
 
-  exports.MainRouter = (function(_super) {
+  NoteWidget = require("./note_view").NoteWidget;
 
-    __extends(MainRouter, _super);
+  Note = require("../models/note").Note;
 
-    function MainRouter() {
-      MainRouter.__super__.constructor.apply(this, arguments);
+  exports.HomeView = (function(_super) {
+
+    __extends(HomeView, _super);
+
+    function HomeView() {
+      this.onNoteChange = __bind(this.onNoteChange, this);
+      this.selectFolder = __bind(this.selectFolder, this);
+      this.deleteFolder = __bind(this.deleteFolder, this);
+      this.renameFolder = __bind(this.renameFolder, this);
+      this.createFolder = __bind(this.createFolder, this);
+      HomeView.__super__.constructor.apply(this, arguments);
     }
 
-    MainRouter.prototype.routes = {
-      '': 'home'
+    HomeView.prototype.id = 'home-view';
+
+    HomeView.prototype.sendTreeRequest = function(type, data, callback) {
+      return $.ajax({
+        type: type,
+        url: "tree",
+        data: data,
+        success: callback,
+        error: function(data) {
+          if (data && data.msg) {
+            return alert(data.msg);
+          } else {
+            return alert("Server error occured.");
+          }
+        }
+      });
     };
 
-    MainRouter.prototype.initialize = function() {
-      return this.route(/^note\/(.*?)$/, 'note');
+    HomeView.prototype.createFolder = function(path, data) {
+      var _this = this;
+      return this.sendTreeRequest("POST", {
+        path: path,
+        name: data.rslt.name
+      }, function(note) {
+        data.rslt.obj.data("id", note.id);
+        data.inst.deselect_all();
+        return data.inst.select_node(data.rslt.obj);
+      });
     };
 
-    MainRouter.prototype.home = function() {
-      $('body').html(app.homeView.render().el);
-      $('#home-view').layout({
+    HomeView.prototype.renameFolder = function(path, newName) {
+      if (newName != null) {
+        return this.sendTreeRequest("PUT", {
+          path: path,
+          newName: newName
+        });
+      }
+    };
+
+    HomeView.prototype.deleteFolder = function(path) {
+      this.noteArea.html(null);
+      return this.sendTreeRequest("DELETE", {
+        path: path
+      });
+    };
+
+    HomeView.prototype.selectFolder = function(path, id) {
+      var _this = this;
+      if (id != null) {
+        return $.get("notes/" + id, function(data) {
+          var note;
+          note = new Note(data);
+          _this.renderNote(note);
+          return _this.noteFull.show();
+        });
+      } else {
+        return this.noteFull.hide();
+      }
+    };
+
+    HomeView.prototype.renderNote = function(note) {
+      var noteWidget;
+      this.currentNote = note;
+      noteWidget = new NoteWidget(this.currentNote);
+      if (this.editor === void 0) {
+        this.editor === NoteWidget.setEditor(this.onNoteChange);
+      }
+      return noteWidget.render();
+    };
+
+    HomeView.prototype.onNoteChange = function(event) {
+      return this.currentNote.saveContent($("#note-full-content").val());
+    };
+
+    HomeView.prototype.render = function() {
+      $(this.el).html(require('./templates/home'));
+      return this;
+    };
+
+    HomeView.prototype.setLayout = function() {
+      return $('#home-view').layout({
         size: "310",
         minSize: "310",
         resizable: true
       });
-      return app.homeView.fetchData();
     };
 
-    MainRouter.prototype.note = function(path) {
-      return this.home();
+    HomeView.prototype.fetchData = function() {
+      var _this = this;
+      this.noteArea = $("#editor");
+      this.noteFull = $("#note-full");
+      this.noteFull.hide();
+      return $.get("tree/", function(data) {
+        return _this.tree = new Tree(_this.$("#nav"), data, {
+          onCreate: _this.createFolder,
+          onRename: _this.renameFolder,
+          onRemove: _this.deleteFolder,
+          onSelect: _this.selectFolder
+        });
+      });
     };
 
-    return MainRouter;
+    return HomeView;
 
-  })(Backbone.Router);
+  })(Backbone.View);
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
+  "views/note_view": function(exports, require, module) {
+    (function() {
+  var template,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  template = require('./templates/note');
+
+  exports.NoteWidget = (function(_super) {
+
+    __extends(NoteWidget, _super);
+
+    NoteWidget.prototype.className = "note-full";
+
+    NoteWidget.prototype.tagName = "div";
+
+    /* Constructor
+    */
+
+    function NoteWidget(model) {
+      this.model = model;
+      NoteWidget.__super__.constructor.call(this);
+      this.id = this.model.slug;
+      this.model.view = this;
+    }
+
+    NoteWidget.prototype.remove = function() {
+      return $(this.el).remove();
+    };
+
+    /* configuration
+    */
+
+    NoteWidget.prototype.render = function() {
+      $("#note-full-breadcrump").html(this.model.humanPath.split(",").join(" / "));
+      $("#note-full-title").html(this.model.title);
+      $("#note-full-content").val(this.model.content);
+      return this.el;
+    };
+
+    NoteWidget.setEditor = function(changeCallback) {
+      var editor;
+      CKEDITOR.editorConfig = function(config) {
+        config.removePlugins = 'scayt,menubutton,contextmenu';
+        config.extraPlugins = 'onchange';
+        return config.minimumChangeMilliseconds = 1000;
+      };
+      $("#note-full-content").ckeditor(function() {
+        return $(".cke_toolbar").hide();
+      }, {
+        toolbar_Cozy: [['Bold', 'Italic', '-', 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent']],
+        toolbar: 'Cozy',
+        uiColor: 'white'
+      });
+      editor = $("#note-full-content").ckeditorGet();
+      editor.on("focus", function(event) {
+        return $(".cke_toolbar").show();
+      });
+      editor.on("focusout", function(event) {
+        return $(".cke_toolbar").hide();
+      });
+      editor.on("change", changeCallback);
+      editor = $("textarea#note-full-content");
+      return editor;
+    };
+
+    return NoteWidget;
+
+  })(Backbone.View);
 
 }).call(this);
 
@@ -148,17 +337,17 @@ return buf.join("");
 (this.require.define({
   "collections/notes": function(exports, require, module) {
     (function() {
-  var Application,
+  var Note,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  Application = require("models/application").Application;
+  Note = require("models/notes").Note;
 
   exports.NotesCollection = (function(_super) {
 
     __extends(NotesCollection, _super);
 
-    NotesCollection.prototype.model = Application;
+    NotesCollection.prototype.model = Note;
 
     NotesCollection.prototype.url = 'notes/';
 
@@ -193,7 +382,7 @@ return buf.join("");
     }
 
     BaseModel.prototype.isNew = function() {
-      return this.id === void 0;
+      return !(this.id != null);
     };
 
     return BaseModel;
@@ -202,6 +391,105 @@ return buf.join("");
 
 }).call(this);
 
+  }
+}));
+(this.require.define({
+  "helpers": function(exports, require, module) {
+    (function() {
+
+  exports.BrunchApplication = (function() {
+
+    function BrunchApplication() {
+      var _this = this;
+      $(function() {
+        _this.initialize(_this);
+        return Backbone.history.start();
+      });
+    }
+
+    BrunchApplication.prototype.initialize = function() {
+      return null;
+    };
+
+    return BrunchApplication;
+
+  })();
+
+  exports.slugify = function(string) {
+    var _slugify_hyphenate_re, _slugify_strip_re;
+    _slugify_strip_re = /[^\w\s-]/g;
+    _slugify_hyphenate_re = /[-\s]+/g;
+    string = string.replace(_slugify_strip_re, '').trim().toLowerCase();
+    string = string.replace(_slugify_hyphenate_re, '-');
+    return string;
+  };
+
+  exports.getPathRegExp = function(path) {
+    var slashReg;
+    slashReg = new RegExp("/", "g");
+    return "^" + (path.replace(slashReg, "\/"));
+  };
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
+  "routers/main_router": function(exports, require, module) {
+    (function() {
+  var slugify,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  slugify = require("helpers").slugify;
+
+  exports.MainRouter = (function(_super) {
+
+    __extends(MainRouter, _super);
+
+    function MainRouter() {
+      MainRouter.__super__.constructor.apply(this, arguments);
+    }
+
+    MainRouter.prototype.routes = {
+      '': 'home'
+    };
+
+    MainRouter.prototype.initialize = function() {
+      return this.route(/^note\/(.*?)$/, 'note');
+    };
+
+    MainRouter.prototype.home = function() {
+      $('body').html(app.homeView.render().el);
+      app.homeView.setLayout();
+      return app.homeView.fetchData();
+    };
+
+    MainRouter.prototype.note = function(path) {
+      return this.home();
+    };
+
+    return MainRouter;
+
+  })(Backbone.Router);
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
+  "views/templates/note": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<p>' + escape((interp = note.humanPath.split(",").join(" / ")) == null ? '' : interp) + '</p><h2>' + escape((interp = note.title) == null ? '' : interp) + '</h2><textarea');
+buf.push(attrs({ 'id':('note-content') }));
+buf.push('></textarea>');
+}
+return buf.join("");
+};
   }
 }));
 (this.require.define({
@@ -367,41 +655,6 @@ return buf.join("");
   }
 }));
 (this.require.define({
-  "helpers": function(exports, require, module) {
-    (function() {
-
-  exports.BrunchApplication = (function() {
-
-    function BrunchApplication() {
-      var _this = this;
-      $(function() {
-        _this.initialize(_this);
-        return Backbone.history.start();
-      });
-    }
-
-    BrunchApplication.prototype.initialize = function() {
-      return null;
-    };
-
-    return BrunchApplication;
-
-  })();
-
-  exports.slugify = function(string) {
-    var _slugify_hyphenate_re, _slugify_strip_re;
-    _slugify_strip_re = /[^\w\s-]/g;
-    _slugify_hyphenate_re = /[-\s]+/g;
-    string = string.replace(_slugify_strip_re, '').trim().toLowerCase();
-    string = string.replace(_slugify_hyphenate_re, '-');
-    return string;
-  };
-
-}).call(this);
-
-  }
-}));
-(this.require.define({
   "views/templates/tree_buttons": function(exports, require, module) {
     module.exports = function anonymous(locals, attrs, escape, rethrow) {
 var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
@@ -455,256 +708,5 @@ buf.push('></textarea></div></div>');
 }
 return buf.join("");
 };
-  }
-}));
-(this.require.define({
-  "views/note_view": function(exports, require, module) {
-    (function() {
-  var template,
-    __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  template = require('./templates/note');
-
-  exports.NoteWidget = (function(_super) {
-
-    __extends(NoteWidget, _super);
-
-    NoteWidget.prototype.className = "note-full";
-
-    NoteWidget.prototype.tagName = "div";
-
-    /* Constructor
-    */
-
-    function NoteWidget(model) {
-      this.model = model;
-      NoteWidget.__super__.constructor.call(this);
-      this.id = this.model.slug;
-      this.model.view = this;
-    }
-
-    NoteWidget.prototype.remove = function() {
-      return $(this.el).remove();
-    };
-
-    /* configuration
-    */
-
-    NoteWidget.prototype.render = function() {
-      $("#note-full-breadcrump").html(this.model.humanPath.split(",").join(" / "));
-      $("#note-full-title").html(this.model.title);
-      $("#note-full-content").val(this.model.content);
-      return this.el;
-    };
-
-    NoteWidget.setEditor = function(changeCallback) {
-      var editor;
-      CKEDITOR.editorConfig = function(config) {
-        config.removePlugins = 'scayt,menubutton,contextmenu';
-        config.extraPlugins = 'onchange';
-        return config.minimumChangeMilliseconds = 1000;
-      };
-      $("#note-full-content").ckeditor(function() {
-        return $(".cke_toolbar").hide();
-      }, {
-        toolbar_Cozy: [['Bold', 'Italic', '-', 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent']],
-        toolbar: 'Cozy',
-        uiColor: 'white'
-      });
-      editor = $("#note-full-content").ckeditorGet();
-      editor.on("focus", function(event) {
-        return $(".cke_toolbar").show();
-      });
-      editor.on("focusout", function(event) {
-        return $(".cke_toolbar").hide();
-      });
-      editor.on("change", changeCallback);
-      editor = $("textarea#note-full-content");
-      return editor;
-    };
-
-    return NoteWidget;
-
-  })(Backbone.View);
-
-}).call(this);
-
-  }
-}));
-(this.require.define({
-  "views/home_view": function(exports, require, module) {
-    (function() {
-  var Note, NoteWidget, Tree,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  Tree = require("./widgets/tree").Tree;
-
-  NoteWidget = require("./note_view").NoteWidget;
-
-  Note = require("../models/note").Note;
-
-  exports.HomeView = (function(_super) {
-
-    __extends(HomeView, _super);
-
-    function HomeView() {
-      this.onNoteChange = __bind(this.onNoteChange, this);
-      this.selectFolder = __bind(this.selectFolder, this);
-      this.deleteFolder = __bind(this.deleteFolder, this);
-      this.renameFolder = __bind(this.renameFolder, this);
-      this.createFolder = __bind(this.createFolder, this);
-      HomeView.__super__.constructor.apply(this, arguments);
-    }
-
-    HomeView.prototype.id = 'home-view';
-
-    HomeView.prototype.sendTreeRequest = function(type, data, callback) {
-      return $.ajax({
-        type: type,
-        url: "tree",
-        data: data,
-        success: callback,
-        error: function(data) {
-          if (data && data.msg) {
-            return alert(data.msg);
-          } else {
-            return alert("Server error occured.");
-          }
-        }
-      });
-    };
-
-    HomeView.prototype.createFolder = function(path, data) {
-      var _this = this;
-      return this.sendTreeRequest("POST", {
-        path: path,
-        name: data.rslt.name
-      }, function(note) {
-        data.rslt.obj.data("id", note.id);
-        data.inst.deselect_all();
-        return data.inst.select_node(data.rslt.obj);
-      });
-    };
-
-    HomeView.prototype.renameFolder = function(path, newName) {
-      if (newName != null) {
-        return this.sendTreeRequest("PUT", {
-          path: path,
-          newName: newName
-        });
-      }
-    };
-
-    HomeView.prototype.deleteFolder = function(path) {
-      this.noteArea.html(null);
-      return this.sendTreeRequest("DELETE", {
-        path: path
-      });
-    };
-
-    HomeView.prototype.selectFolder = function(path, id) {
-      var _this = this;
-      if (id != null) {
-        return $.get("notes/" + id, function(data) {
-          var note;
-          note = new Note(data);
-          _this.renderNote(note);
-          return _this.noteFull.show();
-        });
-      } else {
-        return this.noteFull.hide();
-      }
-    };
-
-    HomeView.prototype.renderNote = function(note) {
-      var noteWidget;
-      this.currentNote = note;
-      noteWidget = new NoteWidget(this.currentNote);
-      if (this.editor === void 0) {
-        this.editor === NoteWidget.setEditor(this.onNoteChange);
-      }
-      return noteWidget.render();
-    };
-
-    HomeView.prototype.onNoteChange = function(event) {
-      this.currentNote.content = $("#note-full-content").val();
-      this.currentNote.url = "/notes/" + this.currentNote.id;
-      return this.currentNote.save({
-        content: $("#note-full-content").val()
-      });
-    };
-
-    HomeView.prototype.render = function() {
-      $(this.el).html(require('./templates/home'));
-      return this;
-    };
-
-    HomeView.prototype.fetchData = function() {
-      var _this = this;
-      this.noteArea = $("#editor");
-      this.noteFull = $("#note-full");
-      this.noteFull.hide();
-      return $.get("tree/", function(data) {
-        return _this.tree = new Tree(_this.$("#nav"), data, {
-          onCreate: _this.createFolder,
-          onRename: _this.renameFolder,
-          onRemove: _this.deleteFolder,
-          onSelect: _this.selectFolder
-        });
-      });
-    };
-
-    return HomeView;
-
-  })(Backbone.View);
-
-}).call(this);
-
-  }
-}));
-(this.require.define({
-  "models/note": function(exports, require, module) {
-    (function() {
-  var BaseModel,
-    __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-  BaseModel = require("models/models").BaseModel;
-
-  exports.Note = (function(_super) {
-
-    __extends(Note, _super);
-
-    Note.prototype.url = '/notes/';
-
-    function Note(note) {
-      var property;
-      Note.__super__.constructor.call(this);
-      for (property in note) {
-        this[property] = note[property];
-      }
-    }
-
-    Note.prototype.isNew = function() {
-      return !(this.id != null);
-    };
-
-    Note.prototype.saveContent = function(content) {
-      this.content = content;
-      this.url = "/notes/" + this.id;
-      return this.save({
-        content: this.content
-      });
-    };
-
-    return Note;
-
-  })(BaseModel);
-
-}).call(this);
-
   }
 }));

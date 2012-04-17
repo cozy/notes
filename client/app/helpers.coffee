@@ -15,3 +15,8 @@ exports.slugify = (string) ->
     string = string.replace _slugify_hyphenate_re, '-'
     string
 
+
+exports.getPathRegExp = (path) ->
+    slashReg = new RegExp "/", "g"
+    "^#{path.replace(slashReg, "\/")}"
+

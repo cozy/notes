@@ -1,9 +1,9 @@
-Application = require("models/application").Application
+Note = require("models/notes").Note
 
-# List of installed applications.
+
 class exports.NotesCollection extends Backbone.Collection
     
-  model: Application
+  model: Note
   url: 'notes/'
 
   constructor: () ->

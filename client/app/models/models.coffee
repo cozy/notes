@@ -2,4 +2,4 @@
 class exports.BaseModel extends Backbone.Model
 
   isNew: () ->
-    @id is undefined
+    not @id?

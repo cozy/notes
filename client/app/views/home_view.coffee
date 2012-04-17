@@ -6,7 +6,6 @@ Note = require("../models/note").Note
 class exports.HomeView extends Backbone.View
     id: 'home-view'
 
-
     # Tree functions
 
     # Send a request for a tree modification.
@@ -64,9 +63,7 @@ class exports.HomeView extends Backbone.View
         noteWidget.render()
 
     onNoteChange: (event) =>
-        @currentNote.content = $("#note-full-content").val()
-        @currentNote.url = "/notes/#{@currentNote.id}"
-        @currentNote.save content: $("#note-full-content").val()
+        @currentNote.saveContent $("#note-full-content").val()
 
     # Initializers
 
@@ -74,11 +71,18 @@ class exports.HomeView extends Backbone.View
         $(@el).html require('./templates/home')
         this
 
+    setLayout: ->
+        $('#home-view').layout
+            size: "310"
+            minSize: "310"
+            resizable: true
+
     # Fetch data loads notre tree and configure it.
     fetchData: ->
         @noteArea = $("#editor")
         @noteFull = $("#note-full")
         @noteFull.hide()
+
         $.get "tree/", (data) =>
             @tree = new Tree @.$("#nav"), data,
                 onCreate: @createFolder
