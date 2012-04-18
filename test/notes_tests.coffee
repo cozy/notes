@@ -1,18 +1,15 @@
 request = require('request')
 should = require('should')
+async = require('async')
 client = require('./client')
+app = require('../server')
 
 
-clearDb = (callback) ->
-    console.log "clear"
 
-initDb = (callback) ->
-    console.log "init"
-
+## Helpers
 
 responseTest = null
 bodyTest = null
-
 
 storeResponse = (error, response, body, done) ->
     responseTest = null
@@ -25,12 +22,17 @@ storeResponse = (error, response, body, done) ->
         bodyTest = body
     done()
 
-
 handleResponse = (error, response, body, done) ->
     if error
         console.log error
         false.should.be.ok()
     done()
+
+
+
+before (done) ->
+    Note.destroyAll done
+
 
 describe "/notes", ->
 
@@ -42,13 +44,12 @@ describe "/notes", ->
                 content: "Test content 01"
                 path: "/all/test-note-01"
 
-
             client.post "notes/", note, (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then a success is returned with a note with an id", ->
-            should.exist(bodyTest)
-            should.exist(bodyTest.id)
+            should.exist bodyTest
+            should.exist bodyTest.id
             responseTest.statusCode.should.equal 201
 
 
@@ -58,12 +59,13 @@ describe "/notes", ->
                 storeResponse error, response, body, done
 
         it "Then I got expected note in a list", ->
-            should.exist(bodyTest)
-            should.exist(bodyTest.rows)
+            should.exist bodyTest
+            bodyTest = JSON.parse bodyTest
+            console.log bodyTest
+            should.exist bodyTest.rows
             bodyTest.rows.length.should.equal 1
             bodyTest.rows[0].title.should.equal "Test note 01"
             responseTest.statusCode.should.equal 200
-
 
 
     describe "POST /notes/path Get all notes with given path", ->
@@ -83,17 +85,18 @@ describe "/notes", ->
     describe "GET /notes/:id Get a note", ->
         it "When I send a request to retrieve a given note", (done) ->
             client.get "notes/#{bodyTest.rows[0].id}", \
-                       (error, response, body) ->
+                      (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then I got expected note ", ->
             should.exist(bodyTest)
+            bodyTest = JSON.parse bodyTest
             should.exist(bodyTest.title)
             bodyTest.title.should.equal "Test note 01"
             responseTest.statusCode.should.equal 200
 
-            
-    describe "PUT /notes/:id Update a note", ->
+  
+     describe "PUT /notes/:id Update a note", ->
         note =
             title: "Test note 01 update"
 
@@ -107,14 +110,15 @@ describe "/notes", ->
 
         it "Then I got expected note ", ->
             should.exist(bodyTest)
+            bodyTest = JSON.parse bodyTest
             should.exist(bodyTest.title)
             bodyTest.title.should.equal "Test note 01 update"
 
-            
+          
     describe "DELETE /notes/:id Delete a note", ->
 
         it "When I send a request to delete a given note", (done) ->
-            client.del "notes/#{bodyTest.id}", (error, response, body) ->
+            client.delete "notes/#{bodyTest.id}", (error, response, body) ->
                 handleResponse error, response, body, done
 
         it "And I send a request to retrieve a given note", (done) ->

@@ -2,7 +2,7 @@ async = require("async")
 eyes = require("eyes")
 
 DataTree = require('../../lib/tree').Tree
-slugify = require('../../client/app/helpers').slugify
+helpers = require('../../client/app/helpers')
 
 # Before each action current tree is loaded. If it does not exists it created.
 before 'load tree', ->
@@ -51,10 +51,8 @@ action 'create', ->
 
     updateTree = (note) =>
         treeData.addNode @path, name, note.id
-        tree = new Tree
-            struct: treeData.toJson()
 
-        @tree.updateAttributes tree, (err) =>
+        @tree.updateAttributes struct: treeData.toJson(), (err) =>
             if err
                 console.log err
                 send error: "An error occured while node was created", 500
@@ -62,7 +60,7 @@ action 'create', ->
                 send note, 201
 
     note = new Note
-        path: "#{@path}/#{slugify name}"
+        path: "#{@path}/#{helpers.slugify name}"
         title: name
         humanPath: humanPath
 
@@ -73,6 +71,8 @@ action 'create', ->
             updateTree note
 
 
+# Update node name and human name: update tree and update all notes which have 
+# this note as parent.
 action 'update', ->
 
     changeNotesPath = (err, notes) =>
@@ -107,29 +107,23 @@ action 'update', ->
                 callback(null)
 
 
-            async.series funcs, (err, results) ->
-            #    #console.log results
-
-
     if body.newName != undefined
         newName = body.newName
-        nodes = @path.split("/")
-        nodes.pop()
-        nodes.push(slugify newName)
-        newPath = nodes.join("/")
         data = new DataTree JSON.parse(@tree.struct)
 
-        data.updateNode @path, newName
-        tree = new Tree
-            struct: data.toJson()
+        nodes = @path.split("/")
+        nodes.pop()
+        nodes.push(helpers.slugify newName)
+        newPath = nodes.join("/")
 
-        @tree.updateAttributes tree, (err) =>
+        data.updateNode @path, newName
+
+        @tree.updateAttributes struct: data.toJson(), (err) =>
             if err
                 console.log err
                 send error: "An error occured while node was created", 500
             else
-                slashReg = new RegExp "/", "g"
-                reg = "^#{@path.replace(slashReg, "\/")}"
+                reg = helpers.getPathRegExp @path
                 Note.all { where: { path: { regex: reg } } }, changeNotesPath
     else
         send error: "No new name sent", 400
@@ -144,12 +138,10 @@ action 'destroy', ->
         struct: data.toJson(),
 
     destroyNotes = =>
-        slashReg = new RegExp "/", "g"
-        reg = "^#{@path.replace(slashReg, "\/")}"
+        reg = helpers.getPathRegExp @path
         Note.destroySome { where: { path: { regex: reg } } }, (err) ->
             if err
                 console.log err
-                eyes.inspect(err)
                 send error: "An error occured while node was deleted", 500
             else
                 send success: "Node succesfully deleted", 200

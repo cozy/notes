@@ -12,7 +12,7 @@
   , "mime":             ">= 1.2.2"
   , "qs":               ">= 0.1.0"
   , "mongoose":         ">= 2.5.10" 
-  , "jugglingdb":         ">= 0"
+  , "jugglingdb":       ">= 0"
   , "async":            ">= 0"
   , "eyes":             ">= 0"
   , "request":          ">= 0"

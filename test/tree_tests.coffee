@@ -1,5 +1,6 @@
 should = require("should")
 client = require("./client")
+app = require("../server")
 
 DataTree = require("../lib/tree").Tree
 
@@ -25,6 +26,13 @@ handleResponse = (error, response, body, done) ->
 
 tree = null
 
+
+
+before (done) ->
+    Note.destroyAll ->
+        Tree.destroyAll done
+
+
 describe "/tree", ->
 
 
@@ -47,6 +55,7 @@ describe "/tree", ->
         it "Then a 201 success response is returned", ->
             responseTest.statusCode.should.equal 201
 
+
     describe "GET /tree Retrieve current tree", ->
 
         it "When I retrieve tree from /tree", (done) ->
@@ -54,6 +63,7 @@ describe "/tree", ->
                 storeResponse error, response, body, done
 
         it "Then I have a tree with this path /all/recipe/dessert/brownie", ->
+            bodyTest = JSON.parse bodyTest
             tree = new DataTree bodyTest
             should.exist tree.all.recipe.dessert.brownie
             tree.all.recipe.dessert.brownie.name.should.equal "Brownie"
@@ -64,9 +74,10 @@ describe "/tree", ->
                 storeResponse error, response, body, done
 
         it "Then I have a note with right path", ->
+            bodyTest = JSON.parse bodyTest
             bodyTest.path.should.equal "/all/recipe/dessert/brownie"
-            bodyTest.humanPath.split(",").join("/").should.equal "All/Recipe/Dessert/Brownie"
-
+            bodyTest.humanPath.split(",").join("/").should.equal \
+                                                "All/Recipe/Dessert/Brownie"
 
 
     describe "PUT /tree Update a node", ->
@@ -84,6 +95,7 @@ describe "/tree", ->
                 storeResponse error, response, body, done
 
         it "Then I have a tree that contains path /all/main-dishes", ->
+            bodyTest = JSON.parse bodyTest
             tree = new DataTree bodyTest
             should.exist tree.all.main_dishes
             tree.all.main_dishes.name.should.equal "Main Dishes"
@@ -105,7 +117,7 @@ describe "/tree", ->
                         (error, response, body) ->
                 storeResponse error, response, body, done
 
-        it "Then I got two notes", ->
+        it "Then I got three notes", ->
             should.exist(bodyTest)
             should.exist(bodyTest.rows)
             bodyTest.rows.length.should.equal 3
@@ -114,8 +126,9 @@ describe "/tree", ->
 
      describe "DELETE /tree Delete given node", ->
 
-        it "When I delete node /all/recipe/dessert", (done) ->
-            client.del "tree/", path: "/all/main-dishes/dessert", (error, response, body) ->
+        it "When I delete node /all/main-dishes/dessert", (done) ->
+            client.put "tree/path", \
+                    path: "/all/main-dishes/dessert", (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then a 200 success response is returned", ->
@@ -126,9 +139,10 @@ describe "/tree", ->
                 storeResponse error, response, body, done
 
         it "Then I have a tree that contains only path /all/main-dishes", ->
+            bodyTest = JSON.parse bodyTest
             tree = new DataTree bodyTest
-            should.exist tree.all.recipe
-            should.not.exist tree.all.recipe.dessert
+            should.exist tree.all.main_dishes
+            should.not.exist tree.all.main_dishes.dessert
 
         it "When I send a request to get notes with dessert path", (done) ->
             client.post "notes/path", path: "/all/main-dishes/dessert", \

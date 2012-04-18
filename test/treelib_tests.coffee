@@ -67,7 +67,6 @@ describe "Tree tools", ->
         it "Then node called '/all/recipe' should not exist", ->
             should.not.exist tree.all.recipe
         it "And node called '/all/recipes/dessert' should exist", ->
-            console.log tree.all
             should.exist tree.all.recipes
             should.exist tree.all.recipes.dessert
         it "When I get humanPath for '/all/recipes/dessert'", ->

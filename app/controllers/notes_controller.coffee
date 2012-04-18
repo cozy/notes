@@ -1,3 +1,6 @@
+helpers = require('../../client/app/helpers')
+
+
 before 'load note', ->
     Note.find params.id, (err, note) =>
         if err
@@ -10,15 +13,30 @@ before 'load note', ->
 , only: ['update', 'destroy', 'show']
 
 
+returnNotes = (err, notes) ->
+    if err
+        console.log err
+        send error: "Retrieve notes failed.", 500
+    else
+        send length: notes.length, rows: notes
+
+
 action 'index', ->
     render
         title: "Cozy Notes"
+
+action 'all', ->
+    Note.all returnNotes
+
+action 'allForPath', ->
+    regExp = helpers.getPathRegExp body.path
+    Note.all { where: { path: { regex: regExp } } }, returnNotes
 
 action 'create', ->
     note = new Note body
     Note.create note, (err, note) =>
         if err
-            send error: 'Note can not be created'
+            end error: 'Note can not be created'
         else
             send note, 201
 
@@ -40,26 +58,5 @@ action 'destroy', ->
             send error: 'Can not destroy note', 500
         else
             send success: 'Note succesfuly deleted'
-
-
-
-returnNote = (err, notes) ->
-    if err
-        console.log err
-        send error: "Retrieve notes failed.", 500
-    else
-        send length: notes.length, rows: notes
-
-
-action 'all', ->
-    Note.all returnNote
-
-action 'allForPath', ->
-    console.log body.path
-    @path = body.path
-    slashReg = new RegExp "/", "g"
-    reg = "^#{@path.replace(slashReg, "\/")}"
-
-    Note.all { where: { path: { regex: reg } } }, returnNote
 
 

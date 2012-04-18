@@ -1,11 +1,12 @@
 request = require('request')
+restler = require('restler')
 
 host = "http://localhost:8001/"
 
 exports.get = (path, callback) ->
-    request.get
+    request
+        method: "GET"
         uri: host + path
-        json: true
         , callback
 
 exports.post = (path, json, callback) ->
@@ -22,11 +23,9 @@ exports.put = (path, json, callback) ->
         json: json
         , callback
 
-exports.del = (path, json, callback) ->
+exports.delete = (path, callback) ->
     request
         method: "DELETE"
         uri: host + path
-        json: json
         , callback
-
 

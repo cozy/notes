@@ -17,7 +17,7 @@ slugify = require('../client/app/helpers').slugify
 #
 class exports.Tree
 
-    # All trees have a root property called all
+    # All trees have a root property called all.
     constructor: (struct) ->
         if struct != undefined
             @all = struct.all
@@ -32,7 +32,7 @@ class exports.Tree
         currentNode = @all
         for pathNode in nodes
             pathNode = pathNode.replace(/-/g, "_")
-            if currentNode[pathNode] != undefined
+            if currentNode[pathNode]?
                 currentNode = currentNode[pathNode]
             else
                 currentNode[pathNode] = {}
@@ -51,7 +51,6 @@ class exports.Tree
         humanPath = []
 
         currentNode = @all
-        console.log nodes
         for pathNode in nodes
             pathNode = pathNode.replace(/-/g, "_")
             humanPath.push(currentNode.name)
@@ -69,7 +68,7 @@ class exports.Tree
 
         currentNode = @getNode path, 1
         nodeName = nodes.pop().replace(/-/g, "_")
-        delete currentNode[nodeName] if currentNode != undefined
+        delete currentNode[nodeName] if currentNode?
 
         this
         
@@ -81,7 +80,7 @@ class exports.Tree
         nodes = @_getCleanPath path
 
         currentNode = @all
-        while currentNode != undefined and nodes.length > limit
+        while currentNode? and nodes.length > limit
             currentNode = currentNode[nodes.shift().replace(/-/g, "_")]
         
         currentNode
@@ -90,16 +89,13 @@ class exports.Tree
     # Change both human and machine node name.
     updateNode: (path, newName) ->
         nodes = @_getCleanPath path
-        console.log nodes
 
         currentNode = @getNode path, 1
-        if currentNode != undefined
-            node = nodes.pop()
-            slug = slugify(newName)
-            slug = slug.replace(/-/g, "_")
-            node = node.replace(/-/g, "_")
+        if currentNode?
+            node = nodes.pop().replace(/-/g, "_")
+            slug = slugify(newName).replace(/-/g, "_")
             currentNode[slug] = currentNode[node]
-            delete currentNode[node] if currentNode != undefined
+            delete currentNode[node] if currentNode?
             currentNode[slug].name = newName
 
         node

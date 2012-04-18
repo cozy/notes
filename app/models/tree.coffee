@@ -1,7 +1,7 @@
 async = require("async")
 
-Note.destroySome = (condition, callback) ->
-
+Tree.destroySome = (condition, callback) ->
+    
     # Replace this with async lib call.
     wait = 0
     error = null
@@ -10,16 +10,15 @@ Note.destroySome = (condition, callback) ->
         if --wait == 0
             callback(error)
 
-    Note.all condition, (err, data) ->
+    Tree.all condition, (err, data) ->
         if err then return callback(err)
         if data.length == 0 then return callback(null)
 
         wait = data.length
         data.forEach (obj) ->
-            console.log obj.title
             obj.destroy done
 
 
-Note.destroyAll = (callback) ->
-    Note.destroySome {}, callback
+Tree.destroyAll = (callback) ->
+    Tree.destroySome {}, callback
 

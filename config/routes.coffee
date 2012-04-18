@@ -10,4 +10,4 @@ exports.routes = (map) ->
     map.get '/tree', 'tree#tree'
     map.post '/tree', 'tree#create'
     map.put '/tree', 'tree#update'
-    map.del '/tree', 'tree#destroy'
+    map.put '/tree/path', 'tree#destroy'
