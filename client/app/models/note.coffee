@@ -2,7 +2,7 @@ BaseModel = require("models/models").BaseModel
 
 class exports.Note extends BaseModel
 
-    url: '/notes/'
+    url: 'notes/'
 
     # Copy note properties to current model.
     constructor: (note) ->
@@ -13,5 +13,5 @@ class exports.Note extends BaseModel
     # Send save request to server.
     saveContent: (content) ->
         @content = content
-        @url = "/notes/#{@.id}"
+        @url = "notes/#{@.id}"
         @save content: @content

@@ -10,9 +10,14 @@ class exports.HomeView extends Backbone.View
 
     # Send a request for a tree modification.
     sendTreeRequest: (type, data, callback) ->
+        url = "tree"
+        if type == "DELETE"
+            type = "PUT"
+            url = url + "/path"
+
         $.ajax
             type: type
-            url: "tree"
+            url: url
             data: data
             success: callback
             error: (data) ->
@@ -40,7 +45,7 @@ class exports.HomeView extends Backbone.View
         
     # Delete currently selected node.
     deleteFolder: (path) =>
-        @noteArea.html null
+        @noteFull.hide()
         @sendTreeRequest "DELETE", path: path
 
     selectFolder: (path, id) =>
