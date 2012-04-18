@@ -23,7 +23,11 @@ returnNotes = (err, notes) ->
 
 action 'index', ->
     render
-        title: "Cozy Notes"
+        title: "Cozy Notes", test: false
+
+action 'index-test', ->
+    render "index",
+        title: "Cozy Notes", test: true
 
 action 'all', ->
     Note.all returnNotes

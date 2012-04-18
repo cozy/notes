@@ -3,9 +3,19 @@ html
 
   head
     title #{title}
-    script(src='javascripts/vendor.js')
-    script(src='javascripts/app.js')
-    link(rel='stylesheet', href='stylesheets/app.css')
+
+    if test
+        script(src='../test/should.js')
+        script(src='../test/mocha.js')
+
+        script(src='../javascripts/vendor.js')
+        script(src='../javascripts/app.js')
+        link(rel='stylesheet', href='../stylesheets/app.css')
+    else        
+        script(src='javascripts/vendor.js')
+        script(src='javascripts/app.js')
+        link(rel='stylesheet', href='stylesheets/app.css')
+
 
   body
 
@@ -13,6 +23,16 @@ html
       .pane.ui-layout-center
       .pane.ui-layout-west
         #tree
-
+        if test    
+            #mocha
+    
   script
     require('initialize');
+
+  if test
+    script
+      $(function(){
+        mocha
+          .globals(['foo', 'bar']) // acceptable globals
+          .run()
+      })

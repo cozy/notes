@@ -1,5 +1,6 @@
 exports.routes = (map) ->
     map.get '/', 'notes#index'
+    map.get '/test', 'notes#index-test'
     map.get '/notes', 'notes#all'
     map.post '/notes', 'notes#create'
     map.post '/notes/path', 'notes#allForPath'
