@@ -1,4 +1,3 @@
-request = require('request')
 should = require('should')
 async = require('async')
 client = require('./client')
