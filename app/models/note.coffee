@@ -16,7 +16,6 @@ Note.destroySome = (condition, callback) ->
 
         wait = data.length
         data.forEach (obj) ->
-            console.log obj.title
             obj.destroy done
 
 

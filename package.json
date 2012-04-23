@@ -13,6 +13,8 @@
   , "qs":               ">= 0.1.0"
   , "mongoose":         ">= 2.5.10" 
   , "jugglingdb":       ">= 0"
+  , "connect-redis":    ">= 0"
+  , "passport":         ">= 0"
   , "async":            ">= 0"
   , "eyes":             ">= 0"
   , "request":          ">= 0"

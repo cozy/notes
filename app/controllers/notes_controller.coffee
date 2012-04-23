@@ -1,5 +1,7 @@
 helpers = require('../../client/app/helpers')
 
+load 'application'
+
 
 before 'load note', ->
     Note.find params.id, (err, note) =>

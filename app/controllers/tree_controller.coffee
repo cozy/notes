@@ -4,6 +4,9 @@ eyes = require("eyes")
 DataTree = require('../../lib/tree').Tree
 helpers = require('../../client/app/helpers')
 
+load 'application'
+
+
 # Before each action current tree is loaded. If it does not exists it created.
 before 'load tree', ->
     createTreeCb = (err, tree) =>
