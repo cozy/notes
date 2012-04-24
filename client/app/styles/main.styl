@@ -1,64 +1,8 @@
 @import 'nib'
-
-shadow()
-  -moz-box-shadow: arguments
-  -webkit-box-shadow: arguments
-  box-shadow: arguments
+@import 'base'
 
 
-bgcolornav = #f3ece4
-bgcolorbuttons = #f2e5ce
-bgclearcolorbuttons = #f2e5de
-
-a, a:visited
-  color: #F95A5A
-  text-decoration: none
-
-a:hover
-  color: #665248
-
-body
-  color: #444
-  background-color #E4D1A9
-  font: bold 16px "Helvetica Neue", Arial, Helvetica, sans-serif
-
-/* Headings */
-h1, h2, h3, h4, h5
-  font-weight: normal
-  color: #222
-  clear: left
-
-h1
-  font-size: 5em
-  line-height: 1.4
-  margin-bottom: 0.5em
-
-h2
-  font-size: 2em
-  line-height: 1
-  margin-bottom: 0.5em
-
-/* Text elements */
-p
-  margin: 0 0 1.5em
-
-a:focus, a:hover
-  color: #F95A5A
-  text-decoration: underline
-a
-  color: #F95A5A
-  text-decoration: none
-
-/* Lists */
-ul, ol
-  margin: 0 1.5em 1.5em 0
-  list-style-type: none
-
-html, body 
-  height 100%
-
-.spacer
-  clear both
+// layout
 
 #home-view
   height 100%
@@ -73,6 +17,16 @@ html, body
   background-color bgcolornav
   shadow 0 0 3px #002200 
 
+#editor
+  margin 0 
+  margin-left 320px
+  padding 10px
+  height auto
+  background-color bgcoloreditor
+
+
+// Tree
+
 #tree
   font-size 12
   padding 10px
@@ -80,9 +34,9 @@ html, body
   background-color bgcolornav
   color #6d3100
 
-
 #tree li
   padding 0
+
 #tree ins
   width 14px
 
@@ -136,14 +90,7 @@ html, body
   shadow 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35)
 
 
-#editor
-  margin 0 
-  margin-left 320px
-  padding 10px
-  height auto
-  background-color #9f857a
-
-/* Notes */
+// Notes 
 
 .note-full
   background white
