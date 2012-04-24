@@ -1,5 +1,3 @@
-async = require("async")
-eyes = require("eyes")
 
 DataTree = require('../../lib/tree').Tree
 helpers = require('../../client/app/helpers')
@@ -10,6 +8,7 @@ load 'application'
 
 # Before each action current tree is loaded. If it does not exists it created.
 before 'load tree', ->
+    console.log "test"
     createTreeCb = (err, tree) =>
         if err
             console.log err
@@ -34,6 +33,7 @@ before 'load path', ->
 
 # Returns complete tree.
 action 'tree', ->
+    console.log "cool"
     send JSON.parse(@tree.struct)
 
 
@@ -71,30 +71,30 @@ action 'create', ->
 action 'update', ->
 
      callback = (err) ->
-        if err
-            console.log err
-            send error: "An error occured while node was updated", 500
-        else
-            send success: "Node succesfully updated", 200
+         if err
+             console.log err
+             send error: "An error occured while node was updated", 500
+         else
+             send success: "Node succesfully updated", 200
 
-    if body.newName?
-        newName = body.newName
-        data = new DataTree JSON.parse(@tree.struct)
+     if body.newName?
+         newName = body.newName
+         data = new DataTree JSON.parse(@tree.struct)
+ 
+         nodes = @path.split("/")
+         nodes.pop()
+         nodes.push(helpers.slugify newName)
+         newPath = nodes.join("/")
+         data.updateNode @path, newName
 
-        nodes = @path.split("/")
-        nodes.pop()
-        nodes.push(helpers.slugify newName)
-        newPath = nodes.join("/")
-        data.updateNode @path, newName
-
-        @tree.updateAttributes struct: data.toJson(), (err) =>
-            if err
-                console.log err
-                send error: "An error occured while node was created", 500
-            else
-                Note.updatePath @path, newPath, newName, callback
-    else
-        send error: "No new name sent", 400
+         @tree.updateAttributes struct: data.toJson(), (err) =>
+             if err
+                 console.log err
+                 send error: "An error occured while node was created", 500
+             else
+                 Note.updatePath @path, newPath, newName, callback
+     else
+         send error: "No new name sent", 400
 
 
 # Destroy a tree node and his childrens. Destroy all notes linked to that
@@ -103,7 +103,7 @@ action 'destroy', ->
     data = new DataTree JSON.parse(@tree.struct)
     data.deleteNode @path
     tree = new Tree
-        struct: data.toJson(),
+        struct: data.toJson()
 
     destroyNotes = =>
         Note.destroyForPath @path, (err) ->
