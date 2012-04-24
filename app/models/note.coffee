@@ -1,5 +1,8 @@
 async = require("async")
+helpers = require('../../client/app/helpers')
 
+# DestroyNote corresponding to given condition
+# TODO optimise deletion : each deletion requires on request.
 Note.destroySome = (condition, callback) ->
 
     # Replace this with async lib call.
@@ -18,7 +21,13 @@ Note.destroySome = (condition, callback) ->
         data.forEach (obj) ->
             obj.destroy done
 
-
+# Delete all notes.
 Note.destroyAll = (callback) ->
     Note.destroySome {}, callback
+
+# Return notes which live under given path.
+Note.allForPath = (path, callback) ->
+    regExp = helpers.getPathRegExp path
+    Note.all { where: { path: { regex: regExp } } }, callback
+
 
