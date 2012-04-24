@@ -81,36 +81,41 @@
   }
 }));
 (this.require.define({
-  "initialize": function(exports, require, module) {
+  "helpers": function(exports, require, module) {
     (function() {
-  var BrunchApplication, HomeView, MainRouter,
-    __hasProp = Object.prototype.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  BrunchApplication = require('helpers').BrunchApplication;
+  exports.BrunchApplication = (function() {
 
-  MainRouter = require('routers/main_router').MainRouter;
-
-  HomeView = require('views/home_view').HomeView;
-
-  exports.Application = (function(_super) {
-
-    __extends(Application, _super);
-
-    function Application() {
-      Application.__super__.constructor.apply(this, arguments);
+    function BrunchApplication() {
+      var _this = this;
+      $(function() {
+        _this.initialize(_this);
+        return Backbone.history.start();
+      });
     }
 
-    Application.prototype.initialize = function() {
-      this.router = new MainRouter;
-      return this.homeView = new HomeView;
+    BrunchApplication.prototype.initialize = function() {
+      return null;
     };
 
-    return Application;
+    return BrunchApplication;
 
-  })(BrunchApplication);
+  })();
 
-  window.app = new exports.Application;
+  exports.slugify = function(string) {
+    var _slugify_hyphenate_re, _slugify_strip_re;
+    _slugify_strip_re = /[^\w\s-]/g;
+    _slugify_hyphenate_re = /[-\s]+/g;
+    string = string.replace(_slugify_strip_re, '').trim().toLowerCase();
+    string = string.replace(_slugify_hyphenate_re, '-');
+    return string;
+  };
+
+  exports.getPathRegExp = function(path) {
+    var slashReg;
+    slashReg = new RegExp("/", "g");
+    return "^" + (path.replace(slashReg, "\/"));
+  };
 
 }).call(this);
 
@@ -180,6 +185,45 @@
     return BaseModel;
 
   })(Backbone.Model);
+
+}).call(this);
+
+  }
+}));
+(this.require.define({
+  "models/note": function(exports, require, module) {
+    (function() {
+  var BaseModel,
+    __hasProp = Object.prototype.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+  BaseModel = require("models/models").BaseModel;
+
+  exports.Note = (function(_super) {
+
+    __extends(Note, _super);
+
+    Note.prototype.url = 'notes/';
+
+    function Note(note) {
+      var property;
+      Note.__super__.constructor.call(this);
+      for (property in note) {
+        this[property] = note[property];
+      }
+    }
+
+    Note.prototype.saveContent = function(content) {
+      this.content = content;
+      this.url = "notes/" + this.id;
+      return this.save({
+        content: this.content
+      });
+    };
+
+    return Note;
+
+  })(BaseModel);
 
 }).call(this);
 
@@ -261,83 +305,110 @@
   }
 }));
 (this.require.define({
-  "models/note": function(exports, require, module) {
+  "initialize": function(exports, require, module) {
     (function() {
-  var BaseModel,
+  var BrunchApplication, HomeView, MainRouter,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
-  BaseModel = require("models/models").BaseModel;
+  BrunchApplication = require('helpers').BrunchApplication;
 
-  exports.Note = (function(_super) {
+  MainRouter = require('routers/main_router').MainRouter;
 
-    __extends(Note, _super);
+  HomeView = require('views/home_view').HomeView;
 
-    Note.prototype.url = 'notes/';
+  exports.Application = (function(_super) {
 
-    function Note(note) {
-      var property;
-      Note.__super__.constructor.call(this);
-      for (property in note) {
-        this[property] = note[property];
-      }
+    __extends(Application, _super);
+
+    function Application() {
+      Application.__super__.constructor.apply(this, arguments);
     }
 
-    Note.prototype.saveContent = function(content) {
-      this.content = content;
-      this.url = "notes/" + this.id;
-      return this.save({
-        content: this.content
-      });
+    Application.prototype.initialize = function() {
+      this.router = new MainRouter;
+      return this.homeView = new HomeView;
     };
 
-    return Note;
+    return Application;
 
-  })(BaseModel);
+  })(BrunchApplication);
+
+  window.app = new exports.Application;
 
 }).call(this);
 
   }
 }));
 (this.require.define({
-  "helpers": function(exports, require, module) {
-    (function() {
-
-  exports.BrunchApplication = (function() {
-
-    function BrunchApplication() {
-      var _this = this;
-      $(function() {
-        _this.initialize(_this);
-        return Backbone.history.start();
-      });
-    }
-
-    BrunchApplication.prototype.initialize = function() {
-      return null;
-    };
-
-    return BrunchApplication;
-
-  })();
-
-  exports.slugify = function(string) {
-    var _slugify_hyphenate_re, _slugify_strip_re;
-    _slugify_strip_re = /[^\w\s-]/g;
-    _slugify_hyphenate_re = /[-\s]+/g;
-    string = string.replace(_slugify_strip_re, '').trim().toLowerCase();
-    string = string.replace(_slugify_hyphenate_re, '-');
-    return string;
-  };
-
-  exports.getPathRegExp = function(path) {
-    var slashReg;
-    slashReg = new RegExp("/", "g");
-    return "^" + (path.replace(slashReg, "\/"));
-  };
-
-}).call(this);
-
+  "views/templates/note": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<p>' + escape((interp = note.humanPath.split(",").join(" / ")) == null ? '' : interp) + '</p><h2>' + escape((interp = note.title) == null ? '' : interp) + '</h2><textarea');
+buf.push(attrs({ 'id':('note-content') }));
+buf.push('></textarea>');
+}
+return buf.join("");
+};
+  }
+}));
+(this.require.define({
+  "views/templates/home": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<div');
+buf.push(attrs({ 'id':('nav'), "class": ('ui-layout-west') }));
+buf.push('><div');
+buf.push(attrs({ 'id':('tree') }));
+buf.push('></div></div><div');
+buf.push(attrs({ 'id':('editor'), "class": ('ui-layout-center') }));
+buf.push('><div');
+buf.push(attrs({ 'id':('note-full'), "class": ('note-full') }));
+buf.push('><p');
+buf.push(attrs({ 'id':('note-full-breadcrump') }));
+buf.push('>/</p><h2');
+buf.push(attrs({ 'id':('note-full-title') }));
+buf.push('>no note selected</h2><textarea');
+buf.push(attrs({ 'id':('note-full-content') }));
+buf.push('></textarea></div></div>');
+}
+return buf.join("");
+};
+  }
+}));
+(this.require.define({
+  "views/templates/tree_buttons": function(exports, require, module) {
+    module.exports = function anonymous(locals, attrs, escape, rethrow) {
+var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+var buf = [];
+with (locals || {}) {
+var interp;
+buf.push('<div');
+buf.push(attrs({ 'id':('tree-buttons') }));
+buf.push('><div');
+buf.push(attrs({ 'id':('tree-create'), "class": ('button') }));
+buf.push('><i');
+buf.push(attrs({ "class": ('icon-plus') }));
+buf.push('></i><span>create</span></div><div');
+buf.push(attrs({ 'id':('tree-remove'), "class": ('button') }));
+buf.push('><i');
+buf.push(attrs({ "class": ('icon-remove') }));
+buf.push('></i><span>delete</span></div><div');
+buf.push(attrs({ 'id':('tree-rename'), "class": ('button') }));
+buf.push('><i');
+buf.push(attrs({ "class": ('icon-pencil') }));
+buf.push('></i><span>rename</span></div><div');
+buf.push(attrs({ "class": ('spacer') }));
+buf.push('></div></div>');
+}
+return buf.join("");
+};
   }
 }));
 (this.require.define({
@@ -500,77 +571,6 @@
 
 }).call(this);
 
-  }
-}));
-(this.require.define({
-  "views/templates/tree_buttons": function(exports, require, module) {
-    module.exports = function anonymous(locals, attrs, escape, rethrow) {
-var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
-var buf = [];
-with (locals || {}) {
-var interp;
-buf.push('<div');
-buf.push(attrs({ 'id':('tree-buttons') }));
-buf.push('><div');
-buf.push(attrs({ 'id':('tree-create'), "class": ('button') }));
-buf.push('><i');
-buf.push(attrs({ "class": ('icon-plus') }));
-buf.push('></i><span>create</span></div><div');
-buf.push(attrs({ 'id':('tree-remove'), "class": ('button') }));
-buf.push('><i');
-buf.push(attrs({ "class": ('icon-remove') }));
-buf.push('></i><span>delete</span></div><div');
-buf.push(attrs({ 'id':('tree-rename'), "class": ('button') }));
-buf.push('><i');
-buf.push(attrs({ "class": ('icon-pencil') }));
-buf.push('></i><span>rename</span></div><div');
-buf.push(attrs({ "class": ('spacer') }));
-buf.push('></div></div>');
-}
-return buf.join("");
-};
-  }
-}));
-(this.require.define({
-  "views/templates/note": function(exports, require, module) {
-    module.exports = function anonymous(locals, attrs, escape, rethrow) {
-var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
-var buf = [];
-with (locals || {}) {
-var interp;
-buf.push('<p>' + escape((interp = note.humanPath.split(",").join(" / ")) == null ? '' : interp) + '</p><h2>' + escape((interp = note.title) == null ? '' : interp) + '</h2><textarea');
-buf.push(attrs({ 'id':('note-content') }));
-buf.push('></textarea>');
-}
-return buf.join("");
-};
-  }
-}));
-(this.require.define({
-  "views/templates/home": function(exports, require, module) {
-    module.exports = function anonymous(locals, attrs, escape, rethrow) {
-var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
-var buf = [];
-with (locals || {}) {
-var interp;
-buf.push('<div');
-buf.push(attrs({ 'id':('nav'), "class": ('ui-layout-west') }));
-buf.push('><div');
-buf.push(attrs({ 'id':('tree') }));
-buf.push('></div></div><div');
-buf.push(attrs({ 'id':('editor'), "class": ('ui-layout-center') }));
-buf.push('><div');
-buf.push(attrs({ 'id':('note-full'), "class": ('note-full') }));
-buf.push('><p');
-buf.push(attrs({ 'id':('note-full-breadcrump') }));
-buf.push('>/</p><h2');
-buf.push(attrs({ 'id':('note-full-title') }));
-buf.push('>no note selected</h2><textarea');
-buf.push(attrs({ 'id':('note-full-content') }));
-buf.push('></textarea></div></div>');
-}
-return buf.join("");
-};
   }
 }));
 (this.require.define({

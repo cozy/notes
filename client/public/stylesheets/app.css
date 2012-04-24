@@ -3544,21 +3544,30 @@ p {
 
 
 
+html,body{height:100%}
+body{color:#444;background-color:#e4d1a9}
 a,a:visited{color:#f95a5a;text-decoration:none}
-a:hover{color:#665248}
-body{color:#444;background-color:#e4d1a9;font:bold 16px "Helvetica Neue",Arial,Helvetica,sans-serif}
+a:focus,a:hover{color:#f95a5a;text-decoration:underline;font:bold 16px "Helvetica Neue",Arial,Helvetica,sans-serif}
 h1,h2,h3,h4,h5{font-weight:normal;color:#222;clear:left}
 h1{font-size:5em;line-height:1.4;margin-bottom:.5em}
 h2{font-size:2em;line-height:1;margin-bottom:.5em}
 p{margin:0 0 1.5em}
-a:focus,a:hover{color:#f95a5a;text-decoration:underline}
-a{color:#f95a5a;text-decoration:none}
 ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
+.spacer{clear:both}
 html,body{height:100%}
+body{color:#444;background-color:#e4d1a9}
+a,a:visited{color:#f95a5a;text-decoration:none}
+a:focus,a:hover{color:#f95a5a;text-decoration:underline;font:bold 16px "Helvetica Neue",Arial,Helvetica,sans-serif}
+h1,h2,h3,h4,h5{font-weight:normal;color:#222;clear:left}
+h1{font-size:5em;line-height:1.4;margin-bottom:.5em}
+h2{font-size:2em;line-height:1;margin-bottom:.5em}
+p{margin:0 0 1.5em}
+ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 .spacer{clear:both}
 #home-view{height:100%}
 #content{height:100%;padding:0}
 #nav{margin:0;padding:0;background-color:#f3ece4;-moz-box-shadow:0 0 3px #020;-webkit-box-shadow:0 0 3px #020;-webkit-box-shadow:0 0 3px #020;-moz-box-shadow:0 0 3px #020;box-shadow:0 0 3px #020}
+#editor{margin:0;margin-left:320px;padding:10px;height:auto;background-color:#9f857a}
 #tree{font-size:12;padding:10px;border-top:1px solid #fff;background-color:#f3ece4;color:#6d3100}
 #tree li{padding:0}
 #tree ins{width:14px}
@@ -3572,7 +3581,6 @@ html,body{height:100%}
 #tree-buttons div.button:hover{background:-webkit-gradient(linear, left top, left bottom, color-stop(0, #ffdd97), color-stop(1, #ffb338));background:-webkit-linear-gradient(top, #ffdd97 0%, #ffb338 100%);background:-moz-linear-gradient(top, #ffdd97 0%, #ffb338 100%);background:linear-gradient(top, #ffdd97 0%, #ffb338 100%)}
 #tree-buttons div.button{background:-webkit-gradient(linear, left top, left bottom, color-stop(0, #f2e5ce), color-stop(1, #f2e5de));background:-webkit-linear-gradient(top, #f2e5ce 0%, #f2e5de 100%);background:-moz-linear-gradient(top, #f2e5ce 0%, #f2e5de 100%);background:linear-gradient(top, #f2e5ce 0%, #f2e5de 100%);-moz-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);-moz-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);color:#000;border:1px solid #3d2100;-webkit-border-radius:2px 2px 2px 2px;-moz-border-radius:2px 2px 2px 2px;border-radius:2px 2px 2px 2px}
 #tree-buttons div.button:active{background:-webkit-gradient(linear, left top, left bottom, color-stop(0, #f4cc86), color-stop(1, #eaa328));background:-webkit-linear-gradient(top, #f4cc86 0%, #eaa328 100%);background:-moz-linear-gradient(top, #f4cc86 0%, #eaa328 100%);background:linear-gradient(top, #f4cc86 0%, #eaa328 100%);-moz-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-moz-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35)}
-#editor{margin:0;margin-left:320px;padding:10px;height:auto;background-color:#9f857a}
 .note-full{background:#fff;-moz-box-shadow:2px 2px 5px #644;-webkit-box-shadow:2px 2px 5px #644;-webkit-box-shadow:2px 2px 5px #644;-moz-box-shadow:2px 2px 5px #644;box-shadow:2px 2px 5px #644;border:1px solid #ebe5e2;padding:10px;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px}
 .note-full h2{padding:0;margin-bottom:20px}
 .cke_toolbox_collapser{display:none}

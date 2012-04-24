@@ -41,6 +41,7 @@ class exports.Tree
 
         @setListeners callbacks
 
+    # Create toolbar inside DOM.
     setToolbar: (navEl) ->
         navEl.prepend require('../templates/tree_buttons')
 
@@ -87,6 +88,7 @@ class exports.Tree
             parent = parent.parent().parent()
         nodes
 
+    # Return path for a node at string format.
     _getStringPath: (data, nodeName) ->
         @_getPath(data, nodeName).join("/")
        
@@ -107,7 +109,8 @@ class exports.Tree
     # Convert a node coming from node server to jstree format. Then convertNode
     # is called recursively on node children.
     _convertNode: (parentNode, nodeToConvert, path) ->
-        for property of nodeToConvert when property isnt "name" and property isnt "id"
+        for property of nodeToConvert when \
+                property isnt "name" and property isnt "id"
             nodePath = "-#{path}#{property.replace(/_/g, "-")}"
             newNode =
                 data: nodeToConvert[property].name

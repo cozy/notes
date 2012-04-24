@@ -11,6 +11,9 @@ class exports.HomeView extends Backbone.View
     # Send a request for a tree modification.
     sendTreeRequest: (type, data, callback) ->
         url = "tree"
+
+        # Small trick needed because delete request should not have data
+        # in their body.
         if type == "DELETE"
             type = "PUT"
             url = url + "/path"
@@ -48,6 +51,8 @@ class exports.HomeView extends Backbone.View
         @noteFull.hide()
         @sendTreeRequest "DELETE", path: path
 
+    # When a note is selected, the note widget is displayed and fill with
+    # note data.
     selectFolder: (path, id) =>
         if id?
             $.get "notes/#{id}", (data) =>
@@ -57,7 +62,7 @@ class exports.HomeView extends Backbone.View
         else
             @noteFull.hide()
 
-
+    # Fill note widget with note data.
     renderNote: (note) ->
         @currentNote = note
         noteWidget = new NoteWidget @currentNote
@@ -67,8 +72,10 @@ class exports.HomeView extends Backbone.View
 
         noteWidget.render()
 
+    # When note change, its content is saved.
     onNoteChange: (event) =>
         @currentNote.saveContent $("#note-full-content").val()
+
 
     # Initializers
 
@@ -76,13 +83,14 @@ class exports.HomeView extends Backbone.View
         $(@el).html require('./templates/home')
         this
 
+    # Use jquery layout so set main layout of current window.
     setLayout: ->
         $('#home-view').layout
             size: "310"
             minSize: "310"
             resizable: true
 
-    # Fetch data loads notre tree and configure it.
+    # Loads note tree and configure it.
     fetchData: ->
         @noteArea = $("#editor")
         @noteFull = $("#note-full")
