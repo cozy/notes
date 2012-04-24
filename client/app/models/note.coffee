@@ -1,5 +1,6 @@
 BaseModel = require("models/models").BaseModel
 
+# Model that describes a single note.
 class exports.Note extends BaseModel
 
     url: 'notes/'
@@ -10,7 +11,7 @@ class exports.Note extends BaseModel
         for property of note
             @[property] = note[property]
 
-    # Send save request to server.
+    # Set right url then send save request to server.
     saveContent: (content) ->
         @content = content
         @url = "notes/#{@.id}"
