@@ -1,5 +1,7 @@
 async = require("async")
+DataTree = require('../../lib/tree').Tree
 
+# Destroy all tree corresponding at given condition.
 Tree.destroySome = (condition, callback) ->
     
     # Replace this with async lib call.
@@ -19,6 +21,20 @@ Tree.destroySome = (condition, callback) ->
             obj.destroy done
 
 
+# Remove all tree from database.
 Tree.destroyAll = (callback) ->
     Tree.destroySome {}, callback
+
+# Normally only one tree should be stored for this app. This function return
+# that tree if it exists. If is does note exist a new empty tree is created
+# and returned.
+Tree.getOrCreate = (callback) ->
+    Tree.all (err, trees) ->
+        if err
+            console.log err
+            send error: 'An error occured', 500
+        else if trees.length == 0
+            Tree.create { struct: new DataTree().toJson() }, callback
+        else
+            callback(null, trees[0])
 
