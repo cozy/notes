@@ -20,7 +20,7 @@ class exports.Tree
                 "default":
                     valid_children: "default"
                 "root":
-                    valid_children: null #"default"
+                    valid_children: null
                     delete_node: false
                     rename_node: false
                     move_node: false
@@ -48,6 +48,8 @@ class exports.Tree
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection).
     setListeners: (callbacks) ->
+
+        # Toolbar
         $("#tree-create").click =>
             @treeEl.jstree("create")
         $("#tree-rename").click =>
@@ -55,6 +57,7 @@ class exports.Tree
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
 
+        # Tree
         @widget.bind "create.jstree", (e, data) =>
             path = @_getPath data
             path.pop()
@@ -71,6 +74,17 @@ class exports.Tree
         @widget.bind "select_node.jstree", (e, data) =>
             path = @_getStringPath data
             callbacks.onSelect path, data.rslt.obj.data("id")
+
+        @widget.bind "loaded.jstree", (e, data) =>
+            callbacks.onLoaded()
+
+    # Select node corresponding at given path
+    selectNode: (path) ->
+        nodePath = path.replace(/\//g, "-")
+        node = $("#tree-node-#{nodePath}")
+        
+        tree = $("#tree").jstree("deselect_all", null)
+        tree = $("#tree").jstree("select_node", node)
 
 
     # Returns path to node for a given node.
@@ -102,7 +116,7 @@ class exports.Tree
                     rel: "root"
                 children: []
 
-        @_convertNode tree.data, data.all, "all-"
+        @_convertNode tree.data, data.all, "-all"
         tree.data = "loading..." if tree.data.length == 0
         tree
 
@@ -111,7 +125,7 @@ class exports.Tree
     _convertNode: (parentNode, nodeToConvert, path) ->
         for property of nodeToConvert when \
                 property isnt "name" and property isnt "id"
-            nodePath = "-#{path}#{property.replace(/_/g, "-")}"
+            nodePath = "#{path}-#{property.replace(/_/g, "-")}"
             newNode =
                 data: nodeToConvert[property].name
                 metadata:

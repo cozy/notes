@@ -54,6 +54,8 @@ class exports.HomeView extends Backbone.View
     # When a note is selected, the note widget is displayed and fill with
     # note data.
     selectFolder: (path, id) =>
+        path = "/#{path}" if path.indexOf("/")
+        app.router.navigate "note#{path}", trigger: false
         if id?
             $.get "notes/#{id}", (data) =>
                 note = new Note data
@@ -62,13 +64,13 @@ class exports.HomeView extends Backbone.View
         else
             @noteFull.hide()
 
+    selectNote: (path) ->
+        @tree.selectNode path
+
     # Fill note widget with note data.
     renderNote: (note) ->
         @currentNote = note
         noteWidget = new NoteWidget @currentNote
-
-        if @editor == undefined
-            @editor == NoteWidget.setEditor @onNoteChange
 
         noteWidget.render()
 
@@ -76,6 +78,10 @@ class exports.HomeView extends Backbone.View
     onNoteChange: (event) =>
         @currentNote.saveContent $("#note-full-content").val()
 
+    # When tree is loaded, callback given in paramter when fetchData
+    # function was called is run.
+    onTreeLoaded: =>
+        @treeCreationCallback() if @treeCreationCallback?
 
     # Initializers
 
@@ -91,7 +97,8 @@ class exports.HomeView extends Backbone.View
             resizable: true
 
     # Loads note tree and configure it.
-    fetchData: ->
+    fetchData: (callback) ->
+        @treeCreationCallback = callback
         @noteArea = $("#editor")
         @noteFull = $("#note-full")
         @noteFull.hide()
@@ -102,4 +109,5 @@ class exports.HomeView extends Backbone.View
                 onRename: @renameFolder
                 onRemove: @deleteFolder
                 onSelect: @selectFolder
+                onLoaded: @onTreeLoaded
 
