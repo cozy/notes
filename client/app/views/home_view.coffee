@@ -83,6 +83,12 @@ class exports.HomeView extends Backbone.View
     onTreeLoaded: =>
         @treeCreationCallback() if @treeCreationCallback?
 
+    onNodeDropped: (data) =>
+        path = @tree._getStringPath data.o
+        parentPath = @tree._getStringPath data.r
+        console.log path
+        console.log parentPath
+
     # Initializers
 
     render: ->
@@ -110,4 +116,5 @@ class exports.HomeView extends Backbone.View
                 onRemove: @deleteFolder
                 onSelect: @selectFolder
                 onLoaded: @onTreeLoaded
+                onDrop: @onNoteDropped
 

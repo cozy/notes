@@ -1249,59 +1249,6 @@ delete this._.started;}},getClick:function(){if(!this._.click)this._.click=e.add
 D.getChild([1,0,0,0,0]).unselectable();D.getChild([1,0,0,0,2]).unselectable();if(s==1)D.insertAfter(r);else r.append(D);o.container=D;D.disableContextMenu();o.on('contentDirChanged',function(E){var F=(o.lang.dir!=E.data?'add':'remove')+'Class';D.getChild(1)[F]('cke_mixed_dir_content');var G=this.sharedSpaces&&this.sharedSpaces[this.config.toolbarLocation];G&&G.getParent().getParent()[F]('cke_mixed_dir_content');});o.fireOnce('themeLoaded');o.fireOnce('uiReady');},buildDialog:function(o){var p=e.getNextNumber(),q=h.createFromHtml(['<div class="',o.id,'_dialog cke_editor_',o.name.replace('.','\\.'),'_dialog cke_skin_',o.skinName,'" dir="',o.lang.dir,'" lang="',o.langCode,'" role="dialog" aria-labelledby="%title#"><table class="cke_dialog',' '+b.cssClass,' cke_',o.lang.dir,'" style="position:absolute" role="presentation"><tr><td role="presentation"><div class="%body" role="presentation"><div id="%title#" class="%title" role="presentation"></div><a id="%close_button#" class="%close_button" href="javascript:void(0)" title="'+o.lang.common.close+'" role="button"><span class="cke_label">X</span></a>'+'<div id="%tabs#" class="%tabs" role="tablist"></div>'+'<table class="%contents" role="presentation">'+'<tr>'+'<td id="%contents#" class="%contents" role="presentation"></td>'+'</tr>'+'<tr>'+'<td id="%footer#" class="%footer" role="presentation"></td>'+'</tr>'+'</table>'+'</div>'+'<div id="%tl#" class="%tl"></div>'+'<div id="%tc#" class="%tc"></div>'+'<div id="%tr#" class="%tr"></div>'+'<div id="%ml#" class="%ml"></div>'+'<div id="%mr#" class="%mr"></div>'+'<div id="%bl#" class="%bl"></div>'+'<div id="%bc#" class="%bc"></div>'+'<div id="%br#" class="%br"></div>'+'</td></tr>'+'</table>',c?'':'<style>.cke_dialog{visibility:hidden;}</style>','</div>'].join('').replace(/#/g,'_'+p).replace(/%/g,'cke_dialog_')),r=q.getChild([0,0,0,0,0]),s=r.getChild(0),t=r.getChild(1);if(c&&!b.ie6Compat){var u=b.isCustomDomain(),v='javascript:void(function(){'+encodeURIComponent('document.open();'+(u?'document.domain="'+document.domain+'";':'')+'document.close();')+'}())',w=h.createFromHtml('<iframe frameBorder="0" class="cke_iframe_shim" src="'+v+'"'+' tabIndex="-1"'+'></iframe>');w.appendTo(r.getParent());}s.unselectable();t.unselectable();return{element:q,parts:{dialog:q.getChild(0),title:s,close:t,tabs:r.getChild(2),contents:r.getChild([3,0,0,0]),footer:r.getChild([3,0,1,0])}};},destroy:function(o){var p=o.container,q=o.element;if(p){p.clearCustomData();p.remove();}if(q){q.clearCustomData();
 o.elementMode==1&&q.show();delete o.element;}}};})());a.editor.prototype.getThemeSpace=function(m){var n='cke_'+m,o=this._[n]||(this._[n]=a.document.getById(n+'_'+this.name));return o;};a.editor.prototype.resize=function(m,n,o,p){var v=this;var q=v.container,r=a.document.getById('cke_contents_'+v.name),s=b.webkit&&v.document&&v.document.getWindow().$.frameElement,t=p?q.getChild(1):q;t.setSize('width',m,true);s&&(s.style.width='1%');var u=o?0:(t.$.offsetHeight||0)-(r.$.clientHeight||0);r.setStyle('height',Math.max(n-u,0)+'px');s&&(s.style.width='100%');v.fire('resize');};a.editor.prototype.getResizable=function(m){return m?a.document.getById('cke_contents_'+this.name):this.container;};})();
 
-﻿/*
-Copyright (c) 2003-2011, CKSource - Frederico Knabben. All rights reserved.
-For licensing, see LICENSE.html or http://ckeditor.com/license
-*/
-
-(function(){CKEDITOR.config.jqueryOverrideVal=typeof CKEDITOR.config.jqueryOverrideVal=='undefined'?true:CKEDITOR.config.jqueryOverrideVal;var a=window.jQuery;if(typeof a=='undefined')return;a.extend(a.fn,{ckeditorGet:function(){var b=this.eq(0).data('ckeditorInstance');if(!b)throw 'CKEditor not yet initialized, use ckeditor() with callback.';return b;},ckeditor:function(b,c){if(!CKEDITOR.env.isCompatible)return this;if(!a.isFunction(b)){var d=c;c=b;b=d;}c=c||{};this.filter('textarea, div, p').each(function(){var e=a(this),f=e.data('ckeditorInstance'),g=e.data('_ckeditorInstanceLock'),h=this;if(f&&!g){if(b)b.apply(f,[this]);}else if(!g){if(c.autoUpdateElement||typeof c.autoUpdateElement=='undefined'&&CKEDITOR.config.autoUpdateElement)c.autoUpdateElementJquery=true;c.autoUpdateElement=false;e.data('_ckeditorInstanceLock',true);f=CKEDITOR.replace(h,c);e.data('ckeditorInstance',f);f.on('instanceReady',function(i){var j=i.editor;setTimeout(function(){if(!j.element){setTimeout(arguments.callee,100);return;}i.removeListener('instanceReady',this.callee);j.on('dataReady',function(){e.trigger('setData.ckeditor',[j]);});j.on('getData',function(l){e.trigger('getData.ckeditor',[j,l.data]);},999);j.on('destroy',function(){e.trigger('destroy.ckeditor',[j]);});if(j.config.autoUpdateElementJquery&&e.is('textarea')&&e.parents('form').length){var k=function(){e.ckeditor(function(){j.updateElement();});};e.parents('form').submit(k);e.parents('form').bind('form-pre-serialize',k);e.bind('destroy.ckeditor',function(){e.parents('form').unbind('submit',k);e.parents('form').unbind('form-pre-serialize',k);});}j.on('destroy',function(){e.data('ckeditorInstance',null);});e.data('_ckeditorInstanceLock',null);e.trigger('instanceReady.ckeditor',[j]);if(b)b.apply(j,[h]);},0);},null,null,9999);}else CKEDITOR.on('instanceReady',function(i){var j=i.editor;setTimeout(function(){if(!j.element){setTimeout(arguments.callee,100);return;}if(j.element.$==h)if(b)b.apply(j,[h]);},0);},null,null,9999);});return this;}});if(CKEDITOR.config.jqueryOverrideVal)a.fn.val=CKEDITOR.tools.override(a.fn.val,function(b){return function(c,d){var e=typeof c!='undefined',f;this.each(function(){var g=a(this),h=g.data('ckeditorInstance');if(!d&&g.is('textarea')&&h){if(e)h.setData(c);else{f=h.getData();return null;}}else if(e)b.call(g,c);else{f=b.call(g);return null;}return true;});return e?this:f;};});})();
-/*!
- * jQuery Cookie Plugin
- * https://github.com/carhartl/jquery-cookie
- *
- * Copyright 2011, Klaus Hartl
- * Dual licensed under the MIT or GPL Version 2 licenses.
- * http://www.opensource.org/licenses/mit-license.php
- * http://www.opensource.org/licenses/GPL-2.0
- */
-(function($) {
-    $.cookie = function(key, value, options) {
-
-        // key and at least value given, set cookie...
-        if (arguments.length > 1 && (!/Object/.test(Object.prototype.toString.call(value)) || value === null || value === undefined)) {
-            options = $.extend({}, options);
-
-            if (value === null || value === undefined) {
-                options.expires = -1;
-            }
-
-            if (typeof options.expires === 'number') {
-                var days = options.expires, t = options.expires = new Date();
-                t.setDate(t.getDate() + days);
-            }
-
-            value = String(value);
-
-            return (document.cookie = [
-                encodeURIComponent(key), '=', options.raw ? value : encodeURIComponent(value),
-                options.expires ? '; expires=' + options.expires.toUTCString() : '', // use expires attribute, max-age is not supported by IE
-                options.path    ? '; path=' + options.path : '',
-                options.domain  ? '; domain=' + options.domain : '',
-                options.secure  ? '; secure' : ''
-            ].join(''));
-        }
-
-        // key and possibly options given, get cookie...
-        options = value || {};
-        var decode = options.raw ? function(s) { return s; } : decodeURIComponent;
-
-        var pairs = document.cookie.split('; ');
-        for (var i = 0, pair; pair = pairs[i] && pairs[i].split('='); i++) {
-            if (decode(pair[0]) === key) return decode(pair[1] || ''); // IE saves cookies with empty string as "c; ", e.g. without "=" as opposed to EOMB, thus pair[1] may be undefined
-        }
-        return null;
-    };
-})(jQuery);
 
 var jade = (function(exports){
 /*!
@@ -1425,6 +1372,157 @@ exports.rethrow = function rethrow(err, filename, lineno){
   return exports;
 
 })({});/*!
+ * jQuery Cookie Plugin
+ * https://github.com/carhartl/jquery-cookie
+ *
+ * Copyright 2011, Klaus Hartl
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://www.opensource.org/licenses/mit-license.php
+ * http://www.opensource.org/licenses/GPL-2.0
+ */
+(function($) {
+    $.cookie = function(key, value, options) {
+
+        // key and at least value given, set cookie...
+        if (arguments.length > 1 && (!/Object/.test(Object.prototype.toString.call(value)) || value === null || value === undefined)) {
+            options = $.extend({}, options);
+
+            if (value === null || value === undefined) {
+                options.expires = -1;
+            }
+
+            if (typeof options.expires === 'number') {
+                var days = options.expires, t = options.expires = new Date();
+                t.setDate(t.getDate() + days);
+            }
+
+            value = String(value);
+
+            return (document.cookie = [
+                encodeURIComponent(key), '=', options.raw ? value : encodeURIComponent(value),
+                options.expires ? '; expires=' + options.expires.toUTCString() : '', // use expires attribute, max-age is not supported by IE
+                options.path    ? '; path=' + options.path : '',
+                options.domain  ? '; domain=' + options.domain : '',
+                options.secure  ? '; secure' : ''
+            ].join(''));
+        }
+
+        // key and possibly options given, get cookie...
+        options = value || {};
+        var decode = options.raw ? function(s) { return s; } : decodeURIComponent;
+
+        var pairs = document.cookie.split('; ');
+        for (var i = 0, pair; pair = pairs[i] && pairs[i].split('='); i++) {
+            if (decode(pair[0]) === key) return decode(pair[1] || ''); // IE saves cookies with empty string as "c; ", e.g. without "=" as opposed to EOMB, thus pair[1] may be undefined
+        }
+        return null;
+    };
+})(jQuery);
+/*
+ * jQuery Hotkeys Plugin
+ * Copyright 2010, John Resig
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ *
+ * Based upon the plugin by Tzury Bar Yochay:
+ * http://github.com/tzuryby/hotkeys
+ *
+ * Original idea by:
+ * Binny V A, http://www.openjs.com/scripts/events/keyboard_shortcuts/
+*/
+
+(function(jQuery){
+	
+	jQuery.hotkeys = {
+		version: "0.8",
+
+		specialKeys: {
+			8: "backspace", 9: "tab", 13: "return", 16: "shift", 17: "ctrl", 18: "alt", 19: "pause",
+			20: "capslock", 27: "esc", 32: "space", 33: "pageup", 34: "pagedown", 35: "end", 36: "home",
+			37: "left", 38: "up", 39: "right", 40: "down", 45: "insert", 46: "del", 
+			96: "0", 97: "1", 98: "2", 99: "3", 100: "4", 101: "5", 102: "6", 103: "7",
+			104: "8", 105: "9", 106: "*", 107: "+", 109: "-", 110: ".", 111 : "/", 
+			112: "f1", 113: "f2", 114: "f3", 115: "f4", 116: "f5", 117: "f6", 118: "f7", 119: "f8", 
+			120: "f9", 121: "f10", 122: "f11", 123: "f12", 144: "numlock", 145: "scroll", 191: "/", 224: "meta"
+		},
+	
+		shiftNums: {
+			"`": "~", "1": "!", "2": "@", "3": "#", "4": "$", "5": "%", "6": "^", "7": "&", 
+			"8": "*", "9": "(", "0": ")", "-": "_", "=": "+", ";": ": ", "'": "\"", ",": "<", 
+			".": ">",  "/": "?",  "\\": "|"
+		}
+	};
+
+	function keyHandler( handleObj ) {
+		// Only care when a possible input has been specified
+		if ( typeof handleObj.data !== "string" ) {
+			return;
+		}
+		
+		var origHandler = handleObj.handler,
+			keys = handleObj.data.toLowerCase().split(" ");
+	
+		handleObj.handler = function( event ) {
+			// Don't fire in text-accepting inputs that we didn't directly bind to
+			if ( this !== event.target && (/textarea|select/i.test( event.target.nodeName ) ||
+				 event.target.type === "text") ) {
+				return;
+			}
+			
+			// Keypress represents characters, not special keys
+			var special = event.type !== "keypress" && jQuery.hotkeys.specialKeys[ event.which ],
+				character = String.fromCharCode( event.which ).toLowerCase(),
+				key, modif = "", possible = {};
+
+			// check combinations (alt|ctrl|shift+anything)
+			if ( event.altKey && special !== "alt" ) {
+				modif += "alt+";
+			}
+
+			if ( event.ctrlKey && special !== "ctrl" ) {
+				modif += "ctrl+";
+			}
+			
+			// TODO: Need to make sure this works consistently across platforms
+			if ( event.metaKey && !event.ctrlKey && special !== "meta" ) {
+				modif += "meta+";
+			}
+
+			if ( event.shiftKey && special !== "shift" ) {
+				modif += "shift+";
+			}
+
+			if ( special ) {
+				possible[ modif + special ] = true;
+
+			} else {
+				possible[ modif + character ] = true;
+				possible[ modif + jQuery.hotkeys.shiftNums[ character ] ] = true;
+
+				// "$" can be triggered as "Shift+4" or "Shift+$" or just "$"
+				if ( modif === "shift+" ) {
+					possible[ jQuery.hotkeys.shiftNums[ character ] ] = true;
+				}
+			}
+
+			for ( var i = 0, l = keys.length; i < l; i++ ) {
+				if ( possible[ keys[i] ] ) {
+					return origHandler.apply( this, arguments );
+				}
+			}
+		};
+	}
+
+	jQuery.each([ "keydown", "keyup", "keypress" ], function() {
+		jQuery.event.special[ this ] = { add: keyHandler };
+	});
+
+})( jQuery );﻿/*
+Copyright (c) 2003-2011, CKSource - Frederico Knabben. All rights reserved.
+For licensing, see LICENSE.html or http://ckeditor.com/license
+*/
+
+(function(){CKEDITOR.config.jqueryOverrideVal=typeof CKEDITOR.config.jqueryOverrideVal=='undefined'?true:CKEDITOR.config.jqueryOverrideVal;var a=window.jQuery;if(typeof a=='undefined')return;a.extend(a.fn,{ckeditorGet:function(){var b=this.eq(0).data('ckeditorInstance');if(!b)throw 'CKEditor not yet initialized, use ckeditor() with callback.';return b;},ckeditor:function(b,c){if(!CKEDITOR.env.isCompatible)return this;if(!a.isFunction(b)){var d=c;c=b;b=d;}c=c||{};this.filter('textarea, div, p').each(function(){var e=a(this),f=e.data('ckeditorInstance'),g=e.data('_ckeditorInstanceLock'),h=this;if(f&&!g){if(b)b.apply(f,[this]);}else if(!g){if(c.autoUpdateElement||typeof c.autoUpdateElement=='undefined'&&CKEDITOR.config.autoUpdateElement)c.autoUpdateElementJquery=true;c.autoUpdateElement=false;e.data('_ckeditorInstanceLock',true);f=CKEDITOR.replace(h,c);e.data('ckeditorInstance',f);f.on('instanceReady',function(i){var j=i.editor;setTimeout(function(){if(!j.element){setTimeout(arguments.callee,100);return;}i.removeListener('instanceReady',this.callee);j.on('dataReady',function(){e.trigger('setData.ckeditor',[j]);});j.on('getData',function(l){e.trigger('getData.ckeditor',[j,l.data]);},999);j.on('destroy',function(){e.trigger('destroy.ckeditor',[j]);});if(j.config.autoUpdateElementJquery&&e.is('textarea')&&e.parents('form').length){var k=function(){e.ckeditor(function(){j.updateElement();});};e.parents('form').submit(k);e.parents('form').bind('form-pre-serialize',k);e.bind('destroy.ckeditor',function(){e.parents('form').unbind('submit',k);e.parents('form').unbind('form-pre-serialize',k);});}j.on('destroy',function(){e.data('ckeditorInstance',null);});e.data('_ckeditorInstanceLock',null);e.trigger('instanceReady.ckeditor',[j]);if(b)b.apply(j,[h]);},0);},null,null,9999);}else CKEDITOR.on('instanceReady',function(i){var j=i.editor;setTimeout(function(){if(!j.element){setTimeout(arguments.callee,100);return;}if(j.element.$==h)if(b)b.apply(j,[h]);},0);},null,null,9999);});return this;}});if(CKEDITOR.config.jqueryOverrideVal)a.fn.val=CKEDITOR.tools.override(a.fn.val,function(b){return function(c,d){var e=typeof c!='undefined',f;this.each(function(){var g=a(this),h=g.data('ckeditorInstance');if(!d&&g.is('textarea')&&h){if(e)h.setData(c);else{f=h.getData();return null;}}else if(e)b.call(g,c);else{f=b.call(g);return null;}return true;});return e?this:f;};});})();
+/*!
  * jQuery UI 1.8.18
  *
  * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)

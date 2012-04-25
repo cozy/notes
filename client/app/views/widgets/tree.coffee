@@ -13,7 +13,8 @@ class exports.Tree
         @widget = @treeEl.jstree
             plugins: [
                 "themes", "json_data", "ui", "crrm",
-                "unique", "sort", "cookies", "types"
+                "unique", "sort", "cookies", "types",
+                "hotkeys", "dnd"
             ]
             json_data: tree
             types:
@@ -74,6 +75,9 @@ class exports.Tree
         @widget.bind "select_node.jstree", (e, data) =>
             path = @_getStringPath data
             callbacks.onSelect path, data.rslt.obj.data("id")
+
+        @widget.bind "move_node.jstree", (e, data) =>
+            console.log data
 
         @widget.bind "loaded.jstree", (e, data) =>
             callbacks.onLoaded()
