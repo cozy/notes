@@ -60,24 +60,40 @@ class exports.Tree
 
         # Tree
         @widget.bind "create.jstree", (e, data) =>
-            path = @_getPath data
+            nodeName = data.inst.get_text data.rslt.obj
+            parent = data.rslt.parent
+            path = @_getPath parent, nodeName
             path.pop()
             callbacks.onCreate path.join("/"), data
 
         @widget.bind "rename.jstree", (e, data) =>
-            path = @_getStringPath data, data.rslt.old_name
+            nodeName = data.inst.get_text data.rslt.obj
+            parent = data.inst._get_parent data.rslt.parent
+            path = @_getStringPath parent, data.rslt.old_name
             callbacks.onRename path, data.rslt.new_name
 
         @widget.bind "remove.jstree", (e, data) =>
-            path = @_getStringPath data
+            nodeName = data.inst.get_text data.rslt.obj
+            parent = data.rslt.parent
+            path = @_getStringPath parent, nodeName
             callbacks.onRemove path
 
         @widget.bind "select_node.jstree", (e, data) =>
-            path = @_getStringPath data
+            nodeName = data.inst.get_text data.rslt.obj
+            parent = data.inst._get_parent data.rslt.parent
+            path = @_getStringPath parent, nodeName
             callbacks.onSelect path, data.rslt.obj.data("id")
 
         @widget.bind "move_node.jstree", (e, data) =>
-            console.log data
+            nodeName = data.inst.get_text data.rslt.o
+            parent = data.inst._get_parent data.rslt.o
+            newPath = @_getPath parent, nodeName
+            newPath.pop()
+            oldParent = data.inst.get_text data.rslt.op
+            parent = data.inst._get_parent data.rslt.op
+            oldPath = @_getPath parent, oldParent
+            oldPath.push(slugify nodeName)
+            callbacks.onDrop newPath.join("/"), oldPath.join("/")
 
         @widget.bind "loaded.jstree", (e, data) =>
             callbacks.onLoaded()
@@ -93,11 +109,11 @@ class exports.Tree
 
     # Returns path to node for a given node.
     # data.inst = tree instance
-    _getPath: (data, nodeName) ->
-        nodeName = data.inst.get_text data.rslt.obj if nodeName == undefined
-        nodes = [slugify nodeName]
-        parent = data.rslt.parent
-        parent = data.inst._get_parent data.rslt.obj if parent == undefined
+    _getPath: (parent, nodeName) ->
+        #nodeName = data.inst.get_text data.rslt.obj if nodeName == undefined
+        nodes = [slugify nodeName] if nodeName?
+        #parent = data.rslt.parent
+        #parent = data.inst._get_parent data.rslt.obj if parent == undefined
 
         name = "all"
         while name and parent != undefined and parent.children != undefined
@@ -107,8 +123,8 @@ class exports.Tree
         nodes
 
     # Return path for a node at string format.
-    _getStringPath: (data, nodeName) ->
-        @_getPath(data, nodeName).join("/")
+    _getStringPath: (parent, nodeName) =>
+        @_getPath(parent, nodeName).join("/")
        
     # Convert tree coming from server to jstree format.
     _convertData: (data) =>

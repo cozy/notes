@@ -9,14 +9,13 @@ class exports.HomeView extends Backbone.View
     # Tree functions
 
     # Send a request for a tree modification.
-    sendTreeRequest: (type, data, callback) ->
-        url = "tree"
+    sendTreeRequest: (type, url, data, callback) ->
+        url = "tree" if not url?
 
         # Small trick needed because delete request should not have data
         # in their body.
         if type == "DELETE"
             type = "PUT"
-            url = url + "/path"
 
         $.ajax
             type: type
@@ -31,7 +30,7 @@ class exports.HomeView extends Backbone.View
 
     # Create a new folder inside currently selected node.
     createFolder: (path, data) =>
-        @sendTreeRequest "POST",
+        @sendTreeRequest "POST", "tree",
             path: path
             name: data.rslt.name
             , (note) =>
@@ -42,14 +41,14 @@ class exports.HomeView extends Backbone.View
     # Rename currently selected node.
     renameFolder: (path, newName) =>
         if newName?
-            @sendTreeRequest "PUT",
+            @sendTreeRequest "PUT", "tree",
                 path: path
                 newName: newName
-        
+            
     # Delete currently selected node.
     deleteFolder: (path) =>
         @noteFull.hide()
-        @sendTreeRequest "DELETE", path: path
+        @sendTreeRequest "DELETE", "tree/path", path: path
 
     # When a note is selected, the note widget is displayed and fill with
     # note data.
@@ -64,6 +63,7 @@ class exports.HomeView extends Backbone.View
         else
             @noteFull.hide()
 
+    # Force selection inside tree of note represented by given path.
     selectNote: (path) ->
         @tree.selectNode path
 
@@ -83,11 +83,13 @@ class exports.HomeView extends Backbone.View
     onTreeLoaded: =>
         @treeCreationCallback() if @treeCreationCallback?
 
-    onNodeDropped: (data) =>
-        path = @tree._getStringPath data.o
-        parentPath = @tree._getStringPath data.r
-        console.log path
-        console.log parentPath
+    # When note is dropped, its old path and its new path are sent to server
+    # for persistence.
+    onNoteDropped: (newPath, oldPath) =>
+        @sendTreeRequest "POST", "tree/path",
+            newPath: newPath
+            oldPath: oldPath
+
 
     # Initializers
 
