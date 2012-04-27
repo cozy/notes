@@ -74,3 +74,14 @@ describe "Tree tools", ->
         it "Then I have an array that corresponds to /All/Recipes/Dessert", ->
             humanPath.join("/").should.equal "All/Recipes/Dessert"
 
+
+    describe "Move a node", ->
+        it "When I move a node '/all/recipes/' to '/all/todo'", ->
+            false
+        it "Then node called '/all/recipes/' should not exist", ->
+            false
+        it "And node called '/all/todo/recipes' should exist", ->
+            false
+        it "And node called '/all/todo/recipes/dessert' should exist", ->
+            false
+
