@@ -100,7 +100,10 @@ class exports.Tree
         node
     
     moveNode: (path, dest) ->
+        console.log path
+        console.log dest
         nodeNames = @_getCleanPath path
+        console.log nodeNames
         nodeToMoveParent = @getNode path, 1
         destNode = @getNode dest
 

@@ -427,9 +427,11 @@
     };
 
     HomeView.prototype.onNoteDropped = function(newPath, oldPath) {
-      return this.sendTreeRequest("POST", "tree/path", {
-        newPath: newPath,
-        oldPath: oldPath
+      if (oldPath.charAt(0) !== "/") oldPath = "/" + oldPath;
+      alert(oldPath);
+      return this.sendTreeRequest("POST", "tree/path/move", {
+        path: oldPath,
+        dest: newPath
       });
     };
 

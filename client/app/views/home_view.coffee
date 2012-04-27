@@ -86,9 +86,11 @@ class exports.HomeView extends Backbone.View
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
     onNoteDropped: (newPath, oldPath) =>
-        @sendTreeRequest "POST", "tree/path",
-            newPath: newPath
-            oldPath: oldPath
+        oldPath = "/" + oldPath if oldPath.charAt(0) != "/"
+        alert oldPath
+        @sendTreeRequest "POST", "tree/path/move",
+            path: oldPath
+            dest: newPath
 
 
     # Initializers
