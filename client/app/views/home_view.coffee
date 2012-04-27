@@ -36,14 +36,17 @@ class exports.HomeView extends Backbone.View
             , (note) =>
                 data.rslt.obj.data("id", note.id)
                 data.inst.deselect_all()
-                data.inst.select_node(data.rslt.obj)
+                data.inst.select_node data.rslt.obj
 
     # Rename currently selected node.
-    renameFolder: (path, newName) =>
+    renameFolder: (path, newName, data) =>
         if newName?
             @sendTreeRequest "PUT", "tree",
                 path: path
                 newName: newName
+            , () =>
+                data.inst.deselect_all()
+                data.inst.select_node data.rslt.obj
             
     # Delete currently selected node.
     deleteFolder: (path) =>
@@ -85,11 +88,14 @@ class exports.HomeView extends Backbone.View
 
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
-    onNoteDropped: (newPath, oldPath) =>
+    onNoteDropped: (newPath, oldPath, data) =>
         oldPath = "/" + oldPath if oldPath.charAt(0) != "/"
         @sendTreeRequest "POST", "tree/path/move",
             path: oldPath
             dest: newPath
+            , () =>
+                data.inst.deselect_all()
+                data.inst.select_node data.rslt.o
 
 
     # Initializers

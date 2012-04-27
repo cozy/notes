@@ -73,7 +73,7 @@ class exports.Tree
             if path == "all"
                 $.jstree.rollback data.rlbk
             else
-                callbacks.onRename path, data.rslt.new_name
+                callbacks.onRename path, data.rslt.new_name, data
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
@@ -102,7 +102,7 @@ class exports.Tree
             if newPath.length == 0
                 $.jstree.rollback data.rlbk
             else
-                callbacks.onDrop newPath.join("/"), oldPath.join("/")
+                callbacks.onDrop newPath.join("/"), oldPath.join("/"), data
 
         @widget.bind "loaded.jstree", (e, data) =>
             callbacks.onLoaded()

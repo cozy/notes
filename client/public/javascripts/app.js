@@ -373,11 +373,15 @@
       });
     };
 
-    HomeView.prototype.renameFolder = function(path, newName) {
+    HomeView.prototype.renameFolder = function(path, newName, data) {
+      var _this = this;
       if (newName != null) {
         return this.sendTreeRequest("PUT", "tree", {
           path: path,
           newName: newName
+        }, function() {
+          data.inst.deselect_all();
+          return data.inst.select_node(data.rslt.obj);
         });
       }
     };
@@ -426,11 +430,15 @@
       if (this.treeCreationCallback != null) return this.treeCreationCallback();
     };
 
-    HomeView.prototype.onNoteDropped = function(newPath, oldPath) {
+    HomeView.prototype.onNoteDropped = function(newPath, oldPath, data) {
+      var _this = this;
       if (oldPath.charAt(0) !== "/") oldPath = "/" + oldPath;
       return this.sendTreeRequest("POST", "tree/path/move", {
         path: oldPath,
         dest: newPath
+      }, function() {
+        data.inst.deselect_all();
+        return data.inst.select_node(data.rslt.o);
       });
     };
 
@@ -704,7 +712,7 @@ return buf.join("");
         if (path === "all") {
           return $.jstree.rollback(data.rlbk);
         } else {
-          return callbacks.onRename(path, data.rslt.new_name);
+          return callbacks.onRename(path, data.rslt.new_name, data);
         }
       });
       this.widget.bind("remove.jstree", function(e, data) {
@@ -738,7 +746,7 @@ return buf.join("");
         if (newPath.length === 0) {
           return $.jstree.rollback(data.rlbk);
         } else {
-          return callbacks.onDrop(newPath.join("/"), oldPath.join("/"));
+          return callbacks.onDrop(newPath.join("/"), oldPath.join("/"), data);
         }
       });
       return this.widget.bind("loaded.jstree", function(e, data) {
