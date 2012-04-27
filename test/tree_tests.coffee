@@ -163,7 +163,7 @@ describe "/tree", ->
 
         it "And I move /all/main-dishes/ to /all/recipes/", (done) ->
             data = { path: "/all/main-dishes", dest: "/all/recipes" }
-            client.post "tree/path", data, (error, response, body) ->
+            client.post "tree/path/move", data, (error, response, body) ->
                 storeResponse error, response, body, done
 
         it "Then a 200 success response is returned", ->
@@ -199,5 +199,9 @@ describe "/tree", ->
             should.exist(bodyTest)
             should.exist(bodyTest.rows)
             bodyTest.rows.length.should.equal 2
+            note = bodyTest.rows[0]
+            note.humanPath.should.equal "All,Recipes,Main Dishes"
+            note = bodyTest.rows[1]
+            note.humanPath.should.equal "All,Recipes"
             responseTest.statusCode.should.equal 200
 
