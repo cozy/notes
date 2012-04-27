@@ -97,9 +97,24 @@ class exports.Tree
             currentNode[slug] = currentNode[node]
             delete currentNode[node] if currentNode?
             currentNode[slug].name = newName
-
         node
     
+    moveNode: (path, dest) ->
+        nodeNames = @_getCleanPath path
+        nodeToMoveParent = @getNode path, 1
+        destNode = @getNode dest
+
+        if nodeToMoveParent? and destNode?
+            nodeName = nodeNames.pop().replace(/-/g, "_")
+            destNode[nodeName] = nodeToMoveParent[nodeName]
+            delete nodeToMoveParent[nodeName]
+        else
+            console.log "Given path does not exist" if not nodeToMoveParent?
+            console.log "Given destination does not exist" if not destNode?
+        return
+
+
+        
 
     # Transform string path to array path while removing first node (all node).
     _getCleanPath: (path) ->

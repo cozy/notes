@@ -17,9 +17,9 @@ describe "Tree tools", ->
 
     describe "Add a node", ->
         it "When I add a node called 'Recipe'", ->
-            tree.addNode "/all", "Recipe"
+            tree.addNode "/all", "Recipe", 2
         it "And I add a node called 'todo'", ->
-            tree.addNode "/all", "todo"
+            tree.addNode "/all", "todo", 1
         it "Then I have a property recipe and a property todo in my tree.", ->
             should.exist tree.all.recipe
             should.exist tree.all.todo
@@ -62,7 +62,7 @@ describe "Tree tools", ->
 
     describe "Update a node", ->
         it "When I update a node called '/all/recipe' with '/all/recipes/'", ->
-            tree.addNode "/all/recipe", "Dessert"
+            tree.addNode "/all/recipe", "Dessert", 3
             tree.updateNode "/all/recipe", "Recipes"
         it "Then node called '/all/recipe' should not exist", ->
             should.not.exist tree.all.recipe
@@ -77,6 +77,7 @@ describe "Tree tools", ->
 
     describe "Move a node", ->
         it "When I move a node '/all/recipes/' to '/all/todo'", ->
+            tree.addNode "/all/todo", "Todo", 4
             tree.moveNode "/all/recipes", "/all/todo"
         it "Then node called '/all/recipes/' should not exist", ->
             should.not.exist tree.all.recipes
