@@ -77,11 +77,10 @@ describe "Tree tools", ->
 
     describe "Move a node", ->
         it "When I move a node '/all/recipes/' to '/all/todo'", ->
-            false
+            tree.moveNode "/all/recipes", "/all/todo"
         it "Then node called '/all/recipes/' should not exist", ->
-            false
+            should.not.exist tree.all.recipes
         it "And node called '/all/todo/recipes' should exist", ->
-            false
+            should.exist tree.all.todo.recipes
         it "And node called '/all/todo/recipes/dessert' should exist", ->
-            false
-
+            should.exist tree.all.todo.recipes.dessert
