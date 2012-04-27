@@ -155,4 +155,49 @@ describe "/tree", ->
             bodyTest.rows.length.should.equal 0
             responseTest.statusCode.should.equal 200
 
+    describe "POST /tree/path/move Move given node to given destination", \
+                (done) ->
+
+        it "When I send data for a node creation : /all/recipes", (done) ->
+            client.post "tree/", { path: "/all", name: "Recipes" }, done
+
+        it "And I move /all/main-dishes/ to /all/recipes/", (done) ->
+            data = { path: "/all/main-dishes", dest: "/all/recipes" }
+            client.post "tree/path", data, (error, response, body) ->
+                storeResponse error, response, body, done
+
+        it "Then a 200 success response is returned", ->
+            responseTest.statusCode.should.equal 200
+
+        it "When I retrieve tree from /tree", (done) ->
+            client.get "tree/", (error, response, body) ->
+                storeResponse error, response, body, done
+
+        it "Then I have a tree that contains only path /all/recipes/main-dishes", ->
+            bodyTest = JSON.parse bodyTest
+            tree = new DataTree bodyTest
+            should.not.exist tree.all.main_dishes
+            should.exist tree.all.recipes.main_dishes
+        
+        it "When I send a request to get notes with main-dishes path", (done) ->
+            client.post "notes/path", path: "/all/main-dishes", \
+                        (error, response, body) ->
+                storeResponse error, response, body, done
+
+        it "Then I got no notes", ->
+            should.exist(bodyTest)
+            should.exist(bodyTest.rows)
+            bodyTest.rows.length.should.equal 0
+            responseTest.statusCode.should.equal 200
+
+        it "When I send a request to get notes with recipes path", (done) ->
+            client.post "notes/path", path: "/all/recipes", \
+                        (error, response, body) ->
+                storeResponse error, response, body, done
+
+        it "Then I got two notes", ->
+            should.exist(bodyTest)
+            should.exist(bodyTest.rows)
+            bodyTest.rows.length.should.equal 2
+            responseTest.statusCode.should.equal 200
 
