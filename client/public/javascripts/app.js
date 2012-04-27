@@ -428,7 +428,6 @@
 
     HomeView.prototype.onNoteDropped = function(newPath, oldPath) {
       if (oldPath.charAt(0) !== "/") oldPath = "/" + oldPath;
-      alert(oldPath);
       return this.sendTreeRequest("POST", "tree/path/move", {
         path: oldPath,
         dest: newPath
@@ -702,14 +701,22 @@ return buf.join("");
         nodeName = data.inst.get_text(data.rslt.obj);
         parent = data.inst._get_parent(data.rslt.parent);
         path = _this._getStringPath(parent, data.rslt.old_name);
-        return callbacks.onRename(path, data.rslt.new_name);
+        if (path === "all") {
+          return $.jstree.rollback(data.rlbk);
+        } else {
+          return callbacks.onRename(path, data.rslt.new_name);
+        }
       });
       this.widget.bind("remove.jstree", function(e, data) {
         var nodeName, parent, path;
         nodeName = data.inst.get_text(data.rslt.obj);
         parent = data.rslt.parent;
         path = _this._getStringPath(parent, nodeName);
-        return callbacks.onRemove(path);
+        if (path === "all") {
+          return $.jstree.rollback(data.rlbk);
+        } else {
+          return callbacks.onRemove(path);
+        }
       });
       this.widget.bind("select_node.jstree", function(e, data) {
         var nodeName, parent, path;
@@ -728,7 +735,11 @@ return buf.join("");
         parent = data.inst._get_parent(data.rslt.op);
         oldPath = _this._getPath(parent, oldParent);
         oldPath.push(slugify(nodeName));
-        return callbacks.onDrop(newPath.join("/"), oldPath.join("/"));
+        if (newPath.length === 0) {
+          return $.jstree.rollback(data.rlbk);
+        } else {
+          return callbacks.onDrop(newPath.join("/"), oldPath.join("/"));
+        }
       });
       return this.widget.bind("loaded.jstree", function(e, data) {
         return callbacks.onLoaded();

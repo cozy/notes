@@ -107,7 +107,7 @@ class exports.Tree
         nodeToMoveParent = @getNode path, 1
         destNode = @getNode dest
 
-        if nodeToMoveParent? and destNode?
+        if nodeToMoveParent? and destNode? and destNode != nodeToMoveParent
             nodeName = nodeNames.pop().replace(/-/g, "_")
             destNode[nodeName] = nodeToMoveParent[nodeName]
             delete nodeToMoveParent[nodeName]

@@ -80,7 +80,7 @@ Note.movePath = (path, dest, humanDest, callback) ->
         for note in notes
             note.path = dest + note.path.substring(pathLength)
             humanNames = note.humanPath.split(",")
-            humanNames.shift(nodeIndex)
+            humanNames.shift() for i in [0..nodeIndex-1]
             humanNames = humanDest.concat humanNames
             note.humanPath = humanNames
             note.save done

@@ -87,7 +87,6 @@ class exports.HomeView extends Backbone.View
     # for persistence.
     onNoteDropped: (newPath, oldPath) =>
         oldPath = "/" + oldPath if oldPath.charAt(0) != "/"
-        alert oldPath
         @sendTreeRequest "POST", "tree/path/move",
             path: oldPath
             dest: newPath

@@ -70,13 +70,19 @@ class exports.Tree
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.inst._get_parent data.rslt.parent
             path = @_getStringPath parent, data.rslt.old_name
-            callbacks.onRename path, data.rslt.new_name
+            if path == "all"
+                $.jstree.rollback data.rlbk
+            else
+                callbacks.onRename path, data.rslt.new_name
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.rslt.parent
             path = @_getStringPath parent, nodeName
-            callbacks.onRemove path
+            if path == "all"
+                $.jstree.rollback data.rlbk
+            else
+                callbacks.onRemove path
 
         @widget.bind "select_node.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
@@ -93,7 +99,10 @@ class exports.Tree
             parent = data.inst._get_parent data.rslt.op
             oldPath = @_getPath parent, oldParent
             oldPath.push(slugify nodeName)
-            callbacks.onDrop newPath.join("/"), oldPath.join("/")
+            if newPath.length == 0
+                $.jstree.rollback data.rlbk
+            else
+                callbacks.onDrop newPath.join("/"), oldPath.join("/")
 
         @widget.bind "loaded.jstree", (e, data) =>
             callbacks.onLoaded()
