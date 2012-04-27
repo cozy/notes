@@ -60,4 +60,28 @@ Note.updatePath = (path, newPath, newName, callback) ->
             note.save done
 
 
+Note.movePath = (path, dest, humanDest, callback) ->
+    Note.allForPath path, (err, notes) ->
+        return callback(err) if err
+        return callback(new Error("No note for this path")) \
+            if notes.length == 0
+
+        wait = notes.length
+        done = (err) ->
+            error = error || err
+            if --wait == 0
+                callback(error)
+
+        parentPath = path.split("/")
+        parentPath.pop()
+        pathLength = parentPath.join("/").length
+        nodeIndex = parentPath.length - 1
+
+        for note in notes
+            note.path = dest + note.path.substring(pathLength)
+            humanNames = note.humanPath.split(",")
+            humanNames.shift(nodeIndex)
+            humanNames = humanDest.concat humanNames
+            note.humanPath = humanNames
+            note.save done
 

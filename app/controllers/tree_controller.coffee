@@ -8,11 +8,10 @@ load 'application'
 
 # Before each action current tree is loaded. If it does not exists it created.
 before 'load tree', ->
-    console.log "test"
     createTreeCb = (err, tree) =>
         if err
             console.log err
-            send error: 'An error occured', 500
+            send error: 'An error occured while loading tree', 500
         else
             @tree = tree
             next()
@@ -28,12 +27,11 @@ before 'load path', ->
         next()
     else
         send error: "No path sent", 400
-, only: ['update', 'destroy', 'create']
+, only: ['update', 'destroy', 'create', 'move']
 
 
 # Returns complete tree.
 action 'tree', ->
-    console.log "cool"
     send JSON.parse(@tree.struct)
 
 
@@ -121,3 +119,24 @@ action 'destroy', ->
             destroyNotes()
 
 
+action 'move', ->
+    data = new DataTree JSON.parse(@tree.struct)
+    dest = body.dest
+    data.moveNode @path, dest
+    humanDest = data.getHumanPath dest
+    tree = new Tree
+        struct: data.toJson()
+       
+    callback = (err) ->
+         if err
+             console.log err
+             send error: "An error occured while node was moved", 500
+         else
+             send success: "Node succesfully moved", 200
+
+    @tree.updateAttributes tree, (err) =>
+        if err
+            console.log err
+            send error: "An error occured while node was moved", 500
+        else
+            Note.movePath @path, dest, humanDest, callback
