@@ -15,7 +15,7 @@
   margin 0
   padding 0
   background-color bgcolornav
-  shadow 0 0 3px #002200 
+  shadow 0 0 3px navshadowcolor
 
 #editor
   margin 0 
@@ -32,7 +32,7 @@
   padding 10px
   border-top 1px solid white
   background-color bgcolornav
-  color #6d3100
+  color treetextcolor 
 
 #tree li
   padding 0
@@ -46,18 +46,18 @@
   margin 2px 0px
   border 1px solid transparent
   font-weight bold
-  color #3d2100
+  color treelinkcolor
 
 #tree a.jstree-clicked
-  background #ffdd97  
+  background bgcolortreeselected 
 
 #tree a:hover
-  shadow 1px 1px 1px #666622
-  background #F4E1B9
+  shadow 1px 1px 1px treetexthovershadowcolor
+  background bgcolortreetexthover
 
 #tree-buttons
-  border-bottom 1px solid #AAA
-  background-color #ebe5e2
+  border-bottom 1px solid bordercolortoolbar
+  background-color bgcolortoolbar 
   margin-top 16px
 
 #tree-buttons div
@@ -76,7 +76,7 @@
   display block
 
 #tree-buttons div.button:hover
-  background: linear-gradient(top , #ffdd97 0%, #ffb338 100%)
+  background: linear-gradient(top , bgcolorhoverbuttons 0%, bgclearcolorhoverbuttons 100%)
 
 #tree-buttons div.button
   background linear-gradient(top, bgcolorbuttons 0%, bgclearcolorbuttons 100%)
@@ -86,7 +86,7 @@
   border-radius 2px 2px 2px 2px
 
 #tree-buttons div.button:active
-  background linear-gradient(top , #f4cc86 0%,  #eaa328 100%)
+  background linear-gradient(top, bgcoloractivebuttons 0%, bgclearcoloractivebuttons 100%)
   shadow 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35)
 
 
@@ -94,8 +94,8 @@
 
 .note-full
   background white
-  shadow 2px 2px 5px #644
-  border 1px solid #ebe5e2
+  shadow 2px 2px 5px noteshadowcolor 
+  border 1px solid notebordercolor
   padding 10px
   border-radius 3px
 
@@ -125,6 +125,6 @@
   display none
 
 .ui-layout-resizer-open:hover
-  background #ffdd97
+  background highlightcolor
 
 
