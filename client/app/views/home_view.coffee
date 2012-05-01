@@ -8,31 +8,11 @@ class exports.HomeView extends Backbone.View
 
     # Tree functions
 
-    # Send a request for a tree modification.
-    sendTreeRequest: (type, url, data, callback) ->
-        url = "tree" if not url?
-
-        # Small trick needed because delete request should not have data
-        # in their body.
-        if type == "DELETE"
-            type = "PUT"
-
-        $.ajax
-            type: type
-            url: url
-            data: data
-            success: callback
-            error: (data) ->
-                if data and data.msg
-                    alert data.msg
-                else
-                    alert "Server error occured."
-
     # Create a new folder inside currently selected node.
-    createFolder: (path, data) =>
-        @sendTreeRequest "POST", "tree",
+    createFolder: (path, newName, data) =>
+        Note.createNote
             path: path
-            name: data.rslt.name
+            name: newName
             , (note) =>
                 data.rslt.obj.data("id", note.id)
                 data.inst.deselect_all()
@@ -41,7 +21,7 @@ class exports.HomeView extends Backbone.View
     # Rename currently selected node.
     renameFolder: (path, newName, data) =>
         if newName?
-            @sendTreeRequest "PUT", "tree",
+            Note.udpateNote
                 path: path
                 newName: newName
             , () =>
@@ -51,7 +31,7 @@ class exports.HomeView extends Backbone.View
     # Delete currently selected node.
     deleteFolder: (path) =>
         @noteFull.hide()
-        @sendTreeRequest "DELETE", "tree/path", path: path
+        Note.deleteNote path: path
 
     # When a note is selected, the note widget is displayed and fill with
     # note data.
@@ -59,8 +39,7 @@ class exports.HomeView extends Backbone.View
         path = "/#{path}" if path.indexOf("/")
         app.router.navigate "note#{path}", trigger: false
         if id?
-            $.get "notes/#{id}", (data) =>
-                note = new Note data
+            Note.getNote id, (note) =>
                 @renderNote note
                 @noteFull.show()
         else
@@ -74,7 +53,6 @@ class exports.HomeView extends Backbone.View
     renderNote: (note) ->
         @currentNote = note
         noteWidget = new NoteWidget @currentNote
-
         noteWidget.render()
 
     # When note change, its content is saved.
@@ -90,7 +68,7 @@ class exports.HomeView extends Backbone.View
     # for persistence.
     onNoteDropped: (newPath, oldPath, data) =>
         oldPath = "/" + oldPath if oldPath.charAt(0) != "/"
-        @sendTreeRequest "POST", "tree/path/move",
+        Note.moveNote
             path: oldPath
             dest: newPath
             , () =>

@@ -221,11 +221,27 @@
 (this.require.define({
   "models/note": function(exports, require, module) {
     (function() {
-  var BaseModel,
+  var BaseModel, request,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
   BaseModel = require("models/models").BaseModel;
+
+  request = function(type, url, data, callback) {
+    return $.ajax({
+      type: type,
+      url: url,
+      data: data,
+      success: callback,
+      error: function(data) {
+        if (data && data.msg) {
+          return alert(data.msg);
+        } else {
+          return alert("Server error occured.");
+        }
+      }
+    });
+  };
 
   exports.Note = (function(_super) {
 
@@ -246,6 +262,31 @@
       this.url = "notes/" + this.id;
       return this.save({
         content: this.content
+      });
+    };
+
+    Note.createNote = function(data, callback) {
+      return request("POST", "tree", data, callback);
+    };
+
+    Note.updateNote = function(data, callback) {
+      return request("PUT", "tree", data, callback);
+    };
+
+    Note.deleteNote = function(data, callback) {
+      return request("PUT", "tree/path", data, callback);
+    };
+
+    Note.moveNote = function(data, callback) {
+      return request("POST", "tree/path/move", data, callback);
+    };
+
+    Note.getNote = function(id, callback) {
+      var _this = this;
+      return $.get("notes/" + id, function(data) {
+        var note;
+        note = new Note(data);
+        return callback(note);
       });
     };
 
@@ -343,29 +384,11 @@
 
     HomeView.prototype.id = 'home-view';
 
-    HomeView.prototype.sendTreeRequest = function(type, url, data, callback) {
-      if (!(url != null)) url = "tree";
-      if (type === "DELETE") type = "PUT";
-      return $.ajax({
-        type: type,
-        url: url,
-        data: data,
-        success: callback,
-        error: function(data) {
-          if (data && data.msg) {
-            return alert(data.msg);
-          } else {
-            return alert("Server error occured.");
-          }
-        }
-      });
-    };
-
-    HomeView.prototype.createFolder = function(path, data) {
+    HomeView.prototype.createFolder = function(path, newName, data) {
       var _this = this;
-      return this.sendTreeRequest("POST", "tree", {
+      return Note.createNote({
         path: path,
-        name: data.rslt.name
+        name: newName
       }, function(note) {
         data.rslt.obj.data("id", note.id);
         data.inst.deselect_all();
@@ -376,7 +399,7 @@
     HomeView.prototype.renameFolder = function(path, newName, data) {
       var _this = this;
       if (newName != null) {
-        return this.sendTreeRequest("PUT", "tree", {
+        return Note.udpateNote({
           path: path,
           newName: newName
         }, function() {
@@ -388,7 +411,7 @@
 
     HomeView.prototype.deleteFolder = function(path) {
       this.noteFull.hide();
-      return this.sendTreeRequest("DELETE", "tree/path", {
+      return Note.deleteNote({
         path: path
       });
     };
@@ -400,9 +423,7 @@
         trigger: false
       });
       if (id != null) {
-        return $.get("notes/" + id, function(data) {
-          var note;
-          note = new Note(data);
+        return Note.getNote(id, function(note) {
           _this.renderNote(note);
           return _this.noteFull.show();
         });
@@ -433,7 +454,7 @@
     HomeView.prototype.onNoteDropped = function(newPath, oldPath, data) {
       var _this = this;
       if (oldPath.charAt(0) !== "/") oldPath = "/" + oldPath;
-      return this.sendTreeRequest("POST", "tree/path/move", {
+      return Note.moveNote({
         path: oldPath,
         dest: newPath
       }, function() {
@@ -702,7 +723,7 @@ return buf.join("");
         parent = data.rslt.parent;
         path = _this._getPath(parent, nodeName);
         path.pop();
-        return callbacks.onCreate(path.join("/"), data);
+        return callbacks.onCreate(path.join("/"), data.rslt.name, data);
       });
       this.widget.bind("rename.jstree", function(e, data) {
         var nodeName, parent, path;
@@ -795,19 +816,19 @@ return buf.join("");
       return tree;
     };
 
-    Tree.prototype._convertNode = function(parentNode, nodeToConvert, path) {
-      var newNode, nodePath, property, _results;
+    Tree.prototype._convertNode = function(parentNode, nodeToConvert, idpath) {
+      var newNode, nodeIdPath, property, _results;
       _results = [];
       for (property in nodeToConvert) {
         if (!(property !== "name" && property !== "id")) continue;
-        nodePath = "" + path + "-" + (property.replace(/_/g, "-"));
+        nodeIdPath = "" + idpath + "-" + (property.replace(/_/g, "-"));
         newNode = {
           data: nodeToConvert[property].name,
           metadata: {
             id: nodeToConvert[property].id
           },
           attr: {
-            id: "tree-node" + nodePath,
+            id: "tree-node" + nodeIdPath,
             rel: "default"
           },
           children: []
@@ -817,7 +838,7 @@ return buf.join("");
         } else {
           parentNode.children.push(newNode);
         }
-        _results.push(this._convertNode(newNode, nodeToConvert[property], nodePath));
+        _results.push(this._convertNode(newNode, nodeToConvert[property], nodeIdPath));
       }
       return _results;
     };

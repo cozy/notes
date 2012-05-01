@@ -60,11 +60,12 @@ class exports.Tree
 
         # Tree
         @widget.bind "create.jstree", (e, data) =>
+
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
             path.pop()
-            callbacks.onCreate path.join("/"), data
+            callbacks.onCreate path.join("/"), data.rslt.name, data
 
         @widget.bind "rename.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
@@ -171,5 +172,5 @@ class exports.Tree
             else
                 parentNode.children.push newNode
 
-            @_convertNode newNode, nodeToConvert[property], nodePath
+            @_convertNode newNode, nodeToConvert[property], nodeIdPath
 
