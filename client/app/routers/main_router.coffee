@@ -14,6 +14,9 @@ class exports.MainRouter extends Backbone.Router
         app.homeView.setLayout()
         app.homeView.fetchData callback
 
+    # Select given note (represented by its path), if tree is already 
+    # rendered, note is directly selected else it loads tree then it selects 
+    # given note.
     note: (path) ->
         selectNote = ->
             app.homeView.selectNote path

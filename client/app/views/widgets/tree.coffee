@@ -107,7 +107,7 @@ class exports.Tree
         @widget.bind "loaded.jstree", (e, data) =>
             callbacks.onLoaded()
 
-    # Select node corresponding at given path
+    # Select node corresponding to given path
     selectNode: (path) ->
         nodePath = path.replace(/\//g, "-")
         node = $("#tree-node-#{nodePath}")
@@ -116,13 +116,10 @@ class exports.Tree
         tree = $("#tree").jstree("select_node", node)
 
 
-    # Returns path to node for a given node.
-    # data.inst = tree instance
+    # Returns path to a node for a given node.
+    # data.inst is the js tree instance
     _getPath: (parent, nodeName) ->
-        #nodeName = data.inst.get_text data.rslt.obj if nodeName == undefined
         nodes = [slugify nodeName] if nodeName?
-        #parent = data.rslt.parent
-        #parent = data.inst._get_parent data.rslt.obj if parent == undefined
 
         name = "all"
         while name and parent != undefined and parent.children != undefined
@@ -136,7 +133,9 @@ class exports.Tree
         @_getPath(parent, nodeName).join("/")
        
     # Convert tree coming from server to jstree format.
+    # It builds the root of the tree then recursively add node to it.
     _convertData: (data) =>
+        # root node
         tree =
             data:
                 data: "all"
@@ -151,16 +150,19 @@ class exports.Tree
 
     # Convert a node coming from node server to jstree format. Then convertNode
     # is called recursively on node children.
-    _convertNode: (parentNode, nodeToConvert, path) ->
+    # * parentNode is the node on which converted node will be set.
+    # * noteToConvert is the node that is going to be converted
+    # * idpath is the current path used to build the node DOM id. 
+    _convertNode: (parentNode, nodeToConvert, idpath) ->
         for property of nodeToConvert when \
                 property isnt "name" and property isnt "id"
-            nodePath = "#{path}-#{property.replace(/_/g, "-")}"
+            nodeIdPath = "#{idpath}-#{property.replace(/_/g, "-")}"
             newNode =
                 data: nodeToConvert[property].name
                 metadata:
                     id: nodeToConvert[property].id
                 attr:
-                    id: "tree-node#{nodePath}"
+                    id: "tree-node#{nodeIdPath}"
                     rel: "default"
                 children: []
 
