@@ -545,26 +545,7 @@
 
     NoteWidget.setEditor = function(changeCallback) {
       var editor;
-      CKEDITOR.editorConfig = function(config) {
-        config.removePlugins = 'scayt,menubutton,contextmenu';
-        config.extraPlugins = 'onchange';
-        return config.minimumChangeMilliseconds = 1000;
-      };
-      $("#note-full-content").ckeditor(function() {
-        return $(".cke_toolbar").hide();
-      }, {
-        toolbar_Cozy: [['Bold', 'Italic', '-', 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent']],
-        toolbar: 'Cozy',
-        uiColor: 'white'
-      });
-      editor = $("#note-full-content").ckeditorGet();
-      editor.on("focus", function(event) {
-        return $(".cke_toolbar").show();
-      });
-      editor.on("focusout", function(event) {
-        return $(".cke_toolbar").hide();
-      });
-      editor.on("change", changeCallback);
+      console.log("TODO: set editor");
       editor = $("textarea#note-full-content");
       return editor;
     };

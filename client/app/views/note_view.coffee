@@ -28,30 +28,8 @@ class exports.NoteWidget extends Backbone.View
         @el
 
     @setEditor: (changeCallback) ->
-        CKEDITOR.editorConfig = (config) ->
-            config.removePlugins = 'scayt,menubutton,contextmenu'
-            config.extraPlugins = 'onchange'
-            config.minimumChangeMilliseconds=1000
 
-
-        $("#note-full-content").ckeditor ->
-                $(".cke_toolbar").hide()
-            ,
-            toolbar_Cozy: [[
-                    'Bold', 'Italic', '-',
-                    'NumberedList', 'BulletedList', '-',
-                    'Outdent', 'Indent'
-                ]]
-            toolbar: 'Cozy'
-            uiColor : 'white'
-
-
-        editor = $("#note-full-content").ckeditorGet()
-        editor.on "focus", (event) ->
-            $(".cke_toolbar").show()
-        editor.on "focusout", (event) ->
-            $(".cke_toolbar").hide()
-        editor.on "change", changeCallback
+        console.log "TODO: set editor"
 
         editor = $("textarea#note-full-content")
         editor
