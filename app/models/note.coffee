@@ -59,7 +59,8 @@ Note.updatePath = (path, newPath, newName, callback) ->
             note.humanPath = humanNames
             note.save done
 
-
+# When a node is moved, all notes that are linked to this node are
+# updated : sub-path are replaced by new node path.
 Note.movePath = (path, dest, humanDest, callback) ->
     Note.allForPath path, (err, notes) ->
         return callback(err) if err
@@ -78,10 +79,14 @@ Note.movePath = (path, dest, humanDest, callback) ->
         nodeIndex = parentPath.length - 1
 
         for note in notes
+            # Replace old path by new path
             note.path = dest + note.path.substring(pathLength)
+            
+            # Replace human path by new human path
             humanNames = note.humanPath.split(",")
             humanNames.shift() for i in [0..nodeIndex-1]
             humanNames = humanDest.concat humanNames
             note.humanPath = humanNames
+
             note.save done
 

@@ -30,6 +30,9 @@ before 'load path', ->
 , only: ['update', 'destroy', 'create', 'move']
 
 
+# Actions
+
+
 # Returns complete tree.
 action 'tree', ->
     send JSON.parse(@tree.struct)
@@ -79,12 +82,16 @@ action 'update', ->
          newName = body.newName
          data = new DataTree JSON.parse(@tree.struct)
  
+         # Build new path from current path and new name
          nodes = @path.split("/")
          nodes.pop()
          nodes.push(helpers.slugify newName)
          newPath = nodes.join("/")
+         
+         # Update tree
          data.updateNode @path, newName
 
+         # Update db data
          @tree.updateAttributes struct: data.toJson(), (err) =>
              if err
                  console.log err
@@ -119,11 +126,14 @@ action 'destroy', ->
             destroyNotes()
 
 
+# Move a node to another parent place : update tree object and all path of
+# nodes which are linked to moved node.
 action 'move', ->
     data = new DataTree JSON.parse(@tree.struct)
     dest = body.dest
     data.moveNode @path, dest
     humanDest = data.getHumanPath dest
+
     tree = new Tree
         struct: data.toJson()
        
