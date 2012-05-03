@@ -5,6 +5,7 @@ app = require('../server')
 
 
 
+
 ## Helpers
 
 responseTest = null
@@ -30,7 +31,12 @@ handleResponse = (error, response, body, done) ->
 
 
 before (done) ->
+    app.listen(8001)
     Note.destroyAll done
+
+after (done) ->
+    app.close()
+    done()
 
 
 describe "/notes", ->
