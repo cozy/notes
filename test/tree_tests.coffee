@@ -11,7 +11,6 @@ storeResponse = (error, response, body, done) ->
     responseTest = null
     bodyTest = null
     if error
-        console.log error
         false.should.be.ok()
     else
         responseTest = response
@@ -20,7 +19,6 @@ storeResponse = (error, response, body, done) ->
 
 handleResponse = (error, response, body, done) ->
     if error
-        console.log error
         false.should.be.ok()
     done()
 

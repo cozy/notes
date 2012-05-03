@@ -15,7 +15,6 @@ storeResponse = (error, response, body, done) ->
     responseTest = null
     bodyTest = null
     if error
-        console.log error
         false.should.be.ok()
     else
         responseTest = response
@@ -24,7 +23,6 @@ storeResponse = (error, response, body, done) ->
 
 handleResponse = (error, response, body, done) ->
     if error
-        console.log error
         false.should.be.ok()
     done()
 
@@ -66,7 +64,6 @@ describe "/notes", ->
         it "Then I got expected note in a list", ->
             should.exist bodyTest
             bodyTest = JSON.parse bodyTest
-            console.log bodyTest
             should.exist bodyTest.rows
             bodyTest.rows.length.should.equal 1
             bodyTest.rows[0].title.should.equal "Test note 01"
