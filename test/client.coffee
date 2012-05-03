@@ -1,5 +1,4 @@
 request = require('request')
-restler = require('restler')
 
 host = "http://localhost:8001/"
 
