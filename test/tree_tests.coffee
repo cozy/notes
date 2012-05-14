@@ -26,12 +26,16 @@ tree = null
 
 
 
-before (done) ->
-    Note.destroyAll ->
-        Tree.destroyAll done
-
-
 describe "/tree", ->
+
+    before (done) ->
+        app.listen(8001)
+        Note.destroyAll ->
+            Tree.destroyAll done
+
+    after (done) ->
+        app.close()
+        done()
 
 
     describe "POST /tree Create a note inside tree", ->
@@ -80,7 +84,7 @@ describe "/tree", ->
 
     describe "PUT /tree Update a node", ->
 
-        it "When I change Recipes to Main Dishes", (done) ->
+        it "When I change Recipe to Main Dishes", (done) ->
             data =
                 path: "/all/recipe"
                 newName: "Main Dishes"

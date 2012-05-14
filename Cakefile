@@ -39,4 +39,10 @@ task 'tests:file', 'run test through mocha for a given file', (options) ->
       console.log "Running mocha caught exception: \n" + err
     console.log stdout
 
+task "xunit", "", ->
+  process.env.TZ = "Europe/Paris"
+  command = "mocha "
+  command += " --require should --compilers coffee:coffee-script -R xunit"
+  exec command, (err, stdout, stderr) ->
+    console.log stdout
 
