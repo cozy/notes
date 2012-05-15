@@ -655,7 +655,7 @@ return buf.join("");
       tree = this._convertData(data);
       this.treeEl = $("#tree");
       this.widget = this.treeEl.jstree({
-        plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort", "cookies", "types", "hotkeys", "dnd"],
+        plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort", "cookies", "types", "hotkeys", "dnd", "search"],
         json_data: tree,
         types: {
           "default": {
@@ -688,9 +688,9 @@ return buf.join("");
           }
         }
       });
-      this.setListeners(callbacks);
       this.searchField = $("#tree-search-field");
       this.searchButton = $("#tree-search");
+      this.setListeners(callbacks);
     }
 
     Tree.prototype.setToolbar = function(navEl) {
@@ -708,8 +708,8 @@ return buf.join("");
       $("#tree-remove").click(function() {
         return _this.treeEl.jstree("remove");
       });
-      $("#tree-search").click(this._onSearchClicked);
-      $("#tree-search-field").keyUp(this._onSearchChanged);
+      this.searchButton.click(this._onSearchClicked);
+      this.searchField.keyup(this._onSearchChanged);
       this.widget.bind("create.jstree", function(e, data) {
         var nodeName, parent, path;
         nodeName = data.inst.get_text(data.rslt.obj);
@@ -839,6 +839,7 @@ return buf.join("");
     Tree.prototype._onSearchClicked = function(event) {
       if (this.searchField.is(":hidden")) {
         this.searchField.show();
+        this.searchField.focus();
         return this.searchButton.addClass("button-active");
       } else {
         this.searchField.hide();
@@ -846,7 +847,11 @@ return buf.join("");
       }
     };
 
-    Tree.prototype._onSearchChanged = function(event) {};
+    Tree.prototype._onSearchChanged = function(event) {
+      var searchString;
+      searchString = this.searchField.val();
+      return this.treeEl.jstree("search", searchString);
+    };
 
     return Tree;
 
