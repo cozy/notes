@@ -42,6 +42,10 @@ class exports.Tree
 
         @setListeners callbacks
 
+        @searchField = $("#tree-search-field")
+        @searchButton = $("#tree-search")
+
+
     # Create toolbar inside DOM.
     setToolbar: (navEl) ->
         navEl.prepend require('../templates/tree_buttons')
@@ -57,6 +61,8 @@ class exports.Tree
             @treeEl.jstree("rename")
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
+        $("#tree-search").click @_onSearchClicked
+        $("#tree-search-field").keyUp @_onSearchChanged
 
         # Tree
         @widget.bind "create.jstree", (e, data) =>
@@ -174,3 +180,14 @@ class exports.Tree
 
             @_convertNode newNode, nodeToConvert[property], nodeIdPath
 
+
+    _onSearchClicked: (event) =>
+        if @searchField.is(":hidden")
+            @searchField.show()
+            @searchButton.addClass("button-active")
+        else
+            @searchField.hide()
+            @searchButton.removeClass("button-active")
+
+    _onSearchChanged: (event) =>
+        

@@ -85,8 +85,8 @@ class exports.HomeView extends Backbone.View
     # Use jquery layout so set main layout of current window.
     setLayout: ->
         $('#home-view').layout
-            size: "310"
-            minSize: "310"
+            size: "350"
+            minSize: "350"
             resizable: true
 
     # Loads note tree and configure it.
