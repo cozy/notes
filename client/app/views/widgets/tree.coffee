@@ -14,7 +14,7 @@ class exports.Tree
             plugins: [
                 "themes", "json_data", "ui", "crrm",
                 "unique", "sort", "cookies", "types",
-                "hotkeys", "dnd"
+                "hotkeys", "dnd", "search"
             ]
             json_data: tree
             types:
@@ -40,6 +40,9 @@ class exports.Tree
                 error_callback: (node, p, func) ->
                     alert "A note has already that name: '#{node}'"
 
+        @searchField = $("#tree-search-field")
+        @searchButton = $("#tree-search")
+
         @setListeners callbacks
 
     # Create toolbar inside DOM.
@@ -57,6 +60,8 @@ class exports.Tree
             @treeEl.jstree("rename")
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
+        @searchButton.click @_onSearchClicked
+        @searchField.keyup @_onSearchChanged
 
         # Tree
         @widget.bind "create.jstree", (e, data) =>
@@ -174,3 +179,16 @@ class exports.Tree
 
             @_convertNode newNode, nodeToConvert[property], nodeIdPath
 
+
+    _onSearchClicked: (event) =>
+        if @searchField.is(":hidden")
+            @searchField.show()
+            @searchField.focus()
+            @searchButton.addClass("button-active")
+        else
+            @searchField.hide()
+            @searchButton.removeClass("button-active")
+
+    _onSearchChanged: (event) =>
+        searchString = @searchField.val()
+        @treeEl.jstree("search", searchString)

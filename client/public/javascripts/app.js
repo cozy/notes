@@ -470,8 +470,8 @@
 
     HomeView.prototype.setLayout = function() {
       return $('#home-view').layout({
-        size: "310",
-        minSize: "310",
+        size: "350",
+        minSize: "350",
         resizable: true
       });
     };
@@ -622,8 +622,14 @@ buf.push(attrs({ 'id':('tree-rename'), "class": ('button') }));
 buf.push('><i');
 buf.push(attrs({ "class": ('icon-pencil') }));
 buf.push('></i><span>rename</span></div><div');
+buf.push(attrs({ 'id':('tree-search'), "class": ('button') }));
+buf.push('><i');
+buf.push(attrs({ "class": ('icon-search') }));
+buf.push('></i></div><div');
 buf.push(attrs({ "class": ('spacer') }));
-buf.push('></div></div>');
+buf.push('></div><input');
+buf.push(attrs({ 'id':('tree-search-field'), 'type':("text") }));
+buf.push('/></div>');
 }
 return buf.join("");
 };
@@ -640,6 +646,8 @@ return buf.join("");
   exports.Tree = (function() {
 
     function Tree(navEl, data, callbacks) {
+      this._onSearchChanged = __bind(this._onSearchChanged, this);
+      this._onSearchClicked = __bind(this._onSearchClicked, this);
       this._convertData = __bind(this._convertData, this);
       this._getStringPath = __bind(this._getStringPath, this);
       var tree;
@@ -647,7 +655,7 @@ return buf.join("");
       tree = this._convertData(data);
       this.treeEl = $("#tree");
       this.widget = this.treeEl.jstree({
-        plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort", "cookies", "types", "hotkeys", "dnd"],
+        plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort", "cookies", "types", "hotkeys", "dnd", "search"],
         json_data: tree,
         types: {
           "default": {
@@ -680,6 +688,8 @@ return buf.join("");
           }
         }
       });
+      this.searchField = $("#tree-search-field");
+      this.searchButton = $("#tree-search");
       this.setListeners(callbacks);
     }
 
@@ -698,6 +708,8 @@ return buf.join("");
       $("#tree-remove").click(function() {
         return _this.treeEl.jstree("remove");
       });
+      this.searchButton.click(this._onSearchClicked);
+      this.searchField.keyup(this._onSearchChanged);
       this.widget.bind("create.jstree", function(e, data) {
         var nodeName, parent, path;
         nodeName = data.inst.get_text(data.rslt.obj);
@@ -822,6 +834,23 @@ return buf.join("");
         _results.push(this._convertNode(newNode, nodeToConvert[property], nodeIdPath));
       }
       return _results;
+    };
+
+    Tree.prototype._onSearchClicked = function(event) {
+      if (this.searchField.is(":hidden")) {
+        this.searchField.show();
+        this.searchField.focus();
+        return this.searchButton.addClass("button-active");
+      } else {
+        this.searchField.hide();
+        return this.searchButton.removeClass("button-active");
+      }
+    };
+
+    Tree.prototype._onSearchChanged = function(event) {
+      var searchString;
+      searchString = this.searchField.val();
+      return this.treeEl.jstree("search", searchString);
     };
 
     return Tree;
