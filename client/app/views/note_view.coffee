@@ -28,8 +28,7 @@ class exports.NoteWidget extends Backbone.View
         @el
 
     @setEditor: (changeCallback) ->
-
-        console.log "TODO: set editor"
-
         editor = $("textarea#note-full-content")
-        editor
+        editor.keyup (event) =>
+            changeCallback()
+

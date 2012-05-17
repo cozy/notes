@@ -374,7 +374,7 @@
     function HomeView() {
       this.onNoteDropped = __bind(this.onNoteDropped, this);
       this.onTreeLoaded = __bind(this.onTreeLoaded, this);
-      this.onNoteChange = __bind(this.onNoteChange, this);
+      this.onNoteChanged = __bind(this.onNoteChanged, this);
       this.selectFolder = __bind(this.selectFolder, this);
       this.deleteFolder = __bind(this.deleteFolder, this);
       this.renameFolder = __bind(this.renameFolder, this);
@@ -443,7 +443,7 @@
       return noteWidget.render();
     };
 
-    HomeView.prototype.onNoteChange = function(event) {
+    HomeView.prototype.onNoteChanged = function(event) {
       return this.currentNote.saveContent($("#note-full-content").val());
     };
 
@@ -482,6 +482,7 @@
       this.noteArea = $("#editor");
       this.noteFull = $("#note-full");
       this.noteFull.hide();
+      NoteWidget.setEditor(this.onNoteChanged);
       return $.get("tree/", function(data) {
         return _this.tree = new Tree(_this.$("#nav"), data, {
           onCreate: _this.createFolder,
@@ -544,10 +545,12 @@
     };
 
     NoteWidget.setEditor = function(changeCallback) {
-      var editor;
-      console.log("TODO: set editor");
+      var editor,
+        _this = this;
       editor = $("textarea#note-full-content");
-      return editor;
+      return editor.keyup(function(event) {
+        return changeCallback();
+      });
     };
 
     return NoteWidget;

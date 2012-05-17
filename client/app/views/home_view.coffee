@@ -56,7 +56,7 @@ class exports.HomeView extends Backbone.View
         noteWidget.render()
 
     # When note change, its content is saved.
-    onNoteChange: (event) =>
+    onNoteChanged: (event) =>
         @currentNote.saveContent $("#note-full-content").val()
 
     # When tree is loaded, callback given in paramter when fetchData
@@ -95,6 +95,9 @@ class exports.HomeView extends Backbone.View
         @noteArea = $("#editor")
         @noteFull = $("#note-full")
         @noteFull.hide()
+        
+        NoteWidget.setEditor @onNoteChanged
+
 
         $.get "tree/", (data) =>
             @tree = new Tree @.$("#nav"), data,

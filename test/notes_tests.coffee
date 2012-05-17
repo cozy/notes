@@ -65,7 +65,7 @@ describe "/notes", ->
             should.exist bodyTest
             bodyTest = JSON.parse bodyTest
             should.exist bodyTest.rows
-            bodyTest.rows.length.should.equal 1
+            bodyTest.rows.length.should.equal 2
             bodyTest.rows[0].title.should.equal "Test note 01"
             responseTest.statusCode.should.equal 200
 

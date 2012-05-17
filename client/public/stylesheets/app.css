@@ -3586,13 +3586,7 @@ ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 #tree a.jstree-search{color:#20ad20}
 .note-full{background:#fff;-moz-box-shadow:2px 2px 5px #644;-webkit-box-shadow:2px 2px 5px #644;-webkit-box-shadow:2px 2px 5px #644;-moz-box-shadow:2px 2px 5px #644;box-shadow:2px 2px 5px #644;border:1px solid #ebe5e2;padding:10px;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px}
 .note-full h2{padding:0;margin-bottom:20px}
-.cke_toolbox_collapser{display:none}
-#cke_bottom_note-content{display:none}
-.cke_resizer{display:none}
-#cke_note-content{padding:0}
-.cke_wrapper{padding:0}
-.cke_contents{margin:0}
-.cke_toolbar{display:none}
+#note-full-content{width:98%}
 .ui-layout-resizer-open:hover{background:#ffdd97}
 /* ==|== non-semantic helper classes ========================================
    Please define your styles before this section.
