@@ -18,11 +18,11 @@ describe "Quick Search", ->
             @browser.evaluate "$('#tree-search-field').hide()"
             done()
 
-    #after (done) ->
-    #    Note.destroyAll ->
-    #        Tree.destroyAll ->
-    #            app.close()
-    #            done()
+    after (done) ->
+        Note.destroyAll ->
+            Tree.destroyAll ->
+                app.close()
+                done()
 
 
     it "I expect that three notes are displayed inside tree", ->
