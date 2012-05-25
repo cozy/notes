@@ -1,43 +1,53 @@
-Browser = require("zombie").Browser
-client = require("../../test/client")
 should = require("should")
+Browser = require("./browser").Browser
+helpers = require("./helpers")
 
 app = require("../../server")
 
-
-createDefaultNotes = (callback) ->
-    client.post "tree/", { path: "/all", name: "Recipe" }, ->
-        client.post "tree/", { path: "/all", name: "Todo" }, ->
-            client.post "tree/", { path: "/all/recipe", name: "Dessert" }, ->
-                callback()
-
-init = (callback) ->
-    Note.destroyAll ->
-        Tree.destroyAll ->
-            createDefaultNotes ->
-                callback()
 
 
 describe "Quick Search", ->
 
     before (done) ->
         app.listen 8001
-        init done
+        helpers.init done
 
     before (done) ->
         @browser = new Browser()
         @browser.visit "http://localhost:8001/", =>
+            @browser.evaluate "$('#tree-search-field').hide()"
             done()
 
-    after (done) ->
-        app.close()
-        Note.destroyAll ->
-            Tree.destroyAll done
+    #after (done) ->
+    #    Note.destroyAll ->
+    #        Tree.destroyAll ->
+    #            app.close()
+    #            done()
 
-    it "I expect that three notes are displayed inside tree", (done) ->
+
+    it "I expect that three notes are displayed inside tree", ->
         should.exist @browser.query("#tree-node-all")
         should.exist @browser.query("#tree-node-all-recipe")
         should.exist @browser.query("#tree-node-all-recipe-dessert")
         should.exist @browser.query("#tree-node-all-todo")
-        done()
+
+    it "And that tree search is hidden", ->
+        @browser.isVisible("#tree-search-field").should.not.be.ok
+
+    it "When I click on search button", ->
+        @browser.click "#tree-search"
+
+    it "Then search field is visible", ->
+        @browser.isVisible("#tree-search-field").should.be.ok
+
+    it "When i fill search field with dessert", ->
+        @browser.fill "#tree-search-field", "dessert"
+        @browser.keyUp "#tree-search-field"
+
+    it "Then dessert note is highlighted and displayed", ->
+        @browser.isVisible("#tree-node-all-recipe-dessert").should.be.ok
+        @browser.hasClass("#tree-node-all-recipe-dessert a", "jstree-search")
+
+
+        
 
