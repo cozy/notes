@@ -16,3 +16,8 @@ exports.Browser.prototype.keyUp = (selector) ->
 exports.Browser.prototype.html = (selector) ->
         @evaluate "$('#{selector}').html()"
 
+exports.Browser.prototype.enterKeyUp = (selector) ->
+        @evaluate "e = jQuery.Event('keyup')"
+        @evaluate "e.which = $.ui.keyCode.ENTER"
+        @evaluate "$('.jstree-rename-input').trigger(e)"
+
