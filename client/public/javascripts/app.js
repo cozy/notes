@@ -399,7 +399,7 @@
     HomeView.prototype.renameFolder = function(path, newName, data) {
       var _this = this;
       if (newName != null) {
-        return Note.udpateNote({
+        return Note.updateNote({
           path: path,
           newName: newName
         }, function() {
