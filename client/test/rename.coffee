@@ -30,12 +30,9 @@ describe "Rename", ->
         @browser.click "#tree-rename"
         @browser.fill ".jstree-rename-input", "Todo renamed"
         @browser.enterKeyUp ".jstree-rename-input"
-        helpers.waits done, 100
+        helpers.waits done, 200
 
     it "Then Todo note new title and path are displayed", ->
         @browser.html("#note-full-breadcrump").should.equal "All / Todo renamed"
         @browser.text("#note-full-title").should.equal "Todo renamed"
-
-
-
 
