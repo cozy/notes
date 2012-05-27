@@ -728,7 +728,7 @@ return buf.join("");
         path = _this._getStringPath(parent, data.rslt.old_name);
         if (path === "all") {
           return $.jstree.rollback(data.rlbk);
-        } else {
+        } else if (data.rslt.old_name !== data.rslt.new_name) {
           return callbacks.onRename(path, data.rslt.new_name, data);
         }
       });
