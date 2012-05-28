@@ -5,7 +5,6 @@ helpers = require("./helpers")
 app = require("../../server")
 
 
-
 describe "Quick Search", ->
 
     before (done) ->
