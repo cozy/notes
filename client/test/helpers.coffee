@@ -1,6 +1,7 @@
 async = require("async")
-client = require("../../test/client")
+Client = require("../../common/test/client").Client
 
+client = new Client("http://localhost:8001/")
 
 exports.createDefaultNotes = (callback) ->
     client.post "tree/", { path: "/all", name: "Recipe" }, ->

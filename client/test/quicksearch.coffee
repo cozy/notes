@@ -1,5 +1,5 @@
 should = require("should")
-Browser = require("./browser").Browser
+Browser = require("../../common/test/browser").Browser
 helpers = require("./helpers")
 
 app = require("../../server")
