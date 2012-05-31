@@ -21,7 +21,7 @@ class exports.HomeView extends Backbone.View
     # Rename currently selected node.
     renameFolder: (path, newName, data) =>
         if newName?
-            Note.udpateNote
+            Note.updateNote
                 path: path
                 newName: newName
             , () =>

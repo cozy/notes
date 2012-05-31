@@ -399,7 +399,7 @@
     HomeView.prototype.renameFolder = function(path, newName, data) {
       var _this = this;
       if (newName != null) {
-        return Note.udpateNote({
+        return Note.updateNote({
           path: path,
           newName: newName
         }, function() {
@@ -616,7 +616,7 @@ buf.push('><div');
 buf.push(attrs({ 'id':('tree-create'), "class": ('button') }));
 buf.push('><i');
 buf.push(attrs({ "class": ('icon-plus') }));
-buf.push('></i><span>create</span></div><div');
+buf.push('></i><span>new</span></div><div');
 buf.push(attrs({ 'id':('tree-remove'), "class": ('button') }));
 buf.push('><i');
 buf.push(attrs({ "class": ('icon-remove') }));
@@ -714,21 +714,26 @@ return buf.join("");
       this.searchButton.click(this._onSearchClicked);
       this.searchField.keyup(this._onSearchChanged);
       this.widget.bind("create.jstree", function(e, data) {
-        var nodeName, parent, path;
+        var idPath, nodeName, parent, path;
         nodeName = data.inst.get_text(data.rslt.obj);
         parent = data.rslt.parent;
         path = _this._getPath(parent, nodeName);
         path.pop();
+        idPath = "tree-node" + (_this._getPath(parent, nodeName).join("-"));
+        data.rslt.obj.attr("id", idPath);
         return callbacks.onCreate(path.join("/"), data.rslt.name, data);
       });
       this.widget.bind("rename.jstree", function(e, data) {
-        var nodeName, parent, path;
+        var idPath, nodeName, parent, path;
         nodeName = data.inst.get_text(data.rslt.obj);
         parent = data.inst._get_parent(data.rslt.parent);
         path = _this._getStringPath(parent, data.rslt.old_name);
         if (path === "all") {
           return $.jstree.rollback(data.rlbk);
-        } else {
+        } else if (data.rslt.old_name !== data.rslt.new_name) {
+          idPath = "tree-node" + (_this._getPath(parent, nodeName).join("-"));
+          data.rslt.obj.attr("id", idPath);
+          _this.rebuildIds(data, data.rslt.obj, idPath);
           return callbacks.onRename(path, data.rslt.new_name, data);
         }
       });
@@ -769,6 +774,19 @@ return buf.join("");
       return this.widget.bind("loaded.jstree", function(e, data) {
         return callbacks.onLoaded();
       });
+    };
+
+    Tree.prototype.rebuildIds = function(data, obj, idPath) {
+      var child, newIdPath, _i, _len, _ref, _results;
+      _ref = data.inst._get_children(obj);
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        child = _ref[_i];
+        newIdPath = idPath + "-" + slugify($(child).children("a:eq(0)").text());
+        $(child).attr("id", newIdPath);
+        _results.push(this.rebuildIds(data, child, newIdPath));
+      }
+      return _results;
     };
 
     Tree.prototype.selectNode = function(path) {

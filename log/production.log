@@ -1,108 +1,19 @@
 
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m1[22m
+[33mThu May 24 2012 21:10:19 GMT+0200 (CEST)[39m [1m1[22m
+[1mGET[22m [90m/[39m controller: [32mnotes[39m action: [34mindex[39m
+Send to client: 403
+
+[33mThu May 24 2012 21:10:19 GMT+0200 (CEST)[39m [1m2[22m
 [1mPOST[22m [90m/tree/[39m controller: [32mtree[39m action: [34mcreate[39m
 [1mBody:  [22m{"path":"/all","name":"Recipe"}
 Send to client: 403
 
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m2[22m
+[33mThu May 24 2012 21:10:19 GMT+0200 (CEST)[39m [1m3[22m
+[1mPOST[22m [90m/tree/[39m controller: [32mtree[39m action: [34mcreate[39m
+[1mBody:  [22m{"path":"/all","name":"Todo"}
+Send to client: 403
+
+[33mThu May 24 2012 21:10:19 GMT+0200 (CEST)[39m [1m4[22m
 [1mPOST[22m [90m/tree/[39m controller: [32mtree[39m action: [34mcreate[39m
 [1mBody:  [22m{"path":"/all/recipe","name":"Dessert"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m3[22m
-[1mPOST[22m [90m/tree/[39m controller: [32mtree[39m action: [34mcreate[39m
-[1mBody:  [22m{"path":"/all/recipe/dessert","name":"Brownie"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m4[22m
-[1mGET[22m [90m/tree/[39m controller: [32mtree[39m action: [34mtree[39m
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m5[22m
-[1mPUT[22m [90m/tree/[39m controller: [32mtree[39m action: [34mupdate[39m
-[1mBody:  [22m{"path":"/all/recipe","newName":"Main Dishes"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m6[22m
-[1mGET[22m [90m/tree/[39m controller: [32mtree[39m action: [34mtree[39m
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m7[22m
-[1mPOST[22m [90m/notes/path[39m controller: [32mnotes[39m action: [34mallForPath[39m
-[1mBody:  [22m{"path":"/all/recipe/dessert"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m8[22m
-[1mPOST[22m [90m/notes/path[39m controller: [32mnotes[39m action: [34mallForPath[39m
-[1mBody:  [22m{"path":"/all/main-dishes"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m9[22m
-[1mPUT[22m [90m/tree/path[39m controller: [32mtree[39m action: [34mdestroy[39m
-[1mBody:  [22m{"path":"/all/main-dishes/dessert"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m10[22m
-[1mGET[22m [90m/tree/[39m controller: [32mtree[39m action: [34mtree[39m
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m11[22m
-[1mPOST[22m [90m/notes/path[39m controller: [32mnotes[39m action: [34mallForPath[39m
-[1mBody:  [22m{"path":"/all/main-dishes/dessert"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m12[22m
-[1mPOST[22m [90m/tree/[39m controller: [32mtree[39m action: [34mcreate[39m
-[1mBody:  [22m{"path":"/all","name":"Recipes"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m13[22m
-[1mPOST[22m [90m/tree/path/move[39m controller: [32mtree[39m action: [34mmove[39m
-[1mBody:  [22m{"path":"/all/main-dishes","dest":"/all/recipes"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m14[22m
-[1mGET[22m [90m/tree/[39m controller: [32mtree[39m action: [34mtree[39m
-Send to client: 403
-
-[33mMon May 14 2012 22:20:54 GMT+0200 (CEST)[39m [1m15[22m
-[1mPOST[22m [90m/notes/path[39m controller: [32mnotes[39m action: [34mallForPath[39m
-[1mBody:  [22m{"path":"/all/main-dishes"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:55 GMT+0200 (CEST)[39m [1m16[22m
-[1mPOST[22m [90m/notes/path[39m controller: [32mnotes[39m action: [34mallForPath[39m
-[1mBody:  [22m{"path":"/all/recipes"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:55 GMT+0200 (CEST)[39m [1m17[22m
-[1mPOST[22m [90m/notes/[39m controller: [32mnotes[39m action: [34mcreate[39m
-[1mBody:  [22m{"title":"Test note 01","content":"Test content 01","path":"/all/test-note-01"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:55 GMT+0200 (CEST)[39m [1m18[22m
-[1mGET[22m [90m/notes/[39m controller: [32mnotes[39m action: [34mall[39m
-Send to client: 403
-
-[33mMon May 14 2012 22:20:55 GMT+0200 (CEST)[39m [1m19[22m
-[1mPOST[22m [90m/notes/path[39m controller: [32mnotes[39m action: [34mallForPath[39m
-[1mBody:  [22m{"path":"/all/test-note-01"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:55 GMT+0200 (CEST)[39m [1m20[22m
-[1mPUT[22m [90m/notes/undefined[39m controller: [32mnotes[39m action: [34mupdate[39m
-[1mBody:  [22m{"title":"Test note 01 update"}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:55 GMT+0200 (CEST)[39m [1m21[22m
-[1mGET[22m [90m/notes/undefined[39m controller: [32mnotes[39m action: [34mshow[39m
-Send to client: 403
-
-[33mMon May 14 2012 22:20:55 GMT+0200 (CEST)[39m [1m22[22m
-[1mDELETE[22m [90m/notes/undefined[39m controller: [32mnotes[39m action: [34mdestroy[39m
-[1mBody:  [22m{}
-Send to client: 403
-
-[33mMon May 14 2012 22:20:55 GMT+0200 (CEST)[39m [1m23[22m
-[1mGET[22m [90m/notes/undefined[39m controller: [32mnotes[39m action: [34mshow[39m
 Send to client: 403

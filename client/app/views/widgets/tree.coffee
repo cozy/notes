@@ -65,11 +65,12 @@ class exports.Tree
 
         # Tree
         @widget.bind "create.jstree", (e, data) =>
-
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
             path.pop()
+            idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
+            data.rslt.obj.attr "id", idPath
             callbacks.onCreate path.join("/"), data.rslt.name, data
 
         @widget.bind "rename.jstree", (e, data) =>
@@ -78,7 +79,10 @@ class exports.Tree
             path = @_getStringPath parent, data.rslt.old_name
             if path == "all"
                 $.jstree.rollback data.rlbk
-            else
+            else if data.rslt.old_name != data.rslt.new_name
+                idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
+                data.rslt.obj.attr "id", idPath
+                @rebuildIds data, data.rslt.obj, idPath
                 callbacks.onRename path, data.rslt.new_name, data
 
         @widget.bind "remove.jstree", (e, data) =>
@@ -112,6 +116,14 @@ class exports.Tree
 
         @widget.bind "loaded.jstree", (e, data) =>
             callbacks.onLoaded()
+
+    # Rebuild ids of obj children. 
+    rebuildIds: (data, obj, idPath) ->
+        for child in data.inst._get_children obj
+            newIdPath = idPath + "-" + slugify($(child).children("a:eq(0)").text())
+            $(child).attr "id", newIdPath
+            @rebuildIds data, child, newIdPath
+
 
     # Select node corresponding to given path
     selectNode: (path) ->
@@ -180,6 +192,8 @@ class exports.Tree
             @_convertNode newNode, nodeToConvert[property], nodeIdPath
 
 
+    # When search button is clicked, quick search input is displayed or hidden
+    # (reverse state). If quick search is displayed, the focus goes on it.
     _onSearchClicked: (event) =>
         if @searchField.is(":hidden")
             @searchField.show()
@@ -189,6 +203,8 @@ class exports.Tree
             @searchField.hide()
             @searchButton.removeClass("button-active")
 
+    # When quick search changes, the jstree quick search function is run with
+    # input val as argument.
     _onSearchChanged: (event) =>
         searchString = @searchField.val()
         @treeEl.jstree("search", searchString)

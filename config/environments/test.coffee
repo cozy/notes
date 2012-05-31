@@ -4,4 +4,3 @@ app.configure 'test', ->
     app.enable 'view cache'
     app.enable 'model cache'
     app.enable 'eval cache'
-
