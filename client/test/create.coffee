@@ -35,7 +35,7 @@ describe "Create", ->
         @browser.evaluate "$('.jstree-rename-input').trigger('blur')"
         helpers.waits done, 200
 
-    it "Then Todo note new title and path are displayed", ->
+    it "Then new note title and path are displayed", ->
         @browser.html("#note-full-breadcrump").should.equal "All / Todo / Cozy"
         @browser.text("#note-full-title").should.equal "Cozy"
         should.exist @browser.query("#tree-node-all-todo-cozy")
