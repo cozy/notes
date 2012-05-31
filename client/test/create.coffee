@@ -32,10 +32,11 @@ describe "Create", ->
 
     it "And i fill create input", (done) ->
         @browser.fill ".jstree-rename-input", "Cozy"
-        @browser.enterKeyUp ".jstree-rename-input"
+        @browser.evaluate "$('.jstree-rename-input').trigger('blur')"
         helpers.waits done, 200
 
     it "Then Todo note new title and path are displayed", ->
         @browser.html("#note-full-breadcrump").should.equal "All / Todo / Cozy"
         @browser.text("#note-full-title").should.equal "Cozy"
         should.exist @browser.query("#tree-node-all-todo-cozy")
+        @browser.location.hash.should.equal "#note/all/todo/cozy"
