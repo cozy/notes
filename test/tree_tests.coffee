@@ -1,8 +1,9 @@
 should = require("should")
-client = require("./client")
+Client = require("../common/test/client").Client
 app = require("../server")
 
 DataTree = require("../lib/tree").Tree
+client = new Client("http://localhost:8001/")
 
 responseTest = null
 bodyTest = null

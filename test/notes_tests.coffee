@@ -1,10 +1,10 @@
 should = require('should')
 async = require('async')
-client = require('./client')
+Client = require('../common/test/client').Client
 app = require('../server')
 
 
-
+client = new Client("http://localhost:8001/")
 
 ## Helpers
 
