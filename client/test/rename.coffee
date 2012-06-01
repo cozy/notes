@@ -28,7 +28,6 @@ describe "Rename", ->
 
     it "And I click on rename button", (done) ->
         @browser.click "#tree-rename"
-        console.log @browser.evaluate("$('.jstree-rename-input')")
         @browser.fill ".jstree-rename-input", "Todo renamed"
         @browser.evaluate "$('.jstree-rename-input').trigger('blur')"
         helpers.waits done, 600
