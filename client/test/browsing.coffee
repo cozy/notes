@@ -27,7 +27,7 @@ describe "Browsing", ->
         helpers.waits(done, 1000)
 
     it "Then Recipe note title and path are displayed", ->
-        @browser.text("#note-full-breadcrump").should.equal \
+        @browser.html("#note-full-breadcrump").should.equal \
             "All / Recipe / Dessert"
         @browser.text("#note-full-title").should.equal "Dessert"
 
