@@ -16,12 +16,6 @@ describe "Browsing", ->
         @browser.visit "http://localhost:8001/", =>
             done()
 
-    after (done) ->
-        Note.destroyAll ->
-            Tree.destroyAll ->
-                app.close()
-                done()
-
     it "When I click on recipe note", (done) ->
         @browser.click "#tree-node-all-recipe-dessert a"
         helpers.waits(done, 100)
