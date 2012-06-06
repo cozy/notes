@@ -9,12 +9,13 @@ describe "Browsing", ->
 
     before (done) ->
         app.listen 8001
-        helpers.init done
+        helpers.init ->
+            done()
 
     before (done) ->
         @browser = new Browser()
         @browser.visit "http://localhost:8001/", =>
-            done()
+            helpers.waits done, 500
 
     after (done) ->
         Note.destroyAll ->
@@ -24,7 +25,7 @@ describe "Browsing", ->
 
     it "When I click on recipe note", (done) ->
         @browser.click "#tree-node-all-recipe-dessert a"
-        helpers.waits(done, 1000)
+        helpers.waits done, 500
 
     it "Then Recipe note title and path are displayed", ->
         @browser.html("#note-full-breadcrump").should.equal \
@@ -33,13 +34,9 @@ describe "Browsing", ->
 
     it "When I click on todo note", (done) ->
         @browser.click "#tree-node-all-todo a"
-        helpers.waits(done, 1000)
+        helpers.waits done, 500
 
     it "Then Todo note title and path are displayed", ->
         @browser.html("#note-full-breadcrump").should.equal "All / Todo"
         @browser.text("#note-full-title").should.equal "Todo"
-
-
-
-
 
