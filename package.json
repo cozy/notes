@@ -21,7 +21,7 @@
   , "should":           ">= 0"
   , "sinon":            ">= 0"
   , "mocha":            ">= 0"
-  , "zombie":            ">= 0"
+  , "zombie":            "= 1.1.4"
   }
 , "scripts":
   { "test": "nodeunit test/*/*"
