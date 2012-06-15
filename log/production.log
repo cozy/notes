@@ -1,19 +1,4 @@
 
-[33mThu May 24 2012 21:10:19 GMT+0200 (CEST)[39m [1m1[22m
+[33mFri Jun 01 2012 20:00:03 GMT+0200 (CEST)[39m [1m1[22m
 [1mGET[22m [90m/[39m controller: [32mnotes[39m action: [34mindex[39m
-Send to client: 403
-
-[33mThu May 24 2012 21:10:19 GMT+0200 (CEST)[39m [1m2[22m
-[1mPOST[22m [90m/tree/[39m controller: [32mtree[39m action: [34mcreate[39m
-[1mBody:  [22m{"path":"/all","name":"Recipe"}
-Send to client: 403
-
-[33mThu May 24 2012 21:10:19 GMT+0200 (CEST)[39m [1m3[22m
-[1mPOST[22m [90m/tree/[39m controller: [32mtree[39m action: [34mcreate[39m
-[1mBody:  [22m{"path":"/all","name":"Todo"}
-Send to client: 403
-
-[33mThu May 24 2012 21:10:19 GMT+0200 (CEST)[39m [1m4[22m
-[1mPOST[22m [90m/tree/[39m controller: [32mtree[39m action: [34mcreate[39m
-[1mBody:  [22m{"path":"/all/recipe","name":"Dessert"}
 Send to client: 403
