@@ -34,4 +34,4 @@ describe "Remove", ->
         should.not.exist @browser.query("#tree-node-all-todo")
         
     it "Then note widget is hidden", ->
-        @browser.isVisible("#note-full").should.be.ok
+        @browser.isVisible("#note-full").should.not.be.ok
