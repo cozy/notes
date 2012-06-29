@@ -374,7 +374,6 @@
     function HomeView() {
       this.onNoteDropped = __bind(this.onNoteDropped, this);
       this.onTreeLoaded = __bind(this.onTreeLoaded, this);
-      this.onNoteChanged = __bind(this.onNoteChanged, this);
       this.selectFolder = __bind(this.selectFolder, this);
       this.deleteFolder = __bind(this.deleteFolder, this);
       this.renameFolder = __bind(this.renameFolder, this);
@@ -443,10 +442,6 @@
       return noteWidget.render();
     };
 
-    HomeView.prototype.onNoteChanged = function(event) {
-      return this.currentNote.saveContent($("#note-full-content").val());
-    };
-
     HomeView.prototype.onTreeLoaded = function() {
       if (this.treeCreationCallback != null) return this.treeCreationCallback();
     };
@@ -482,7 +477,6 @@
       this.noteArea = $("#editor");
       this.noteFull = $("#note-full");
       this.noteFull.hide();
-      NoteWidget.setEditor(this.onNoteChanged);
       return $.get("tree/", function(data) {
         return _this.tree = new Tree(_this.$("#nav"), data, {
           onCreate: _this.createFolder,
@@ -507,6 +501,7 @@
   "views/note_view": function(exports, require, module) {
     (function() {
   var template,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -525,10 +520,15 @@
 
     function NoteWidget(model) {
       this.model = model;
+      this.onNoteChanged = __bind(this.onNoteChanged, this);
       NoteWidget.__super__.constructor.call(this);
       this.id = this.model.slug;
       this.model.view = this;
     }
+
+    NoteWidget.prototype.onNoteChanged = function(event) {
+      return this.model.saveContent($("#note-full-content").val());
+    };
 
     NoteWidget.prototype.remove = function() {
       return $(this.el).remove();
@@ -538,19 +538,14 @@
     */
 
     NoteWidget.prototype.render = function() {
+      var editor;
       $("#note-full-breadcrump").html(this.model.humanPath.split(",").join(" / "));
       $("#note-full-title").html(this.model.title);
       $("#note-full-content").val(this.model.content);
-      return this.el;
-    };
-
-    NoteWidget.setEditor = function(changeCallback) {
-      var editor,
-        _this = this;
       editor = $("textarea#note-full-content");
-      return editor.keyup(function(event) {
-        return changeCallback();
-      });
+      editor.unbind("keyup");
+      editor.keyup(this.onNoteChanged);
+      return this.el;
     };
 
     return NoteWidget;

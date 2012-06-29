@@ -14,9 +14,12 @@ class exports.NoteWidget extends Backbone.View
         @id = @model.slug
         @model.view = @
 
+    # When note change, its content is saved.
+    onNoteChanged: (event) =>
+        @model.saveContent $("#note-full-content").val()
+
     remove: ->
         $(@el).remove()
-
 
     ### configuration ###
 
@@ -25,10 +28,9 @@ class exports.NoteWidget extends Backbone.View
         $("#note-full-title").html @model.title
         $("#note-full-content").val @model.content
 
-        @el
+        editor = @.$("textarea#note-full-content")
+        editor.unbind("keyup")
+        editor.keyup @onNoteChanged
 
-    @setEditor: (changeCallback) ->
-        editor = $("textarea#note-full-content")
-        editor.keyup (event) =>
-            changeCallback()
+        @el
 
