@@ -36,5 +36,5 @@ Tree.getOrCreate = (callback) ->
         else if trees.length == 0
             Tree.create { struct: new DataTree().toJson() }, callback
         else
-            callback(null, trees[0])
+            callback null, trees[0]
 

@@ -29,12 +29,7 @@ before 'load note', ->
 
 # Entry point, load first html page.
 action 'index', ->
-    render
-        title: "Cozy Notes", test: false
-
-action 'index-test', ->
-    render "index",
-        title: "Cozy Notes", test: true
+    render title: "Cozy Notes"
 
 # Return all notes
 action 'all', ->
