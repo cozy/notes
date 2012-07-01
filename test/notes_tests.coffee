@@ -31,7 +31,7 @@ handleResponse = (error, response, body, done) ->
 describe "/notes", ->
 
     before (done) ->
-        app.listen(8001)
+        app.listen(8888)
         Note.destroyAll ->
             Tree.destroyAll done
 
