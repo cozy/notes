@@ -1,5 +1,7 @@
-load 'application'
+DataTree = require('../../lib/tree').Tree
+helpers = require('../../client/app/helpers')
 
+load 'application'
 
 # Helpers
 
@@ -24,6 +26,20 @@ before 'load note', ->
             next()
 , only: ['update', 'destroy', 'show']
 
+# Before each note list modification current tree is loaded. If it does not 
+# exist it is created.
+before 'load tree', ->
+    createTreeCb = (err, tree) =>
+        if err
+            console.log err
+            send error: 'An error occured while loading tree', 500
+        else
+            @tree = tree
+            next()
+
+    Tree.getOrCreate createTreeCb
+, only: ['update', 'destroy', 'create']
+
 
 # Actions
 
@@ -45,12 +61,31 @@ action 'allForPath', ->
 # Create a new note from data given in body.
 action 'create', ->
     note = new Note body
+    dataTree = new DataTree JSON.parse(@tree.struct)
+    
+    @name = note.title
+    @path = note.path.split("/")
+    @path.pop()
+    @path = @path.join("/")
+
+    note.humanPath = dataTree.getHumanPath(@path)
+    note.humanPath.push(@name)
+
+    updateTree = (note) =>
+        dataTree.addNode @path, @name, note.id
+
+        @tree.updateAttributes struct: dataTree.toJson(), (err) =>
+            if err
+                console.log err
+                send error: "An error occured while node was created", 500
+            else
+                send note, 201
+
     Note.create note, (err, note) =>
         if err
-            console.log err
             send error: 'Note can not be created'
         else
-            send note, 201
+            updateTree note
 
 # Return a note 
 action 'show', ->
@@ -68,6 +103,36 @@ action 'update', ->
 
 # Remove given note from db.
 action 'destroy', ->
+    
+    data = new DataTree JSON.parse(@tree.struct)
+    data.deleteNode @path
+    tree = new Tree
+        struct: data.toJson()
+
+    updateTree = ->
+        @tree.updateAttributes tree, (err) =>
+            if err
+                console.log err
+                send error: "An error occured while node was deleted", 500
+            else
+                send success: 'Note succesfuly deleted'
+
+
+    destroyNotes = =>
+        Note.destroyForPath @path, (err) ->
+            if err
+                console.log err
+                send error: "An error occured while node was deleted", 500
+            else
+                send success: "Node succesfully deleted", 200
+
+    @tree.updateAttributes tree, (err) =>
+        if err
+            console.log err
+            send error: "An error occured while node was deleted", 500
+        else
+            destroyNotes()
+
     @note.destroy (err) ->
         if err
             console.log err
