@@ -8,7 +8,3 @@ exports.routes = (map) ->
     map.del '/notes/:id', 'notes#destroy'
 
     map.get '/tree', 'tree#tree'
-    map.post '/tree', 'tree#create'
-    map.put '/tree', 'tree#update'
-    map.put '/tree/path', 'tree#destroy'
-    map.post '/tree/path/move', 'tree#move'

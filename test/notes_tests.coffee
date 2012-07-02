@@ -101,7 +101,7 @@ describe "/notes", ->
                 done()
 
         it "And I move recipe to travel", (done) ->
-            client.put "notes/#{@recipeNote.id}", path: "/all/travel", done
+            client.put "notes/#{@recipeNote.id}", path: "/all/travel/recipes", done
 
         it "Then it should have move recipe note and its children", (done) ->
             client.get "notes/", (error, response, body) =>

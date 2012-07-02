@@ -103,9 +103,8 @@ action 'update', ->
                 send success: 'Note updated'
 
     if body.title != @note.title and body.title?
-        
         dataTree = new DataTree JSON.parse(@tree.struct)
- 
+
         # Build new path from current path and new name
         @newName = body.title
         nodes = @note.path.split("/")
@@ -128,7 +127,9 @@ action 'update', ->
     else if body.path? and body.path != @note.path
 
         @dataTree = new DataTree JSON.parse(@tree.struct)
-        @dest = body.path
+        @dest = body.path.split("/")
+        @dest.pop()
+        @dest = @dest.join("/")
         @dataTree.moveNode @note.path, @dest
         @humanDest = @dataTree.getHumanPath @dest
 

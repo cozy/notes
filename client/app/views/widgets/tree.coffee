@@ -112,7 +112,8 @@ class exports.Tree
             if newPath.length == 0
                 $.jstree.rollback data.rlbk
             else
-                callbacks.onDrop newPath.join("/"), oldPath.join("/"), data
+                callbacks.onDrop newPath.join("/"), oldPath.join("/"), \
+                                 nodeName, data
 
         @widget.bind "loaded.jstree", (e, data) =>
             callbacks.onLoaded()
