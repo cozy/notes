@@ -104,40 +104,20 @@ action 'update', ->
 # Remove given note from db.
 action 'destroy', ->
     
-    data = new DataTree JSON.parse(@tree.struct)
-    data.deleteNode @path
-    tree = new Tree
-        struct: data.toJson()
+    @dataTree = new DataTree JSON.parse(@tree.struct)
+    @dataTree.deleteNode @note.path
 
-    updateTree = ->
-        @tree.updateAttributes tree, (err) =>
+    updateTree = =>
+        @tree.updateAttributes struct: @dataTree.toJson(), (err) =>
             if err
                 console.log err
                 send error: "An error occured while node was deleted", 500
             else
                 send success: 'Note succesfuly deleted'
 
-
-    destroyNotes = =>
-        Note.destroyForPath @path, (err) ->
-            if err
-                console.log err
-                send error: "An error occured while node was deleted", 500
-            else
-                send success: "Node succesfully deleted", 200
-
-    @tree.updateAttributes tree, (err) =>
+    Note.destroyForPath @note.path, (err) ->
         if err
             console.log err
             send error: "An error occured while node was deleted", 500
         else
-            destroyNotes()
-
-    @note.destroy (err) ->
-        if err
-            console.log err
-            send error: 'Can not destroy note', 500
-        else
-            send success: 'Note succesfuly deleted'
-
-
+            updateTree()
