@@ -94,12 +94,61 @@ action 'show', ->
 # Update attributes with data given in body. If no data is provided for an 
 # attribute it is not updated.
 action 'update', ->
-    @note.updateAttributes body, (err) =>
-        if err
-            console.log err
-            send error: 'Note can not be updated', 400
-        else
-            send success: 'Note updated'
+    updateNote = =>
+        @note.updateAttributes body, (err) =>
+            if err
+                console.log err
+                send error: 'Note can not be updated', 400
+            else
+                send success: 'Note updated'
+
+    if body.title != @note.title and body.title?
+        
+        dataTree = new DataTree JSON.parse(@tree.struct)
+ 
+        # Build new path from current path and new name
+        @newName = body.title
+        nodes = @note.path.split("/")
+        nodes.pop()
+        nodes.push helpers.slugify(@newName)
+        @newPath = nodes.join("/")
+         
+        # Update tree
+        dataTree.updateNode @note.path, @newName
+
+        # Save Tree 
+        @tree.updateAttributes struct: dataTree.toJson(), (err) =>
+            if err
+                console.log err
+                send error: "An error occured while node was created", 500
+            else
+                # Update note children 
+                Note.updatePath @note.path, @newPath, @newName, updateNote
+
+    else if body.path? and body.path != @note.path
+
+        @dataTree = new DataTree JSON.parse(@tree.struct)
+        @dest = body.path
+        @dataTree.moveNode @note.path, @dest
+        @humanDest = @dataTree.getHumanPath @dest
+
+        callback = (err) ->
+             if err
+                 console.log err
+                 send error: "An error occured while node was moved", 500
+             else
+                 send success: "Node succesfully moved", 200
+
+        @tree.updateAttributes struct: @dataTree.toJson(), (err) =>
+            if err
+                console.log err
+                send error: "An error occured while node was moved", 500
+            else
+                Note.movePath @note.path, @dest, @humanDest, callback
+
+    else
+        updateNote()
+
 
 # Remove given note from db.
 action 'destroy', ->
