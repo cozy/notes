@@ -43,7 +43,7 @@ describe "/notes", ->
             ], ->
                 done()
 
-        it "Then it should have 2 notes created", (done) ->
+        it "Then it should have 3 notes created", (done) ->
             client.get "notes/", (error, response, body) =>
                 response.statusCode.should.equal 200
                 notes = JSON.parse(body)
@@ -51,14 +51,35 @@ describe "/notes", ->
                 notes.rows[0].title.should.equal "Recipe"
                 notes.rows[0].path.should.equal "/all/recipe"
                 notes.rows[0].humanPath.should.equal "All,Recipe"
-
+                @recipeNote = notes.rows[0]
                 done()
 
-        it "Then it should have updated tree structure properly", (done) ->
+        it "And it should have updated tree structure properly", (done) ->
             client.get "tree/", (error, response, body) =>
                 tree = new DataTree JSON.parse(body)
                 should.exist tree.all.recipe.dessert
                 should.exist tree.all.recipe
+                should.exist tree.all.todo
+                done()
+
+
+    describe "DELETE /notes/:id Deletes a note and update tree.", ->
+        
+        it "When I delete Recipe note", (done) ->
+            client.delete "notes/#{@recipeNote.id}", done
+
+        it "Then it should have delete recipe note and its children", (done) ->
+            client.get "notes/", (error, response, body) =>
+                response.statusCode.should.equal 200
+                notes = JSON.parse(body)
+                notes.rows.length.should.equal 1
+                notes.rows[0].title.should.equal "Todo"
+                done()
+
+        it "And it should have updated tree structure properly", (done) ->
+            client.get "tree/", (error, response, body) =>
+                tree = new DataTree JSON.parse(body)
+                should.not.exist tree.all.recipe
                 should.exist tree.all.todo
                 done()
 
