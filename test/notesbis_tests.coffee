@@ -33,13 +33,13 @@ describe "/notes", ->
         #helpers.cleanDb done
         done()
 
-    describe "POST /notes Creates a bunch of notes", ->
+    describe "POST /notes Creates a note and update tree.", ->
 
         it "When I create several notes", (done) ->
             async.series [
-                createNoteFunction "Recipe", "/all/recipe", "Test content 01"
-                createNoteFunction "Dessert", "/all/recipe/dessert", \
-                    "Test content 02"
+                createNoteFunction "Recipe", "/all/recipe", "01"
+                createNoteFunction "Dessert", "/all/recipe/dessert", "02"
+                createNoteFunction "Todo", "/all/todo", "03"
             ], ->
                 done()
 
@@ -47,9 +47,11 @@ describe "/notes", ->
             client.get "notes/", (error, response, body) =>
                 response.statusCode.should.equal 200
                 notes = JSON.parse(body)
-                console.log notes
-                notes.rows.length.should.equal 2
-                body.rows[0].title.should.equal "Recipe"
+                notes.rows.length.should.equal 3
+                notes.rows[0].title.should.equal "Recipe"
+                notes.rows[0].path.should.equal "/all/recipe"
+                notes.rows[0].humanPath.should.equal "All,Recipe"
+
                 done()
 
         it "Then it should have updated tree structure properly", (done) ->
@@ -57,4 +59,7 @@ describe "/notes", ->
                 tree = new DataTree JSON.parse(body)
                 should.exist tree.all.recipe.dessert
                 should.exist tree.all.recipe
+                should.exist tree.all.todo
                 done()
+
+
