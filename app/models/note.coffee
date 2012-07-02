@@ -57,7 +57,6 @@ Note.updatePath = (path, newPath, newName, callback) ->
             humanNames = note.humanPath.split(",")
             humanNames[nodeIndex] = newName
             note.humanPath = humanNames
-            note.title = newName
             note.save done
 
 # When a node is moved, all notes that are linked to this node are

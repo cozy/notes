@@ -15,16 +15,7 @@ html
       .pane.ui-layout-center
       .pane.ui-layout-west
         #tree
-        if test    
-            #mocha
     
   script
     require('initialize');
 
-  if test
-    script
-      $(function(){
-        mocha
-          .globals(['foo', 'bar']) // acceptable globals
-          .run()
-      })

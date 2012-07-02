@@ -1,6 +1,7 @@
 Tree = require("./widgets/tree").Tree
 NoteWidget = require("./note_view").NoteWidget
 Note = require("../models/note").Note
+helpers = require "../helpers"
 
 # Main view that manages interaction between toolbar, navigation and notes
 class exports.HomeView extends Backbone.View
@@ -10,9 +11,10 @@ class exports.HomeView extends Backbone.View
 
     # Create a new folder inside currently selected node.
     createFolder: (path, newName, data) =>
+        path = path + "/" + helpers.slugify(newName)
         Note.createNote
             path: path
-            name: newName
+            title: newName
             , (note) =>
                 data.rslt.obj.data("id", note.id)
                 data.inst.deselect_all()
@@ -21,9 +23,8 @@ class exports.HomeView extends Backbone.View
     # Rename currently selected node.
     renameFolder: (path, newName, data) =>
         if newName?
-            Note.updateNote
-                path: path
-                newName: newName
+            Note.updateNote data.rslt.obj.data("id"),
+                title: newName
             , () =>
                 data.inst.deselect_all()
                 data.inst.select_node data.rslt.obj
@@ -31,7 +32,7 @@ class exports.HomeView extends Backbone.View
     # Delete currently selected node.
     deleteFolder: (path) =>
         @noteFull.hide()
-        Note.deleteNote path: path
+        @currentNote.destroy()
 
     # When a note is selected, the note widget is displayed and fill with
     # note data.
@@ -51,13 +52,10 @@ class exports.HomeView extends Backbone.View
 
     # Fill note widget with note data.
     renderNote: (note) ->
+        note.url = "notes/#{note.id}"
         @currentNote = note
         noteWidget = new NoteWidget @currentNote
         noteWidget.render()
-
-    # When note change, its content is saved.
-    onNoteChanged: (event) =>
-        @currentNote.saveContent $("#note-full-content").val()
 
     # When tree is loaded, callback given in paramter when fetchData
     # function was called is run.
@@ -66,11 +64,10 @@ class exports.HomeView extends Backbone.View
 
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
-    onNoteDropped: (newPath, oldPath, data) =>
-        oldPath = "/" + oldPath if oldPath.charAt(0) != "/"
-        Note.moveNote
-            path: oldPath
-            dest: newPath
+    onNoteDropped: (newPath, oldPath, noteTitle, data) =>
+        newPath = newPath + "/" + helpers.slugify(noteTitle)
+        Note.updateNote data.rslt.o.data("id"),
+            path: newPath
             , () =>
                 data.inst.deselect_all()
                 data.inst.select_node data.rslt.o
@@ -96,9 +93,6 @@ class exports.HomeView extends Backbone.View
         @noteFull = $("#note-full")
         @noteFull.hide()
         
-        NoteWidget.setEditor @onNoteChanged
-
-
         $.get "tree/", (data) =>
             @tree = new Tree @.$("#nav"), data,
                 onCreate: @createFolder
