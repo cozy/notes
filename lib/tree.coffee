@@ -62,7 +62,7 @@ class exports.Tree
 
         return humanPath
 
-     # If exitsts, deletes node located at given path, else do nothing
+     # If exists, deletes node located at given path, else do nothing
     deleteNode: (path) ->
         nodes = @_getCleanPath path
 

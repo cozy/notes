@@ -21,7 +21,22 @@ class exports.NoteWidget extends Backbone.View
     ### configuration ###
 
     render: ->
-        $("#note-full-breadcrump").html @model.humanPath.split(",").join(" / ")
+    #breadcrumb will contain the path of the selected note in a link format (<a>)
+    #the code below generates the breadcrumb corresponding to the current note path
+        i = 0
+        breadcrumb = ""
+        linkToThePath = []
+        while i < @model.humanPath.split(",").length
+            linkToThePath[i] = @model.humanPath.split(",")[0..i].join("/")
+            path = "/#note/#{linkToThePath[i]}".toLowerCase()
+            path = path.replace(/\s+/g, "-")
+            linkToThePath[i] = "<a href='#{path}'> #{@model.humanPath.split(",")[i]}</a>"
+            if i is 0
+                breadcrumb += "#{linkToThePath[i]}"
+            else
+                breadcrumb += " > #{linkToThePath[i]}"
+            i++
+        $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
         $("#note-full-content").val @model.content
 

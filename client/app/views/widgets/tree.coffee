@@ -3,10 +3,21 @@ slugify = require("helpers").slugify
 # Widget to easily manipulate data tree (navigation for cozy apps)
 class exports.Tree
 
+
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
     constructor: (navEl, data, callbacks) ->
         @setToolbar navEl
+
+
+        #Autocomplete
+        @autocompInput = $("#tree-search-field")
+        @widgetAutocomplete = @autocompInput.autocomplete
+            source: []
+            #    "c++", "java", "php", "coldfusion",
+            #    "javascript", "asp", "ruby"
+            #]
+            autoFocus: true
 
         tree = @_convertData data
         @treeEl = $("#tree")
@@ -39,15 +50,27 @@ class exports.Tree
             unique:
                 error_callback: (node, p, func) ->
                     alert "A note has already that name: '#{node}'"
-
+            search:
+                show_only_matches: true
+    
         @searchField = $("#tree-search-field")
         @searchButton = $("#tree-search")
+        @noteFull = $("#note-full")
 
-        @setListeners callbacks
+        @setListeners callbacks            
 
     # Create toolbar inside DOM.
     setToolbar: (navEl) ->
         navEl.prepend require('../templates/tree_buttons')
+
+    organizeArray: (array)->
+        i = array.length-1
+        tmp = ""
+        while i isnt 0 and array[i] < array[i-1]
+            tmp = array[i]
+            array[i] = array[i-1]
+            array[i-1] = tmp
+            i--
 
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection).
@@ -60,12 +83,15 @@ class exports.Tree
             @treeEl.jstree("rename")
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
-        @searchButton.click @_onSearchClicked
         @searchField.keyup @_onSearchChanged
 
         # Tree
         @widget.bind "create.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
+            completeSource =  @autocompInput.autocomplete( "option", "source")
+            completeSource.push nodeName
+            @organizeArray completeSource
+            @autocompInput.autocomplete( "option", "source", completeSource)
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
             path.pop()
@@ -80,6 +106,17 @@ class exports.Tree
             if path == "all"
                 $.jstree.rollback data.rlbk
             else if data.rslt.old_name != data.rslt.new_name
+                completeSource =  @autocompInput.autocomplete( "option", "source")
+                i = 0
+                while completeSource[i] isnt data.rslt.old_name
+                    i++
+                while i isnt completeSource.length-1
+                    completeSource[i] = completeSource[i+1]
+                    completeSource[i+1] = completeSource[i]
+                    i++
+                completeSource[i] = data.rslt.new_name
+                @organizeArray completeSource
+                @autocompInput.autocomplete( "option", "source", completeSource)
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
@@ -87,6 +124,16 @@ class exports.Tree
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
+            completeSource =  @autocompInput.autocomplete( "option", "source")
+            i = 0
+            while completeSource[i] isnt nodeName
+                i++
+            while i isnt completeSource.length-1
+                completeSource[i] = completeSource[i+1]
+                completeSource[i+1] = completeSource[i]
+                i++           
+            completeSource.pop()
+            @autocompInput.autocomplete( "option", "source", completeSource)
             parent = data.rslt.parent
             path = @_getStringPath parent, nodeName
             if path == "all"
@@ -116,6 +163,17 @@ class exports.Tree
 
         @widget.bind "loaded.jstree", (e, data) =>
             callbacks.onLoaded()
+
+        
+        @widget.bind "search.jstree", (e, data, searchString) =>
+        #    for note in data.rslt.nodes
+        #        nodeName = data.inst.get_text note
+        #        parent = data.inst._get_parent note
+        #        path = @_getStringPath parent, nodeName
+        #        currentNote = data.inst._get_node note
+        #        #PROBLEME ICI une seule note s'affiche (la dernière)
+        #        callbacks.onSelect path, currentNote.data("id")
+                
 
     # Rebuild ids of obj children. 
     rebuildIds: (data, obj, idPath) ->
@@ -175,6 +233,10 @@ class exports.Tree
         for property of nodeToConvert when \
                 property isnt "name" and property isnt "id"
             nodeIdPath = "#{idpath}-#{property.replace(/_/g, "-")}"
+            completeSource =  @autocompInput.autocomplete( "option", "source")
+            completeSource.push nodeToConvert[property].name
+            @organizeArray completeSource
+            @autocompInput.autocomplete( "option", "source", completeSource)
             newNode =
                 data: nodeToConvert[property].name
                 metadata:
@@ -188,23 +250,32 @@ class exports.Tree
                 parentNode.data.push newNode
             else
                 parentNode.children.push newNode
-
             @_convertNode newNode, nodeToConvert[property], nodeIdPath
-
 
     # When search button is clicked, quick search input is displayed or hidden
     # (reverse state). If quick search is displayed, the focus goes on it.
-    _onSearchClicked: (event) =>
-        if @searchField.is(":hidden")
-            @searchField.show()
-            @searchField.focus()
-            @searchButton.addClass("button-active")
-        else
-            @searchField.hide()
-            @searchButton.removeClass("button-active")
+    #_onSearchClicked: (event) =>
+    #    if @searchField.is(":hidden")
+    #        @searchField.show()
+    #        @searchField.focus()
+    #        @searchButton.addClass("button-active")
+    #    else
+    #        @searchField.hide()
+    #        @searchButton.removeClass("button-active")
+
+    searchTimer: null
 
     # When quick search changes, the jstree quick search function is run with
     # input val as argument.
     _onSearchChanged: (event) =>
         searchString = @searchField.val()
-        @treeEl.jstree("search", searchString)
+        info = "Recherche: \"#{searchString}\""
+        clearTimeout @searchTimer
+        if searchString is ""
+            $("#searchInfo").hide()
+        else
+            @searchTimer = setTimeout(->
+                $("#tree").jstree("search", searchString)
+                $("#searchInfo").html info
+                $("#searchInfo").show()
+            , 1000) 
