@@ -47,6 +47,7 @@
     border 1px solid transparent
     font-weight bold
     color treelinkcolor
+    width: 100%
 
 #tree a.jstree-clicked
     background bgcolortreeselected 
@@ -54,6 +55,9 @@
 #tree a:hover
     shadow 1px 1px 1px treetexthovershadowcolor
     background bgcolortreetexthover
+
+#tree a:hover div.button
+    display inline
 
 #tree-buttons
     border-bottom 1px solid bordercolortoolbar
@@ -118,7 +122,12 @@
 
 #note-full-content
     width 98%
-
+    
+#note-full-content-with-video
+    display inline-block
+    margin 10px
+    width 48%
+    height 310px
 
 .ui-layout-resizer-open:hover
     background highlightcolor
@@ -126,3 +135,35 @@
 
 #searchInfo
     background #F39999
+
+
+#tree div
+    display none
+    padding 6px 10px
+    margin-left 8px
+    background-repeat no-repeat
+    background-position center
+    cursor pointer
+
+#tree i
+    margin-top 3px
+    margin-right 5px
+
+
+#tree div.button:hover
+    background: linear-gradient(top , bgcolorhoverbuttons 0%, bgclearcolorhoverbuttons 100%)
+
+#tree div.button
+    background linear-gradient(top, bgcolorbuttons 0%, bgclearcolorbuttons 100%)
+    shadow 0 1px 0 rgba(255, 255, 255, 0.12) inset, 1px 1px 1px rgba(0, 0, 0, 0.35)
+    color black
+    border 1px solid treebuttonbordercolor 
+    border-radius 2px 2px 2px 2px
+
+#tree a div.button:active
+    background linear-gradient(top, bgcoloractivebuttons 0%, bgclearcoloractivebuttons 100%)
+    shadow 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35)
+
+iframe
+    display inline-block
+    float left

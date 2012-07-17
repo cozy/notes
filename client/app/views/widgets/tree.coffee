@@ -14,9 +14,6 @@ class exports.Tree
         @autocompInput = $("#tree-search-field")
         @widgetAutocomplete = @autocompInput.autocomplete
             source: []
-            #    "c++", "java", "php", "coldfusion",
-            #    "javascript", "asp", "ruby"
-            #]
             autoFocus: true
 
         tree = @_convertData data
@@ -62,7 +59,7 @@ class exports.Tree
     # Create toolbar inside DOM.
     setToolbar: (navEl) ->
         navEl.prepend require('../templates/tree_buttons')
-
+            
     organizeArray: (array)->
         i = array.length-1
         tmp = ""
@@ -84,6 +81,9 @@ class exports.Tree
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
         @searchField.keyup @_onSearchChanged
+        $("#tree").mouseover @_addButton
+
+
 
         # Tree
         @widget.bind "create.jstree", (e, data) =>
@@ -237,6 +237,7 @@ class exports.Tree
             completeSource.push nodeToConvert[property].name
             @organizeArray completeSource
             @autocompInput.autocomplete( "option", "source", completeSource)
+            #@addButton "#tree a"
             newNode =
                 data: nodeToConvert[property].name
                 metadata:
@@ -245,7 +246,6 @@ class exports.Tree
                     id: "tree-node#{nodeIdPath}"
                     rel: "default"
                 children: []
-
             if parentNode.children == undefined
                 parentNode.data.push newNode
             else
@@ -273,9 +273,20 @@ class exports.Tree
         clearTimeout @searchTimer
         if searchString is ""
             $("#searchInfo").hide()
+            $("#tree").jstree("search", searchString)
         else
             @searchTimer = setTimeout(->
                 $("#tree").jstree("search", searchString)
                 $("#searchInfo").html info
                 $("#searchInfo").show()
             , 1000) 
+
+    _addButton: (event) =>
+        if @once is undefined
+            $("#tree a").append('<div class="tree-create button">
+            <i class="icon-plus"></i>
+            </div>')
+            @once = false
+    
+    _onNode: (event) =>
+        alert "essai"

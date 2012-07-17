@@ -4135,9 +4135,10 @@ ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 #tree{font-size:12;padding:10px;border-top:1px solid #fff;background-color:#f3ece4;color:#6d3100}
 #tree li{padding:0}
 #tree ins{width:14px}
-#tree a{text-transform:lowercase;padding:3px 5px;margin:2px 0;border:1px solid transparent;font-weight:bold;color:#3d2100}
+#tree a{text-transform:lowercase;padding:3px 5px;margin:2px 0;border:1px solid transparent;font-weight:bold;color:#3d2100;width:100%}
 #tree a.jstree-clicked{background:#ffdd97}
 #tree a:hover{-moz-box-shadow:1px 1px 1px #662;-webkit-box-shadow:1px 1px 1px #662;-webkit-box-shadow:1px 1px 1px #662;-moz-box-shadow:1px 1px 1px #662;box-shadow:1px 1px 1px #662;background:#f4e1b9}
+#tree a:hover div.button{display:inline}
 #tree-buttons{border-bottom:1px solid #aaa;background-color:#ebe5e2;margin-top:16px}
 #tree-buttons div{display:inline;padding:6px 10px;margin-left:8px;background-repeat:no-repeat;background-position:center;cursor:pointer}
 #tree-buttons i{margin-top:3px;margin-right:5px}
@@ -4151,8 +4152,15 @@ ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 .note-full{background:#fff;-moz-box-shadow:2px 2px 5px #668;-webkit-box-shadow:2px 2px 5px #668;-webkit-box-shadow:2px 2px 5px #668;-moz-box-shadow:2px 2px 5px #668;box-shadow:2px 2px 5px #668;border:1px solid #ebe5e2;padding:10px;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px}
 .note-full h2{padding:0;margin-bottom:20px}
 #note-full-content{width:98%}
+#note-full-content-with-video{display:inline-block;margin:10px;width:48%;height:310px}
 .ui-layout-resizer-open:hover{background:#ffdd97}
 #searchInfo{background:#f39999}
+#tree div{display:none;padding:6px 10px;margin-left:8px;background-repeat:no-repeat;background-position:center;cursor:pointer}
+#tree i{margin-top:3px;margin-right:5px}
+#tree div.button:hover{background:-webkit-gradient(linear, left top, left bottom, color-stop(0, #ffdd97), color-stop(1, #ffb338));background:-webkit-linear-gradient(top, #ffdd97 0%, #ffb338 100%);background:-moz-linear-gradient(top, #ffdd97 0%, #ffb338 100%);background:linear-gradient(top, #ffdd97 0%, #ffb338 100%)}
+#tree div.button{background:-webkit-gradient(linear, left top, left bottom, color-stop(0, #f2e5ce), color-stop(1, #f2e5de));background:-webkit-linear-gradient(top, #f2e5ce 0%, #f2e5de 100%);background:-moz-linear-gradient(top, #f2e5ce 0%, #f2e5de 100%);background:linear-gradient(top, #f2e5ce 0%, #f2e5de 100%);-moz-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);-moz-box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);box-shadow:0 1px 0 rgba(255,255,255,0.12) inset,1px 1px 1px rgba(0,0,0,0.35);color:#000;border:1px solid #3d2100;-webkit-border-radius:2px 2px 2px 2px;-moz-border-radius:2px 2px 2px 2px;border-radius:2px 2px 2px 2px}
+#tree a div.button:active{background:-webkit-gradient(linear, left top, left bottom, color-stop(0, #eaa328), color-stop(1, #f4cc86));background:-webkit-linear-gradient(top, #eaa328 0%, #f4cc86 100%);background:-moz-linear-gradient(top, #eaa328 0%, #f4cc86 100%);background:linear-gradient(top, #eaa328 0%, #f4cc86 100%);-moz-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-webkit-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);-moz-box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35);box-shadow:0 0 0 rgba(255,255,255,0.12) inset,0 0 1px rgba(0,0,0,0.35)}
+iframe{display:inline-block;float:left}
 /* ==|== non-semantic helper classes ========================================
    Please define your styles before this section.
    ========================================================================== */

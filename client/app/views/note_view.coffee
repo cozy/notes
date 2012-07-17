@@ -39,6 +39,7 @@ class exports.NoteWidget extends Backbone.View
         $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
         $("#note-full-content").val @model.content
+ 
 
         @el
 

@@ -647,6 +647,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
     exports.Tree = (function() {
 
       function Tree(navEl, data, callbacks) {
+        this._onNode = __bind(this._onNode, this);
+        this._addButton = __bind(this._addButton, this);
         this._onSearchChanged = __bind(this._onSearchChanged, this);
         this._convertData = __bind(this._convertData, this);
         this._getStringPath = __bind(this._getStringPath, this);
@@ -732,6 +734,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           return _this.treeEl.jstree("remove");
         });
         this.searchField.keyup(this._onSearchChanged);
+        $("#tree").mouseover(this._addButton);
         this.widget.bind("create.jstree", function(e, data) {
           var completeSource, idPath, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
@@ -918,7 +921,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         info = "Recherche: \"" + searchString + "\"";
         clearTimeout(this.searchTimer);
         if (searchString === "") {
-          return $("#searchInfo").hide();
+          $("#searchInfo").hide();
+          return $("#tree").jstree("search", searchString);
         } else {
           return this.searchTimer = setTimeout(function() {
             $("#tree").jstree("search", searchString);
@@ -926,6 +930,19 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             return $("#searchInfo").show();
           }, 1000);
         }
+      };
+
+      Tree.prototype._addButton = function(event) {
+        if (this.once === void 0) {
+          $("#tree a").append('<div class="tree-create button">\
+              <i class="icon-plus"></i>\
+              </div>');
+          return this.once = false;
+        }
+      };
+
+      Tree.prototype._onNode = function(event) {
+        return alert("essai");
       };
 
       return Tree;

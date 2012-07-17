@@ -98,7 +98,6 @@ class exports.HomeView extends Backbone.View
         
         NoteWidget.setEditor @onNoteChanged
 
-
         $.get "tree/", (data) =>
             @tree = new Tree @.$("#nav"), data,
                 onCreate: @createFolder
