@@ -29,12 +29,12 @@ Tree.destroyAll = (callback) ->
 # that tree if it exists. If is does note exist a new empty tree is created
 # and returned.
 Tree.getOrCreate = (callback) ->
-    Tree.all (err, trees) ->
+    Tree.all where: type:"Note", (err, trees) ->
         if err
             console.log err
             send error: 'An error occured', 500
         else if trees.length == 0
-            Tree.create { struct: new DataTree().toJson() }, callback
+            Tree.create { struct: new DataTree().toJson(), type: "Note" }, callback
         else
             callback null, trees[0]
 
