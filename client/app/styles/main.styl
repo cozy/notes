@@ -34,12 +34,13 @@
 
 // Tree
 
-// #tree
-//     font-size 12
+#tree
+    color treetextcolor 
+    font-size 12
+    background-color transparent
 //     padding 10px
 //     border-top 1px solid white
 //     background-color bgcolornav
-//     color treetextcolor 
 
 #tree li
     padding 0
@@ -52,19 +53,26 @@
     padding 3px 5px
     margin 2px 0px
     border 1px solid transparent
-    //font-weight bold
     color treelinkcolor
-    // width: 100%
+    font-size 14px
 
 #tree a.jstree-clicked
     background bgcolortreeselected 
 
 #tree a:hover
-    shadow 1px 1px 1px treetexthovershadowcolor
-    background bgcolortreetexthover
+    // shadow 1px 1px 1px treetexthovershadowcolor
+    // background bgcolortreetexthover
+    font-weight normal
 
 #tree-buttons div
     display none
+
+#tree-top-buttons
+    border-spacing:0
+    margin-bottom:3px
+
+#tree-top-buttons .btn-group
+    margin-bottom:2px
 
 // #tree-buttons
 //     border-bottom 1px solid bordercolortoolbar
