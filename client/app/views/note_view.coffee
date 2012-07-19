@@ -1,4 +1,5 @@
 template = require('./templates/note')
+cozyEditor = require('./ed_initPage').initPage
 
 # Row displaying application name and attributes
 class exports.NoteWidget extends Backbone.View
@@ -39,7 +40,31 @@ class exports.NoteWidget extends Backbone.View
         $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
         $("#note-full-content").val @model.content
+        cozyEditor()
  
+        #params = { allowScriptAccess: "always" }
+        #atts = { id: "myytplayer" }
+        #swfobject.embedSWF("http://www.youtube.com/v/YAOv-KGh1qw?enablejsapi=1&playerapiid=ytplayer&version=3",
+        #               "ytapiplayer", "425", "356", "8", null, null, params, atts)
+        #ytplayer = document.getElementById("myytplayer")
+#
+        #$("#video").click =>
+        #    videoUrl = $("#video-url").val()
+        #    ytplayer.cueVideoById(videoUrl, 0, "default")
+        #$("a.video-timer").click (event) ->
+        #    videoTimer = event.target.text.split(":")
+        #    lastElem = videoTimer.length - 1
+        #    minute = videoTimer[lastElem - 1]
+        #    seconde = videoTimer[lastElem]
+        #    if lastElem is 2
+        #        hour = videoTimer[0]
+        #    else
+        #        hour = 0
+        #    totalSeconds = parseInt(seconde) + parseInt((60*minute)) + parseInt((3600*hour))
+        #    ytplayer.seekTo(totalSeconds)
+        #$("#note-full-content-with-video").dblclick =>
+        #    content = $("#note-full-content-with-video").html()
+        #    $("#note-area").append("<textarea id='note-full-content-with-video'>#{content}</textarea>")
 
         @el
 

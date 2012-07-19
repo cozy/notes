@@ -1,0 +1,184 @@
+Debug = 1
+maxDepth=4
+limit = 4
+
+trueRank(depth)
+  if maxDepth > limit
+    min(depth, limit)
+  else
+    limit - maxDepth + depth
+
+titleMixin(rank, type)
+  padding-left unit(max(5, 20 * (rank - 1)), px)
+  margin-left unit(0, px)
+  if type == 1
+    margin-top unit(12, px)
+    border-radius 5px 5px 5px 5px
+    color orange
+    width 100%
+    box-sizing border-box
+    -moz-box-sizing border-box
+    -webkit-box-sizing border-box
+    text-transform uppercase
+    font-weight bold
+  else if type == 2
+    margin-top unit(5, px)
+    color cyan
+  else if type == 3
+    margin-top unit(5, px)
+    color green
+  else
+    margin-top unit(5, px)
+    color 586408
+  if rank == 1
+    counter-reset    : section4
+    counter-reset    : section3
+    counter-reset    : section2
+    counter-increment: section1
+  else if rank == 2
+    counter-reset    : section4
+    counter-reset    : section3
+    counter-increment: section2
+  else if rank == 3
+    counter-reset    : section4
+    counter-increment: section3
+  else if rank == 4
+    counter-increment: section4
+
+olMixin(rank)
+  margin-left unit(20*rank, px)
+
+ulMixin(rank)
+  margin-left unit(20*rank, px)
+  if rank <= 2
+    margin-top unit(2, px)
+  display list-item
+  if rank % 4 == 0
+    list-style-type circle
+  else if rank % 2 == 0
+    list-style-type square
+
+titleLineMixin(rank)
+  padding-left unit(max(5, 20 * (rank - 1)), px)
+
+lineMixin(rank)
+  padding-left unit(max(22, 20 * rank), px)
+
+
+#__ed-iframe-html
+  background-color: #333333
+
+#__ed-iframe-body
+  overflow        : auto
+  box-sizing      : border-box
+  -moz-box-sizing : border-box
+  border          : 1px solid #333333
+  border-radius   : 5px 5px 5px 5px
+  -moz-transition : border 0.2s linear 0s, box-shadow 0.2s linear 0s
+  box-shadow      : inset 0px 0px 6px rgba(0, 0, 0, 0.8)
+  position        : relative
+  left            : 0px
+  top             : 0px
+  font            : normal 13px "Helvetica Neue", Arial, Helvetica, sans-serif
+  color           : #8c9ea0
+  background-color: #042029 //272822
+
+p
+  margin-top   : 0px
+  margin-bottom: 0px
+  margin-left  : 0px
+  margin-right : 0px
+  color        : #333055
+
+dl
+  margin       : 0
+  padding      : 0
+
+dt
+  margin       : 0
+  padding      : 0
+
+ul, ol
+  margin       : 3px 0 0 0
+  padding      : 0
+  list-style-type: none
+
+li
+  margin       : 0
+  padding      : 0
+  list-style-type: disc
+  
+dd
+  margin-left  : 32px
+
+num = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
+for n in num
+  .Th-{n}
+    titleMixin(n, trueRank(n))
+  .To-{n}
+    olMixin(n)
+    counter-increment list1
+  .Tu-{n}
+    ulMixin(n)
+  .Lu-{n}
+  .Lo-{n}
+    lineMixin(n)
+  .Lh-{n}
+    titleLineMixin(n)
+  if Debug == 1
+    .Lu-{n}:before
+    .Tu-{n}:before
+    .Lo-{n}:before
+    .To-{n}:before
+    .Lh-{n}:before
+    .Th-{n}:before
+      content: attr(toDisplay)
+
+if Debug == 1
+  .Th-1:before
+    content: counter(section1) " " attr(toDisplay)
+  .Th-2:before
+    content: counter(section1) "." counter(section2) " " attr(toDisplay)
+  .Th-3:before
+    content: counter(section1) "." counter(section2) "." counter(section3) " " attr(toDisplay)
+  .Th-4:before
+    content: counter(section1) "." counter(section2) "." counter(section3) "." counter(section4) " " attr(toDisplay)
+else
+  .Th-1:before
+    content: counter(section1) " "
+  .Th-2:before
+    content: counter(section1) "." counter(section2) " "
+  .Th-3:before
+    content: counter(section1) "." counter(section2) "." counter(section3) " "
+  .Th-4:before
+    content: counter(section1) "." counter(section2) "." counter(section3) "." counter(section4) " "
+
+
+.vline_02
+  margin-left  : 30px
+  border       : 1px solid #DDDDDD
+  width        : 10px
+  height       : 100%
+  position     : relative
+  top          : 0
+
+h1
+  font-size    : 2em
+
+h2
+  font-size    : 1.5em
+
+h3
+  font-size    : 1.17em
+
+h4
+  font-size    : 1em
+
+h5
+  font-size    : .83em
+
+h6
+  font-size    : .75em
+
+img
+  border       : 0
