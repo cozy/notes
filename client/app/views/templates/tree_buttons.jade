@@ -1,12 +1,15 @@
 #tree-buttons
-    div#tree-create.button
-        i.icon-plus
-        span new
-    div#tree-remove.button
-        i.icon-remove
-        span delete
-    div#tree-rename.button
-        i.icon-pencil 
-        span rename
+    .btn-group
+        div#tree-create.btn.btn-primary.btn-small
+            i.icon-plus
+            span new
+        div#tree-remove.btn.btn-primary.btn-small
+            i.icon-remove
+            span delete
+        div#tree-rename.btn.btn-primary.btn-small
+            i.icon-pencil 
+            span rename
     .spacer
-    input#tree-search-field(type="text")
+    .input-append
+        input#tree-search-field.span2(type="text",placeholder="Search…")
+        button.btn Search !
