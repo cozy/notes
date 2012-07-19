@@ -1,2 +1,4 @@
 node_modules
 *.swp
+client/public/*
+client/public/javascripts/app.js
