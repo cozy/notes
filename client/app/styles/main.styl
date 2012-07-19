@@ -18,6 +18,7 @@
     shadow 0 0 3px navshadowcolor
 
 #editor
+    overflow hidden
     margin 0 
     margin-left 320px
     padding 10px
@@ -56,8 +57,8 @@
     shadow 1px 1px 1px treetexthovershadowcolor
     background bgcolortreetexthover
 
-#tree a:hover div.button
-    display inline
+#tree-buttons div
+    display none
 
 #tree-buttons
     border-bottom 1px solid bordercolortoolbar
@@ -115,6 +116,8 @@
     border 1px solid notebordercolor
     padding 10px
     border-radius 3px
+    height 90%
+    margin-bottom 10px
 
 .note-full h2
     padding 0
@@ -127,7 +130,9 @@
     display inline-block
     margin 10px
     width 48%
-    height 310px
+    
+#note-full-content-with-video:hover
+    border 1px solid blue
 
 .ui-layout-resizer-open:hover
     background highlightcolor
@@ -158,12 +163,10 @@
     shadow 0 1px 0 rgba(255, 255, 255, 0.12) inset, 1px 1px 1px rgba(0, 0, 0, 0.35)
     color black
     border 1px solid treebuttonbordercolor 
-    border-radius 2px 2px 2px 2px
+    border-radius 2px 2px 2px 2px    
 
 #tree a div.button:active
     background linear-gradient(top, bgcoloractivebuttons 0%, bgclearcoloractivebuttons 100%)
     shadow 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35)
 
-iframe
-    display inline-block
-    float left
+    

@@ -68,7 +68,7 @@ class exports.Tree
             array[i] = array[i-1]
             array[i-1] = tmp
             i--
-
+ 
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection).
     setListeners: (callbacks) ->
@@ -81,8 +81,6 @@ class exports.Tree
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
         @searchField.keyup @_onSearchChanged
-        $("#tree").mouseover @_addButton
-
 
 
         # Tree
@@ -142,8 +140,26 @@ class exports.Tree
                 callbacks.onRemove path
 
         @widget.bind "select_node.jstree", (e, data) =>
+            root = $("#tree-node-all")
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.inst._get_parent data.rslt.parent
+            if parent isnt -1
+                leftPosition1 = root.offset().left + root.width() - 150
+                leftPosition2 = root.offset().left + root.width() - 100
+                leftPosition3 = root.offset().left + root.width() - 50
+                $("#tree-create").css
+                    position: "absolute"
+                    left: leftPosition1
+                    top: data.rslt.obj.position().top
+                $("#tree-rename").css
+                    position: "absolute"
+                    left: leftPosition2
+                    top: data.rslt.obj.position().top
+                $("#tree-remove").css
+                    position: "absolute"
+                    left: leftPosition3
+                    top: data.rslt.obj.position().top
+                $("#tree-buttons").show()
             path = @_getStringPath parent, nodeName
             callbacks.onSelect path, data.rslt.obj.data("id")
 
