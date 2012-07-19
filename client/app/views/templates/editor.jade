@@ -2,48 +2,6 @@
 #main.table-ly-wrpr
   // boutons for the editor
   #divMainBtn.table-ly-hder
-    #generalBtnBar.btn-group
-      button#logKeysBtn.btn.btn-small.btn-primary Log keystrokes
-      button#printRangeBtn.btn.btn-small.btn-primary Print Range
-      button#addClass.btn.btn-small.btn-primary Class of selected Lines
-      button#addClass2LineBtn.btn.btn-small.btn-primary Show Class on Lines
-    //- div.btn-group
-    //-   button.btn.dropdown-toggle(data-toggle="dropdown",href="#") Change content
-    //-     span.caret
-    //-   ul.dropdown-menu
-    //-     li
-    //-       a(href="#") one action
-    //-     li
-    //-       a(href="#") another action
-    select#contentSelect
-      option(value="content-full", style="display:block") Full note
-      option(value="content-full-marker", style="display:block") Tout en puces
-      option(value="content-shortlines-marker", style="display:block") Tout en puce, lignes courtes
-      option(value="content-shortlines-all", style="display:block") Puces et titres, lignes courtes
-      option(value="content-empty", style="display:block") Empty note
-      option(value="content-full-relative-indent", style="display:block") Avec sommaire
-      option(value="test_1", style="display:block") Test numero 1
-      option(value="test_2", style="display:block") Test numero 2
-      option(value="test_3", style="display:block") Test numero 3
-      option(value="test_4", style="display:block") Test numero 4
-      option(value="test_5", style="display:block") Test numero 5
-      option(value="test_6", style="display:block") Test numero 6
-      option(value="test_7", style="display:block") Test numero 7
-      option(value="test_8", style="display:block") Test numero 8
-      option(value="test_9", style="display:block") Test numero 9
-      option(value="test_10", style="display:block") Test numero 10
-      option(value="test_11", style="display:block") Test numero 11
-    select#mdSelect
-      option(value="exemple1.md", style="display:block") ex1
-      option(value="exemple2.md", style="display:block") ex2
-    select#cssSelect
-      option(value="images/editor2.css", style="display:block") css1
-      option(value="stylesheets/app.css", style="display:block") css2
-      option(value="stylesheets/app-deep-1.css", style="display:block") depth_1
-      option(value="stylesheets/app-deep-2.css", style="display:block") depth_2
-      option(value="stylesheets/app-deep-3.css", style="display:block") depth_3
-      option(value="stylesheets/app-deep-4.css", style="display:block") depth_4
-
   #main-div.table-ly-ctnt
     #col-wrap
       #editor-col
@@ -59,17 +17,3 @@
             // text for the editor
             #editorContent.table-ly-ctnt
               iframe#editorIframe
-      #result-col
-        #well-result.monWell
-          #resultDiv.table-ly-wrpr
-            .table-ly-hder
-              #resultBtnBar.btn-group
-                button#resultBtnBar_coller.btn.btn-small.btn-primary Coller
-                button#markdownBtn.btn.btn-small.btn-primary Convert to Markdown
-                button#cozyBtn.btn.btn-small.btn-primary Convert to Cozy
-                button#checkBtn.btn.btn-small.btn-primary Run syntax test
-                button#summaryBtn.btn.btn-small.btn-primary Display Summary
-              p#editorPropertiesDisplay
-            // text for the resulting html
-            #resultContent.table-ly-ctnt
-              textarea#resultText

@@ -2174,6 +2174,393 @@ window.require.define({"views/ed_home_view": function(exports, require, module) 
 
 window.require.define({"views/ed_initPage": function(exports, require, module) {
   (function() {
+    var CNEditor, beautify, editorBody$, editor_css$, editor_doAddClasseToLines, editor_head$;
+
+    beautify = require('views/ed_beautify').beautify;
+
+    CNEditor = require('views/ed_editor').CNEditor;
+
+    editorBody$ = void 0;
+
+    editor_head$ = void 0;
+
+    editor_css$ = void 0;
+
+    editor_doAddClasseToLines = void 0;
+
+    exports.initPage = function(selector) {
+      var cb, editor, editorIframe$;
+      $(selector).html(require('./templates/editor'));
+      editorIframe$ = $("" + selector + " iframe");
+      cb = function() {
+        var editorCtrler,
+          _this = this;
+        this.replaceContent(require('./templates/content-empty'));
+        editorCtrler = this;
+        editorBody$ = this.editorBody$;
+        beautify(editorBody$);
+        editorBody$.on('keyup', function() {
+          return beautify(editorBody$);
+        });
+        $("#indentBtn").on("click", function() {
+          return editorCtrler.tab();
+        });
+        $("#unIndentBtn").on("click", function() {
+          return editorCtrler.shiftTab();
+        });
+        $("#markerListBtn").on("click", function() {
+          return editorCtrler.markerList();
+        });
+        $("#titleBtn").on("click", function() {
+          return editorCtrler.titleList();
+        });
+        this.editorBody$.on('mouseup', function() {
+          _this.newPosition = true;
+          return $("#editorPropertiesDisplay").text("newPosition = true");
+        });
+        this.editorBody$.on('mouseup', function() {
+          return _this.buildSummary();
+        });
+        return this.editorBody$.on('keyup', function() {
+          return _this.buildSummary();
+        });
+      };
+      editor = new CNEditor($('#editorIframe')[0], cb);
+      return editorBody$;
+    };
+
+  }).call(this);
+  
+}});
+
+window.require.define({"views/ed_markdownToCozy": function(exports, require, module) {
+  (function() {
+    var __hasProp = Object.prototype.hasOwnProperty,
+      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+    exports.CNmarkdownToCozy = (function(_super) {
+
+      __extends(CNmarkdownToCozy, _super);
+
+      function CNmarkdownToCozy() {
+        CNmarkdownToCozy.__super__.constructor.apply(this, arguments);
+      }
+
+      CNmarkdownToCozy.prototype.translate = function(text) {
+        var conv, cozyCode, cozyTurn, depth, htmlCode, id, readHtml, recRead;
+        conv = new Showdown.converter();
+        text = conv.makeHtml(text);
+        htmlCode = $(document.createElement('ul')).html(text);
+        cozyCode = '';
+        id = 0;
+        cozyTurn = function(type, depth, p) {
+          var code;
+          id++;
+          code = '';
+          p.contents().each(function() {
+            var name;
+            name = this.nodeName;
+            if (name === "#text") {
+              return code += "<span>" + ($(this).text()) + "</span>";
+            } else if (this.tagName != null) {
+              $(this).wrap('<div></div>');
+              code += "" + ($(this).parent().html());
+              return $(this).unwrap();
+            }
+          });
+          return ("<div id=CNID_" + id + " class=" + type + "-" + depth + ">") + code + "<br></div>";
+        };
+        depth = 0;
+        readHtml = function(obj) {
+          var tag;
+          tag = obj[0].tagName;
+          if (tag[0] === "H") {
+            depth = parseInt(tag[1], 10);
+            return cozyCode += cozyTurn("Th", depth, obj);
+          } else if (tag === "P") {
+            return cozyCode += cozyTurn("Lh", depth, obj);
+          } else {
+            return recRead(obj, "u");
+          }
+        };
+        recRead = function(obj, status) {
+          var child, i, tag, _ref, _results;
+          tag = obj[0].tagName;
+          if (tag === "UL") {
+            depth++;
+            obj.children().each(function() {
+              return recRead($(this), "u");
+            });
+            return depth--;
+          } else if (tag === "OL") {
+            depth++;
+            obj.children().each(function() {
+              return recRead($(this), "o");
+            });
+            return depth--;
+          } else if (tag === "LI" && (obj.contents().get(0) != null)) {
+            if (obj.contents().get(0).nodeName === "#text") {
+              obj = obj.clone().wrap('<p></p>').parent();
+            }
+            _results = [];
+            for (i = 0, _ref = obj.children().length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+              child = $(obj.children().get(i));
+              if (i === 0) {
+                _results.push(cozyCode += cozyTurn("T" + status, depth, child));
+              } else {
+                _results.push(recRead(child, status));
+              }
+            }
+            return _results;
+          } else if (tag === "P") {
+            return cozyCode += cozyTurn("L" + status, depth, obj);
+          }
+        };
+        htmlCode.children().each(function() {
+          return readHtml($(this));
+        });
+        return cozyCode;
+      };
+
+      return CNmarkdownToCozy;
+
+    })(Backbone.View);
+
+  }).call(this);
+  
+}});
+
+window.require.define({"views/home_view": function(exports, require, module) {
+  (function() {
+    var CNcozyToMarkdown, Editor, Note, NoteWidget, Tree,
+      __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+      __hasProp = Object.prototype.hasOwnProperty,
+      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+    Tree = require("./widgets/tree").Tree;
+
+    NoteWidget = require("./note_view").NoteWidget;
+
+    Editor = require("./note_view").instEditor;
+
+    Note = require("../models/note").Note;
+
+    CNcozyToMarkdown = require('views/ed_cozyToMarkdown').CNcozyToMarkdown;
+
+    exports.HomeView = (function(_super) {
+
+      __extends(HomeView, _super);
+
+      function HomeView() {
+        this.onNoteDropped = __bind(this.onNoteDropped, this);
+        this.onTreeLoaded = __bind(this.onTreeLoaded, this);
+        this.onNoteChanged = __bind(this.onNoteChanged, this);
+        this.selectFolder = __bind(this.selectFolder, this);
+        this.deleteFolder = __bind(this.deleteFolder, this);
+        this.renameFolder = __bind(this.renameFolder, this);
+        this.createFolder = __bind(this.createFolder, this);
+        HomeView.__super__.constructor.apply(this, arguments);
+      }
+
+      HomeView.prototype.id = 'home-view';
+
+      HomeView.prototype.createFolder = function(path, newName, data) {
+        var _this = this;
+        return Note.createNote({
+          path: path,
+          name: newName
+        }, function(note) {
+          data.rslt.obj.data("id", note.id);
+          data.inst.deselect_all();
+          return data.inst.select_node(data.rslt.obj);
+        });
+      };
+
+      HomeView.prototype.renameFolder = function(path, newName, data) {
+        var _this = this;
+        if (newName != null) {
+          return Note.updateNote({
+            path: path,
+            newName: newName
+          }, function() {
+            data.inst.deselect_all();
+            return data.inst.select_node(data.rslt.obj);
+          });
+        }
+      };
+
+      HomeView.prototype.deleteFolder = function(path) {
+        this.noteFull.hide();
+        return Note.deleteNote({
+          path: path
+        });
+      };
+
+      HomeView.prototype.selectFolder = function(path, id) {
+        var _this = this;
+        if (path.indexOf("/")) path = "/" + path;
+        app.router.navigate("note" + path, {
+          trigger: false
+        });
+        if (id != null) {
+          return Note.getNote(id, function(note) {
+            _this.renderNote(note);
+            return _this.noteFull.show();
+          });
+        } else {
+          return this.noteFull.hide();
+        }
+      };
+
+      HomeView.prototype.selectNote = function(path) {
+        return this.tree.selectNode(path);
+      };
+
+      HomeView.prototype.renderNote = function(note) {
+        var noteWidget;
+        this.currentNote = note;
+        noteWidget = new NoteWidget(this.currentNote);
+        return noteWidget.render();
+      };
+
+      HomeView.prototype.onNoteChanged = function(event) {
+        return this.currentNote.saveContent($("#note-full-content").val());
+      };
+
+      HomeView.prototype.onTreeLoaded = function() {
+        if (this.treeCreationCallback != null) return this.treeCreationCallback();
+      };
+
+      HomeView.prototype.onNoteDropped = function(newPath, oldPath, data) {
+        var _this = this;
+        if (oldPath.charAt(0) !== "/") oldPath = "/" + oldPath;
+        return Note.moveNote({
+          path: oldPath,
+          dest: newPath
+        }, function() {
+          data.inst.deselect_all();
+          return data.inst.select_node(data.rslt.o);
+        });
+      };
+
+      HomeView.prototype.render = function() {
+        $(this.el).html(require('./templates/home'));
+        return this;
+      };
+
+      HomeView.prototype.setLayout = function() {
+        return $('#home-view').layout({
+          size: "350",
+          minSize: "350",
+          resizable: true
+        });
+      };
+
+      HomeView.prototype.fetchData = function(callback) {
+        var _this = this;
+        this.treeCreationCallback = callback;
+        this.noteArea = $("#editor");
+        this.noteFull = $("#note-full");
+        this.noteFull.hide();
+        NoteWidget.setEditor(this.onNoteChanged);
+        return $.get("tree/", function(data) {
+          return _this.tree = new Tree(_this.$("#nav"), data, {
+            onCreate: _this.createFolder,
+            onRename: _this.renameFolder,
+            onRemove: _this.deleteFolder,
+            onSelect: _this.selectFolder,
+            onLoaded: _this.onTreeLoaded,
+            onDrop: _this.onNoteDropped
+          });
+        });
+      };
+
+      return HomeView;
+
+    })(Backbone.View);
+
+  }).call(this);
+  
+}});
+
+window.require.define({"views/note_view": function(exports, require, module) {
+  (function() {
+    var cozyEditor, template,
+      __hasProp = Object.prototype.hasOwnProperty,
+      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+    template = require('./templates/note');
+
+    cozyEditor = require('./ed_initPage').initPage;
+
+    exports.NoteWidget = (function(_super) {
+
+      __extends(NoteWidget, _super);
+
+      NoteWidget.prototype.className = "note-full";
+
+      NoteWidget.prototype.tagName = "div";
+
+      /* Constructor
+      */
+
+      function NoteWidget(model) {
+        this.model = model;
+        NoteWidget.__super__.constructor.call(this);
+        this.id = this.model.slug;
+        this.model.view = this;
+      }
+
+      NoteWidget.prototype.remove = function() {
+        return $(this.el).remove();
+      };
+
+      /* configuration
+      */
+
+      NoteWidget.prototype.render = function() {
+        var breadcrumb, i, linkToThePath, path;
+        i = 0;
+        breadcrumb = "";
+        linkToThePath = [];
+        while (i < this.model.humanPath.split(",").length) {
+          linkToThePath[i] = this.model.humanPath.split(",").slice(0, i + 1 || 9e9).join("/");
+          path = ("/#note/" + linkToThePath[i]).toLowerCase();
+          path = path.replace(/\s+/g, "-");
+          linkToThePath[i] = "<a href='" + path + "'> " + (this.model.humanPath.split(",")[i]) + "</a>";
+          if (i === 0) {
+            breadcrumb += "" + linkToThePath[i];
+          } else {
+            breadcrumb += " > " + linkToThePath[i];
+          }
+          i++;
+        }
+        this.instEditor = cozyEditor("#note-area");
+        $("#note-full-breadcrumb").html(breadcrumb);
+        $("#note-full-title").html(this.model.title);
+        $("#note-full-content").val(this.model.content);
+        return this.el;
+      };
+
+      NoteWidget.setEditor = function(changeCallback) {
+        var editor,
+          _this = this;
+        editor = $("textarea#note-full-content");
+        return editor.keyup(function(event) {
+          return changeCallback();
+        });
+      };
+
+      return NoteWidget;
+
+    })(Backbone.View);
+
+  }).call(this);
+  
+}});
+
+window.require.define({"views/old_ed_initPage": function(exports, require, module) {
+  (function() {
     var AutoTest, CNEditor, CNcozyToMarkdown, CNmarkdownToCozy, beautify, checker, cozy2md, editorBody$, editor_css$, editor_doAddClasseToLines, editor_head$, md2cozy;
 
     beautify = require('views/ed_beautify').beautify;
@@ -2374,328 +2761,6 @@ window.require.define({"views/ed_initPage": function(exports, require, module) {
       editor = new CNEditor($('#editorIframe')[0], cb);
       return editor;
     };
-
-  }).call(this);
-  
-}});
-
-window.require.define({"views/ed_markdownToCozy": function(exports, require, module) {
-  (function() {
-    var __hasProp = Object.prototype.hasOwnProperty,
-      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-    exports.CNmarkdownToCozy = (function(_super) {
-
-      __extends(CNmarkdownToCozy, _super);
-
-      function CNmarkdownToCozy() {
-        CNmarkdownToCozy.__super__.constructor.apply(this, arguments);
-      }
-
-      CNmarkdownToCozy.prototype.translate = function(text) {
-        var conv, cozyCode, cozyTurn, depth, htmlCode, id, readHtml, recRead;
-        conv = new Showdown.converter();
-        text = conv.makeHtml(text);
-        htmlCode = $(document.createElement('ul')).html(text);
-        cozyCode = '';
-        id = 0;
-        cozyTurn = function(type, depth, p) {
-          var code;
-          id++;
-          code = '';
-          p.contents().each(function() {
-            var name;
-            name = this.nodeName;
-            if (name === "#text") {
-              return code += "<span>" + ($(this).text()) + "</span>";
-            } else if (this.tagName != null) {
-              $(this).wrap('<div></div>');
-              code += "" + ($(this).parent().html());
-              return $(this).unwrap();
-            }
-          });
-          return ("<div id=CNID_" + id + " class=" + type + "-" + depth + ">") + code + "<br></div>";
-        };
-        depth = 0;
-        readHtml = function(obj) {
-          var tag;
-          tag = obj[0].tagName;
-          if (tag[0] === "H") {
-            depth = parseInt(tag[1], 10);
-            return cozyCode += cozyTurn("Th", depth, obj);
-          } else if (tag === "P") {
-            return cozyCode += cozyTurn("Lh", depth, obj);
-          } else {
-            return recRead(obj, "u");
-          }
-        };
-        recRead = function(obj, status) {
-          var child, i, tag, _ref, _results;
-          tag = obj[0].tagName;
-          if (tag === "UL") {
-            depth++;
-            obj.children().each(function() {
-              return recRead($(this), "u");
-            });
-            return depth--;
-          } else if (tag === "OL") {
-            depth++;
-            obj.children().each(function() {
-              return recRead($(this), "o");
-            });
-            return depth--;
-          } else if (tag === "LI" && (obj.contents().get(0) != null)) {
-            if (obj.contents().get(0).nodeName === "#text") {
-              obj = obj.clone().wrap('<p></p>').parent();
-            }
-            _results = [];
-            for (i = 0, _ref = obj.children().length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
-              child = $(obj.children().get(i));
-              if (i === 0) {
-                _results.push(cozyCode += cozyTurn("T" + status, depth, child));
-              } else {
-                _results.push(recRead(child, status));
-              }
-            }
-            return _results;
-          } else if (tag === "P") {
-            return cozyCode += cozyTurn("L" + status, depth, obj);
-          }
-        };
-        htmlCode.children().each(function() {
-          return readHtml($(this));
-        });
-        return cozyCode;
-      };
-
-      return CNmarkdownToCozy;
-
-    })(Backbone.View);
-
-  }).call(this);
-  
-}});
-
-window.require.define({"views/home_view": function(exports, require, module) {
-  (function() {
-    var Note, NoteWidget, Tree,
-      __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-      __hasProp = Object.prototype.hasOwnProperty,
-      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-    Tree = require("./widgets/tree").Tree;
-
-    NoteWidget = require("./note_view").NoteWidget;
-
-    Note = require("../models/note").Note;
-
-    exports.HomeView = (function(_super) {
-
-      __extends(HomeView, _super);
-
-      function HomeView() {
-        this.onNoteDropped = __bind(this.onNoteDropped, this);
-        this.onTreeLoaded = __bind(this.onTreeLoaded, this);
-        this.onNoteChanged = __bind(this.onNoteChanged, this);
-        this.selectFolder = __bind(this.selectFolder, this);
-        this.deleteFolder = __bind(this.deleteFolder, this);
-        this.renameFolder = __bind(this.renameFolder, this);
-        this.createFolder = __bind(this.createFolder, this);
-        HomeView.__super__.constructor.apply(this, arguments);
-      }
-
-      HomeView.prototype.id = 'home-view';
-
-      HomeView.prototype.createFolder = function(path, newName, data) {
-        var _this = this;
-        return Note.createNote({
-          path: path,
-          name: newName
-        }, function(note) {
-          data.rslt.obj.data("id", note.id);
-          data.inst.deselect_all();
-          return data.inst.select_node(data.rslt.obj);
-        });
-      };
-
-      HomeView.prototype.renameFolder = function(path, newName, data) {
-        var _this = this;
-        if (newName != null) {
-          return Note.updateNote({
-            path: path,
-            newName: newName
-          }, function() {
-            data.inst.deselect_all();
-            return data.inst.select_node(data.rslt.obj);
-          });
-        }
-      };
-
-      HomeView.prototype.deleteFolder = function(path) {
-        this.noteFull.hide();
-        return Note.deleteNote({
-          path: path
-        });
-      };
-
-      HomeView.prototype.selectFolder = function(path, id) {
-        var _this = this;
-        if (path.indexOf("/")) path = "/" + path;
-        app.router.navigate("note" + path, {
-          trigger: false
-        });
-        if (id != null) {
-          return Note.getNote(id, function(note) {
-            _this.renderNote(note);
-            return _this.noteFull.show();
-          });
-        } else {
-          return this.noteFull.hide();
-        }
-      };
-
-      HomeView.prototype.selectNote = function(path) {
-        return this.tree.selectNode(path);
-      };
-
-      HomeView.prototype.renderNote = function(note) {
-        var noteWidget;
-        this.currentNote = note;
-        noteWidget = new NoteWidget(this.currentNote);
-        return noteWidget.render();
-      };
-
-      HomeView.prototype.onNoteChanged = function(event) {
-        return this.currentNote.saveContent($("#note-full-content").val());
-      };
-
-      HomeView.prototype.onTreeLoaded = function() {
-        if (this.treeCreationCallback != null) return this.treeCreationCallback();
-      };
-
-      HomeView.prototype.onNoteDropped = function(newPath, oldPath, data) {
-        var _this = this;
-        if (oldPath.charAt(0) !== "/") oldPath = "/" + oldPath;
-        return Note.moveNote({
-          path: oldPath,
-          dest: newPath
-        }, function() {
-          data.inst.deselect_all();
-          return data.inst.select_node(data.rslt.o);
-        });
-      };
-
-      HomeView.prototype.render = function() {
-        $(this.el).html(require('./templates/home'));
-        return this;
-      };
-
-      HomeView.prototype.setLayout = function() {
-        return $('#home-view').layout({
-          size: "350",
-          minSize: "350",
-          resizable: true
-        });
-      };
-
-      HomeView.prototype.fetchData = function(callback) {
-        var _this = this;
-        this.treeCreationCallback = callback;
-        this.noteArea = $("#editor");
-        this.noteFull = $("#note-full");
-        this.noteFull.hide();
-        NoteWidget.setEditor(this.onNoteChanged);
-        return $.get("tree/", function(data) {
-          return _this.tree = new Tree(_this.$("#nav"), data, {
-            onCreate: _this.createFolder,
-            onRename: _this.renameFolder,
-            onRemove: _this.deleteFolder,
-            onSelect: _this.selectFolder,
-            onLoaded: _this.onTreeLoaded,
-            onDrop: _this.onNoteDropped
-          });
-        });
-      };
-
-      return HomeView;
-
-    })(Backbone.View);
-
-  }).call(this);
-  
-}});
-
-window.require.define({"views/note_view": function(exports, require, module) {
-  (function() {
-    var cozyEditor, template,
-      __hasProp = Object.prototype.hasOwnProperty,
-      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
-
-    template = require('./templates/note');
-
-    cozyEditor = require('./ed_initPage').initPage;
-
-    exports.NoteWidget = (function(_super) {
-
-      __extends(NoteWidget, _super);
-
-      NoteWidget.prototype.className = "note-full";
-
-      NoteWidget.prototype.tagName = "div";
-
-      /* Constructor
-      */
-
-      function NoteWidget(model) {
-        this.model = model;
-        NoteWidget.__super__.constructor.call(this);
-        this.id = this.model.slug;
-        this.model.view = this;
-      }
-
-      NoteWidget.prototype.remove = function() {
-        return $(this.el).remove();
-      };
-
-      /* configuration
-      */
-
-      NoteWidget.prototype.render = function() {
-        var breadcrumb, i, linkToThePath, path;
-        i = 0;
-        breadcrumb = "";
-        linkToThePath = [];
-        while (i < this.model.humanPath.split(",").length) {
-          linkToThePath[i] = this.model.humanPath.split(",").slice(0, i + 1 || 9e9).join("/");
-          path = ("/#note/" + linkToThePath[i]).toLowerCase();
-          path = path.replace(/\s+/g, "-");
-          linkToThePath[i] = "<a href='" + path + "'> " + (this.model.humanPath.split(",")[i]) + "</a>";
-          if (i === 0) {
-            breadcrumb += "" + linkToThePath[i];
-          } else {
-            breadcrumb += " > " + linkToThePath[i];
-          }
-          i++;
-        }
-        $("#note-full-breadcrumb").html(breadcrumb);
-        $("#note-full-title").html(this.model.title);
-        $("#note-full-content").val(this.model.content);
-        cozyEditor();
-        return this.el;
-      };
-
-      NoteWidget.setEditor = function(changeCallback) {
-        var editor,
-          _this = this;
-        editor = $("textarea#note-full-content");
-        return editor.keyup(function(event) {
-          return changeCallback();
-        });
-      };
-
-      return NoteWidget;
-
-    })(Backbone.View);
 
   }).call(this);
   
@@ -4303,73 +4368,7 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   buf.push(attrs({ 'id':('main'), "class": ('table-ly-wrpr') }));
   buf.push('><!-- boutons for the editor--><div');
   buf.push(attrs({ 'id':('divMainBtn'), "class": ('table-ly-hder') }));
-  buf.push('><div');
-  buf.push(attrs({ 'id':('generalBtnBar'), "class": ('btn-group') }));
-  buf.push('><button');
-  buf.push(attrs({ 'id':('logKeysBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
-  buf.push('>Log keystrokes</button><button');
-  buf.push(attrs({ 'id':('printRangeBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
-  buf.push('>Print Range</button><button');
-  buf.push(attrs({ 'id':('addClass'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
-  buf.push('>Class of selected Lines</button><button');
-  buf.push(attrs({ 'id':('addClass2LineBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
-  buf.push('>Show Class on Lines</button></div><select');
-  buf.push(attrs({ 'id':('contentSelect') }));
-  buf.push('><option');
-  buf.push(attrs({ 'value':("content-full"), 'style':("display:block") }));
-  buf.push('>Full note</option><option');
-  buf.push(attrs({ 'value':("content-full-marker"), 'style':("display:block") }));
-  buf.push('>Tout en puces</option><option');
-  buf.push(attrs({ 'value':("content-shortlines-marker"), 'style':("display:block") }));
-  buf.push('>Tout en puce, lignes courtes</option><option');
-  buf.push(attrs({ 'value':("content-shortlines-all"), 'style':("display:block") }));
-  buf.push('>Puces et titres, lignes courtes</option><option');
-  buf.push(attrs({ 'value':("content-empty"), 'style':("display:block") }));
-  buf.push('>Empty note</option><option');
-  buf.push(attrs({ 'value':("content-full-relative-indent"), 'style':("display:block") }));
-  buf.push('>Avec sommaire</option><option');
-  buf.push(attrs({ 'value':("test_1"), 'style':("display:block") }));
-  buf.push('>Test numero 1</option><option');
-  buf.push(attrs({ 'value':("test_2"), 'style':("display:block") }));
-  buf.push('>Test numero 2</option><option');
-  buf.push(attrs({ 'value':("test_3"), 'style':("display:block") }));
-  buf.push('>Test numero 3</option><option');
-  buf.push(attrs({ 'value':("test_4"), 'style':("display:block") }));
-  buf.push('>Test numero 4</option><option');
-  buf.push(attrs({ 'value':("test_5"), 'style':("display:block") }));
-  buf.push('>Test numero 5</option><option');
-  buf.push(attrs({ 'value':("test_6"), 'style':("display:block") }));
-  buf.push('>Test numero 6</option><option');
-  buf.push(attrs({ 'value':("test_7"), 'style':("display:block") }));
-  buf.push('>Test numero 7</option><option');
-  buf.push(attrs({ 'value':("test_8"), 'style':("display:block") }));
-  buf.push('>Test numero 8</option><option');
-  buf.push(attrs({ 'value':("test_9"), 'style':("display:block") }));
-  buf.push('>Test numero 9</option><option');
-  buf.push(attrs({ 'value':("test_10"), 'style':("display:block") }));
-  buf.push('>Test numero 10</option><option');
-  buf.push(attrs({ 'value':("test_11"), 'style':("display:block") }));
-  buf.push('>Test numero 11</option></select><select');
-  buf.push(attrs({ 'id':('mdSelect') }));
-  buf.push('><option');
-  buf.push(attrs({ 'value':("exemple1.md"), 'style':("display:block") }));
-  buf.push('>ex1</option><option');
-  buf.push(attrs({ 'value':("exemple2.md"), 'style':("display:block") }));
-  buf.push('>ex2</option></select><select');
-  buf.push(attrs({ 'id':('cssSelect') }));
-  buf.push('><option');
-  buf.push(attrs({ 'value':("images/editor2.css"), 'style':("display:block") }));
-  buf.push('>css1</option><option');
-  buf.push(attrs({ 'value':("stylesheets/app.css"), 'style':("display:block") }));
-  buf.push('>css2</option><option');
-  buf.push(attrs({ 'value':("stylesheets/app-deep-1.css"), 'style':("display:block") }));
-  buf.push('>depth_1</option><option');
-  buf.push(attrs({ 'value':("stylesheets/app-deep-2.css"), 'style':("display:block") }));
-  buf.push('>depth_2</option><option');
-  buf.push(attrs({ 'value':("stylesheets/app-deep-3.css"), 'style':("display:block") }));
-  buf.push('>depth_3</option><option');
-  buf.push(attrs({ 'value':("stylesheets/app-deep-4.css"), 'style':("display:block") }));
-  buf.push('>depth_4</option></select></div><div');
+  buf.push('></div><div');
   buf.push(attrs({ 'id':('main-div'), "class": ('table-ly-ctnt') }));
   buf.push('><div');
   buf.push(attrs({ 'id':('col-wrap') }));
@@ -4395,33 +4394,7 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   buf.push(attrs({ 'id':('editorContent'), "class": ('table-ly-ctnt') }));
   buf.push('><iframe');
   buf.push(attrs({ 'id':('editorIframe') }));
-  buf.push('></iframe></div></div></div></div><div');
-  buf.push(attrs({ 'id':('result-col') }));
-  buf.push('><div');
-  buf.push(attrs({ 'id':('well-result'), "class": ('monWell') }));
-  buf.push('><div');
-  buf.push(attrs({ 'id':('resultDiv'), "class": ('table-ly-wrpr') }));
-  buf.push('><div');
-  buf.push(attrs({ "class": ('table-ly-hder') }));
-  buf.push('><div');
-  buf.push(attrs({ 'id':('resultBtnBar'), "class": ('btn-group') }));
-  buf.push('><button');
-  buf.push(attrs({ 'id':('resultBtnBar_coller'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
-  buf.push('>Coller</button><button');
-  buf.push(attrs({ 'id':('markdownBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
-  buf.push('>Convert to Markdown</button><button');
-  buf.push(attrs({ 'id':('cozyBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
-  buf.push('>Convert to Cozy</button><button');
-  buf.push(attrs({ 'id':('checkBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
-  buf.push('>Run syntax test</button><button');
-  buf.push(attrs({ 'id':('summaryBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
-  buf.push('>Display Summary</button></div><p');
-  buf.push(attrs({ 'id':('editorPropertiesDisplay') }));
-  buf.push('></p></div><!-- text for the resulting html--><div');
-  buf.push(attrs({ 'id':('resultContent'), "class": ('table-ly-ctnt') }));
-  buf.push('><textarea');
-  buf.push(attrs({ 'id':('resultText') }));
-  buf.push('></textarea></div></div></div></div></div></div></div>');
+  buf.push('></iframe></div></div></div></div></div></div></div>');
   }
   return buf.join("");
   };
@@ -4685,8 +4658,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
               top: data.rslt.obj.position().top
             });
             $("#tree-buttons").show();
-          } else {
-            $("#tree-buttons").hide();
           }
           path = _this._getStringPath(parent, nodeName);
           return callbacks.onSelect(path, data.rslt.obj.data("id"));
