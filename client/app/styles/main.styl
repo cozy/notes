@@ -50,15 +50,20 @@
 
 #tree a
     text-transform lowercase
-    padding 3px 5px
-    margin 2px 0px
-    border 1px solid transparent
+    // padding 3px 5px
+    // margin 2px 60px 0px 0
+    // border 1px solid transparent
+    padding 0px 0px 0px 0px
+    margin  0px 0px 0px 0px
+    border  0px 0px 0px 0px solid black
     color treelinkcolor
     font-size 14px
+    box-sizing border-box
+
     width 100%
 
 #tree a.jstree-clicked
-    background bgcolortreeselected 
+    background #c5ebf9 
 
 #tree a:hover
     // shadow 1px 1px 1px treetexthovershadowcolor
@@ -68,35 +73,29 @@
 #tree-buttons
     display none
 
-#tree-top-buttons
-    border-spacing:0
-    margin-bottom:3px
+#tree-buttons
+    // border-bottom 1px solid bordercolortoolbar
+    // background-color bgcolortoolbar 
+    // margin-top 16px
+
+#tree-buttons div
+    display inline
+    padding 6px 10px
+    margin-left 8px
+    background-repeat no-repeat
+    background-position center
+    cursor pointer
 
 #tree-top-buttons .btn-group
     margin-bottom:2px
 
-// #tree-buttons
-//     border-bottom 1px solid bordercolortoolbar
-//     background-color bgcolortoolbar 
-//     margin-top 16px
+#tree-buttons i
+    margin-top 3px
+    margin-right 5px
 
-// #tree-buttons div
-//     display inline
-//     padding 6px 10px
-//     margin-left 8px
-//     background-repeat no-repeat
-//     background-position center
-//     cursor pointer
 
-// #tree-buttons i
-//     margin-top 3px
-//     margin-right 5px
-
-// #tree-buttons .spacer
-//     display block
-
-// #tree-buttons div.button:hover
-//     background: linear-gradient(top , bgcolorhoverbuttons 0%, bgclearcolorhoverbuttons 100%)
+#tree-buttons div.button:hover
+    background: linear-gradient(top , bgcolorhoverbuttons 0%, bgclearcolorhoverbuttons 100%)
 
 // #tree-buttons div.button
 //     background linear-gradient(top, bgcolorbuttons 0%, bgclearcolorbuttons 100%)
@@ -105,9 +104,11 @@
 //     border 1px solid treebuttonbordercolor 
 //     border-radius 2px 2px 2px 2px
 
-// #tree-buttons div.button:active
-//     background linear-gradient(top, bgcoloractivebuttons 0%, bgclearcoloractivebuttons 100%)
-//     shadow 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35)
+
+
+
+// #tree-buttons div.button-active
+//     shadow 0 0 0 0
 
 // #tree-search-field
 //     display inline-block
