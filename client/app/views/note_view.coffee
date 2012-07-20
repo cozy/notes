@@ -76,7 +76,7 @@ class exports.NoteWidget extends Backbone.View
         
     @setEditor: (changeCallback) ->
         @instEditor = cozyEditor("#note-area")
-        editor = $("#editor-content")
+        editor = $("#save-editor-content")
         #editor = $("textarea#note-full-content")
-        editor.keyup (event) =>
+        editor.click (event) =>
             changeCallback()
