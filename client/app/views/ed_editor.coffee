@@ -1366,16 +1366,16 @@ class exports.CNEditor extends Backbone.View
                 lineStart.lineDepthRel = lineStart.linePrev.lineDepthRel
 
     initSummary : () ->
-        summary = @editorBody$.children("#nav")
+        summary = @editorBody$.children("#navi")
         if summary.length == 0
             summary = $ document.createElement('div')
-            summary.attr('id', 'nav')
+            summary.attr('id', 'navi')
             summary.prependTo @editorBody$
         return summary
         
     buildSummary : () ->
         summary = @initSummary()
-        @editorBody$.children("#nav").children().remove()
+        @editorBody$.children("#navi").children().remove()
         lines = @_lines
         for c of lines
             if (@editorBody$.children("#" + "#{lines[c].lineID}").length > 0 and lines[c].lineType == "Th")
