@@ -2,9 +2,6 @@ Tree = require("./widgets/tree").Tree
 NoteWidget = require("./note_view").NoteWidget
 Editor = require("./note_view").instEditor
 Note = require("../models/note").Note
-CNcozyToMarkdown = require("views/ed_cozyToMarkdown").CNcozyToMarkdown
-
-cozy2md = new CNcozyToMarkdown()
 
 # Main view that manages interaction between toolbar, navigation and notes
 class exports.HomeView extends Backbone.View
@@ -62,13 +59,7 @@ class exports.HomeView extends Backbone.View
     # When note change, its content is saved.
     onNoteChanged: (event) =>
         alert "kikoo"
-        content = ""
-        Editor.editorBody$.children("div:not(#nav)").each () ->
-            content += @html()
-        console.log content
-        #mdContent = cozy2md(content)
-        #@currentNote.saveContent mdContent
-        @currentNote.saveContent $("#note-full-content").val()
+        @currentNote.saveContent Editor.getEditorContent()
 
     # When tree is loaded, callback given in paramter when fetchData
     # function was called is run.
@@ -116,5 +107,5 @@ class exports.HomeView extends Backbone.View
                 onRemove: @deleteFolder
                 onSelect: @selectFolder
                 onLoaded: @onTreeLoaded
-                onDrop: @onNoteDropped
+                onDrop  : @onNoteDropped
 

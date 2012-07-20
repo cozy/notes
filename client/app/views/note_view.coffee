@@ -1,5 +1,5 @@
 template = require('./templates/note')
-cozyEditor = require('./ed_initPage').initPage
+CNEditor = require('./ed_editor').CNEditor
 
 # Row displaying application name and attributes
 class exports.NoteWidget extends Backbone.View
@@ -23,8 +23,9 @@ class exports.NoteWidget extends Backbone.View
     
 
     render: ->
-    #breadcrumb will contain the path of the selected note in a link format (<a>)
-    #the code below generates the breadcrumb corresponding to the current note path
+    #breadcrumb will contain the path of the selected note in a link format(<a>)
+    # the code below generates the breadcrumb corresponding
+    # to the current note path
         i = 0
         breadcrumb = ""
         linkToThePath = []
@@ -40,10 +41,32 @@ class exports.NoteWidget extends Backbone.View
             i++
         $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
-        #le contenu va de la base dans les notes
-        $("#note-full-content").val @model.content
-        #@instEditor.editorBody$.val @model.content
- 
+        
+        # load the base's content into the editor
+        myContent = @model.content
+        
+        # Callback to execute when the editor is ready
+        # this refers to the editor during instanciation
+        callbackEditor = () ->
+            # load the base's content into the editor
+            if myContent
+                this.setEditorContent(myContent)
+            else
+                this.replaceContent( require('./templates/content-empty') )
+            # buttons for the editor
+            $("#indentBtn").on "click", () ->
+                this.tab()
+            $("#unIndentBtn").on "click", () ->
+                this.shiftTab()
+            $("#markerListBtn").on "click", () ->
+                this.markerList()
+            $("#titleBtn").on "click", () ->
+                this.titleList()
+            instEditor = this
+        # creation of the editor itself
+        editor = new CNEditor($('#editorIframe')[0], callBackEditor)
+
+        
         #params = { allowScriptAccess: "always" }
         #atts = { id: "myytplayer" }
         #swfobject.embedSWF("http://www.youtube.com/v/YAOv-KGh1qw?enablejsapi=1&playerapiid=ytplayer&version=3",
@@ -68,12 +91,10 @@ class exports.NoteWidget extends Backbone.View
         #    content = $("#note-full-content-with-video").html()
         #    $("#note-area").append("<textarea id='note-full-content-with-video'>#{content}</textarea>")
 
-        @el
+        return @el
         
     @setEditor: (changeCallback) ->
-        @instEditor = cozyEditor("#note-area")
         editor = $("#editor-content")
-        console.log $("#editor-content")
-        #editor = $("textarea#note-full-content")
+        #console.log $("#editor-content")
         editor.keyup (event) =>
             changeCallback()
