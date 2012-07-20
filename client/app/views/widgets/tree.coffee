@@ -284,29 +284,11 @@ class exports.Tree
             root = $("#tree-node-all")
             #if e.target isnt root
             console.log e.data
-            leftPosition1 = root.offset().left + root.width() - 50
-            leftPosition2 = leftPosition1 - 50
-            leftPosition3 = leftPosition2 - 50
-            $("#tree-create").css
+            leftPosition1 = root.offset().left + root.width() - 150
+            $("#tree-buttons").css
                 position: "absolute"
                 left: leftPosition1
                 top: e.target.offsetTop
-            $("#tree-rename").css
-                position: "absolute"
-                left: leftPosition2
-                top: e.target.offsetTop
-            $("#tree-remove").css
-                position: "absolute"
-                left: leftPosition3
-                top: e.target.offsetTop
             $("#tree-buttons").show()
-        #$("#tree").mouseleave =>
-            #$("#tree-buttons div").hide()
-        #if @once is undefined
-        #    $("#tree a").append('<div class="tree-create button">
-        #    <i class="icon-plus"></i>
-        #    </div>')
-        #    @once = false
-    
-    _onNode: (event) =>
-        alert "essai"
+        $("#tree").mouseleave =>
+            $("#tree-buttons").hide()
