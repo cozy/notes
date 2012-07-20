@@ -15,14 +15,15 @@ exports.initPage =  (selector)->
 
     # callback to execute after editor's initialization
     # the contexte (this) inside the function is the editor
+    
     cb = () ->
         this.replaceContent( require('./templates/content-empty') )
         # buttons init, beautify actions
         editorCtrler = this
         editorBody$  = this.editorBody$
-
+               
         beautify(editorBody$)
-        
+               
         editorBody$.on 'keyup' , ->
             beautify(editorBody$)
 

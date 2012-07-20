@@ -290,5 +290,5 @@ class exports.Tree
                 left: leftPosition1
                 top: e.target.offsetTop
             $("#tree-buttons").show()
-        $("#tree").mouseleave =>
-            $("#tree-buttons").hide()
+        #$("#tree").mouseleave =>
+            #$("#tree-buttons").hide()
