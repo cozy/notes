@@ -81,7 +81,7 @@ class exports.Tree
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
         @searchField.keyup @_onSearchChanged
-
+        $("#tree").mouseover @_addButton
 
         # Tree
         @widget.bind "create.jstree", (e, data) =>
@@ -140,26 +140,8 @@ class exports.Tree
                 callbacks.onRemove path
 
         @widget.bind "select_node.jstree", (e, data) =>
-            root = $("#tree-node-all")
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.inst._get_parent data.rslt.parent
-            if parent isnt -1
-                leftPosition1 = root.offset().left + root.width() - 150
-                leftPosition2 = root.offset().left + root.width() - 100
-                leftPosition3 = root.offset().left + root.width() - 50
-                $("#tree-create").css
-                    position: "absolute"
-                    left: leftPosition1
-                    top: data.rslt.obj.position().top
-                $("#tree-rename").css
-                    position: "absolute"
-                    left: leftPosition2
-                    top: data.rslt.obj.position().top
-                $("#tree-remove").css
-                    position: "absolute"
-                    left: leftPosition3
-                    top: data.rslt.obj.position().top
-                $("#tree-buttons").show()
             path = @_getStringPath parent, nodeName
             callbacks.onSelect path, data.rslt.obj.data("id")
 
@@ -298,11 +280,33 @@ class exports.Tree
             , 1000) 
 
     _addButton: (event) =>
-        if @once is undefined
-            $("#tree a").append('<div class="tree-create button">
-            <i class="icon-plus"></i>
-            </div>')
-            @once = false
+        $("#tree a").mouseover (e) =>
+            root = $("#tree-node-all")
+            #if e.target isnt root
+            console.log e.data
+            leftPosition1 = root.offset().left + root.width() - 50
+            leftPosition2 = leftPosition1 - 50
+            leftPosition3 = leftPosition2 - 50
+            $("#tree-create").css
+                position: "absolute"
+                left: leftPosition1
+                top: e.target.offsetTop
+            $("#tree-rename").css
+                position: "absolute"
+                left: leftPosition2
+                top: e.target.offsetTop
+            $("#tree-remove").css
+                position: "absolute"
+                left: leftPosition3
+                top: e.target.offsetTop
+            $("#tree-buttons").show()
+        #$("#tree").mouseleave =>
+            #$("#tree-buttons div").hide()
+        #if @once is undefined
+        #    $("#tree a").append('<div class="tree-create button">
+        #    <i class="icon-plus"></i>
+        #    </div>')
+        #    @once = false
     
     _onNode: (event) =>
         alert "essai"

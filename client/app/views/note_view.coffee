@@ -38,7 +38,6 @@ class exports.NoteWidget extends Backbone.View
             else
                 breadcrumb += " > #{linkToThePath[i]}"
             i++
-        @instEditor = cozyEditor("#note-area")
         $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
         #le contenu va de la base dans les notes
@@ -72,7 +71,9 @@ class exports.NoteWidget extends Backbone.View
         @el
         
     @setEditor: (changeCallback) ->
-        editor = $("textarea#note-full-content")
+        @instEditor = cozyEditor("#note-area")
+        editor = $("#editor-content")
+        console.log $("#editor-content")
+        #editor = $("textarea#note-full-content")
         editor.keyup (event) =>
             changeCallback()
-        #editor = cozyEditor("#note-area").editorBody$

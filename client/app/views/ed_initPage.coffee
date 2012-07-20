@@ -39,7 +39,6 @@ exports.initPage =  (selector)->
         # display whether the user has moved the carret with keyboard or mouse.
         this.editorBody$.on 'mouseup' , () =>
             this.newPosition = true
-            $("#editorPropertiesDisplay").text("newPosition = true")
 
         # automatic summary
         this.editorBody$.on 'mouseup', () =>
@@ -48,4 +47,4 @@ exports.initPage =  (selector)->
             this.buildSummary()
     # creation of the editor
     editor = new CNEditor( $('#editorIframe')[0], cb )
-    return editorBody$
+    return editor

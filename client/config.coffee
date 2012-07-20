@@ -27,6 +27,8 @@ exports.config =
           'vendor/scripts/jquery.jstree.js'
           'vendor/scripts/jquery.layout-1.2.0.js'
           'vendor/scripts/ckeditor.js'
+          'vendor/scripts/rangy-core.js'
+          'vendor/scripts/rangy-selectionsaverestore-uncompressed.js'
         ]
 
     stylesheets:

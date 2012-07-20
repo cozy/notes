@@ -2215,8 +2215,7 @@ window.require.define({"views/ed_initPage": function(exports, require, module) {
           return editorCtrler.titleList();
         });
         this.editorBody$.on('mouseup', function() {
-          _this.newPosition = true;
-          return $("#editorPropertiesDisplay").text("newPosition = true");
+          return _this.newPosition = true;
         });
         this.editorBody$.on('mouseup', function() {
           return _this.buildSummary();
@@ -2226,7 +2225,7 @@ window.require.define({"views/ed_initPage": function(exports, require, module) {
         });
       };
       editor = new CNEditor($('#editorIframe')[0], cb);
-      return editorBody$;
+      return editor;
     };
 
   }).call(this);
@@ -2332,7 +2331,7 @@ window.require.define({"views/ed_markdownToCozy": function(exports, require, mod
 
 window.require.define({"views/home_view": function(exports, require, module) {
   (function() {
-    var CNcozyToMarkdown, Editor, Note, NoteWidget, Tree,
+    var CNcozyToMarkdown, Editor, Note, NoteWidget, Tree, cozy2md,
       __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
       __hasProp = Object.prototype.hasOwnProperty,
       __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
@@ -2345,7 +2344,9 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
     Note = require("../models/note").Note;
 
-    CNcozyToMarkdown = require('views/ed_cozyToMarkdown').CNcozyToMarkdown;
+    CNcozyToMarkdown = require("views/ed_cozyToMarkdown").CNcozyToMarkdown;
+
+    cozy2md = new CNcozyToMarkdown();
 
     exports.HomeView = (function(_super) {
 
@@ -2424,6 +2425,13 @@ window.require.define({"views/home_view": function(exports, require, module) {
       };
 
       HomeView.prototype.onNoteChanged = function(event) {
+        var content;
+        alert("kikoo");
+        content = "";
+        Editor.editorBody$.children("div:not(#nav)").each(function() {
+          return content += this.html();
+        });
+        console.log(content);
         return this.currentNote.saveContent($("#note-full-content").val());
       };
 
@@ -2535,7 +2543,6 @@ window.require.define({"views/note_view": function(exports, require, module) {
           }
           i++;
         }
-        this.instEditor = cozyEditor("#note-area");
         $("#note-full-breadcrumb").html(breadcrumb);
         $("#note-full-title").html(this.model.title);
         $("#note-full-content").val(this.model.content);
@@ -2545,7 +2552,9 @@ window.require.define({"views/note_view": function(exports, require, module) {
       NoteWidget.setEditor = function(changeCallback) {
         var editor,
           _this = this;
-        editor = $("textarea#note-full-content");
+        this.instEditor = cozyEditor("#note-area");
+        editor = $("#editor-content");
+        console.log($("#editor-content"));
         return editor.keyup(function(event) {
           return changeCallback();
         });
@@ -4569,6 +4578,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           return _this.treeEl.jstree("remove");
         });
         this.searchField.keyup(this._onSearchChanged);
+        $("#tree").mouseover(this._addButton);
         this.widget.bind("create.jstree", function(e, data) {
           var completeSource, idPath, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
@@ -4634,31 +4644,9 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           }
         });
         this.widget.bind("select_node.jstree", function(e, data) {
-          var leftPosition1, leftPosition2, leftPosition3, nodeName, parent, path, root;
-          root = $("#tree-node-all");
+          var nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           parent = data.inst._get_parent(data.rslt.parent);
-          if (parent !== -1) {
-            leftPosition1 = root.offset().left + root.width() - 150;
-            leftPosition2 = root.offset().left + root.width() - 100;
-            leftPosition3 = root.offset().left + root.width() - 50;
-            $("#tree-create").css({
-              position: "absolute",
-              left: leftPosition1,
-              top: data.rslt.obj.position().top
-            });
-            $("#tree-rename").css({
-              position: "absolute",
-              left: leftPosition2,
-              top: data.rslt.obj.position().top
-            });
-            $("#tree-remove").css({
-              position: "absolute",
-              left: leftPosition3,
-              top: data.rslt.obj.position().top
-            });
-            $("#tree-buttons").show();
-          }
           path = _this._getStringPath(parent, nodeName);
           return callbacks.onSelect(path, data.rslt.obj.data("id"));
         });
@@ -4789,12 +4777,31 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       };
 
       Tree.prototype._addButton = function(event) {
-        if (this.once === void 0) {
-          $("#tree a").append('<div class="tree-create button">\
-              <i class="icon-plus"></i>\
-              </div>');
-          return this.once = false;
-        }
+        var _this = this;
+        return $("#tree a").mouseover(function(e) {
+          var leftPosition1, leftPosition2, leftPosition3, root;
+          root = $("#tree-node-all");
+          console.log(e.data);
+          leftPosition1 = root.offset().left + root.width() - 50;
+          leftPosition2 = leftPosition1 - 50;
+          leftPosition3 = leftPosition2 - 50;
+          $("#tree-create").css({
+            position: "absolute",
+            left: leftPosition1,
+            top: e.target.offsetTop
+          });
+          $("#tree-rename").css({
+            position: "absolute",
+            left: leftPosition2,
+            top: e.target.offsetTop
+          });
+          $("#tree-remove").css({
+            position: "absolute",
+            left: leftPosition3,
+            top: e.target.offsetTop
+          });
+          return $("#tree-buttons").show();
+        });
       };
 
       Tree.prototype._onNode = function(event) {
