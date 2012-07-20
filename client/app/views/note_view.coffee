@@ -43,11 +43,12 @@ class exports.NoteWidget extends Backbone.View
         $("#note-full-title").html @model.title
         
         # load the base's content into the editor
+        $("#note-area").html require('./templates/editor')
         myContent = @model.content
         
         # Callback to execute when the editor is ready
         # this refers to the editor during instanciation
-        callbackEditor = () ->
+        callBackEditor = () ->
             # load the base's content into the editor
             if myContent
                 this.setEditorContent(myContent)
