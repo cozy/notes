@@ -20,6 +20,7 @@ class exports.NoteWidget extends Backbone.View
 
 
     ### configuration ###
+    
 
     render: ->
     #breadcrumb will contain the path of the selected note in a link format (<a>)
@@ -39,15 +40,16 @@ class exports.NoteWidget extends Backbone.View
             i++
         $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
+        #le contenu va de la base dans les notes
         $("#note-full-content").val @model.content
-        cozyEditor()
+        #@instEditor.editorBody$.val @model.content
  
         #params = { allowScriptAccess: "always" }
         #atts = { id: "myytplayer" }
         #swfobject.embedSWF("http://www.youtube.com/v/YAOv-KGh1qw?enablejsapi=1&playerapiid=ytplayer&version=3",
         #               "ytapiplayer", "425", "356", "8", null, null, params, atts)
         #ytplayer = document.getElementById("myytplayer")
-#
+        #
         #$("#video").click =>
         #    videoUrl = $("#video-url").val()
         #    ytplayer.cueVideoById(videoUrl, 0, "default")
@@ -67,9 +69,11 @@ class exports.NoteWidget extends Backbone.View
         #    $("#note-area").append("<textarea id='note-full-content-with-video'>#{content}</textarea>")
 
         @el
-
+        
     @setEditor: (changeCallback) ->
-        editor = $("textarea#note-full-content")
+        @instEditor = cozyEditor("#note-area")
+        editor = $("#editor-content")
+        console.log $("#editor-content")
+        #editor = $("textarea#note-full-content")
         editor.keyup (event) =>
             changeCallback()
-
