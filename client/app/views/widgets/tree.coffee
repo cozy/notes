@@ -80,6 +80,7 @@ class exports.Tree
             @treeEl.jstree("rename")
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
+        $("#searchInfo").hide()
         @searchField.keyup @_onSearchChanged
         $("#tree").mouseover @_addButton
 

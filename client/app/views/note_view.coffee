@@ -43,7 +43,7 @@ class exports.NoteWidget extends Backbone.View
         #@instEditor = cozyEditor("#note-area")
         $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
-
+        
         # load the base's content into the editor
         $("#note-area").html require('./templates/editor')
         myContent = @model.content
@@ -69,7 +69,6 @@ class exports.NoteWidget extends Backbone.View
         # creation of the editor itself
         editor = new CNEditor($('#editorIframe')[0], callBackEditor)
 
-        
         #params = { allowScriptAccess: "always" }
         #atts = { id: "myytplayer" }
         #swfobject.embedSWF("http://www.youtube.com/v/YAOv-KGh1qw?enablejsapi=1&playerapiid=ytplayer&version=3",
@@ -97,8 +96,7 @@ class exports.NoteWidget extends Backbone.View
         return @el
         
     @setEditor: (changeCallback) ->
-        @instEditor = cozyEditor("#note-area")
-        editor = $("#save-editor-content")
-        #editor = $("textarea#note-full-content")
-        editor.click (event) =>
+        editor = $("#editor-content")
+        #console.log $("#editor-content")
+        editor.keyup (event) =>
             changeCallback()
