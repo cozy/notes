@@ -2,7 +2,6 @@ Tree = require("./widgets/tree").Tree
 NoteWidget = require("./note_view").NoteWidget
 Note = require("../models/note").Note
 
-
 # Main view that manages interaction between toolbar, navigation and notes
 class exports.HomeView extends Backbone.View
     id: 'home-view'
@@ -108,5 +107,5 @@ class exports.HomeView extends Backbone.View
                 onRemove: @deleteFolder
                 onSelect: @selectFolder
                 onLoaded: @onTreeLoaded
-                onDrop: @onNoteDropped
+                onDrop  : @onNoteDropped
 

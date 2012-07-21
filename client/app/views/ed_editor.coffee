@@ -53,6 +53,9 @@ class exports.CNEditor extends Backbone.View
             # 3- initialize event listeners
             editorBody$.prop( '__editorCtl', this)
             editorBody$.on 'keypress' , @_keyPressListener
+            editorBody$.on "mouseup", () ->
+                @newPosition = true
+            
             # 4- return a ref to the editor's controler
             callBack.call(this)
             return this

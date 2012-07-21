@@ -9,18 +9,34 @@
     height auto
     background-color bgcoloreditor
 
+#breadcrumb
+    background: url("../images/gray-bg.png") repeat scroll center center transparent;
+    height: 1.5em;
+    list-style: none outside none;
+    margin: 0;
+    padding: 0;
+    
+#breadcrumb a
+    background: url("../images/gray-sep.png") no-repeat scroll right center transparent;
+    color: #FFFFFF;
+    display: block;
+    padding-right: 0.8em;
+    text-decoration: none;
+
 .note-full
     background #333333
-    shadow 2px 2px 5px bgshadowcolor 
-    border 1px solid notebordercolor
+    shadow 5px 5px 5px bgshadowcolor 
+    //border 1px solid notebordercolor
     padding 10px
     border-radius 3px
     height 90%
     margin-bottom 10px
 
 .note-full h2
+    color #B5B5B5
     padding 0
     margin-bottom 20px
+    margin-left 20px
 
 #note-full-content
     width 98%
