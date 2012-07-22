@@ -57,9 +57,9 @@ class exports.HomeView extends Backbone.View
 
     # When note change, its content is saved.
     onNoteChanged: (event) =>
-        #mdContent = cozy2md(content)
-        @currentNote.saveContent mdContent
-        #@currentNote.saveContent NoteWidget.instEditor.getEditorContent()
+        noteWidget = new NoteWidget @currentNote
+        console.log noteWidget
+        @currentNote.saveContent noteWidget.instEditor.getEditorContent()
 
     # When tree is loaded, callback given in paramter when fetchData
     # function was called is run.

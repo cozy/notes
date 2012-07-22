@@ -1,13 +1,11 @@
 template = require('./templates/note')
-CNEditor = require('./ed_editor').CNEditor
+CNEditor = require('./editor').CNEditor
 
 # Row displaying application name and attributes
 class exports.NoteWidget extends Backbone.View
     className: "note-full"
     tagName: "div"
-
-    #instEditor: cozyEditor("#note-area")
-    
+   
     ### Constructor ####
 
     constructor: (@model) ->
@@ -40,7 +38,7 @@ class exports.NoteWidget extends Backbone.View
             else
                 breadcrumb += " > #{linkToThePath[i]}"
             i++
-        #@instEditor = cozyEditor("#note-area")
+            
         $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
         
@@ -51,6 +49,7 @@ class exports.NoteWidget extends Backbone.View
         # Callback to execute when the editor is ready
         # this refers to the editor during instanciation
         callBackEditor = () ->
+            editorCtrl = this
             # load the base's content into the editor
             if myContent
                 this.setEditorContent(myContent)
@@ -58,16 +57,16 @@ class exports.NoteWidget extends Backbone.View
                 this.replaceContent( require('./templates/content-empty') )
             # buttons for the editor
             $("#indentBtn").on "click", () ->
-                this.tab()
+                editorCtrl.tab()
             $("#unIndentBtn").on "click", () ->
-                this.shiftTab()
+                editorCtrl.shiftTab()
             $("#markerListBtn").on "click", () ->
-                this.markerList()
+                editorCtrl.markerList()
             $("#titleBtn").on "click", () ->
-                this.titleList()
+                editorCtrl.titleList()
             instEditor = this
         # creation of the editor itself
-        editor = new CNEditor($('#editorIframe')[0], callBackEditor)
+        @instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)
 
         #params = { allowScriptAccess: "always" }
         #atts = { id: "myytplayer" }
@@ -92,11 +91,24 @@ class exports.NoteWidget extends Backbone.View
         #$("#note-full-content-with-video").dblclick =>
         #    content = $("#note-full-content-with-video").html()
         #    $("#note-area").append("<textarea id='note-full-content-with-video'>#{content}</textarea>")
-
+        
         return @el
+
         
     @setEditor: (changeCallback) ->
-        editor = $("#editor-content")
-        #console.log $("#editor-content")
-        editor.keyup (event) =>
+        
+        # the save button cannot work because it does not exist at the moment
+        # we try to bind the "save" event to it (since the editor isnt ready
+        # yet)
+                
+        saveBtn = $ document.createElement("button")
+        $("#note-area").before saveBtn
+        saveBtn.text "Save"
+        saveBtn.on "click", () =>
             changeCallback()
+            
+        #editor.on "click", () =>
+            #changeCallback()
+        #editor = $("#editor-content")
+        #editor.keyup (event) =>
+            #changeCallback()
