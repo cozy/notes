@@ -82,6 +82,8 @@ class exports.Tree
             @treeEl.jstree("remove")
         $("#searchInfo").hide()
         @searchField.keyup @_onSearchChanged
+        # TODO : this event occures many many times when in the tree : not the best way
+        # to add the tree-buttons
         $("#tree").mouseover @_addButton
 
         # Tree
@@ -280,16 +282,26 @@ class exports.Tree
                 $("#searchInfo").show()
             , 1000) 
 
-    _addButton: (event) =>
-        $("#tree a").mouseover (e) =>
-            root = $("#tree-node-all")
+    _addButton: (event) ->
+        # TODO : 
+        # console.log '#tree.mouseover'
+        $("#tree a").mouseover (e) ->
+            # console.log '#tree a .mouseover'
+            # root = $("#tree-node-all")
             #if e.target isnt root
-            console.log e.data
-            leftPosition1 = root.offset().left + root.width() - 150
-            $("#tree-buttons").css
-                position: "absolute"
-                left: leftPosition1
-                top: e.target.offsetTop
+
+            # leftPosition1 = root.offset().left + root.width() - 60
+            # $("#tree-buttons").css
+            #     position: "absolute"
+            #     left: leftPosition1
+            #     top: e.target.offsetTop
+
+            $("#tree-buttons").appendTo( this )
             $("#tree-buttons").show()
-        #$("#tree").mouseleave =>
-            #$("#tree-buttons").hide()
+        $("#tree").mouseleave ->
+            # TODO : this event occurs several times when the mouse
+            # leaves the tree (?? shouldn't this hapen only once ??)
+            # besides it hapens when the mouse goes over the tree-buttons
+            # => not the best way to remove the tree-buttons ...
+            # console.log 'tree.mouseleave'
+            $("#tree-buttons").hide()
