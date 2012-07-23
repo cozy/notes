@@ -2180,6 +2180,113 @@ window.require.define({"views/home_view": function(exports, require, module) {
   
 }});
 
+window.require.define({"views/note_view": function(exports, require, module) {
+  (function() {
+    var CNEditor, template,
+      __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+      __hasProp = Object.prototype.hasOwnProperty,
+      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+    template = require('./templates/note');
+
+    CNEditor = require('./editor').CNEditor;
+
+    exports.NoteWidget = (function(_super) {
+
+      __extends(NoteWidget, _super);
+
+      NoteWidget.prototype.className = "note-full";
+
+      NoteWidget.prototype.tagName = "div";
+
+      /* Constructor
+      */
+
+      function NoteWidget(model) {
+        this.model = model;
+        this.onNoteChanged = __bind(this.onNoteChanged, this);
+        NoteWidget.__super__.constructor.call(this);
+        this.id = this.model.slug;
+        this.model.view = this;
+      }
+
+      NoteWidget.prototype.onNoteChanged = function(event) {
+        return this.model.saveContent($("#note-full-content").val());
+      };
+
+      NoteWidget.prototype.remove = function() {
+        return $(this.el).remove();
+      };
+
+      /* configuration
+      */
+
+      NoteWidget.prototype.render = function() {
+        var breadcrumb, callBackEditor, i, linkToThePath, myContent, path;
+        i = 0;
+        breadcrumb = "";
+        linkToThePath = [];
+        while (i < this.model.humanPath.split(",").length) {
+          linkToThePath[i] = this.model.humanPath.split(",").slice(0, i + 1 || 9e9).join("/");
+          path = ("/#note/" + linkToThePath[i]).toLowerCase();
+          path = path.replace(/\s+/g, "-");
+          linkToThePath[i] = "<a href='" + path + "'> " + (this.model.humanPath.split(",")[i]) + "</a>";
+          if (i === 0) {
+            breadcrumb += "" + linkToThePath[i];
+          } else {
+            breadcrumb += " > " + linkToThePath[i];
+          }
+          i++;
+        }
+        $("#note-full-breadcrumb").html(breadcrumb);
+        $("#note-full-title").html(this.model.title);
+        $("#note-area").html(require('./templates/editor'));
+        myContent = this.model.content;
+        callBackEditor = function() {
+          var editorCtrl, instEditor;
+          editorCtrl = this;
+          if (myContent) {
+            this.setEditorContent(myContent);
+          } else {
+            this.replaceContent(require('./templates/content-empty'));
+          }
+          $("#indentBtn").on("click", function() {
+            return editorCtrl.tab();
+          });
+          $("#unIndentBtn").on("click", function() {
+            return editorCtrl.shiftTab();
+          });
+          $("#markerListBtn").on("click", function() {
+            return editorCtrl.markerList();
+          });
+          $("#titleBtn").on("click", function() {
+            return editorCtrl.titleList();
+          });
+          return instEditor = this;
+        };
+        this.instEditor = new CNEditor($('#editorIframe')[0], callBackEditor);
+        return this.el;
+      };
+
+      NoteWidget.setEditor = function(changeCallback) {
+        var saveBtn,
+          _this = this;
+        saveBtn = $(document.createElement("button"));
+        $("#note-area").before(saveBtn);
+        saveBtn.text("Save");
+        return saveBtn.on("click", function() {
+          return changeCallback();
+        });
+      };
+
+      return NoteWidget;
+
+    })(Backbone.View);
+
+  }).call(this);
+  
+}});
+
 window.require.define({"views/templates/content-empty": function(exports, require, module) {
   module.exports = function anonymous(locals, attrs, escape, rethrow) {
   var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;

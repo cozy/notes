@@ -115,4 +115,3 @@ class exports.NoteWidget extends Backbone.View
         #editor = $("#editor-content")
         #editor.keyup (event) =>
             #changeCallback()
->>>>>>> cc8af92707c695436ca3100b98eeaebdbf663fd3
