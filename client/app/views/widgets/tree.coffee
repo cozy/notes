@@ -273,12 +273,18 @@ class exports.Tree
         if searchString is ""
             $("#searchInfo").hide()
             $("#tree").jstree("search", searchString)
+            $(".note-full").height("100%")
         else
             @searchTimer = setTimeout(->
                 $("#tree").jstree("search", searchString)
                 $("#searchInfo").html info
                 $("#searchInfo").show()
+                #24 represents the size of the margin from the searchInfo
+                if @noteNewHeight is undefined
+                    @noteNewHeight = parseInt($("#note-full").css("height")) - parseInt($("#searchInfo").css("height")) - 24
+                $(".note-full").height(@noteNewHeight)
             , 1000) 
+
 
     _addButton: (event) =>
         $("#tree a").mouseover (e) =>
