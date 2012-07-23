@@ -43,19 +43,18 @@ class exports.CNEditor extends Backbone.View
             editor_css$  = editor_head$.html('<link href="stylesheets/app.css" 
                                                rel="stylesheet">')
             # 2- set the properties of the editor
-            @editorBody$   = editorBody$
-            console.log @editorBody$
-            @editorIframe  = iframe$[0]
-            @_lines        = {}
-            @_highestId    = 0
-            @_deepest      = 1
-            @_firstLine    = null
+            @editorBody$  = editorBody$
+            @editorIframe = iframe$[0]
+            @_lines       = {}
+            @_highestId   = 0
+            @_deepest     = 1
+            @_firstLine   = null
+            @_history     =
+                index  : 0
+                history: []
             # 3- initialize event listeners
             editorBody$.prop( '__editorCtl', this)
             editorBody$.on 'keypress' , @_keyPressListener
-            editorBody$.on "mouseup", () ->
-                @newPosition = true
-            
             # 4- return a ref to the editor's controler
             callBack.call(this)
             return this
@@ -94,6 +93,7 @@ class exports.CNEditor extends Backbone.View
         @_readHtml()
         #@_buildSummary()
 
+
     ###
     # Returns a markdown string representing the editor content
     ###
@@ -116,8 +116,10 @@ class exports.CNEditor extends Backbone.View
     replaceCSS : (path) ->
         $(this.editorIframe).contents().find("link[rel=stylesheet]").attr({href : path})
 
-    ###
-    # Utility functions for accurate node selections
+
+    ### ------------------------------------------------------------------------
+    # UTILITY FUNCTIONS
+    # used to set ranges and normalize selection
     ###
     _putEndOnEnd : (range, elt) ->
         if elt.firstChild?
@@ -125,26 +127,26 @@ class exports.CNEditor extends Backbone.View
             range.setEnd(elt.firstChild, offset)
         else
             range.setEnd(elt, 0)
+            
     _putStartOnEnd : (range, elt) ->
         if elt.firstChild?
             offset = $(elt.firstChild).text().length
             range.setStart(elt.firstChild, offset)
         else
             range.setStart(elt, 0)
+            
     _putEndOnStart : (range, elt) ->
         if elt.firstChild?
             range.setEnd(elt.firstChild, 0)
         else
             range.setEnd(elt, 0)
+            
     _putStartOnStart : (range, elt) ->
         if elt.firstChild?
             range.setStart(elt.firstChild, 0)
         else
             range.setStart(elt, 0)
-
-    ###
-    # Normalize the actual selection
-    ###
+            
     _normalize : (range) ->
         # We suppose that a div can be selected only when clicking on the right
         # 1. if it's a div
@@ -282,6 +284,7 @@ class exports.CNEditor extends Backbone.View
             # RETURN
             when "-return"
                 @_return()
+                @_addHistory()
                 e.preventDefault()
                 #@_updateDeepest()
             
@@ -328,6 +331,7 @@ class exports.CNEditor extends Backbone.View
                 # console.log "TODO : PASTE"
                 e.preventDefault()
                 #@_updateDeepest()
+               
             
             # SAVE (Ctrl + s)                  
             when "Ctrl-115"
@@ -335,6 +339,17 @@ class exports.CNEditor extends Backbone.View
                 # console.log "TODO : SAVE"
                 e.preventDefault()
 
+
+            # UNDO (Ctrl + z)
+            when "Ctrl-122"
+                e.preventDefault()
+                @unDo()
+                
+            # REDO (Ctrl + y)
+            when "Ctrl-121"
+                e.preventDefault()
+                @reDo()
+            
 
     ### ------------------------------------------------------------------------
     # Manage deletions when suppr key is pressed
@@ -1330,10 +1345,14 @@ class exports.CNEditor extends Backbone.View
         @_highestId = lineID
 
 
+    ### ------------------------------------------------------------------------
+    # LINES MOTION MANAGEMENT
+    # 
     # Functions to perform the motion of an entire block of lines
     # TODO: bug: on 2 extreme lines
     #            (right after the first line and right before the last line)
     # TODO: improve insertion of the line swapped with the block
+    ####
     _moveLinesDown : () ->
         #0- Set variables with informations on the selected lines
         @_findLines()
@@ -1436,10 +1455,39 @@ class exports.CNEditor extends Backbone.View
                 linePrev.line$.attr('class', "#{linePrev.lineType}-#{linePrev.lineDepthAbs}")
 
 
-    # Summary initialization
-    # TODO: avoid to update the summary too often
+    ### ------------------------------------------------------------------------
+    #  HISTORY MANAGEMENT
+    # Add html code to the history
+    ###
+    _addHistory : () ->
+        @_history.history.push @editorBody$.html()
+        @_history.index = @_history.history.length-1
+    ###
+    # Undo the previous action
+    ###
+    unDo : () ->
+        # if there is an action to undo
+        if @_history.index > 0
+            @_history.index -= 1
+            @editorBody$.html @_history.history[@_history.index]
+    ###
+    # Redo a undo-ed action
+    ###
+    reDo : () ->
+        # if there is an action to redo
+        if @_history.index < (@_history.history.length-1)
+            @_history.index += 1
+            @editorBody$.html @_history.history[@_history.index]
+
+
+    ### ------------------------------------------------------------------------
+    # SUMMARY MANAGEMENT
+    # 
+    # initialization
+    # TODO: avoid updating the summary too often
     #       it would be best to make the update faster (rather than reading
     #       every line)
+    ###
     _initSummary : () ->
         summary = @editorBody$.children("#nav")
         if summary.length == 0
@@ -1447,7 +1495,6 @@ class exports.CNEditor extends Backbone.View
             summary.attr('id', 'nav')
             summary.prependTo @editorBody$
         return summary
-
     ###
     # Summary upkeep
     ###
@@ -1459,29 +1506,14 @@ class exports.CNEditor extends Backbone.View
             if (@editorBody$.children("#" + "#{lines[c].lineID}").length > 0 and lines[c].lineType == "Th")
                 lines[c].line$.clone().appendTo summary
 
+    ### ------------------------------------------------------------------------
+    #  DECORATION FUNCTIONS (bold/italic/underlined/quote)
+    #  TODO
     ###
-    # Add html code to the history
-    ###
-    _addHistory : () ->
-        # 1-fetch current html code
-        allDivs = @editorBody$.children("div:not(#nav)")
-        content = ''
-        allDivs.each () ->
-            content += @html()
-        
-    ###
-    # Undo the previous action
-    ###
-    unDo : () ->
-        return
-
-    ###
-    # Redo a undo-ed action
-    ###
-    reDo : () ->
-        return
-
-    ###
+    
+    
+    ### ------------------------------------------------------------------------
+    #  MARKUP LANGUAGE CONVERTERS
     # Reads a string that represents html code in our cozy format and turns it
     # into a string in markdown format
     ###
@@ -1539,7 +1571,6 @@ class exports.CNEditor extends Backbone.View
 
         # adds structure depending of the line's class
         classType = (className) ->
-            #console.log className
             tab   = className.split "-"
             type  = tab[0]               # type of class (Tu,Lu,Th,Lh,To,Lo)
             depth = parseInt(tab[1], 10) # depth (1,2,3...)
@@ -1561,7 +1592,6 @@ class exports.CNEditor extends Backbone.View
             if lineCode.attr('class')?
                 markCode += classType lineCode.attr 'class'
 
-            
             # completes the text depending of the line's content
             l = lineCode.children().length
             j = 0
@@ -1582,9 +1612,11 @@ class exports.CNEditor extends Backbone.View
 
     # Reads a string of html code given by showdown
     # and turns it into our proper cozy html code.
-    _md2cozy : (text) ->
+    _md2cozy: (text) ->
+
         conv = new Showdown.converter()
         text = conv.makeHtml text
+    
         # Writes the string into a jQuery object
         htmlCode = $(document.createElement 'ul').html text
 
