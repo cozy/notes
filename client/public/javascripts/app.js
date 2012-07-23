@@ -339,6 +339,1695 @@ window.require.define({"routers/main_router": function(exports, require, module)
   
 }});
 
+window.require.define({"views/editor": function(exports, require, module) {
+  
+  /* ------------------------------------------------------------------------
+  # CLASS FOR THE COZY NOTE EDITOR
+  #
+  # usage : 
+  #
+  # newEditor = new CNEditor( iframeTarget,callBack )
+  #   iframeTarget = iframe where the editor will be nested
+  #   callBack     = launched when editor ready, the context 
+  #                  is set to the editorCtrl (callBack.call(this))
+  # properties & methods :
+  #   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
+  #   _keyPressListener : (e) =>
+  #   _insertLineAfter  : (param) ->
+  #   _insertLineBefore : (param) ->
+  #   
+  #   editorIframe      : the iframe element where is nested the editor
+  #   editorBody$       : the jquery pointer on the body of the iframe
+  #   _lines            : {} an objet, each property refers a line
+  #   _highestId        : 
+  #   _firstLine        : pointes the first line : TODO : not taken into account
+  */
+
+  (function() {
+    var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+      __hasProp = Object.prototype.hasOwnProperty,
+      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+
+    exports.CNEditor = (function(_super) {
+
+      __extends(CNEditor, _super);
+
+      /*
+          #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
+          #       iframeTarget = iframe where the editor will be nested
+          #       callBack     = launched when editor ready, the context 
+          #                      is set to the editorCtrl (callBack.call(this))
+      */
+
+      function CNEditor(iframeTarget, callBack) {
+        this._keyPressListener = __bind(this._keyPressListener, this);
+        var iframe$,
+          _this = this;
+        iframe$ = $(iframeTarget);
+        iframe$.on('load', function() {
+          var editorBody$, editor_css$, editor_head$, editor_html$;
+          editor_html$ = iframe$.contents().find("html");
+          editorBody$ = editor_html$.find("body");
+          editorBody$.parent().attr('id', '__ed-iframe-html');
+          editorBody$.attr("contenteditable", "true");
+          editorBody$.attr("id", "__ed-iframe-body");
+          editor_head$ = editor_html$.find("head");
+          editor_css$ = editor_head$.html('<link href="stylesheets/app.css" \
+                                                 rel="stylesheet">');
+          _this.editorBody$ = editorBody$;
+          _this.editorIframe = iframe$[0];
+          _this._lines = {};
+          _this._highestId = 0;
+          _this._deepest = 1;
+          _this._firstLine = null;
+          _this._history = {
+            index: 0,
+            history: []
+          };
+          editorBody$.prop('__editorCtl', _this);
+          editorBody$.on('keypress', _this._keyPressListener);
+          callBack.call(_this);
+          return _this;
+        });
+      }
+
+      /* ------------------------------------------------------------------------
+      # Find the maximal deep (thus the deepest line) of the text
+      # TODO: improve it so it only calculates the new depth from the modified
+      #       lines (not all of them)
+      # TODO: set a class system rather than multiple CSS files. Thus titles
+      #       classes look like "Th-n depth3" for instance if max depth is 3
+      # note: These todos arent our priority for now
+      */
+
+      CNEditor.prototype._updateDeepest = function() {
+        var c, lines, max;
+        max = 1;
+        lines = this._lines;
+        for (c in lines) {
+          if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th" && lines[c].lineDepthAbs > max) {
+            max = this._lines[c].lineDepthAbs;
+          }
+        }
+        if (max !== this._deepest) {
+          this._deepest = max;
+          if (max < 4) {
+            return this.replaceCSS("stylesheets/app-deep-" + max + ".css");
+          } else {
+            return this.replaceCSS("stylesheets/app-deep-4.css");
+          }
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      # Initialize the editor content from a html string
+      */
+
+      CNEditor.prototype.replaceContent = function(htmlContent) {
+        this.editorBody$.html(htmlContent);
+        return this._readHtml();
+      };
+
+      /*
+          # Returns a markdown string representing the editor content
+      */
+
+      CNEditor.prototype.getEditorContent = function() {
+        var cozyContent;
+        cozyContent = this.editorBody$.html();
+        return this._cozy2md(cozyContent);
+      };
+
+      /*
+          # Sets the editor content from a markdown string
+      */
+
+      CNEditor.prototype.setEditorContent = function(mdContent) {
+        var cozyContent;
+        cozyContent = this._md2cozy(mdContent);
+        this.editorBody$.html(cozyContent);
+        return this._readHtml();
+      };
+
+      /*
+          # Change the path of the css applied to the editor iframe
+      */
+
+      CNEditor.prototype.replaceCSS = function(path) {
+        return $(this.editorIframe).contents().find("link[rel=stylesheet]").attr({
+          href: path
+        });
+      };
+
+      /* ------------------------------------------------------------------------
+      # UTILITY FUNCTIONS
+      # used to set ranges and normalize selection
+      */
+
+      CNEditor.prototype._putEndOnEnd = function(range, elt) {
+        var offset;
+        if (elt.firstChild != null) {
+          offset = $(elt.firstChild).text().length;
+          return range.setEnd(elt.firstChild, offset);
+        } else {
+          return range.setEnd(elt, 0);
+        }
+      };
+
+      CNEditor.prototype._putStartOnEnd = function(range, elt) {
+        var offset;
+        if (elt.firstChild != null) {
+          offset = $(elt.firstChild).text().length;
+          return range.setStart(elt.firstChild, offset);
+        } else {
+          return range.setStart(elt, 0);
+        }
+      };
+
+      CNEditor.prototype._putEndOnStart = function(range, elt) {
+        if (elt.firstChild != null) {
+          return range.setEnd(elt.firstChild, 0);
+        } else {
+          return range.setEnd(elt, 0);
+        }
+      };
+
+      CNEditor.prototype._putStartOnStart = function(range, elt) {
+        if (elt.firstChild != null) {
+          return range.setStart(elt.firstChild, 0);
+        } else {
+          return range.setStart(elt, 0);
+        }
+      };
+
+      CNEditor.prototype._normalize = function(range) {
+        var elt, endContainer, next, prev, startContainer, _ref, _ref2;
+        startContainer = range.startContainer;
+        if (startContainer.nodeName === "DIV") {
+          elt = startContainer.lastChild.previousElementSibling;
+          this._putStartOnEnd(range, elt);
+        } else if ((_ref = !startContainer.parentNode) === "SPAN" || _ref === "IMG" || _ref === "A") {
+          next = startContainer.nextElementSibling;
+          prev = startContainer.previousElementSibling;
+          if (next !== null) {
+            this._putStartOnStart(range, next);
+          } else {
+            this._putEndOnEnd(range, prev);
+          }
+        }
+        endContainer = range.endContainer;
+        if (endContainer.nodeName === "DIV") {
+          elt = endContainer.lastChild.previousElementSibling;
+          return this._putEndOnEnd(range, elt);
+        } else if ((_ref2 = !endContainer.parentNode) === "SPAN" || _ref2 === "IMG" || _ref2 === "A") {
+          next = endContainer.nextElementSibling;
+          prev = endContainer.previousElementSibling;
+          if (next !== null) {
+            return this._putStartOnStart(range, next);
+          } else {
+            return this._putEndOnEnd(range, prev);
+          }
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      #    The listener of keyPress event on the editor's iframe... the king !
+      */
+
+      /*
+          # SHORTCUT  |-----------------------> (suggestion: see jquery.hotkeys.js ? )
+          #
+          # Definition of a shortcut : 
+          #   a combination alt,ctrl,shift,meta
+          #   + one caracter(.which) 
+          #   or 
+          #     arrow (.keyCode=dghb:) or 
+          #     return(keyCode:13) or 
+          #     bckspace (which:8) or 
+          #     tab(keyCode:9)
+          #   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
+          #                   'Ctrl-'
+      */
+
+      CNEditor.prototype._keyPressListener = function(e) {
+        var i, keyStrokesCode, metaKeyStrokesCode, num, range, sel, shortcut, _ref;
+        metaKeyStrokesCode = (e.altKey ? "Alt" : "") + 
+                                (e.ctrlKey ? "Ctrl" : "") + 
+                                (e.shiftKey ? "Shift" : "");
+        switch (e.keyCode) {
+          case 13:
+            keyStrokesCode = "return";
+            break;
+          case 35:
+            keyStrokesCode = "end";
+            break;
+          case 36:
+            keyStrokesCode = "home";
+            break;
+          case 33:
+            keyStrokesCode = "pgUp";
+            break;
+          case 34:
+            keyStrokesCode = "pgDwn";
+            break;
+          case 37:
+            keyStrokesCode = "left";
+            break;
+          case 38:
+            keyStrokesCode = "up";
+            break;
+          case 39:
+            keyStrokesCode = "right";
+            break;
+          case 40:
+            keyStrokesCode = "down";
+            break;
+          case 9:
+            keyStrokesCode = "tab";
+            break;
+          case 8:
+            keyStrokesCode = "backspace";
+            break;
+          case 32:
+            keyStrokesCode = "space";
+            break;
+          case 27:
+            keyStrokesCode = "esc";
+            break;
+          case 46:
+            keyStrokesCode = "suppr";
+            break;
+          default:
+            switch (e.which) {
+              case 32:
+                keyStrokesCode = "space";
+                break;
+              case 8:
+                keyStrokesCode = "backspace";
+                break;
+              default:
+                keyStrokesCode = e.which;
+            }
+        }
+        shortcut = metaKeyStrokesCode + '-' + keyStrokesCode;
+        if ((keyStrokesCode === "left" || keyStrokesCode === "up" || keyStrokesCode === "right" || keyStrokesCode === "down" || keyStrokesCode === "pgUp" || keyStrokesCode === "pgDwn" || keyStrokesCode === "end" || keyStrokesCode === "home") && (shortcut !== 'CtrlShift-down' && shortcut !== 'CtrlShift-up')) {
+          this.newPosition = true;
+        } else {
+          if (this.newPosition) {
+            this.newPosition = false;
+            $("#editorPropertiesDisplay").text("newPosition = false");
+            sel = rangy.getIframeSelection(this.editorIframe);
+            num = sel.rangeCount;
+            if (num > 0) {
+              for (i = 0, _ref = num - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+                range = sel.getRangeAt(i);
+                this._normalize(range);
+              }
+            }
+          }
+        }
+        this.currentSel = null;
+        switch (shortcut) {
+          case "-return":
+            this._return();
+            this._addHistory();
+            return e.preventDefault();
+          case "-tab":
+            this.tab();
+            return e.preventDefault();
+          case "-backspace":
+            return this._backspace(e);
+          case "-suppr":
+            return this._suppr(e);
+          case "CtrlShift-down":
+            this._moveLinesDown();
+            return e.preventDefault();
+          case "CtrlShift-up":
+            this._moveLinesUp();
+            return e.preventDefault();
+          case "Shift-tab":
+            this.shiftTab();
+            return e.preventDefault();
+          case "Alt-97":
+            this._toggleLineType();
+            return e.preventDefault();
+          case "Ctrl-118":
+            return e.preventDefault();
+          case "Ctrl-115":
+            return e.preventDefault();
+          case "Ctrl-122":
+            e.preventDefault();
+            return this.unDo();
+          case "Ctrl-121":
+            e.preventDefault();
+            return this.reDo();
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      # Manage deletions when suppr key is pressed
+      */
+
+      CNEditor.prototype._suppr = function(e) {
+        var sel, startLine;
+        this._findLinesAndIsStartIsEnd();
+        sel = this.currentSel;
+        startLine = sel.startLine;
+        if (sel.range.collapsed) {
+          if (sel.rangeIsEndLine) {
+            if (startLine.lineNext !== null) {
+              sel.range.setEndBefore(startLine.lineNext.line$[0].firstChild);
+              sel.endLine = startLine.lineNext;
+              this._deleteMultiLinesSelections();
+              return e.preventDefault();
+            } else {
+              return e.preventDefault();
+            }
+          }
+        } else if (sel.endLine === startLine) {
+          sel.range.deleteContents();
+          return e.preventDefault();
+        } else {
+          this._deleteMultiLinesSelections();
+          return e.preventDefault();
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      #  Manage deletions when backspace key is pressed
+      */
+
+      CNEditor.prototype._backspace = function(e) {
+        var sel, startLine;
+        this._findLinesAndIsStartIsEnd();
+        sel = this.currentSel;
+        startLine = sel.startLine;
+        if (sel.range.collapsed) {
+          if (sel.rangeIsStartLine) {
+            if (startLine.linePrev !== null) {
+              sel.range.setStartBefore(startLine.linePrev.line$[0].lastChild);
+              sel.startLine = startLine.linePrev;
+              this._deleteMultiLinesSelections();
+              return e.preventDefault();
+            } else {
+              return e.preventDefault();
+            }
+          }
+        } else if (sel.endLine === startLine) {
+          sel.range.deleteContents();
+          return e.preventDefault();
+        } else {
+          this._deleteMultiLinesSelections();
+          return e.preventDefault();
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      #  Turn selected lines in a title List (Th)
+      */
+
+      CNEditor.prototype.titleList = function() {
+        var endContainer, endDiv, endDivID, endLineID, initialEndOffset, initialStartOffset, line, range, sel, startContainer, startDiv, _results;
+        sel = rangy.getIframeSelection(this.editorIframe);
+        range = sel.getRangeAt(0);
+        startContainer = range.startContainer;
+        endContainer = range.endContainer;
+        initialStartOffset = range.startOffset;
+        initialEndOffset = range.endOffset;
+        startDiv = startContainer;
+        if (startDiv.nodeName !== "DIV") startDiv = $(startDiv).parents("div")[0];
+        endDiv = endContainer;
+        if (endDiv.nodeName !== "DIV") endDiv = $(endDiv).parents("div")[0];
+        endLineID = endDiv.id;
+        line = this._lines[startDiv.id];
+        endDivID = endDiv.id;
+        _results = [];
+        while (true) {
+          this._line2titleList(line);
+          if (line.lineID === endDivID) {
+            break;
+          } else {
+            _results.push(line = line.lineNext);
+          }
+        }
+        return _results;
+      };
+
+      /* ------------------------------------------------------------------------
+      #  Turn a given line in a title List Line (Th)
+      */
+
+      CNEditor.prototype._line2titleList = function(line) {
+        var parent1stSibling, _results;
+        if (line.lineType !== 'Th') {
+          if (line.lineType[0] === 'L') {
+            line.lineType = 'Tu';
+            line.lineDepthAbs += 1;
+          }
+          this._titilizeSiblings(line);
+          parent1stSibling = this._findParent1stSibling(line);
+          _results = [];
+          while (parent1stSibling !== null && parent1stSibling.lineType !== 'Th') {
+            this._titilizeSiblings(parent1stSibling);
+            _results.push(parent1stSibling = this._findParent1stSibling(parent1stSibling));
+          }
+          return _results;
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      #  Turn selected lines in a Marker List
+      */
+
+      CNEditor.prototype.markerList = function(l) {
+        var endContainer, endDiv, endLineID, initialEndOffset, initialStartOffset, line, lineTypeTarget, range, startDiv, startDivID, _results;
+        if (l != null) {
+          startDivID = l.lineID;
+          endLineID = startDivID;
+        } else {
+          range = rangy.getIframeSelection(this.editorIframe).getRangeAt(0);
+          endContainer = initialStartOffset = range.startOffset;
+          initialEndOffset = range.endOffset;
+          startDiv = range.startContainer;
+          if (startDiv.nodeName !== "DIV") startDiv = $(startDiv).parents("div")[0];
+          startDivID = startDiv.id;
+          endDiv = range.endContainer;
+          if (endDiv.nodeName !== "DIV") endDiv = $(endDiv).parents("div")[0];
+          endLineID = endDiv.id;
+        }
+        line = this._lines[startDivID];
+        _results = [];
+        while (true) {
+          switch (line.lineType) {
+            case 'Th':
+              lineTypeTarget = 'Tu';
+              l = line.lineNext;
+              while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+                switch (l.lineType) {
+                  case 'Th':
+                    l.line$.prop("class", "Tu-" + l.lineDepthAbs);
+                    l.lineType = 'Tu';
+                    l.lineDepthRel = this._findDepthRel(l);
+                    break;
+                  case 'Lh':
+                    l.line$.prop("class", "Lu-" + l.lineDepthAbs);
+                    l.lineType = 'Lu';
+                    l.lineDepthRel = this._findDepthRel(l);
+                }
+                l = l.lineNext;
+              }
+              l = line.linePrev;
+              while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+                switch (l.lineType) {
+                  case 'Th':
+                    l.line$.prop("class", "Tu-" + l.lineDepthAbs);
+                    l.lineType = 'Tu';
+                    l.lineDepthRel = this._findDepthRel(l);
+                    break;
+                  case 'Lh':
+                    l.line$.prop("class", "Lu-" + l.lineDepthAbs);
+                    l.lineType = 'Lu';
+                    l.lineDepthRel = this._findDepthRel(l);
+                }
+                l = l.linePrev;
+              }
+              break;
+            case 'Lh':
+            case 'Lu':
+              this.tab(line);
+              break;
+            default:
+              lineTypeTarget = false;
+          }
+          if (lineTypeTarget) {
+            line.line$.prop("class", "" + lineTypeTarget + "-" + line.lineDepthAbs);
+            line.lineType = lineTypeTarget;
+          }
+          if (line.lineID === endLineID) {
+            break;
+          } else {
+            _results.push(line = line.lineNext);
+          }
+        }
+        return _results;
+      };
+
+      /* ------------------------------------------------------------------------
+      # Calculates the relative depth of the line
+      #   usage   : cycle : Tu => To => Lx => Th
+      #   param   : line : the line we want to find the relative depth
+      #   returns : a number
+      #
+      */
+
+      CNEditor.prototype._findDepthRel = function(line) {
+        var linePrev;
+        if (line.lineDepthAbs === 1) {
+          if (line.lineType[1] === "h") {
+            return 0;
+          } else {
+            return 1;
+          }
+        } else {
+          linePrev = line.linePrev;
+          while (linePrev.lineDepthAbs >= line.lineDepthAbs) {
+            linePrev = linePrev.linePrev;
+          }
+          return linePrev.lineDepthRel + 1;
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      # Toggle line type
+      #   usage : cycle : Tu => To => Lx => Th
+      #   param :
+      #       e = event
+      */
+
+      CNEditor.prototype._toggleLineType = function() {
+        var endContainer, endDiv, endLineID, initialEndOffset, initialStartOffset, l, line, lineTypeTarget, range, sel, startContainer, startDiv, _results;
+        sel = rangy.getIframeSelection(this.editorIframe);
+        range = sel.getRangeAt(0);
+        startContainer = range.startContainer;
+        endContainer = range.endContainer;
+        initialStartOffset = range.startOffset;
+        initialEndOffset = range.endOffset;
+        startDiv = startContainer;
+        if (startDiv.nodeName !== "DIV") startDiv = $(startDiv).parents("div")[0];
+        endDiv = endContainer;
+        if (endDiv.nodeName !== "DIV") endDiv = $(endDiv).parents("div")[0];
+        endLineID = endDiv.id;
+        line = this._lines[startDiv.id];
+        _results = [];
+        while (true) {
+          switch (line.lineType) {
+            case 'Tu':
+              lineTypeTarget = 'Th';
+              l = line.lineNext;
+              while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+                if (l.lineDepthAbs === line.lineDepthAbs) {
+                  if (l.lineType === 'Tu') {
+                    l.line$.prop("class", "Th-" + line.lineDepthAbs);
+                    l.lineType = 'Th';
+                  } else {
+                    l.line$.prop("class", "Lh-" + line.lineDepthAbs);
+                    l.lineType = 'Lh';
+                  }
+                }
+                l = l.lineNext;
+              }
+              l = line.linePrev;
+              while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+                if (l.lineDepthAbs === line.lineDepthAbs) {
+                  if (l.lineType === 'Tu') {
+                    l.line$.prop("class", "Th-" + line.lineDepthAbs);
+                    l.lineType = 'Th';
+                  } else {
+                    l.line$.prop("class", "Lh-" + line.lineDepthAbs);
+                    l.lineType = 'Lh';
+                  }
+                }
+                l = l.linePrev;
+              }
+              break;
+            case 'Th':
+              lineTypeTarget = 'Tu';
+              l = line.lineNext;
+              while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+                if (l.lineDepthAbs === line.lineDepthAbs) {
+                  if (l.lineType === 'Th') {
+                    l.line$.prop("class", "Tu-" + line.lineDepthAbs);
+                    l.lineType = 'Tu';
+                  } else {
+                    l.line$.prop("class", "Lu-" + line.lineDepthAbs);
+                    l.lineType = 'Lu';
+                  }
+                }
+                l = l.lineNext;
+              }
+              l = line.linePrev;
+              while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+                if (l.lineDepthAbs === line.lineDepthAbs) {
+                  if (l.lineType === 'Th') {
+                    l.line$.prop("class", "Tu-" + line.lineDepthAbs);
+                    l.lineType = 'Tu';
+                  } else {
+                    l.line$.prop("class", "Lu-" + line.lineDepthAbs);
+                    l.lineType = 'Lu';
+                  }
+                }
+                l = l.linePrev;
+              }
+              break;
+            default:
+              lineTypeTarget = false;
+          }
+          if (lineTypeTarget) {
+            line.line$.prop("class", "" + lineTypeTarget + "-" + line.lineDepthAbs);
+            line.lineType = lineTypeTarget;
+          }
+          if (line.lineID === endDiv.id) {
+            break;
+          } else {
+            _results.push(line = line.lineNext);
+          }
+        }
+        return _results;
+      };
+
+      /* ------------------------------------------------------------------------
+      # tab keypress
+      #   l = optional : a line to indent. If none, the selection will be indented
+      */
+
+      CNEditor.prototype.tab = function(l) {
+        var endDiv, endLineID, isTabAllowed, line, lineNext, linePrev, linePrevSibling, lineTypeTarget, nextLineType, range, sel, startDiv, _results;
+        if (l != null) {
+          startDiv = l.line$[0];
+          endDiv = startDiv;
+        } else {
+          sel = rangy.getIframeSelection(this.editorIframe);
+          range = sel.getRangeAt(0);
+          startDiv = range.startContainer;
+          endDiv = range.endContainer;
+        }
+        if (startDiv.nodeName !== "DIV") startDiv = $(startDiv).parents("div")[0];
+        if (endDiv.nodeName !== "DIV") endDiv = $(endDiv).parents("div")[0];
+        endLineID = endDiv.id;
+        line = this._lines[startDiv.id];
+        _results = [];
+        while (true) {
+          switch (line.lineType) {
+            case 'Tu':
+            case 'Th':
+              linePrevSibling = this._findPrevSibling(line);
+              if (linePrevSibling === null) {
+                isTabAllowed = false;
+              } else {
+                isTabAllowed = true;
+                if (linePrevSibling.lineType === 'Th') {
+                  lineTypeTarget = 'Lh';
+                } else {
+                  if (linePrevSibling.lineType === 'Tu') {
+                    lineTypeTarget = 'Lu';
+                  } else {
+                    lineTypeTarget = 'Lo';
+                  }
+                  if (line.lineType === 'Th') {
+                    lineNext = line.lineNext;
+                    while (lineNext !== null && lineNext.lineDepthAbs > line.lineDepthAbs) {
+                      switch (lineNext.lineType) {
+                        case 'Th':
+                          lineNext.lineType = 'Tu';
+                          line.line$.prop("class", "Tu-" + lineNext.lineDepthAbs);
+                          nextLineType = prevTxType;
+                          break;
+                        case 'Tu':
+                          nextLineType = 'Lu';
+                          break;
+                        case 'To':
+                          nextLineType = 'Lo';
+                          break;
+                        case 'Lh':
+                          lineNext.lineType = nextLineType;
+                          line.line$.prop("class", "" + nextLineType + "-" + lineNext.lineDepthAbs);
+                      }
+                    }
+                  }
+                }
+              }
+              break;
+            case 'Lh':
+            case 'Lu':
+            case 'Lo':
+              lineNext = line.lineNext;
+              lineTypeTarget = null;
+              while (lineNext !== null && lineNext.lineDepthAbs >= line.lineDepthAbs) {
+                if (lineNext.lineDepthAbs !== line.lineDepthAbs + 1) {
+                  lineNext = lineNext.lineNext;
+                } else {
+                  lineTypeTarget = lineNext.lineType;
+                  lineNext = null;
+                }
+              }
+              if (lineTypeTarget === null) {
+                linePrev = line.linePrev;
+                while (linePrev !== null && linePrev.lineDepthAbs >= line.lineDepthAbs) {
+                  if (linePrev.lineDepthAbs === line.lineDepthAbs + 1) {
+                    lineTypeTarget = linePrev.lineType;
+                    linePrev = null;
+                  } else {
+                    linePrev = linePrev.linePrev;
+                  }
+                }
+              }
+              if (lineTypeTarget === null) {
+                isTabAllowed = true;
+                lineTypeTarget = 'Tu';
+                line.lineDepthAbs += 1;
+                line.lineDepthRel += 1;
+              } else {
+                if (lineTypeTarget === 'Th') {
+                  isTabAllowed = true;
+                  line.lineDepthAbs += 1;
+                  line.lineDepthRel = 0;
+                }
+                if (lineTypeTarget === 'Tu' || lineTypeTarget === 'To') {
+                  isTabAllowed = true;
+                  line.lineDepthAbs += 1;
+                  line.lineDepthRel += 1;
+                }
+              }
+          }
+          if (isTabAllowed) {
+            line.line$.prop("class", "" + lineTypeTarget + "-" + line.lineDepthAbs);
+            line.lineType = lineTypeTarget;
+          }
+          if (line.lineID === endLineID) {
+            break;
+          } else {
+            _results.push(line = line.lineNext);
+          }
+        }
+        return _results;
+      };
+
+      /* ------------------------------------------------------------------------
+      # shift + tab keypress
+      #   e = event
+      */
+
+      CNEditor.prototype.shiftTab = function() {
+        var c, endDiv, endLineID, initialEndOffset, initialStartOffset, isTabAllowed, l, line, lineTypeTarget, nextL, parent, range, sel, startDiv, _results;
+        sel = rangy.getIframeSelection(this.editorIframe);
+        l = sel.rangeCount;
+        if (l === 0) return;
+        c = 0;
+        _results = [];
+        while (c < l) {
+          range = sel.getRangeAt(c);
+          startDiv = range.startContainer;
+          endDiv = range.endContainer;
+          initialStartOffset = range.startOffset;
+          initialEndOffset = range.endOffset;
+          if (startDiv.nodeName !== "DIV") startDiv = $(startDiv).parents("div")[0];
+          if (endDiv.nodeName !== "DIV") endDiv = $(endDiv).parents("div")[0];
+          endLineID = endDiv.id;
+          line = this._lines[startDiv.id];
+          while (true) {
+            switch (line.lineType) {
+              case 'Tu':
+              case 'Th':
+              case 'To':
+                parent = line.linePrev;
+                while (parent !== null && parent.lineDepthAbs >= line.lineDepthAbs) {
+                  parent = parent.linePrev;
+                }
+                if (parent !== null) {
+                  isTabAllowed = true;
+                  lineTypeTarget = parent.lineType;
+                  lineTypeTarget = "L" + lineTypeTarget.charAt(1);
+                  line.lineDepthAbs -= 1;
+                  line.lineDepthRel -= parent.lineDepthRel;
+                  if (line.lineNext.lineType[0] === 'L') {
+                    nextL = line.lineNext;
+                    nextL.lineType = 'T' + nextL.lineType[1];
+                    nextL.line$.prop('class', "" + nextL.lineType + "-" + nextL.lineDepthAbs);
+                  }
+                } else {
+                  isTabAllowed = false;
+                }
+                break;
+              case 'Lh':
+                isTabAllowed = true;
+                lineTypeTarget = 'Th';
+                break;
+              case 'Lu':
+                isTabAllowed = true;
+                lineTypeTarget = 'Tu';
+                break;
+              case 'Lo':
+                isTabAllowed = true;
+                lineTypeTarget = 'To';
+            }
+            if (isTabAllowed) {
+              line.line$.prop("class", "" + lineTypeTarget + "-" + line.lineDepthAbs);
+              line.lineType = lineTypeTarget;
+            }
+            if (line.lineID === endDiv.id) {
+              break;
+            } else {
+              line = line.lineNext;
+            }
+          }
+          _results.push(c++);
+        }
+        return _results;
+      };
+
+      /* ------------------------------------------------------------------------
+      # return keypress
+      #   e = event
+      */
+
+      CNEditor.prototype._return = function() {
+        var currSel, endLine, endOfLineFragment, newLine, range4sel, startLine;
+        this._findLinesAndIsStartIsEnd();
+        currSel = this.currentSel;
+        startLine = currSel.startLine;
+        endLine = currSel.endLine;
+        if (currSel.range.collapsed) {} else if (endLine === startLine) {
+          currSel.range.deleteContents();
+        } else {
+          this._deleteMultiLinesSelections();
+          this._findLinesAndIsStartIsEnd();
+          currSel = this.currentSel;
+          startLine = currSel.startLine;
+        }
+        if (currSel.rangeIsEndLine) {
+          newLine = this._insertLineAfter({
+            sourceLineID: startLine.lineID,
+            targetLineType: startLine.lineType,
+            targetLineDepthAbs: startLine.lineDepthAbs,
+            targetLineDepthRel: startLine.lineDepthRel
+          });
+          range4sel = rangy.createRange();
+          range4sel.collapseToPoint(newLine.line$[0].firstChild, 0);
+          return currSel.sel.setSingleRange(range4sel);
+        } else if (currSel.rangeIsStartLine) {
+          newLine = this._insertLineBefore({
+            sourceLineID: startLine.lineID,
+            targetLineType: startLine.lineType,
+            targetLineDepthAbs: startLine.lineDepthAbs,
+            targetLineDepthRel: startLine.lineDepthRel
+          });
+          range4sel = rangy.createRange();
+          range4sel.collapseToPoint(startLine.line$[0].firstChild, 0);
+          return currSel.sel.setSingleRange(range4sel);
+        } else {
+          currSel.range.setEndBefore(startLine.line$[0].lastChild);
+          endOfLineFragment = currSel.range.extractContents();
+          currSel.range.deleteContents();
+          newLine = this._insertLineAfter({
+            sourceLineID: startLine.lineID,
+            targetLineType: startLine.lineType,
+            targetLineDepthAbs: startLine.lineDepthAbs,
+            targetLineDepthRel: startLine.lineDepthRel,
+            fragment: endOfLineFragment
+          });
+          range4sel = rangy.createRange();
+          range4sel.collapseToPoint(newLine.line$[0].firstChild.childNodes[0], 0);
+          currSel.sel.setSingleRange(range4sel);
+          return this.currentSel = null;
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      # turn in Th or Lh of the siblings of line (and line itself of course)
+      # the children are note modified
+      */
+
+      CNEditor.prototype._titilizeSiblings = function(line) {
+        var l, lineDepthAbs;
+        lineDepthAbs = line.lineDepthAbs;
+        l = line;
+        while (l !== null && l.lineDepthAbs >= lineDepthAbs) {
+          if (l.lineDepthAbs === lineDepthAbs) {
+            switch (l.lineType) {
+              case 'Tu':
+              case 'To':
+                l.line$.prop("class", "Th-" + lineDepthAbs);
+                l.lineType = 'Th';
+                l.lineDepthRel = 0;
+                break;
+              case 'Lu':
+              case 'Lo':
+                l.line$.prop("class", "Lh-" + lineDepthAbs);
+                l.lineType = 'Lh';
+                l.lineDepthRel = 0;
+            }
+          }
+          l = l.lineNext;
+        }
+        l = line.linePrev;
+        while (l !== null && l.lineDepthAbs >= lineDepthAbs) {
+          if (l.lineDepthAbs === lineDepthAbs) {
+            switch (l.lineType) {
+              case 'Tu':
+              case 'To':
+                l.line$.prop("class", "Th-" + lineDepthAbs);
+                l.lineType = 'Th';
+                l.lineDepthRel = 0;
+                break;
+              case 'Lu':
+              case 'Lo':
+                l.line$.prop("class", "Lh-" + lineDepthAbs);
+                l.lineType = 'Lh';
+                l.lineDepthRel = 0;
+            }
+          }
+          l = l.linePrev;
+        }
+        return true;
+      };
+
+      /* ------------------------------------------------------------------------
+      # find the sibling line of the parent of line that is the first of the list
+      # ex :
+      #   . Sibling1  <= _findParent1stSibling(line)
+      #   . Sibling2
+      #   . Parent
+      #      . child1
+      #      . line     : the line in argument
+      # returns null if no previous sibling, the line otherwise
+      # the sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+      */
+
+      CNEditor.prototype._findParent1stSibling = function(line) {
+        var lineDepthAbs, linePrev;
+        lineDepthAbs = line.lineDepthAbs;
+        linePrev = line.linePrev;
+        if (linePrev === null) return line;
+        if (lineDepthAbs <= 2) {
+          while (linePrev.linePrev !== null) {
+            linePrev = linePrev.linePrev;
+          }
+          return linePrev;
+        } else {
+          while (linePrev !== null && linePrev.lineDepthAbs > (lineDepthAbs - 2)) {
+            linePrev = linePrev.linePrev;
+          }
+          return linePrev.lineNext;
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      # find the previous sibling line.
+      # returns null if no previous sibling, the line otherwise
+      # the sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+      */
+
+      CNEditor.prototype._findPrevSibling = function(line) {
+        var lineDepthAbs, linePrevSibling;
+        lineDepthAbs = line.lineDepthAbs;
+        linePrevSibling = line.linePrev;
+        if (linePrevSibling === null) {
+          return null;
+        } else if (linePrevSibling.lineDepthAbs < lineDepthAbs) {
+          return null;
+        } else {
+          while (linePrevSibling.lineDepthAbs > lineDepthAbs) {
+            linePrevSibling = linePrevSibling.linePrev;
+          }
+          while (linePrevSibling.lineType[0] === 'L') {
+            linePrevSibling = linePrevSibling.linePrev;
+          }
+          return linePrevSibling;
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      #   delete the user multi line selection
+      #
+      #   prerequisite : at least 2 lines must be selected
+      # 
+      #   parameters :
+      #        :
+      #
+      */
+
+      CNEditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
+        var deltaDepth, deltaDepth1stLine, depthSibling, endLineDepthAbs, endOfLineFragment, firstLineAfterSiblingsOfDeleted, l, line, myEndLine, newDepth, newText, prevSiblingType, range, range4caret, range4fragment, startContainer, startFrag, startLineDepthAbs, startOffset, _ref;
+        if (startLine !== void 0) {
+          range = rangy.createRange();
+          this._putStartOnEnd(range, startLine.line$[0].lastElementChild.previousElementSibling);
+          this._putEndOnEnd(range, endLine.line$[0].lastElementChild.previousElementSibling);
+        } else {
+          this._findLines();
+          range = this.currentSel.range;
+          startContainer = range.startContainer;
+          startOffset = range.startOffset;
+          startLine = this.currentSel.startLine;
+          endLine = this.currentSel.endLine;
+        }
+        endLineDepthAbs = endLine.lineDepthAbs;
+        startLineDepthAbs = startLine.lineDepthAbs;
+        deltaDepth = endLineDepthAbs - startLineDepthAbs;
+        range4fragment = rangy.createRangyRange();
+        range4fragment.setStart(range.endContainer, range.endOffset);
+        range4fragment.setEndAfter(endLine.line$[0].lastChild);
+        endOfLineFragment = range4fragment.cloneContents();
+        if (endLine.lineType[1] === 'h' && startLine.lineType[1] !== 'h') {
+          if (endLine.lineType[0] === 'L') {
+            endLine.lineType = 'T' + endLine.lineType[1];
+            endLine.line$.prop("class", "" + endLine.lineType + "-" + endLine.lineDepthAbs);
+          }
+          this.markerList(endLine);
+        }
+        range.deleteContents();
+        if (startLine.line$[0].lastChild.nodeName === 'BR') {
+          startLine.line$[0].removeChild(startLine.line$[0].lastChild);
+        }
+        startFrag = endOfLineFragment.childNodes[0];
+        myEndLine = startLine.line$[0].lastElementChild;
+        if (((startFrag.tagName === (_ref = myEndLine.tagName) && _ref === 'SPAN')) && ((!($(startFrag).attr("class") != null) && !($(myEndLine).attr("class") != null)) || ($(startFrag).attr("class") === $(myEndLine).attr("class")))) {
+          startOffset = $(myEndLine).text().length;
+          newText = $(myEndLine).text() + $(startFrag).text();
+          $(myEndLine).text(newText);
+          startContainer = myEndLine.firstChild;
+          l = 1;
+          while (l < endOfLineFragment.childNodes.length) {
+            $(endOfLineFragment.childNodes[l]).appendTo(startLine.line$);
+            l++;
+          }
+        } else {
+          startLine.line$.append(endOfLineFragment);
+        }
+        startLine.lineNext = endLine.lineNext;
+        if (endLine.lineNext !== null) endLine.lineNext.linePrev = startLine;
+        endLine.line$.remove();
+        delete this._lines[endLine.lineID];
+        line = startLine.lineNext;
+        if (line !== null) {
+          deltaDepth1stLine = line.lineDepthAbs - startLineDepthAbs;
+          if (deltaDepth1stLine >= 1) {
+            while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
+              newDepth = line.lineDepthAbs - deltaDepth;
+              line.lineDepthAbs = newDepth;
+              line.line$.prop("class", "" + line.lineType + "-" + newDepth);
+              line = line.lineNext;
+            }
+          }
+        }
+        if (line !== null) {
+          if (line.lineType[0] === 'L') {
+            line.lineType = 'T' + line.lineType[1];
+            line.line$.prop("class", "" + line.lineType + "-" + line.lineDepthAbs);
+          }
+          firstLineAfterSiblingsOfDeleted = line;
+          depthSibling = line.lineDepthAbs;
+          line = line.linePrev;
+          while (line !== null && line.lineDepthAbs > depthSibling) {
+            line = line.linePrev;
+          }
+          prevSiblingType = line.lineType;
+          if (firstLineAfterSiblingsOfDeleted.lineType !== prevSiblingType) {
+            if (prevSiblingType[1] === 'h') {
+              this._line2titleList(firstLineAfterSiblingsOfDeleted);
+            } else {
+              this.markerList(firstLineAfterSiblingsOfDeleted);
+            }
+          }
+        }
+        if (startLine === void 0) {
+          range4caret = rangy.createRange();
+          range4caret.collapseToPoint(startContainer, startOffset);
+          this.currentSel.sel.setSingleRange(range4caret);
+          return this.currentSel = null;
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      # Insert a line after a source line
+      # p = 
+      #     sourceLineID       : ID of the line after which the line will be added
+      #     fragment           : [optionnal] - an html fragment that will be added
+      #     targetLineType     : type of the line to add
+      #     targetLineDepthAbs : absolute depth of the line to add
+      #     targetLineDepthRel : relative depth of the line to add
+      */
+
+      CNEditor.prototype._insertLineAfter = function(p) {
+        var lineID, newLine, newLine$, sourceLine;
+        this._highestId += 1;
+        lineID = 'CNID_' + this._highestId;
+        newLine$ = $("<div id='" + lineID + "' class='" + p.targetLineType + "-" + p.targetLineDepthAbs + "'></div>");
+        if (p.fragment != null) {
+          newLine$.append(p.fragment);
+          newLine$.append('<br>');
+        } else {
+          newLine$.append($('<span></span><br>'));
+        }
+        sourceLine = this._lines[p.sourceLineID];
+        newLine$ = newLine$.insertAfter(sourceLine.line$);
+        newLine = {
+          line$: newLine$,
+          lineID: lineID,
+          lineType: p.targetLineType,
+          lineDepthAbs: p.targetLineDepthAbs,
+          lineDepthRel: p.targetLineDepthRel,
+          lineNext: sourceLine.lineNext,
+          linePrev: sourceLine
+        };
+        this._lines[lineID] = newLine;
+        if (sourceLine.lineNext !== null) sourceLine.lineNext.linePrev = newLine;
+        sourceLine.lineNext = newLine;
+        return newLine;
+      };
+
+      /* ------------------------------------------------------------------------
+      # Insert a line before a source line
+      # p = 
+      #     sourceLineID       : ID of the line before which a line will be added
+      #     fragment           : [optionnal] - an html fragment that will be added
+      #     targetLineType     : type of the line to add
+      #     targetLineDepthAbs : absolute depth of the line to add
+      #     targetLineDepthRel : relative depth of the line to add
+      */
+
+      CNEditor.prototype._insertLineBefore = function(p) {
+        var lineID, newLine, newLine$, sourceLine;
+        this._highestId += 1;
+        lineID = 'CNID_' + this._highestId;
+        newLine$ = $("<div id='" + lineID + "' class='" + p.targetLineType + "-" + p.targetLineDepthAbs + "'></div>");
+        if (p.fragment != null) {
+          newLine$.append(p.fragment);
+          newLine$.append($('<br>'));
+        } else {
+          newLine$.append($('<span></span><br>'));
+        }
+        sourceLine = this._lines[p.sourceLineID];
+        newLine$ = newLine$.insertBefore(sourceLine.line$);
+        newLine = {
+          line$: newLine$,
+          lineID: lineID,
+          lineType: p.targetLineType,
+          lineDepthAbs: p.targetLineDepthAbs,
+          lineDepthRel: p.targetLineDepthRel,
+          lineNext: sourceLine,
+          linePrev: sourceLine.linePrev
+        };
+        this._lines[lineID] = newLine;
+        if (sourceLine.linePrev !== null) sourceLine.linePrev.lineNext = newLine;
+        sourceLine.linePrev = newLine;
+        return newLine;
+      };
+
+      /* ------------------------------------------------------------------------
+      # Finds :
+      #   First and last line of selection. 
+      # Remark :
+      #   Only the first range of the selections is taken into account.
+      # Returns : 
+      #   sel : the selection
+      #   range : the 1st range of the selections
+      #   startLine : the 1st line of the range
+      #   endLine : the last line of the range
+      */
+
+      CNEditor.prototype._findLines = function() {
+        var endContainer, endLine, initialEndOffset, initialStartOffset, range, sel, startContainer, startLine;
+        if (this.currentSel === null) {
+          sel = rangy.getIframeSelection(this.editorIframe);
+          range = sel.getRangeAt(0);
+          startContainer = range.startContainer;
+          endContainer = range.endContainer;
+          initialStartOffset = range.startOffset;
+          initialEndOffset = range.endOffset;
+          if ((endContainer.id != null) && endContainer.id.substr(0, 5) === 'CNID_') {
+            endLine = this._lines[endContainer.id];
+          } else {
+            endLine = this._lines[$(endContainer).parents("div")[0].id];
+          }
+          if (startContainer.nodeName === 'DIV') {
+            startLine = this._lines[startContainer.id];
+          } else {
+            startLine = this._lines[$(startContainer).parents("div")[0].id];
+          }
+          return this.currentSel = {
+            sel: sel,
+            range: range,
+            startLine: startLine,
+            endLine: endLine,
+            rangeIsStartLine: null,
+            rangeIsEndLine: null
+          };
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      # Finds :
+      #   first and last line of selection 
+      #   wheter the selection starts at the beginning of startLine or not
+      #   wheter the selection ends at the end of endLine or not
+      # 
+      # Remark :
+      #   Only the first range of the selections is taken into account.
+      #
+      # Returns : 
+      #   sel : the selection
+      #   range : the 1st range of the selections
+      #   startLine : the 1st line of the range
+      #   endLine : the last line of the range
+      #   rangeIsEndLine : true if the range ends at the end of the last line
+      #   rangeIsStartLine : true if the range starts at the start of 1st line
+      */
+
+      CNEditor.prototype._findLinesAndIsStartIsEnd = function() {
+        var endContainer, endLine, initialEndOffset, initialStartOffset, nextSibling, parentEndContainer, range, rangeIsEndLine, rangeIsStartLine, sel, startContainer, startLine;
+        if (this.currentSel === null) {
+          sel = rangy.getIframeSelection(this.editorIframe);
+          range = sel.getRangeAt(0);
+          startContainer = range.startContainer;
+          endContainer = range.endContainer;
+          initialStartOffset = range.startOffset;
+          initialEndOffset = range.endOffset;
+          if ((endContainer.id != null) && endContainer.id.substr(0, 5) === 'CNID_') {
+            endLine = this._lines[endContainer.id];
+            rangeIsEndLine = (endContainer.children.length - 1 === initialEndOffset) || (endContainer.children[initialEndOffset].nodeName === "BR");
+          } else {
+            endLine = this._lines[$(endContainer).parents("div")[0].id];
+            parentEndContainer = endContainer;
+            rangeIsEndLine = false;
+            if (parentEndContainer.nodeType === Node.TEXT_NODE) {
+              rangeIsEndLine = initialEndOffset === parentEndContainer.textContent.length;
+            } else {
+              nextSibling = parentEndContainer.nextSibling;
+              rangeIsEndLine = nextSibling === null || nextSibling.nodeName === 'BR';
+            }
+            parentEndContainer = endContainer.parentNode;
+            while (rangeIsEndLine && parentEndContainer.nodeName !== "DIV") {
+              nextSibling = parentEndContainer.nextSibling;
+              rangeIsEndLine = nextSibling === null || nextSibling.nodeName === 'BR';
+              parentEndContainer = parentEndContainer.parentNode;
+            }
+          }
+          if (startContainer.nodeName === 'DIV') {
+            startLine = this._lines[startContainer.id];
+            rangeIsStartLine = initialStartOffset === 0;
+            if (initialStartOffset === 1 && startContainer.innerHTML === "<span></span><br>") {
+              rangeIsStartLine = true;
+            }
+          } else {
+            startLine = this._lines[$(startContainer).parents("div")[0].id];
+            rangeIsStartLine = initialStartOffset === 0;
+            while (rangeIsStartLine && parentEndContainer.nodeName !== "DIV") {
+              rangeIsStartLine = parentEndContainer.previousSibling === null;
+              parentEndContainer = parentEndContainer.parentNode;
+            }
+          }
+          return this.currentSel = {
+            sel: sel,
+            range: range,
+            startLine: startLine,
+            endLine: endLine,
+            rangeIsStartLine: rangeIsStartLine,
+            rangeIsEndLine: rangeIsEndLine
+          };
+        }
+      };
+
+      /*  -----------------------------------------------------------------------
+      # Parse a raw html inserted in the iframe in order to update the controler
+      */
+
+      CNEditor.prototype._readHtml = function() {
+        var DeltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, _i, _len, _ref;
+        linesDiv$ = this.editorBody$.children();
+        lineDepthAbs = 0;
+        lineDepthRel = 0;
+        lineID = 0;
+        this._lines = {};
+        linePrev = null;
+        lineNext = null;
+        for (_i = 0, _len = linesDiv$.length; _i < _len; _i++) {
+          htmlLine = linesDiv$[_i];
+          htmlLine$ = $(htmlLine);
+          lineClass = (_ref = htmlLine$.attr('class')) != null ? _ref : "";
+          lineClass = lineClass.split('-');
+          lineType = lineClass[0];
+          if (lineType !== "") {
+            lineDepthAbs_old = lineDepthAbs;
+            lineDepthAbs = +lineClass[1];
+            DeltaDepthAbs = lineDepthAbs - lineDepthAbs_old;
+            lineDepthRel_old = lineDepthRel;
+            if (lineType === "Th") {
+              lineDepthRel = 0;
+            } else {
+              lineDepthRel = lineDepthRel_old + DeltaDepthAbs;
+            }
+            lineID = parseInt(lineID, 10) + 1;
+            lineID_st = "CNID_" + lineID;
+            htmlLine$.prop("id", lineID_st);
+            lineNew = {
+              line$: htmlLine$,
+              lineID: lineID_st,
+              lineType: lineType,
+              lineDepthAbs: lineDepthAbs,
+              lineDepthRel: lineDepthRel,
+              lineNext: null,
+              linePrev: linePrev
+            };
+            if (linePrev !== null) linePrev.lineNext = lineNew;
+            linePrev = lineNew;
+            this._lines[lineID_st] = lineNew;
+          }
+        }
+        return this._highestId = lineID;
+      };
+
+      /* ------------------------------------------------------------------------
+      # LINES MOTION MANAGEMENT
+      # 
+      # Functions to perform the motion of an entire block of lines
+      # TODO: bug: on 2 extreme lines
+      #            (right after the first line and right before the last line)
+      # TODO: improve insertion of the line swapped with the block
+      */
+
+      CNEditor.prototype._moveLinesDown = function() {
+        var cloneLine, lineEnd, lineNext, linePrev, lineStart, sel;
+        this._findLines();
+        sel = this.currentSel;
+        lineStart = sel.startLine;
+        lineEnd = sel.endLine;
+        linePrev = lineStart.linePrev;
+        lineNext = lineEnd.lineNext;
+        if (lineNext !== null) {
+          cloneLine = {
+            line$: lineNext.line$.clone(),
+            lineID: lineNext.lineID,
+            lineType: lineNext.lineType,
+            lineDepthAbs: lineNext.lineDepthAbs,
+            lineDepthRel: lineNext.lineDepthRel,
+            linePrev: lineNext.linePrev,
+            lineNext: lineNext.lineNext
+          };
+          this._deleteMultiLinesSelections(lineEnd, lineNext);
+          lineNext = cloneLine;
+          this._lines[lineNext.lineID] = lineNext;
+          lineNext.linePrev = linePrev;
+          lineStart.linePrev = lineNext;
+          if (lineNext.lineNext !== null) lineNext.lineNext.linePrev = lineEnd;
+          lineEnd.lineNext = lineNext.lineNext;
+          lineNext.lineNext = lineStart;
+          if (linePrev !== null) linePrev.lineNext = lineNext;
+          lineStart.line$.before(lineNext.line$);
+          if (lineStart.lineDepthAbs < lineNext.lineDeptAbs) {
+            lineNext.lineDepthRel = lineStart.lineDepthRel;
+            lineNext.lineDepthAbs = lineStart.lineDepthAbs;
+            return lineNext.line$.attr('class', "" + lineNext.lineType + "-" + lineNext.lineDepthAbs);
+          }
+        }
+      };
+
+      CNEditor.prototype._moveLinesUp = function() {
+        var cloneLine, lineEnd, lineNext, linePrev, lineStart, sel;
+        this._findLines();
+        sel = this.currentSel;
+        lineStart = sel.startLine;
+        lineEnd = sel.endLine;
+        linePrev = lineStart.linePrev;
+        lineNext = lineEnd.lineNext;
+        if (linePrev !== null) {
+          cloneLine = {
+            line$: linePrev.line$.clone(),
+            lineID: linePrev.lineID,
+            lineType: linePrev.lineType,
+            lineDepthAbs: linePrev.lineDepthAbs,
+            lineDepthRel: linePrev.lineDepthRel,
+            linePrev: linePrev.linePrev,
+            lineNext: linePrev.lineNext
+          };
+          this._deleteMultiLinesSelections(linePrev.linePrev, linePrev);
+          linePrev = cloneLine;
+          this._lines[linePrev.lineID] = linePrev;
+          linePrev.lineNext = lineNext;
+          lineEnd.lineNext = linePrev;
+          if (linePrev.linePrev !== null) linePrev.linePrev.lineNext = lineStart;
+          lineStart.linePrev = linePrev.linePrev;
+          linePrev.linePrev = lineEnd;
+          if (lineNext !== null) lineNext.linePrev = linePrev;
+          lineEnd.line$.after(linePrev.line$);
+          if (lineEnd.lineType[0] === 'T') {
+            linePrev.lineType = lineEnd.lineType;
+            linePrev.lineDepthRel = lineEnd.lineDepthRel;
+            linePrev.lineDepthAbs = lineEnd.lineDepthAbs;
+            linePrev.line$.attr('class', lineEnd.line$.attr('class'));
+          }
+          if (linePrev.lineDepthAbs > lineEnd.lineDepthAbs) {
+            linePrev.lineDepthRel = lineEnd.lineDepthRel;
+            linePrev.lineDepthAbs = lineEnd.lineDepthAbs;
+            return linePrev.line$.attr('class', "" + linePrev.lineType + "-" + linePrev.lineDepthAbs);
+          }
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      #  HISTORY MANAGEMENT
+      # Add html code to the history
+      */
+
+      CNEditor.prototype._addHistory = function() {
+        this._history.history.push(this.editorBody$.html());
+        return this._history.index = this._history.history.length - 1;
+      };
+
+      /*
+          # Undo the previous action
+      */
+
+      CNEditor.prototype.unDo = function() {
+        if (this._history.index > 0) {
+          this._history.index -= 1;
+          return this.editorBody$.html(this._history.history[this._history.index]);
+        }
+      };
+
+      /*
+          # Redo a undo-ed action
+      */
+
+      CNEditor.prototype.reDo = function() {
+        if (this._history.index < (this._history.history.length - 1)) {
+          this._history.index += 1;
+          return this.editorBody$.html(this._history.history[this._history.index]);
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+      # SUMMARY MANAGEMENT
+      # 
+      # initialization
+      # TODO: avoid updating the summary too often
+      #       it would be best to make the update faster (rather than reading
+      #       every line)
+      */
+
+      CNEditor.prototype._initSummary = function() {
+        var summary;
+        summary = this.editorBody$.children("#nav");
+        if (summary.length === 0) {
+          summary = $(document.createElement('div'));
+          summary.attr('id', 'nav');
+          summary.prependTo(this.editorBody$);
+        }
+        return summary;
+      };
+
+      /*
+          # Summary upkeep
+      */
+
+      CNEditor.prototype._buildSummary = function() {
+        var c, lines, summary, _results;
+        summary = this.initSummary();
+        this.editorBody$.children("#nav").children().remove();
+        lines = this._lines;
+        _results = [];
+        for (c in lines) {
+          if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th") {
+            _results.push(lines[c].line$.clone().appendTo(summary));
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      };
+
+      /* ------------------------------------------------------------------------
+      #  DECORATION FUNCTIONS (bold/italic/underlined/quote)
+      #  TODO
+      */
+
+      /* ------------------------------------------------------------------------
+      #  MARKUP LANGUAGE CONVERTERS
+      # Reads a string that represents html code in our cozy format and turns it
+      # into a string in markdown format
+      */
+
+      CNEditor.prototype._cozy2md = function(text) {
+        var children, classType, converter, currDepth, htmlCode, i, j, l, lineCode, lineElt, markCode, markup, space, _ref;
+        htmlCode = $(document.createElement('div')).html(text);
+        markCode = '';
+        currDepth = 1;
+        converter = {
+          'A': function(obj) {
+            var href, title;
+            title = obj.attr('title') != null ? obj.attr('title') : "";
+            href = obj.attr('href') != null ? obj.attr('href') : "";
+            return '[' + obj.html() + '](' + href + ' "' + title + '")';
+          },
+          'IMG': function(obj) {
+            var alt, src, title;
+            title = obj.attr('title') != null ? obj.attr('title') : "";
+            alt = obj.attr('alt') != null ? obj.attr('alt') : "";
+            src = obj.attr('src') != null ? obj.attr('src') : "";
+            return '![' + alt + '](' + src + ' "' + title + '")';
+          },
+          'SPAN': function(obj) {
+            return obj.text();
+          }
+        };
+        markup = {
+          'Th': function(blanks, depth) {
+            var dieses, i;
+            currDepth = depth;
+            dieses = '';
+            i = 0;
+            while (i < depth) {
+              dieses += '#';
+              i++;
+            }
+            return "\n" + dieses + ' ';
+          },
+          'Lh': function(blanks, depth) {
+            return "\n";
+          },
+          'Tu': function(blanks, depth) {
+            return "\n" + blanks + "+   ";
+          },
+          'Lu': function(blanks, depth) {
+            return "\n" + blanks + "    ";
+          },
+          'To': function(blanks, depth) {
+            return "\n" + blanks + "1.   ";
+          },
+          'Lo': function(blanks, depth) {
+            return "\n" + blanks + "    ";
+          }
+        };
+        classType = function(className) {
+          var blanks, depth, i, tab, type;
+          tab = className.split("-");
+          type = tab[0];
+          depth = parseInt(tab[1], 10);
+          blanks = '';
+          i = 1;
+          while (i < depth - currDepth) {
+            blanks += '    ';
+            i++;
+          }
+          return markup[type](blanks, depth);
+        };
+        children = htmlCode.children();
+        for (i = 0, _ref = children.length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+          lineCode = $(children.get(i));
+          if (lineCode.attr('class') != null) {
+            markCode += classType(lineCode.attr('class'));
+          }
+          l = lineCode.children().length;
+          j = 0;
+          space = ' ';
+          while (j < l) {
+            lineElt = lineCode.children().get(j);
+            if (j + 2 === l) space = '';
+            if (lineElt.nodeType === 1 && (converter[lineElt.nodeName] != null)) {
+              markCode += converter[lineElt.nodeName]($(lineElt)) + space;
+            } else {
+              markCode += $(lineElt).text() + space;
+            }
+            j++;
+          }
+          markCode += "\n";
+        }
+        return markCode;
+      };
+
+      CNEditor.prototype._md2cozy = function(text) {
+        var conv, cozyCode, cozyTurn, depth, htmlCode, id, readHtml, recRead;
+        conv = new Showdown.converter();
+        text = conv.makeHtml(text);
+        htmlCode = $(document.createElement('ul')).html(text);
+        cozyCode = '';
+        id = 0;
+        cozyTurn = function(type, depth, p) {
+          var code;
+          id++;
+          code = '';
+          p.contents().each(function() {
+            var name;
+            name = this.nodeName;
+            if (name === "#text") {
+              return code += "<span>" + ($(this).text()) + "</span>";
+            } else if (this.tagName != null) {
+              $(this).wrap('<div></div>');
+              code += "" + ($(this).parent().html());
+              return $(this).unwrap();
+            }
+          });
+          return ("<div id=CNID_" + id + " class=" + type + "-" + depth + ">") + code + "<br></div>";
+        };
+        depth = 0;
+        readHtml = function(obj) {
+          var tag;
+          tag = obj[0].tagName;
+          if (tag[0] === "H") {
+            depth = parseInt(tag[1], 10);
+            return cozyCode += cozyTurn("Th", depth, obj);
+          } else if (tag === "P") {
+            return cozyCode += cozyTurn("Lh", depth, obj);
+          } else {
+            return recRead(obj, "u");
+          }
+        };
+        recRead = function(obj, status) {
+          var child, i, tag, _ref, _results;
+          tag = obj[0].tagName;
+          if (tag === "UL") {
+            depth++;
+            obj.children().each(function() {
+              return recRead($(this), "u");
+            });
+            return depth--;
+          } else if (tag === "OL") {
+            depth++;
+            obj.children().each(function() {
+              return recRead($(this), "o");
+            });
+            return depth--;
+          } else if (tag === "LI" && (obj.contents().get(0) != null)) {
+            if (obj.contents().get(0).nodeName === "#text") {
+              obj = obj.clone().wrap('<p></p>').parent();
+            }
+            _results = [];
+            for (i = 0, _ref = obj.children().length - 1; 0 <= _ref ? i <= _ref : i >= _ref; 0 <= _ref ? i++ : i--) {
+              child = $(obj.children().get(i));
+              if (i === 0) {
+                _results.push(cozyCode += cozyTurn("T" + status, depth, child));
+              } else {
+                _results.push(recRead(child, status));
+              }
+            }
+            return _results;
+          } else if (tag === "P") {
+            return cozyCode += cozyTurn("L" + status, depth, obj);
+          }
+        };
+        htmlCode.children().each(function() {
+          return readHtml($(this));
+        });
+        return cozyCode;
+      };
+
+      return CNEditor;
+
+    })(Backbone.View);
+
+  }).call(this);
+  
+}});
+
 window.require.define({"views/home_view": function(exports, require, module) {
   (function() {
     var Note, NoteWidget, Tree, helpers,
@@ -361,6 +2050,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
       function HomeView() {
         this.onNoteDropped = __bind(this.onNoteDropped, this);
         this.onTreeLoaded = __bind(this.onTreeLoaded, this);
+        this.onNoteChanged = __bind(this.onNoteChanged, this);
         this.selectFolder = __bind(this.selectFolder, this);
         this.deleteFolder = __bind(this.deleteFolder, this);
         this.renameFolder = __bind(this.renameFolder, this);
@@ -428,6 +2118,13 @@ window.require.define({"views/home_view": function(exports, require, module) {
         return noteWidget.render();
       };
 
+      HomeView.prototype.onNoteChanged = function(event) {
+        var noteWidget;
+        noteWidget = new NoteWidget(this.currentNote);
+        console.log(noteWidget);
+        return this.currentNote.saveContent(noteWidget.instEditor.getEditorContent());
+      };
+
       HomeView.prototype.onTreeLoaded = function() {
         if (this.treeCreationCallback != null) return this.treeCreationCallback();
       };
@@ -462,6 +2159,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
         this.noteArea = $("#editor");
         this.noteFull = $("#note-full");
         this.noteFull.hide();
+        NoteWidget.setEditor(this.onNoteChanged);
         return $.get("tree/", function(data) {
           return _this.tree = new Tree(_this.$("#nav"), data, {
             onCreate: _this.createFolder,
@@ -482,62 +2180,64 @@ window.require.define({"views/home_view": function(exports, require, module) {
   
 }});
 
-window.require.define({"views/note_view": function(exports, require, module) {
-  (function() {
-    var template,
-      __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-      __hasProp = Object.prototype.hasOwnProperty,
-      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+window.require.define({"views/templates/content-empty": function(exports, require, module) {
+  module.exports = function anonymous(locals, attrs, escape, rethrow) {
+  var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+  var buf = [];
+  with (locals || {}) {
+  var interp;
+  buf.push('<div');
+  buf.push(attrs({ "class": ('Tu-1') }));
+  buf.push('><span></span><br');
+  buf.push(attrs({  }));
+  buf.push('/></div>');
+  }
+  return buf.join("");
+  };
+}});
 
-    template = require('./templates/note');
-
-    exports.NoteWidget = (function(_super) {
-
-      __extends(NoteWidget, _super);
-
-      NoteWidget.prototype.className = "note-full";
-
-      NoteWidget.prototype.tagName = "div";
-
-      /* Constructor
-      */
-
-      function NoteWidget(model) {
-        this.model = model;
-        this.onNoteChanged = __bind(this.onNoteChanged, this);
-        NoteWidget.__super__.constructor.call(this);
-        this.id = this.model.slug;
-        this.model.view = this;
-      }
-
-      NoteWidget.prototype.onNoteChanged = function(event) {
-        return this.model.saveContent($("#note-full-content").val());
-      };
-
-      NoteWidget.prototype.remove = function() {
-        return $(this.el).remove();
-      };
-
-      /* configuration
-      */
-
-      NoteWidget.prototype.render = function() {
-        var editor;
-        $("#note-full-breadcrump").html(this.model.humanPath.split(",").join(" / "));
-        $("#note-full-title").html(this.model.title);
-        $("#note-full-content").val(this.model.content);
-        editor = this.$("textarea#note-full-content");
-        editor.unbind("keyup");
-        editor.keyup(this.onNoteChanged);
-        return this.el;
-      };
-
-      return NoteWidget;
-
-    })(Backbone.View);
-
-  }).call(this);
-  
+window.require.define({"views/templates/editor": function(exports, require, module) {
+  module.exports = function anonymous(locals, attrs, escape, rethrow) {
+  var attrs = jade.attrs, escape = jade.escape, rethrow = jade.rethrow;
+  var buf = [];
+  with (locals || {}) {
+  var interp;
+  buf.push('<div');
+  buf.push(attrs({ 'id':('main'), "class": ('table-ly-wrpr') + ' ' + ('monWell') }));
+  buf.push('><!-- boutons for the editor--><div');
+  buf.push(attrs({ 'id':('divMainBtn'), "class": ('table-ly-hder') }));
+  buf.push('></div><div');
+  buf.push(attrs({ 'id':('main-div'), "class": ('table-ly-ctnt') }));
+  buf.push('><div');
+  buf.push(attrs({ 'id':('col-wrap') }));
+  buf.push('><div');
+  buf.push(attrs({ 'id':('editor-col') }));
+  buf.push('><div');
+  buf.push(attrs({ 'id':('well-editor'), "class": ('monWell') }));
+  buf.push('><div');
+  buf.push(attrs({ 'id':('editorDiv'), "class": ('table-ly-wrpr') }));
+  buf.push('><!-- boutons for the editor--><div');
+  buf.push(attrs({ "class": ('table-ly-hder') }));
+  buf.push('><div');
+  buf.push(attrs({ 'id':('editorBtnBar'), "class": ('btn-group') }));
+  buf.push('><button');
+  buf.push(attrs({ 'id':('indentBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
+  buf.push('>Indent</button><button');
+  buf.push(attrs({ 'id':('unIndentBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
+  buf.push('>Un-indent</button><button');
+  buf.push(attrs({ 'id':('markerListBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
+  buf.push('>- Marker list</button><button');
+  buf.push(attrs({ 'id':('titleBtn'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
+  buf.push('>1.1.2 Title</button><button');
+  buf.push(attrs({ 'id':('save-editor-content'), "class": ('btn') + ' ' + ('btn-small') + ' ' + ('btn-primary') }));
+  buf.push('>Save</button></div></div><!-- text for the editor--><div');
+  buf.push(attrs({ 'id':('editorContent'), "class": ('table-ly-ctnt') }));
+  buf.push('><iframe');
+  buf.push(attrs({ 'id':('editorIframe') }));
+  buf.push('></iframe></div></div></div></div></div></div></div>');
+  }
+  return buf.join("");
+  };
 }});
 
 window.require.define({"views/templates/home": function(exports, require, module) {
@@ -547,20 +2247,24 @@ window.require.define({"views/templates/home": function(exports, require, module
   with (locals || {}) {
   var interp;
   buf.push('<div');
-  buf.push(attrs({ 'id':('nav'), "class": ('ui-layout-west') }));
+  buf.push(attrs({ 'id':('nav1'), "class": ('ui-layout-west') }));
+  buf.push('><div');
+  buf.push(attrs({ 'id':('nav'), "class": ('well') }));
   buf.push('><div');
   buf.push(attrs({ 'id':('tree') }));
-  buf.push('></div></div><div');
+  buf.push('></div></div></div><div');
   buf.push(attrs({ 'id':('editor'), "class": ('ui-layout-center') }));
-  buf.push('><div');
+  buf.push('><p');
+  buf.push(attrs({ 'id':('searchInfo') }));
+  buf.push('></p><div');
   buf.push(attrs({ 'id':('note-full'), "class": ('note-full') }));
   buf.push('><p');
-  buf.push(attrs({ 'id':('note-full-breadcrump') }));
+  buf.push(attrs({ 'id':('note-full-breadcrumb') }));
   buf.push('>/</p><h2');
   buf.push(attrs({ 'id':('note-full-title') }));
-  buf.push('>no note selected</h2><textarea');
-  buf.push(attrs({ 'id':('note-full-content') }));
-  buf.push('></textarea></div></div>');
+  buf.push('>no note selected</h2><div');
+  buf.push(attrs({ 'id':('note-area') }));
+  buf.push('></div></div></div>');
   }
   return buf.join("");
   };
@@ -592,23 +2296,23 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   buf.push(attrs({ 'id':('tree-create'), "class": ('button') }));
   buf.push('><i');
   buf.push(attrs({ "class": ('icon-plus') }));
-  buf.push('></i><span>new</span></div><div');
+  buf.push('></i></div><div');
   buf.push(attrs({ 'id':('tree-remove'), "class": ('button') }));
   buf.push('><i');
   buf.push(attrs({ "class": ('icon-remove') }));
-  buf.push('></i><span>delete</span></div><div');
+  buf.push('></i></div><div');
   buf.push(attrs({ 'id':('tree-rename'), "class": ('button') }));
   buf.push('><i');
   buf.push(attrs({ "class": ('icon-pencil') }));
-  buf.push('></i><span>rename</span></div><div');
-  buf.push(attrs({ 'id':('tree-search'), "class": ('button') }));
-  buf.push('><i');
-  buf.push(attrs({ "class": ('icon-search') }));
-  buf.push('></i></div><div');
-  buf.push(attrs({ "class": ('spacer') }));
-  buf.push('></div><input');
-  buf.push(attrs({ 'id':('tree-search-field'), 'type':("text") }));
-  buf.push('/></div>');
+  buf.push('></i></div></div><div');
+  buf.push(attrs({ 'id':('tree-top-buttons') }));
+  buf.push('><div');
+  buf.push(attrs({ "class": ('input-append') }));
+  buf.push('><input');
+  buf.push(attrs({ 'id':('tree-search-field'), 'type':("text"), 'placeholder':("Search…"), "class": ('span2') }));
+  buf.push('/><button');
+  buf.push(attrs({ "class": ('btn') }));
+  buf.push('>Search !</button></div></div>');
   }
   return buf.join("");
   };
@@ -625,11 +2329,15 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
 
       function Tree(navEl, data, callbacks) {
         this._onSearchChanged = __bind(this._onSearchChanged, this);
-        this._onSearchClicked = __bind(this._onSearchClicked, this);
         this._convertData = __bind(this._convertData, this);
         this._getStringPath = __bind(this._getStringPath, this);
         var tree;
         this.setToolbar(navEl);
+        this.autocompInput = $("#tree-search-field");
+        this.widgetAutocomplete = this.autocompInput.autocomplete({
+          source: [],
+          autoFocus: true
+        });
         tree = this._convertData(data);
         this.treeEl = $("#tree");
         this.widget = this.treeEl.jstree({
@@ -664,15 +2372,33 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             error_callback: function(node, p, func) {
               return alert("A note has already that name: '" + node + "'");
             }
+          },
+          search: {
+            show_only_matches: true
           }
         });
         this.searchField = $("#tree-search-field");
         this.searchButton = $("#tree-search");
+        this.noteFull = $("#note-full");
         this.setListeners(callbacks);
       }
 
       Tree.prototype.setToolbar = function(navEl) {
         return navEl.prepend(require('../templates/tree_buttons'));
+      };
+
+      Tree.prototype.organizeArray = function(array) {
+        var i, tmp, _results;
+        i = array.length - 1;
+        tmp = "";
+        _results = [];
+        while (i !== 0 && array[i] < array[i - 1]) {
+          tmp = array[i];
+          array[i] = array[i - 1];
+          array[i - 1] = tmp;
+          _results.push(i--);
+        }
+        return _results;
       };
 
       Tree.prototype.setListeners = function(callbacks) {
@@ -686,11 +2412,16 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         $("#tree-remove").click(function() {
           return _this.treeEl.jstree("remove");
         });
-        this.searchButton.click(this._onSearchClicked);
+        $("#searchInfo").hide();
         this.searchField.keyup(this._onSearchChanged);
+        $("#tree").mouseover(this._addButton);
         this.widget.bind("create.jstree", function(e, data) {
-          var idPath, nodeName, parent, path;
+          var completeSource, idPath, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
+          completeSource = _this.autocompInput.autocomplete("option", "source");
+          completeSource.push(nodeName);
+          _this.organizeArray(completeSource);
+          _this.autocompInput.autocomplete("option", "source", completeSource);
           parent = data.rslt.parent;
           path = _this._getPath(parent, nodeName);
           path.pop();
@@ -699,13 +2430,26 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           return callbacks.onCreate(path.join("/"), data.rslt.name, data);
         });
         this.widget.bind("rename.jstree", function(e, data) {
-          var idPath, nodeName, parent, path;
+          var completeSource, i, idPath, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           parent = data.inst._get_parent(data.rslt.parent);
           path = _this._getStringPath(parent, data.rslt.old_name);
           if (path === "all") {
             return $.jstree.rollback(data.rlbk);
           } else if (data.rslt.old_name !== data.rslt.new_name) {
+            completeSource = _this.autocompInput.autocomplete("option", "source");
+            i = 0;
+            while (completeSource[i] !== data.rslt.old_name) {
+              i++;
+            }
+            while (i !== completeSource.length - 1) {
+              completeSource[i] = completeSource[i + 1];
+              completeSource[i + 1] = completeSource[i];
+              i++;
+            }
+            completeSource[i] = data.rslt.new_name;
+            _this.organizeArray(completeSource);
+            _this.autocompInput.autocomplete("option", "source", completeSource);
             idPath = "tree-node" + (_this._getPath(parent, nodeName).join("-"));
             data.rslt.obj.attr("id", idPath);
             _this.rebuildIds(data, data.rslt.obj, idPath);
@@ -713,8 +2457,20 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           }
         });
         this.widget.bind("remove.jstree", function(e, data) {
-          var nodeName, parent, path;
+          var completeSource, i, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
+          completeSource = _this.autocompInput.autocomplete("option", "source");
+          i = 0;
+          while (completeSource[i] !== nodeName) {
+            i++;
+          }
+          while (i !== completeSource.length - 1) {
+            completeSource[i] = completeSource[i + 1];
+            completeSource[i + 1] = completeSource[i];
+            i++;
+          }
+          completeSource.pop();
+          _this.autocompInput.autocomplete("option", "source", completeSource);
           parent = data.rslt.parent;
           path = _this._getStringPath(parent, nodeName);
           if (path === "all") {
@@ -746,9 +2502,10 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             return callbacks.onDrop(newPath.join("/"), oldPath.join("/"), nodeName, data);
           }
         });
-        return this.widget.bind("loaded.jstree", function(e, data) {
+        this.widget.bind("loaded.jstree", function(e, data) {
           return callbacks.onLoaded();
         });
+        return this.widget.bind("search.jstree", function(e, data, searchString) {});
       };
 
       Tree.prototype.rebuildIds = function(data, obj, idPath) {
@@ -806,11 +2563,15 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       };
 
       Tree.prototype._convertNode = function(parentNode, nodeToConvert, idpath) {
-        var newNode, nodeIdPath, property, _results;
+        var completeSource, newNode, nodeIdPath, property, _results;
         _results = [];
         for (property in nodeToConvert) {
           if (!(property !== "name" && property !== "id")) continue;
           nodeIdPath = "" + idpath + "-" + (property.replace(/_/g, "-"));
+          completeSource = this.autocompInput.autocomplete("option", "source");
+          completeSource.push(nodeToConvert[property].name);
+          this.organizeArray(completeSource);
+          this.autocompInput.autocomplete("option", "source", completeSource);
           newNode = {
             data: nodeToConvert[property].name,
             metadata: {
@@ -832,21 +2593,38 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         return _results;
       };
 
-      Tree.prototype._onSearchClicked = function(event) {
-        if (this.searchField.is(":hidden")) {
-          this.searchField.show();
-          this.searchField.focus();
-          return this.searchButton.addClass("button-active");
+      Tree.prototype.searchTimer = null;
+
+      Tree.prototype._onSearchChanged = function(event) {
+        var info, searchString;
+        searchString = this.searchField.val();
+        info = "Recherche: \"" + searchString + "\"";
+        clearTimeout(this.searchTimer);
+        if (searchString === "") {
+          $("#searchInfo").hide();
+          $("#tree").jstree("search", searchString);
+          return $(".note-full").height("100%");
         } else {
-          this.searchField.hide();
-          return this.searchButton.removeClass("button-active");
+          return this.searchTimer = setTimeout(function() {
+            $("#tree").jstree("search", searchString);
+            $("#searchInfo").html(info);
+            $("#searchInfo").show();
+            if (this.noteNewHeight === void 0) {
+              this.noteNewHeight = parseInt($("#note-full").css("height")) - parseInt($("#searchInfo").css("height")) - 24;
+            }
+            return $(".note-full").height(this.noteNewHeight);
+          }, 1000);
         }
       };
 
-      Tree.prototype._onSearchChanged = function(event) {
-        var searchString;
-        searchString = this.searchField.val();
-        return this.treeEl.jstree("search", searchString);
+      Tree.prototype._addButton = function(event) {
+        $("#tree a").mouseover(function(e) {
+          $("#tree-buttons").appendTo(this);
+          return $("#tree-buttons").show();
+        });
+        return $("#tree").mouseleave(function() {
+          return $("#tree-buttons").hide();
+        });
       };
 
       return Tree;

@@ -1,0 +1,57 @@
+
+#nav
+    position absolute
+    bottom 10px
+    top 10px
+    right 10px
+    left 10px
+    margin-bottom 0
+    // TODO : the best way is to manage the hight of tree, not ro crop.
+    //overflow hidden 
+
+
+// Tree
+
+#tree
+    font-size 14px
+    background-color transparent
+
+#tree li
+    padding 0 // padding arround the content of a list item (leaf of the tree)
+    position relative
+
+#tree ins
+    width 14px  // width of the inset of each level of the tree
+
+#tree a
+    padding 0px 0px 0px 0px
+    margin  0px 0px 0px 0px
+    border  0px 0px 0px 0px solid transparent
+    color treelinkcolor
+    left 15px
+    right 0px
+    position absolute
+
+#tree a.jstree-clicked
+    background #c5ebf9 
+    border 0
+
+#tree a.jstree-hovered
+    border 0
+
+#tree-buttons
+    display none
+    top 0
+    position absolute
+    right 10px
+    top    0px
+
+#tree-buttons div
+    display inline
+    cursor pointer
+    padding-left 3px
+
+// separator between nav-pane and content-pane
+.ui-layout-resizer-open:hover
+    background highlightcolor
+

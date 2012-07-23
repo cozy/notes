@@ -57,6 +57,12 @@ class exports.HomeView extends Backbone.View
         noteWidget = new NoteWidget @currentNote
         noteWidget.render()
 
+    # When note change, its content is saved.
+    onNoteChanged: (event) =>
+        noteWidget = new NoteWidget @currentNote
+        console.log noteWidget
+        @currentNote.saveContent noteWidget.instEditor.getEditorContent()
+
     # When tree is loaded, callback given in paramter when fetchData
     # function was called is run.
     onTreeLoaded: =>
@@ -93,6 +99,8 @@ class exports.HomeView extends Backbone.View
         @noteFull = $("#note-full")
         @noteFull.hide()
         
+        NoteWidget.setEditor @onNoteChanged
+
         $.get "tree/", (data) =>
             @tree = new Tree @.$("#nav"), data,
                 onCreate: @createFolder
@@ -100,5 +108,5 @@ class exports.HomeView extends Backbone.View
                 onRemove: @deleteFolder
                 onSelect: @selectFolder
                 onLoaded: @onTreeLoaded
-                onDrop: @onNoteDropped
+                onDrop  : @onNoteDropped
 

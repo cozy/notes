@@ -1,0 +1,28 @@
+#tree-buttons
+    div#tree-create.button
+        i.icon-plus
+    div#tree-remove.button
+        i.icon-remove
+    div#tree-rename.button
+<<<<<<< HEAD
+        i.icon-pencil
+        
+#tree-top-buttons
+    .btn-group
+        div#tree-create.btn.btn-primary.btn-small
+            i.icon-plus
+            span new
+        div#tree-remove.btn.btn-primary.btn-small
+            i.icon-remove
+            span delete
+        div#tree-rename.btn.btn-primary.btn-small
+            i.icon-pencil 
+            span rename
+    .spacer
+    .input-append
+        input#tree-search-field.span2(type="text",placeholder="Search…")
+        button.btn Search !
+=======
+        i.icon-pencil 
+input#tree-search-field(type="text")
+>>>>>>> 9e437eec7e6bd4495ff2bfbcce53b4c22882232a

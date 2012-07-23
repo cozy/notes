@@ -1,126 +1,16 @@
-@import 'nib'
-@import 'base'
-
 
 // layout
 
 #home-view
-  height 100%
+    height 100%
 
 #content
-  height 100%
-  padding 0
+    height 100%
+    padding 0
 
-#nav
-  margin 0
-  padding 0
-  background-color bgcolornav
-  shadow 0 0 3px navshadowcolor
-
-#editor
-  margin 0 
-  margin-left 320px
-  padding 10px
-  height auto
-  background-color bgcoloreditor
-
-
-// Tree
-
-#tree
-  font-size 12
-  padding 10px
-  border-top 1px solid white
-  background-color bgcolornav
-  color treetextcolor 
-
-#tree li
-  padding 0
-
-#tree ins
-  width 14px
-
-#tree a
-  text-transform lowercase
-  padding 3px 5px
-  margin 2px 0px
-  border 1px solid transparent
-  font-weight bold
-  color treelinkcolor
-
-#tree a.jstree-clicked
-  background bgcolortreeselected 
-
-#tree a:hover
-  shadow 1px 1px 1px treetexthovershadowcolor
-  background bgcolortreetexthover
-
-#tree-buttons
-  border-bottom 1px solid bordercolortoolbar
-  background-color bgcolortoolbar 
-  margin-top 16px
-
-#tree-buttons div
-  display inline
-  padding 6px 10px
-  margin-left 8px
-  background-repeat no-repeat
-  background-position center
-  cursor pointer
-
-#tree-buttons i
-  margin-top 3px
-  margin-right 5px
-
-#tree-buttons .spacer
-  display block
-
-#tree-buttons div.button:hover
-  background: linear-gradient(top , bgcolorhoverbuttons 0%, bgclearcolorhoverbuttons 100%)
-
-#tree-buttons div.button
-  background linear-gradient(top, bgcolorbuttons 0%, bgclearcolorbuttons 100%)
-  shadow 0 1px 0 rgba(255, 255, 255, 0.12) inset, 1px 1px 1px rgba(0, 0, 0, 0.35)
-  color black
-  border 1px solid treebuttonbordercolor 
-  border-radius 2px 2px 2px 2px
-
-#tree-buttons div.button:active
-  background linear-gradient(top, bgcoloractivebuttons 0%, bgclearcoloractivebuttons 100%)
-  shadow 0 0px 0 rgba(255, 255, 255, 0.12) inset, 0 0px 1px rgba(0, 0, 0, 0.35)
-
-#tree-search-field
-  margin-left 8px
-  width 320px
-  shadow 0 1px 0 rgba(255, 255, 255, 0.12) inset, 1px 1px 1px rgba(0, 0, 0, 0.35)
-  border 1px solid treebuttonbordercolor 
-  border-radius 2px 2px 2px 2px
-  display none
-
-#tree-buttons div.button-active
-  shadow 0 0 0 0
-
-#tree a.jstree-search
-  color treehighlightcolor 
-
-// Notes 
-
-.note-full
-  background white
-  shadow 2px 2px 5px bgshadowcolor 
-  border 1px solid notebordercolor
-  padding 10px
-  border-radius 3px
-
-.note-full h2
-  padding 0
-  margin-bottom 20px
-
-#note-full-content
-  width 98%
-
-
-.ui-layout-resizer-open:hover
-  background highlightcolor
+// @import 'nib'  TODO : check that this import corresponds to something (commented by BJA 22/07/2012)
+@import 'base'
+@import 'content-pane'
+@import 'nav-pane'
 
 
