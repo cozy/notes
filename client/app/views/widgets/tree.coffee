@@ -11,16 +11,20 @@ class exports.Tree
 
 
         #Autocomplete
-        @autocompInput = $("#tree-search-field")
-        @widgetAutocomplete = @autocompInput.autocomplete
-            source: []
-            autoFocus: true
+        @searchField = $("#tree-search-field")
+        @searchButton = $("#tree-search")
+        @noteFull = $("#note-full")
+        @searchField.autocomplete(
+                source: []
+                autoFocus: true
+            )
 
+        # Creation of the tree with jstree
         tree = @_convertData data
         console.log data
         console.log tree
         @treeEl = $("#tree")
-        @widget = @treeEl.jstree
+        @widget = @treeEl.jstree(
             plugins: [
                 "themes", "json_data", "ui", "crrm",
                 "unique", "sort", "cookies", "types",
@@ -51,12 +55,9 @@ class exports.Tree
                     alert "A note has already that name: '#{node}'"
             search:
                 show_only_matches: true
+        )
     
-        @searchField = $("#tree-search-field")
-        @searchButton = $("#tree-search")
-        @noteFull = $("#note-full")
-
-        @setListeners callbacks            
+        @setListeners( callbacks )
 
     # Create toolbar inside DOM.
     setToolbar: (navEl) ->
@@ -91,10 +92,10 @@ class exports.Tree
         # Tree
         @widget.bind "create.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
-            completeSource =  @autocompInput.autocomplete( "option", "source")
+            completeSource =  @searchField.autocomplete( "option", "source")
             completeSource.push nodeName
             @organizeArray completeSource
-            @autocompInput.autocomplete( "option", "source", completeSource)
+            @searchField.autocomplete( "option", "source", completeSource)
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
             path.pop()
@@ -114,7 +115,7 @@ class exports.Tree
             if path == "all"
                 $.jstree.rollback data.rlbk
             else if data.rslt.old_name != data.rslt.new_name
-                completeSource =  @autocompInput.autocomplete( "option", "source")
+                completeSource =  @searchField.autocomplete( "option", "source")
                 i = 0
                 while completeSource[i] isnt data.rslt.old_name
                     i++
@@ -124,7 +125,7 @@ class exports.Tree
                     i++
                 completeSource[i] = data.rslt.new_name
                 @organizeArray completeSource
-                @autocompInput.autocomplete( "option", "source", completeSource)
+                @searchField.autocomplete( "option", "source", completeSource)
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
@@ -153,7 +154,7 @@ class exports.Tree
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
-            completeSource =  @autocompInput.autocomplete( "option", "source")
+            completeSource =  @searchField.autocomplete( "option", "source")
             i = 0
             while completeSource[i] isnt nodeName
                 i++
@@ -162,7 +163,7 @@ class exports.Tree
                 completeSource[i+1] = completeSource[i]
                 i++           
             completeSource.pop()
-            @autocompInput.autocomplete( "option", "source", completeSource)
+            @searchField.autocomplete( "option", "source", completeSource)
             parent = data.rslt.parent
             path = @_getStringPath parent, nodeName
             if path == "all"
@@ -262,10 +263,10 @@ class exports.Tree
         for property of nodeToConvert when \
                 property isnt "name" and property isnt "id"
             nodeIdPath = "#{idpath}-#{property.replace(/_/g, "-")}"
-            completeSource =  @autocompInput.autocomplete( "option", "source")
+            completeSource =  @searchField.autocomplete( "option", "source")
             completeSource.push nodeToConvert[property].name
             @organizeArray completeSource
-            @autocompInput.autocomplete( "option", "source", completeSource)
+            @searchField.autocomplete( "option", "source", completeSource)
             #@addButton "#tree a"
             newNode =
                 data: nodeToConvert[property].name
@@ -321,7 +322,7 @@ class exports.Tree
             , 1000) 
 
     _addButton: (event) ->
-        # TODO : 
+        # TODO : these listeners should be set when the node is created in the tree.
         # console.log '#tree.mouseover'
         $("#tree a").mouseover (e) ->
             # console.log '#tree a .mouseover'
