@@ -81,6 +81,11 @@ class exports.Tree
             @treeEl.jstree("create")
         $("#tree-rename").click =>
             @treeEl.jstree("rename")
+        #$("#note-full-title").blur =>
+        #    newName = $("#note-full-title").val()
+        #    path = mouahah
+        #    callbacks.onRenameNoReselect(path, newName)
+        #    @treeEl.jstree("rename")
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
         $("#searchInfo").hide()
@@ -107,11 +112,6 @@ class exports.Tree
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.inst._get_parent data.rslt.parent
             path = @_getStringPath parent, data.rslt.old_name
-            console.log "nodeName #{nodeName}"
-            console.log "parent #{parent}"
-            console.log "path #{path}"
-            console.log "data.rslt.old_name #{data.rslt.old_name}"
-            console.log "data.rslt.new_name #{data.rslt.new_name}"
             if path == "all"
                 $.jstree.rollback data.rlbk
             else if data.rslt.old_name != data.rslt.new_name
@@ -129,28 +129,7 @@ class exports.Tree
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
-                callbacks.onRename path, data.rslt.new_name, data
-
-        $("#note-full-title").focusout (e) ->
-            nodeName = $("#note-full-title").val()
-            parent = data.inst._get_parent data.rslt.parent
-            path = @_getStringPath parent, data.rslt.old_name
-            if data.rslt.old_name != data.rslt.new_name
-                completeSource =  @autocompInput.autocomplete( "option", "source")
-                i = 0
-                while completeSource[i] isnt data.rslt.old_name
-                    i++
-                while i isnt completeSource.length-1
-                    completeSource[i] = completeSource[i+1]
-                    completeSource[i+1] = completeSource[i]
-                    i++
-                completeSource[i] = data.rslt.new_name
-                @organizeArray completeSource
-                @autocompInput.autocomplete( "option", "source", completeSource)
-                idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
-                data.rslt.obj.attr "id", idPath
-                @rebuildIds data, data.rslt.obj, idPath
-                callbacks.onRename path, data.rslt.new_name, data           
+                callbacks.onRename path, data.rslt.new_name, data          
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
@@ -176,7 +155,7 @@ class exports.Tree
             parent = data.inst._get_parent data.rslt.parent
             path = @_getStringPath parent, nodeName
             callbacks.onSelect path, data.rslt.obj.data("id")
-
+                    
         @widget.bind "move_node.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.o
             parent = data.inst._get_parent data.rslt.o

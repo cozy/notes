@@ -33,6 +33,12 @@ class exports.HomeView extends Backbone.View
                 data.inst.deselect_all()
                 data.inst.select_node data.rslt.obj
             
+    renameFolderNoReselect: (path, NewName) =>
+        if newName?
+            Note.updateNote
+                path: path
+                newName: newName
+            
     # Delete currently selected node.
     deleteFolder: (path) =>
         @noteFull.hide()
@@ -120,6 +126,7 @@ class exports.HomeView extends Backbone.View
             @tree = new Tree( @.$("#nav"), data, 
                     onCreate: @createFolder
                     onRename: @renameFolder
+                    onRenameNoReselect: @renameFolderNoReselect
                     onRemove: @deleteFolder
                     onSelect: @selectFolder
                     onLoaded: @onTreeLoaded
