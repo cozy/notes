@@ -21,6 +21,8 @@ class exports.Tree
 
         # Creation of the tree with jstree
         tree = @_convertData data
+        console.log data
+        console.log tree
         @treeEl = $("#tree")
         @widget = @treeEl.jstree(
             plugins: [
@@ -79,6 +81,11 @@ class exports.Tree
             @treeEl.jstree("create")
         $("#tree-rename").click =>
             @treeEl.jstree("rename")
+        #$("#note-full-title").blur =>
+        #    newName = $("#note-full-title").val()
+        #    path = mouahah
+        #    callbacks.onRenameNoReselect(path, newName)
+        #    @treeEl.jstree("rename")
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
         $("#searchInfo").hide()
@@ -122,7 +129,7 @@ class exports.Tree
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
-                callbacks.onRename path, data.rslt.new_name, data
+                callbacks.onRename path, data.rslt.new_name, data          
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
@@ -148,7 +155,7 @@ class exports.Tree
             parent = data.inst._get_parent data.rslt.parent
             path = @_getStringPath parent, nodeName
             callbacks.onSelect path, data.rslt.obj.data("id")
-
+                    
         @widget.bind "move_node.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.o
             parent = data.inst._get_parent data.rslt.o

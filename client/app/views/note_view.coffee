@@ -64,7 +64,8 @@ class exports.NoteWidget extends Backbone.View
                 editorCtrl.markerList()
             $("#titleBtn").on "click", () ->
                 editorCtrl.titleList()
-            instEditor = this
+            # $("#save-editor-content").on "click", () ->
+                # alert editorCtrl.getEditorContent()
         # creation of the editor itself
         @instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)
 
