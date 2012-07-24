@@ -1,8 +1,13 @@
 Tree = require("./widgets/tree").Tree
 NoteWidget = require("./note_view").NoteWidget
 Note = require("../models/note").Note
-
+###
 # Main view that manages interaction between toolbar, navigation and notes
+    @treeCreationCallback 
+    @noteArea 
+    @noteFull 
+###
+
 class exports.HomeView extends Backbone.View
     id: 'home-view'
 
@@ -63,8 +68,7 @@ class exports.HomeView extends Backbone.View
 
     # When tree is loaded, callback given in paramter when fetchData
     # function was called is run.
-    onTreeLoaded: =>
-        @treeCreationCallback() if @treeCreationCallback?
+    onTreeLoaded: ->
 
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
@@ -79,33 +83,48 @@ class exports.HomeView extends Backbone.View
 
 
     # Initializers
-
+    constructor: () ->
+        super()
+    
     render: ->
-        $(@el).html require('./templates/home')
         this
 
-    # Use jquery layout so set main layout of current window.
-    setLayout: ->
-        $('#home-view').layout
-            size: "350"
-            minSize: "350"
-            resizable: true
-
-    # Loads note tree and configure it.
-    fetchData: (callback) ->
-        @treeCreationCallback = callback
+    # Load the home view and the tree
+    initContent: (path) ->
+        
+        # add the html in the element of the view
+        $(@el).html require('./templates/home')
         @noteArea = $("#editor")
         @noteFull = $("#note-full")
         @noteFull.hide()
         
+        # Use jquery layout so set main layout of current window.
+        $('#home-view').layout
+            size: "350"
+            minSize: "350"
+            resizable: true
+        
+        # TODO : expliquer le coupt du cookie
+        @onTreeLoaded = ->
+            setTimeout(
+                ->
+                    app.homeView.selectNote path
+                , 100
+            )
+        
+        # 
         NoteWidget.setEditor @onNoteChanged
 
-        $.get "tree/", (data) =>
-            @tree = new Tree @.$("#nav"), data,
-                onCreate: @createFolder
-                onRename: @renameFolder
-                onRemove: @deleteFolder
-                onSelect: @selectFolder
-                onLoaded: @onTreeLoaded
-                onDrop  : @onNoteDropped
+        # creation of the tree
+        $.get "tree/",  (data) =>
+            @tree = new Tree( @.$("#nav"), data, 
+                    onCreate: @createFolder
+                    onRename: @renameFolder
+                    onRemove: @deleteFolder
+                    onSelect: @selectFolder
+                    onLoaded: @onTreeLoaded
+                    onDrop  : @onNoteDropped
+                )
+
+    # TODO à renommer
 
