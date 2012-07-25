@@ -1,5 +1,6 @@
 template = require('./templates/note')
 CNEditor = require('./editor').CNEditor
+Note = require('../models/note').Note
 
 # Row displaying application name and attributes
 class exports.NoteWidget extends Backbone.View
@@ -41,7 +42,6 @@ class exports.NoteWidget extends Backbone.View
             
         $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
-        
         # load the base's content into the editor
         $("#note-area").html require('./templates/editor')
         myContent = @model.content
@@ -67,7 +67,14 @@ class exports.NoteWidget extends Backbone.View
             # $("#save-editor-content").on "click", () ->
                 # alert editorCtrl.getEditorContent()
         # creation of the editor itself
-        @instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)
+        instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)
+        note = @model
+        
+        $("iframe").on "onHistoryChanged", () ->
+            console.log "call onNoteChanged"
+            console.log instEditor.getEditorContent()
+            content = instEditor.getEditorContent()
+            note.saveContent content
 
         #params = { allowScriptAccess: "always" }
         #atts = { id: "myytplayer" }
@@ -97,16 +104,20 @@ class exports.NoteWidget extends Backbone.View
 
         
     @setEditor: (changeCallback) ->
-        
+        #$("#note-area").html require('./templates/editor')
         # the save button cannot work because it does not exist at the moment
         # we try to bind the "save" event to it (since the editor isnt ready
         # yet)
-                
         saveBtn = $ document.createElement("button")
         $("#note-area").before saveBtn
         saveBtn.text "Save"
         saveBtn.on "click", () =>
-            changeCallback()
+            console.log "kikoo"
+        
+        #console.log $ "iframe"
+        #$("iframe").on "onHistoryChanged", () ->
+        #    console.log "kikoo"
+        #    changeCallback()   
             
         #editor.on "click", () =>
             #changeCallback()
