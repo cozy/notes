@@ -1,5 +1,5 @@
 ## TODO: méthode pour récupérer le js de l'éditeur nu
-##       deleteContent()
+## TODO: fire an event qd click sur un bouton.
 
 ### ------------------------------------------------------------------------
 # CLASS FOR THE COZY NOTE EDITOR
@@ -88,7 +88,6 @@ class exports.CNEditor extends Backbone.View
             else
                 @replaceCSS("stylesheets/app-deep-4.css")
         
-
     ### ------------------------------------------------------------------------
     # Initialize the editor content from a html string
     ###
@@ -105,15 +104,16 @@ class exports.CNEditor extends Backbone.View
 
         @_readHtml()
         #@_buildSummary()
-
-    ###
+    
+    
+    ### ------------------------------------------------------------------------
     # Returns a markdown string representing the editor content
     ###
     getEditorContent : () ->
         cozyContent = @editorBody$.html()
         return @_cozy2md cozyContent
         
-    ###
+    ### ------------------------------------------------------------------------
     # Sets the editor content from a markdown string
     ###
     setEditorContent : (mdContent) ->
@@ -1605,16 +1605,16 @@ class exports.CNEditor extends Backbone.View
                     
             'IMG': (obj) ->
                 title = if obj.attr('title')? then obj.attr('title') else ""
-                alt = if obj.attr('alt')? then obj.attr('alt') else ""
-                src = if obj.attr('src')? then obj.attr('src') else ""
+                alt   = if obj.attr('alt')? then obj.attr('alt') else ""
+                src   = if obj.attr('src')? then obj.attr('src') else ""
                 return '![' + alt + '](' + src + ' "' + title + '")'
                 
-            'SPAN':  (obj) ->
+            'SPAN': (obj) ->
                 return obj.text()
             }
 
         
-        # markup symboles
+        # markup symbols
         markup = {
             'Th' : (blanks, depth) ->
                 # a title is a section rupture
@@ -1643,21 +1643,22 @@ class exports.CNEditor extends Backbone.View
             type  = tab[0]               # type of class (Tu,Lu,Th,Lh,To,Lo)
             depth = parseInt(tab[1], 10) # depth (1,2,3...)
             blanks = ''
-            i = 1
+            i = 0
             while i < depth - currDepth
                 blanks += '    '
                 i++
             return markup[type](blanks, depth)
         
-        # iterates on direct children
+        # iterate on direct children
         children = htmlCode.children()
         for i in [0..children.length-1]
             
-            # fetches the i-th line of the text
+            # fetch the i-th line of the text
             lineCode = $ children.get i
             
-            # indents and structures the line
+            # indent and structure the line
             if lineCode.attr('class')?
+                console.log classType lineCode.attr 'class'
                 markCode += classType lineCode.attr 'class'
 
             # completes the text depending of the line's content
