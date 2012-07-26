@@ -1,3 +1,5 @@
+## TODO: méthode pour récupérer le js de l'éditeur nu
+##       deleteContent()
 
 ### ------------------------------------------------------------------------
 # CLASS FOR THE COZY NOTE EDITOR
@@ -46,6 +48,7 @@ class exports.CNEditor extends Backbone.View
             @editorBody$  = editorBody$
             @editorIframe = iframe$[0]
             @_lines       = {}
+            @newPosition  = true
             @_highestId   = 0
             @_deepest     = 1
             @_firstLine   = null
@@ -283,7 +286,7 @@ class exports.CNEditor extends Backbone.View
                     for i in [0..num-1]
                         range = sel.getRangeAt(i)
                         @_normalize(range)
-
+                        
         # 4- the current selection is initialized on each keypress
         this.currentSel = null
   
