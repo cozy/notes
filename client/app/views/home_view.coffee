@@ -33,12 +33,6 @@ class exports.HomeView extends Backbone.View
                 data.inst.deselect_all()
                 data.inst.select_node data.rslt.obj
             
-    renameFolderNoReselect: (path, newName) =>
-        if newName?
-            Note.updateNote
-                path: path
-                newName: newName
-            
     # Delete currently selected node.
     deleteFolder: (path) =>
         @noteFull.hide()
@@ -111,7 +105,7 @@ class exports.HomeView extends Backbone.View
             minSize: "350"
             resizable: true
         
-        # TODO : expliquer le coupt du cookie
+        # TODO : expliquer le coup du cookie
         @onTreeLoaded = ->
             setTimeout(
                 ->
@@ -119,17 +113,15 @@ class exports.HomeView extends Backbone.View
                 , 100
             )
         
-        NoteWidget.setEditor @onNoteChanged
+        #NoteWidget.setEditor @onNoteChanged
 
         # creation of the tree
         $.get "tree/",  (data) =>
             @tree = new Tree( @.$("#nav"), data, 
                     onCreate: @createFolder
                     onRename: @renameFolder
-                    onRenameNoReselect: @renameFolderNoReselect
                     onRemove: @deleteFolder
                     onSelect: @selectFolder
                     onLoaded: @onTreeLoaded
                     onDrop  : @onNoteDropped
-                    onNoteChangedEvent: @onNoteChanged
                 )

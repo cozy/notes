@@ -86,17 +86,17 @@ class exports.Tree
             @treeEl.jstree("rename")
         $("#note-full-title").blur =>
             newName = $("#note-full-title").text()
-            idPath = "tree-node#{@currentPath.split("/").join("-")}"
-            #console.log idPath
-            @currentData.rslt.obj.attr "id", idPath
-            @rebuildIds @currentData, @currentData.rslt.obj, idPath
-            callbacks.onRenameNoReselect @currentPath, newName
-            #console.log "refreshing tree"
-            @treeEl.jstree("refresh")
+            oldName = @currentData.inst.get_text @currentData.rslt.obj
+            console.log oldName
+            if newName isnt "" and oldName != newName
+                @currentData.inst.rename_node(@currentData.rslt.obj, newName)
+                #idPath = "tree-node#{@currentPath.split("/").join("-")}"
+                #console.log idPath
+                #@currentData.rslt.obj.attr "id", idPath
+                #@rebuildIds @currentData, @currentData.rslt.obj, idPath
+                callbacks.onRename @currentPath, newName, @currentData
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
-        console.log $("#editorIframe")
-        $("button").click @_saveIt
         $("#searchInfo").hide()
         @searchField.keyup @_onSearchChanged
         # TODO : this event occures many many times when in the tree : not the best way
@@ -197,6 +197,7 @@ class exports.Tree
                 
 
     # Rebuild ids of obj children. 
+    # Not sure about the efficiency of this function
     rebuildIds: (data, obj, idPath) ->
         for child in data.inst._get_children obj
             newIdPath = idPath + "-" + slugify($(child).children("a:eq(0)").text())
@@ -312,11 +313,6 @@ class exports.Tree
                     $("#note-full").css("top", @noteNewTop)
             , 1000) 
 
-            
-    _saveIt: (event) ->
-        $("#editorIframe").on "onHistoryChanged", () ->
-            console.log "kikoo"
-            callbacks.onNoteChangedEvent
 
     _addButton: (event) ->
         # TODO : these listeners should be set when the node is created in the tree.

@@ -42,6 +42,7 @@ class exports.NoteWidget extends Backbone.View
             
         $("#note-full-breadcrumb").html breadcrumb
         $("#note-full-title").html @model.title
+        console.log @model.title
         # load the base's content into the editor
         $("#note-area").html require('./templates/editor')
         myContent = @model.content
