@@ -64,6 +64,7 @@ class exports.NoteWidget extends Backbone.View
                 editorCtrl.markerList()
             $("#titleBtn").on "click", () ->
                 editorCtrl.titleList()
+            # DEBUG BUTTON
             $("#save-editor-content").on "click", () ->
                 alert editorCtrl.editorBody$.html()
                 alert editorCtrl.getEditorContent()
