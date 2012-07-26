@@ -31,7 +31,6 @@ class exports.Note extends BaseModel
         @url = "notes/#{@.id}"
         @save content: @content
 
-
     @createNote = (data, callback) ->
         request "POST", "tree", data, callback
 

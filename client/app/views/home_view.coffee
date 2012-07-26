@@ -33,6 +33,12 @@ class exports.HomeView extends Backbone.View
                 data.inst.deselect_all()
                 data.inst.select_node data.rslt.obj
             
+    renameFolderNoReselect: (path, newName) =>
+        if newName?
+            Note.updateNote
+                path: path
+                newName: newName
+            
     # Delete currently selected node.
     deleteFolder: (path) =>
         @noteFull.hide()
@@ -62,6 +68,7 @@ class exports.HomeView extends Backbone.View
 
     # When note change, its content is saved.
     onNoteChanged: (event) =>
+        console.log "call onNoteChanged"
         noteWidget = new NoteWidget @currentNote
         console.log noteWidget
         @currentNote.saveContent noteWidget.instEditor.getEditorContent()
@@ -112,7 +119,6 @@ class exports.HomeView extends Backbone.View
                 , 100
             )
         
-        # 
         NoteWidget.setEditor @onNoteChanged
 
         # creation of the tree
@@ -120,11 +126,10 @@ class exports.HomeView extends Backbone.View
             @tree = new Tree( @.$("#nav"), data, 
                     onCreate: @createFolder
                     onRename: @renameFolder
+                    onRenameNoReselect: @renameFolderNoReselect
                     onRemove: @deleteFolder
                     onSelect: @selectFolder
                     onLoaded: @onTreeLoaded
                     onDrop  : @onNoteDropped
+                    onNoteChangedEvent: @onNoteChanged
                 )
-
-    # TODO à renommer
-

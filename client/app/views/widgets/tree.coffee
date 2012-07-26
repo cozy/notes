@@ -1,5 +1,6 @@
 slugify = require("helpers").slugify
 
+
 # Widget to easily manipulate data tree (navigation for cozy apps)
 class exports.Tree
 
@@ -21,6 +22,8 @@ class exports.Tree
 
         # Creation of the tree with jstree
         tree = @_convertData data
+        console.log data
+        console.log tree
         @treeEl = $("#tree")
         @widget = @treeEl.jstree(
             plugins: [
@@ -70,17 +73,30 @@ class exports.Tree
             array[i-1] = tmp
             i--
  
+    currentPath: ""
+ 
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection).
     setListeners: (callbacks) ->
-
+        
         # Toolbar
         $("#tree-create").click =>
             @treeEl.jstree("create")
         $("#tree-rename").click =>
             @treeEl.jstree("rename")
+        $("#note-full-title").blur =>
+            newName = $("#note-full-title").text()
+            idPath = "tree-node#{@currentPath.split("/").join("-")}"
+            #console.log idPath
+            @currentData.rslt.obj.attr "id", idPath
+            @rebuildIds @currentData, @currentData.rslt.obj, idPath
+            callbacks.onRenameNoReselect @currentPath, newName
+            #console.log "refreshing tree"
+            @treeEl.jstree("refresh")
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
+        console.log $("#editorIframe")
+        $("button").click @_saveIt
         $("#searchInfo").hide()
         @searchField.keyup @_onSearchChanged
         # TODO : this event occures many many times when in the tree : not the best way
@@ -122,7 +138,7 @@ class exports.Tree
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
-                callbacks.onRename path, data.rslt.new_name, data
+                callbacks.onRename path, data.rslt.new_name, data          
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
@@ -147,8 +163,11 @@ class exports.Tree
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.inst._get_parent data.rslt.parent
             path = @_getStringPath parent, nodeName
+            @currentPath = path
+            @currentData = data
+            #console.log @currentData
             callbacks.onSelect path, data.rslt.obj.data("id")
-
+                    
         @widget.bind "move_node.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.o
             parent = data.inst._get_parent data.rslt.o
@@ -292,6 +311,12 @@ class exports.Tree
                     console.log @noteOldTop
                     $("#note-full").css("top", @noteNewTop)
             , 1000) 
+
+            
+    _saveIt: (event) ->
+        $("#editorIframe").on "onHistoryChanged", () ->
+            console.log "kikoo"
+            callbacks.onNoteChangedEvent
 
     _addButton: (event) ->
         # TODO : these listeners should be set when the node is created in the tree.
