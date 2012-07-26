@@ -97,6 +97,15 @@ class exports.CNEditor extends Backbone.View
         @_readHtml()
         #@_buildSummary()
 
+    ### ------------------------------------------------------------------------
+    # Clear editor content
+    ###
+    deleteContent : () ->
+        @editorBody$.html '<div id="CNID_1" class="Tu-1"><span></span><br></div>'
+
+        @_readHtml()
+        #@_buildSummary()
+
     ###
     # Returns a markdown string representing the editor content
     ###

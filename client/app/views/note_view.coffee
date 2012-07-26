@@ -53,22 +53,28 @@ class exports.NoteWidget extends Backbone.View
             editorCtrl = this
             # load the base's content into the editor
             if myContent
-                this.setEditorContent(myContent)
+                editorCtrl.setEditorContent(myContent)
             else
-                this.replaceContent( require('./templates/content-empty') )
+                editorCtrl.deleteContent()
             # buttons for the editor
             $("#indentBtn").on "click", () ->
+                editorCtrl._addHistory()
                 editorCtrl.tab()
             $("#unIndentBtn").on "click", () ->
+                editorCtrl._addHistory()
                 editorCtrl.shiftTab()
             $("#markerListBtn").on "click", () ->
+                editorCtrl._addHistory()
                 editorCtrl.markerList()
             $("#titleBtn").on "click", () ->
+                editorCtrl._addHistory()
                 editorCtrl.titleList()
-            # DEBUG BUTTON
-            $("#save-editor-content").on "click", () ->
-                alert editorCtrl.editorBody$.html()
-                alert editorCtrl.getEditorContent()
+            $("#saveBtn").on "click", () ->
+                editorCtrl._addHistory()
+            $("#clearBtn").on "click", () ->
+                editorCtrl._addHistory()
+                editorCtrl.deleteContent()
+    
                 
         # creation of the editor itself
         instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)
@@ -105,8 +111,9 @@ class exports.NoteWidget extends Backbone.View
         #    $("#note-area").append("<textarea id='note-full-content-with-video'>#{content}</textarea>")
         
         return @el
-
         
+
+    # TO WIPE OUT
     @setEditor: (changeCallback) ->
         #$("#note-area").html require('./templates/editor')
         # the save button cannot work because it does not exist at the moment
