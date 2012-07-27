@@ -23,6 +23,7 @@ class exports.NoteWidget extends Backbone.View
     
 
     render: ->
+        $(".icon-ok-circle").hide()
     #breadcrumb will contain the path of the selected note in a link format(<a>)
     # the code below generates the breadcrumb corresponding
     # to the current note path
@@ -71,24 +72,18 @@ class exports.NoteWidget extends Backbone.View
                 editorCtrl._addHistory()
                 editorCtrl.titleList()
             $("iframe").on "onKeyUp", () =>
-                console.log "okidoki"
+                $(".icon-ok-circle").hide()
                 if $("#save-editor-content").hasClass("btn-info")
-                    console.log "ok let's go"
-                    $("#save-editor-content").removeClass("btn-active btn-info").addClass("btn btn-primary")
-            # DEBUG BUTTON
+                    $("#save-editor-content").addClass("btn-primary").removeClass("active btn-info")
             $("#save-editor-content").on "click", () ->
                 if $("#save-editor-content").hasClass("btn-primary")
-                    console.log editorCtrl.editorBody$.html()
-                    console.log editorCtrl.getEditorContent()
-                    $("#save-editor-content").removeClass("btn btn-primary").addClass("btn-active btn-info")
+                    $("#save-editor-content").addClass("active btn-info").removeClass("btn-primary")
                     editorCtrl._addHistory()
-                    $("#editorBtnBar").after("<i class='icon-ok-circle'></i>")
+                    $(".icon-ok-circle").show()
             $("iframe").on "onHistoryChanged", () =>
-                console.log this
                 note.saveContent @.getEditorContent()  
-            #$("#saveBtn").on "click", () ->
-            #    editorCtrl._addHistory()
             $("#clearBtn").on "click", () ->
+                $(".icon-ok-circle").hide()
                 editorCtrl._addHistory()
                 editorCtrl.deleteContent()
     
