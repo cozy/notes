@@ -99,7 +99,7 @@ class exports.HomeView extends Backbone.View
         @noteFull = $("#note-full")
         @noteFull.hide()
         
-        # Use jquery layout so set main layout of current window.
+        # Use jquery layout to set main layout of current window.
         $('#home-view').layout
             size: "350"
             minSize: "350"
@@ -113,8 +113,6 @@ class exports.HomeView extends Backbone.View
                 , 100
             )
         
-        #NoteWidget.setEditor @onNoteChanged
-
         # creation of the tree
         $.get "tree/",  (data) =>
             @tree = new Tree( @.$("#nav"), data, 

@@ -22,8 +22,6 @@ class exports.Tree
 
         # Creation of the tree with jstree
         tree = @_convertData data
-        console.log data
-        console.log tree
         @treeEl = $("#tree")
         @widget = @treeEl.jstree(
             plugins: [
@@ -87,7 +85,6 @@ class exports.Tree
         $("#note-full-title").blur =>
             newName = $("#note-full-title").text()
             oldName = @currentData.inst.get_text @currentData.rslt.obj
-            console.log oldName
             if newName isnt "" and oldName != newName
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
                 #idPath = "tree-node#{@currentPath.split("/").join("-")}"
@@ -184,16 +181,6 @@ class exports.Tree
 
         @widget.bind "loaded.jstree", (e, data) =>
             callbacks.onLoaded()
-
-        
-        @widget.bind "search.jstree", (e, data, searchString) =>
-        #    for note in data.rslt.nodes
-        #        nodeName = data.inst.get_text note
-        #        parent = data.inst._get_parent note
-        #        path = @_getStringPath parent, nodeName
-        #        currentNote = data.inst._get_node note
-        #        #PROBLEME ICI une seule note s'affiche (la dernière)
-        #        callbacks.onSelect path, currentNote.data("id")
                 
 
     # Rebuild ids of obj children. 
@@ -274,16 +261,6 @@ class exports.Tree
                 parentNode.children.push newNode
             @_convertNode newNode, nodeToConvert[property], nodeIdPath
 
-    # When search button is clicked, quick search input is displayed or hidden
-    # (reverse state). If quick search is displayed, the focus goes on it.
-    #_onSearchClicked: (event) =>
-    #    if @searchField.is(":hidden")
-    #        @searchField.show()
-    #        @searchField.focus()
-    #        @searchButton.addClass("button-active")
-    #    else
-    #        @searchField.hide()
-    #        @searchButton.removeClass("button-active")
 
     searchTimer: null
 
@@ -304,7 +281,7 @@ class exports.Tree
                 $("#searchInfo").html info
                 if $("#searchInfo").is(":hidden")
                     $("#searchInfo").show()
-                #    #24 represents the size of the margin from the searchInfo
+                    #24 represents the size of the margin from the searchInfo
                     if @noteNewTop is undefined
                         @noteOldTop = parseInt($("#note-full").css("top"))
                         @noteNewTop = parseInt($("#note-full").css("top")) + parseInt($("#searchInfo").css("height")) + 24
@@ -318,15 +295,6 @@ class exports.Tree
         # TODO : these listeners should be set when the node is created in the tree.
         # console.log '#tree.mouseover'
         $("#tree a").mouseover (e) ->
-            # console.log '#tree a .mouseover'
-            # root = $("#tree-node-all")
-            #if e.target isnt root
-
-            # leftPosition1 = root.offset().left + root.width() - 60
-            # $("#tree-buttons").css
-            #     position: "absolute"
-            #     left: leftPosition1
-            #     top: e.target.offsetTop
 
             $("#tree-buttons").appendTo( this )
             $("#tree-buttons").show()

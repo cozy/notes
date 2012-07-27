@@ -41,14 +41,15 @@ class exports.NoteWidget extends Backbone.View
             i++
             
         $("#note-full-breadcrumb").html breadcrumb
+        #give a title to the note
         $("#note-full-title").html @model.title
-        console.log @model.title
         # load the base's content into the editor
         $("#note-area").html require('./templates/editor')
         myContent = @model.content
         
         # Callback to execute when the editor is ready
         # this refers to the editor during instanciation
+        note = @model
         callBackEditor = () ->
             editorCtrl = this
             # load the base's content into the editor
@@ -65,66 +66,23 @@ class exports.NoteWidget extends Backbone.View
                 editorCtrl.markerList()
             $("#titleBtn").on "click", () ->
                 editorCtrl.titleList()
+            $("#__ed-iframe-body").keyup =>
+                if $("#save-editor-content").hasClass("btn-info")
+                    console.log "ok let's go"
+                    $("#save-editor-content").removeClass("btn-active btn-info").addClass("btn btn-primary")
             # DEBUG BUTTON
             $("#save-editor-content").on "click", () ->
-                alert editorCtrl.editorBody$.html()
-                alert editorCtrl.getEditorContent()
-                
+                if $("#save-editor-content").hasClass("btn-primary")
+                    console.log editorCtrl.editorBody$.html()
+                    console.log editorCtrl.getEditorContent()
+                    $("#save-editor-content").removeClass("btn btn-primary").addClass("btn-active btn-info")
+                    note.saveContent @.getEditorContent()  
+                    $("#editorBtnBar").after("<i class='icon-ok-circle'></i>")
+            $("iframe").on "onHistoryChanged", () =>
+                console.log this
+                note.saveContent @.getEditorContent()  
+    
         # creation of the editor itself
         instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)
-        note = @model
-        
-        $("iframe").on "onHistoryChanged", () ->
-            console.log "call onNoteChanged"
-            console.log instEditor.getEditorContent()
-            content = instEditor.getEditorContent()
-            note.saveContent content
-
-        #params = { allowScriptAccess: "always" }
-        #atts = { id: "myytplayer" }
-        #swfobject.embedSWF("http://www.youtube.com/v/YAOv-KGh1qw?enablejsapi=1&playerapiid=ytplayer&version=3",
-        #               "ytapiplayer", "425", "356", "8", null, null, params, atts)
-        #ytplayer = document.getElementById("myytplayer")
-        #
-        #$("#video").click =>
-        #    videoUrl = $("#video-url").val()
-        #    ytplayer.cueVideoById(videoUrl, 0, "default")
-        #$("a.video-timer").click (event) ->
-        #    videoTimer = event.target.text.split(":")
-        #    lastElem = videoTimer.length - 1
-        #    minute = videoTimer[lastElem - 1]
-        #    seconde = videoTimer[lastElem]
-        #    if lastElem is 2
-        #        hour = videoTimer[0]
-        #    else
-        #        hour = 0
-        #    totalSeconds = parseInt(seconde) + parseInt((60*minute)) + parseInt((3600*hour))
-        #    ytplayer.seekTo(totalSeconds)
-        #$("#note-full-content-with-video").dblclick =>
-        #    content = $("#note-full-content-with-video").html()
-        #    $("#note-area").append("<textarea id='note-full-content-with-video'>#{content}</textarea>")
         
         return @el
-
-        
-    @setEditor: (changeCallback) ->
-        #$("#note-area").html require('./templates/editor')
-        # the save button cannot work because it does not exist at the moment
-        # we try to bind the "save" event to it (since the editor isnt ready
-        # yet)
-        saveBtn = $ document.createElement("button")
-        $("#note-area").before saveBtn
-        saveBtn.text "Save"
-        saveBtn.on "click", () =>
-            console.log "kikoo"
-        
-        #console.log $ "iframe"
-        #$("iframe").on "onHistoryChanged", () ->
-        #    console.log "kikoo"
-        #    changeCallback()   
-            
-        #editor.on "click", () =>
-            #changeCallback()
-        #editor = $("#editor-content")
-        #editor.keyup (event) =>
-            #changeCallback()
