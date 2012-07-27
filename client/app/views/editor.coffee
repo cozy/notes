@@ -59,6 +59,12 @@ class exports.CNEditor extends Backbone.View
             # 3- initialize event listeners
             editorBody$.prop( '__editorCtl', this)
             editorBody$.on 'keypress' , @_keyPressListener
+            editorBody$.on 'keyup', () ->
+                $(@editorIframe).trigger jQuery.Event("onKeyUp")
+            # editorBody$.on 'keydown', () ->
+                # $(@editorIframe).trigger jQuery.Event("onKeyDown")
+            # editorBody$.on 'keypress', () ->
+                # $(@editorIframe).trigger jQuery.Event("onKeyPress")
             # 4- return a ref to the editor's controler
             callBack.call(this)
             return this
@@ -1524,6 +1530,10 @@ class exports.CNEditor extends Backbone.View
     ###
     _addHistory : () ->
         @_history.history.push @editorBody$.html()
+        # histElt =
+            # htmlContent: @editorBody$.html()
+            # rangeContent: rangy.getIframeSelection(@editorIframe).getRangeAt(0)
+        # @_history.history.push histElt
         @_history.index = @_history.history.length-1
         $(@editorIframe).trigger jQuery.Event("onHistoryChanged")
     ###
@@ -1533,6 +1543,8 @@ class exports.CNEditor extends Backbone.View
         # if there is an action to undo
         if @_history.index > 0
             @editorBody$.html @_history.history[@_history.index]
+            # @editorBody$.html @_history.history[@_history.index].htmlContent
+            # rangy.getIframeSelection(@editorIframe).setSingleRange @_history.history[@_history.index].rangeContent
             @_history.index -= 1
     ###
     # Redo a undo-ed action
@@ -1542,7 +1554,8 @@ class exports.CNEditor extends Backbone.View
         if @_history.index < (@_history.history.length-2)
             @_history.index += 1
             @editorBody$.html @_history.history[@_history.index+1]
-
+            # @editorBody$.html @_history.history[@_history.index].htmlContent
+            # rangy.getIframeSelection(@editorIframe).setSingleRange @_history.history[@_history.index].rangeContent
             
 
     ### ------------------------------------------------------------------------
@@ -1658,7 +1671,7 @@ class exports.CNEditor extends Backbone.View
             
             # indent and structure the line
             if lineCode.attr('class')?
-                console.log classType lineCode.attr 'class'
+                # console.log classType lineCode.attr 'class'
                 markCode += classType lineCode.attr 'class'
 
             # completes the text depending of the line's content
