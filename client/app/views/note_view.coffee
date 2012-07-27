@@ -54,19 +54,24 @@ class exports.NoteWidget extends Backbone.View
             editorCtrl = this
             # load the base's content into the editor
             if myContent
-                this.setEditorContent(myContent)
+                editorCtrl.setEditorContent(myContent)
             else
-                this.replaceContent( require('./templates/content-empty') )
+                editorCtrl.deleteContent()
             # buttons for the editor
             $("#indentBtn").on "click", () ->
+                editorCtrl._addHistory()
                 editorCtrl.tab()
             $("#unIndentBtn").on "click", () ->
+                editorCtrl._addHistory()
                 editorCtrl.shiftTab()
             $("#markerListBtn").on "click", () ->
+                editorCtrl._addHistory()
                 editorCtrl.markerList()
             $("#titleBtn").on "click", () ->
+                editorCtrl._addHistory()
                 editorCtrl.titleList()
-            $("#__ed-iframe-body").keyup =>
+            $("iframe").on "onKeyUp", () =>
+                console.log "okidoki"
                 if $("#save-editor-content").hasClass("btn-info")
                     console.log "ok let's go"
                     $("#save-editor-content").removeClass("btn-active btn-info").addClass("btn btn-primary")
@@ -76,11 +81,16 @@ class exports.NoteWidget extends Backbone.View
                     console.log editorCtrl.editorBody$.html()
                     console.log editorCtrl.getEditorContent()
                     $("#save-editor-content").removeClass("btn btn-primary").addClass("btn-active btn-info")
-                    note.saveContent @.getEditorContent()  
+                    editorCtrl._addHistory()
                     $("#editorBtnBar").after("<i class='icon-ok-circle'></i>")
             $("iframe").on "onHistoryChanged", () =>
                 console.log this
                 note.saveContent @.getEditorContent()  
+            #$("#saveBtn").on "click", () ->
+            #    editorCtrl._addHistory()
+            $("#clearBtn").on "click", () ->
+                editorCtrl._addHistory()
+                editorCtrl.deleteContent()
     
         # creation of the editor itself
         instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)

@@ -1,5 +1,5 @@
 ## TODO: méthode pour récupérer le js de l'éditeur nu
-##       deleteContent()
+## TODO: fire an event qd click sur un bouton.
 
 ### ------------------------------------------------------------------------
 # CLASS FOR THE COZY NOTE EDITOR
@@ -59,6 +59,12 @@ class exports.CNEditor extends Backbone.View
             # 3- initialize event listeners
             editorBody$.prop( '__editorCtl', this)
             editorBody$.on 'keypress' , @_keyPressListener
+            editorBody$.on 'keyup', () ->
+                $(@editorIframe).trigger jQuery.Event("onKeyUp")
+            # editorBody$.on 'keydown', () ->
+                # $(@editorIframe).trigger jQuery.Event("onKeyDown")
+            # editorBody$.on 'keypress', () ->
+                # $(@editorIframe).trigger jQuery.Event("onKeyPress")
             # 4- return a ref to the editor's controler
             callBack.call(this)
             return this
@@ -88,7 +94,6 @@ class exports.CNEditor extends Backbone.View
             else
                 @replaceCSS("stylesheets/app-deep-4.css")
         
-
     ### ------------------------------------------------------------------------
     # Initialize the editor content from a html string
     ###
@@ -97,14 +102,24 @@ class exports.CNEditor extends Backbone.View
         @_readHtml()
         #@_buildSummary()
 
+    ### ------------------------------------------------------------------------
+    # Clear editor content
     ###
+    deleteContent : () ->
+        @editorBody$.html '<div id="CNID_1" class="Tu-1"><span></span><br></div>'
+
+        @_readHtml()
+        #@_buildSummary()
+    
+    
+    ### ------------------------------------------------------------------------
     # Returns a markdown string representing the editor content
     ###
     getEditorContent : () ->
         cozyContent = @editorBody$.html()
         return @_cozy2md cozyContent
         
-    ###
+    ### ------------------------------------------------------------------------
     # Sets the editor content from a markdown string
     ###
     setEditorContent : (mdContent) ->
@@ -1515,6 +1530,10 @@ class exports.CNEditor extends Backbone.View
     ###
     _addHistory : () ->
         @_history.history.push @editorBody$.html()
+        # histElt =
+            # htmlContent: @editorBody$.html()
+            # rangeContent: rangy.getIframeSelection(@editorIframe).getRangeAt(0)
+        # @_history.history.push histElt
         @_history.index = @_history.history.length-1
         $(@editorIframe).trigger jQuery.Event("onHistoryChanged")
     ###
@@ -1524,6 +1543,8 @@ class exports.CNEditor extends Backbone.View
         # if there is an action to undo
         if @_history.index > 0
             @editorBody$.html @_history.history[@_history.index]
+            # @editorBody$.html @_history.history[@_history.index].htmlContent
+            # rangy.getIframeSelection(@editorIframe).setSingleRange @_history.history[@_history.index].rangeContent
             @_history.index -= 1
     ###
     # Redo a undo-ed action
@@ -1533,7 +1554,8 @@ class exports.CNEditor extends Backbone.View
         if @_history.index < (@_history.history.length-2)
             @_history.index += 1
             @editorBody$.html @_history.history[@_history.index+1]
-
+            # @editorBody$.html @_history.history[@_history.index].htmlContent
+            # rangy.getIframeSelection(@editorIframe).setSingleRange @_history.history[@_history.index].rangeContent
             
 
     ### ------------------------------------------------------------------------
@@ -1596,16 +1618,16 @@ class exports.CNEditor extends Backbone.View
                     
             'IMG': (obj) ->
                 title = if obj.attr('title')? then obj.attr('title') else ""
-                alt = if obj.attr('alt')? then obj.attr('alt') else ""
-                src = if obj.attr('src')? then obj.attr('src') else ""
+                alt   = if obj.attr('alt')? then obj.attr('alt') else ""
+                src   = if obj.attr('src')? then obj.attr('src') else ""
                 return '![' + alt + '](' + src + ' "' + title + '")'
                 
-            'SPAN':  (obj) ->
+            'SPAN': (obj) ->
                 return obj.text()
             }
 
         
-        # markup symboles
+        # markup symbols
         markup = {
             'Th' : (blanks, depth) ->
                 # a title is a section rupture
@@ -1634,21 +1656,22 @@ class exports.CNEditor extends Backbone.View
             type  = tab[0]               # type of class (Tu,Lu,Th,Lh,To,Lo)
             depth = parseInt(tab[1], 10) # depth (1,2,3...)
             blanks = ''
-            i = 1
+            i = 0
             while i < depth - currDepth
                 blanks += '    '
                 i++
             return markup[type](blanks, depth)
         
-        # iterates on direct children
+        # iterate on direct children
         children = htmlCode.children()
         for i in [0..children.length-1]
             
-            # fetches the i-th line of the text
+            # fetch the i-th line of the text
             lineCode = $ children.get i
             
-            # indents and structures the line
+            # indent and structure the line
             if lineCode.attr('class')?
+                # console.log classType lineCode.attr 'class'
                 markCode += classType lineCode.attr 'class'
 
             # completes the text depending of the line's content
