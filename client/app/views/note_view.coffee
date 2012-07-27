@@ -82,10 +82,6 @@ class exports.NoteWidget extends Backbone.View
                     $(".icon-ok-circle").show()
             $("iframe").on "onHistoryChanged", () =>
                 note.saveContent @.getEditorContent()  
-            $("#clearBtn").on "click", () ->
-                $(".icon-ok-circle").hide()
-                editorCtrl._addHistory()
-                editorCtrl.deleteContent()
     
         # creation of the editor itself
         instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)

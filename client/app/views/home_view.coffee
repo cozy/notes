@@ -104,7 +104,7 @@ class exports.HomeView extends Backbone.View
             size: "350"
             minSize: "350"
             resizable: true
-        
+            
         # TODO : expliquer le coup du cookie
         @onTreeLoaded = ->
             setTimeout(

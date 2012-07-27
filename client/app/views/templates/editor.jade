@@ -1,13 +1,16 @@
 
-
-#editorBtnBar.btn-group
-    button#indentBtn.btn.btn-small.btn-primary 
-        i.icon-indent-left
-    button#unIndentBtn.btn.btn-small.btn-primary
-        i.icon-indent-right
-    button#markerListBtn.btn.btn-small.btn-primary - Marker list
-    button#titleBtn.btn.btn-small.btn-primary 1.1.2 Title
-    button#save-editor-content.btn.active.btn-small.btn-info
-        i.icon-download-alt
-    button#clearBtn.btn.btn-small.btn-primary Clear
-iframe#editorIframe
+table
+    tr
+        th
+            #editorBtnBar.btn-group
+                button#indentBtn.btn.btn-small.btn-primary 
+                    i.icon-indent-left
+                button#unIndentBtn.btn.btn-small.btn-primary
+                    i.icon-indent-right
+                button#markerListBtn.btn.btn-small.btn-primary
+                    i.icon-th-list
+                button#titleBtn.btn.btn-small.btn-primary Title
+                button#save-editor-content.btn.active.btn-small.btn-info
+                    i.icon-download-alt
+        td
+            iframe#editorIframe
