@@ -60,7 +60,7 @@ class exports.CNEditor extends Backbone.View
             editorBody$.prop( '__editorCtl', this)
             editorBody$.on 'keypress' , @_keyPressListener
             editorBody$.on 'keyup', () ->
-                $(@editorIframe).trigger jQuery.Event("onKeyUp")
+                $(iframe$[0]).trigger jQuery.Event("onKeyUp")
             # editorBody$.on 'keydown', () ->
                 # $(@editorIframe).trigger jQuery.Event("onKeyDown")
             # editorBody$.on 'keypress', () ->
