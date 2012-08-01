@@ -47,4 +47,3 @@ class exports.Note extends BaseModel
         $.get "notes/#{id}", (data) =>
             note = new Note data
             callback(note)
-
