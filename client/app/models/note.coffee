@@ -31,7 +31,6 @@ class exports.Note extends BaseModel
         @url = "notes/#{@.id}"
         @save content: @content
 
-
     @createNote = (data, callback) ->
         request "POST", "notes", data, callback
 
@@ -45,4 +44,3 @@ class exports.Note extends BaseModel
         $.get "notes/#{id}", (data) =>
             note = new Note data
             callback(note)
-
