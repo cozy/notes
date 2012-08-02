@@ -103,6 +103,10 @@ class exports.HomeView extends Backbone.View
             size: "350"
             minSize: "350"
             resizable: true
+        $(".ui-layout-resizer").css("width","10px")
+        $(".ui-layout-resizer").css("z-index","2")
+        $(".ui-layout-resizer-dragging").css("width","10px")
+        
             
         # TODO : expliquer le coup du cookie
         @onTreeLoaded = ->
