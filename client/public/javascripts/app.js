@@ -2185,8 +2185,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
           size: "350",
           minSize: "350",
           resizable: true,
-          spacing_open: 10,
-          togglerHeight_open: 4
+          spacing_open: 10
         });
         this.onTreeLoaded = function() {
           return setTimeout(function() {
