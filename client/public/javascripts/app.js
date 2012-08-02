@@ -2087,6 +2087,16 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
       __extends(HomeView, _super);
 
+      function HomeView() {
+        this.onNoteDropped = __bind(this.onNoteDropped, this);
+        this.onNoteChanged = __bind(this.onNoteChanged, this);
+        this.selectFolder = __bind(this.selectFolder, this);
+        this.deleteFolder = __bind(this.deleteFolder, this);
+        this.renameFolder = __bind(this.renameFolder, this);
+        this.createFolder = __bind(this.createFolder, this);
+        HomeView.__super__.constructor.apply(this, arguments);
+      }
+
       HomeView.prototype.id = 'home-view';
 
       HomeView.prototype.createFolder = function(path, newName, data) {
@@ -2154,8 +2164,6 @@ window.require.define({"views/home_view": function(exports, require, module) {
         return this.currentNote.saveContent(noteWidget.instEditor.getEditorContent());
       };
 
-      HomeView.prototype.onTreeLoaded = function() {};
-
       HomeView.prototype.onNoteDropped = function(newPath, oldPath, noteTitle, data) {
         var _this = this;
         newPath = newPath + "/" + helpers.slugify(noteTitle);
@@ -2167,19 +2175,6 @@ window.require.define({"views/home_view": function(exports, require, module) {
         });
       };
 
-      function HomeView() {
-        this.onNoteDropped = __bind(this.onNoteDropped, this);
-        this.onNoteChanged = __bind(this.onNoteChanged, this);
-        this.selectFolder = __bind(this.selectFolder, this);
-        this.deleteFolder = __bind(this.deleteFolder, this);
-        this.renameFolder = __bind(this.renameFolder, this);
-        this.createFolder = __bind(this.createFolder, this);      HomeView.__super__.constructor.call(this);
-      }
-
-      HomeView.prototype.render = function() {
-        return this;
-      };
-
       HomeView.prototype.initContent = function(path) {
         var _this = this;
         $(this.el).html(require('./templates/home'));
@@ -2189,11 +2184,9 @@ window.require.define({"views/home_view": function(exports, require, module) {
         $('#home-view').layout({
           size: "350",
           minSize: "350",
-          resizable: true
+          resizable: true,
+          spacing_open: 10
         });
-        $(".ui-layout-resizer").css("width", "10px");
-        $(".ui-layout-resizer").css("z-index", "2");
-        $(".ui-layout-resizer-dragging").css("width", "10px");
         this.onTreeLoaded = function() {
           return setTimeout(function() {
             return app.homeView.selectNote(path);
@@ -2222,7 +2215,6 @@ window.require.define({"views/home_view": function(exports, require, module) {
 window.require.define({"views/note_view": function(exports, require, module) {
   (function() {
     var CNEditor, Note, template,
-      __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
       __hasProp = Object.prototype.hasOwnProperty,
       __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -2245,15 +2237,10 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
       function NoteWidget(model) {
         this.model = model;
-        this.onNoteChanged = __bind(this.onNoteChanged, this);
         NoteWidget.__super__.constructor.call(this);
         this.id = this.model.slug;
         this.model.view = this;
       }
-
-      NoteWidget.prototype.onNoteChanged = function(event) {
-        return this.model.saveContent($("#note-full-content").val());
-      };
 
       NoteWidget.prototype.remove = function() {
         return $(this.el).remove();
@@ -2460,7 +2447,7 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   buf.push('><div');
   buf.push(attrs({ "class": ('input-append') }));
   buf.push('><input');
-  buf.push(attrs({ 'id':('tree-search-field'), "class": ('span2') }));
+  buf.push(attrs({ 'id':('tree-search-field'), 'type':("text"), 'placeholder':("Search…"), "class": ('span2') }));
   buf.push('/><button');
   buf.push(attrs({ "class": ('btn') }));
   buf.push('>Search !</button><br');
@@ -2496,9 +2483,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         this.noteFull = $("#note-full");
         this.searchField.autocomplete({
           source: []
-        }).textext({
-          plugins: 'tags prompt',
-          prompt: 'Search...'
         });
         $("#textext-field").textext({
           plugins: 'suggestions tags prompt focus autocomplete arrow',
@@ -2587,11 +2571,14 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           return _this.treeEl.jstree("rename");
         });
         $("#note-full-title").blur(function() {
-          var newName, oldName;
+          var idPath, newName, oldName;
           newName = $("#note-full-title").text();
           oldName = _this.currentData.inst.get_text(_this.currentData.rslt.obj);
           if (newName !== "" && oldName !== newName) {
             _this.currentData.inst.rename_node(_this.currentData.rslt.obj, newName);
+            idPath = "tree-node" + (_this.currentPath.split("/").join("-"));
+            _this.currentData.rslt.obj.attr("id", idPath);
+            _this.rebuildIds(_this.currentData, _this.currentData.rslt.obj, idPath);
             return callbacks.onRename(_this.currentPath, newName, _this.currentData);
           }
         });
@@ -2788,7 +2775,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         if (searchString === "") {
           $("#searchInfo").hide();
           $("#tree").jstree("search", searchString);
-          console.log(this.noteOldTop);
           return $("#note-full").css("top", "10px");
         } else {
           return this.searchTimer = setTimeout(function() {
@@ -2800,8 +2786,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
                 this.noteOldTop = parseInt($("#note-full").css("top"));
                 this.noteNewTop = parseInt($("#note-full").css("top")) + parseInt($("#searchInfo").css("height")) + 24;
               }
-              console.log(this.noteNewTop);
-              console.log(this.noteOldTop);
               return $("#note-full").css("top", this.noteNewTop);
             }
           }, 1000);
