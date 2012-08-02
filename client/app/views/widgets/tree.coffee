@@ -21,12 +21,6 @@ class exports.Tree
         @searchField
             .autocomplete(
                     source: []
-                    #search: (event, ui) ->
-                    #    console.log "oh yeah"
-                )
-            .textext(
-                    plugins: 'tags prompt'
-                    prompt: 'Search...'
                 )
 
         $("#textext-field")
@@ -117,10 +111,9 @@ class exports.Tree
             if newName isnt "" and oldName != newName
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
                 #See what it changes to include the code below
-                #idPath = "tree-node#{@currentPath.split("/").join("-")}"
-                #console.log idPath
-                #@currentData.rslt.obj.attr "id", idPath
-                #@rebuildIds @currentData, @currentData.rslt.obj, idPath
+                idPath = "tree-node#{@currentPath.split("/").join("-")}"
+                @currentData.rslt.obj.attr "id", idPath
+                @rebuildIds @currentData, @currentData.rslt.obj, idPath
                 callbacks.onRename @currentPath, newName, @currentData
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
@@ -200,7 +193,6 @@ class exports.Tree
             path = @_getStringPath parent, nodeName
             @currentPath = path
             @currentData = data
-            #console.log @currentData
             callbacks.onSelect path, data.rslt.obj.data("id")
                     
         @widget.bind "move_node.jstree", (e, data) =>
@@ -287,7 +279,6 @@ class exports.Tree
             #$("#textext-field").trigger('setSuggestions', { result : sourceList, showHideDropdown: false })
             @organizeArray completeSource
             @searchField.autocomplete( "option", "source", completeSource)
-            #@addButton "#tree a"
             newNode =
                 data: nodeToConvert[property].name
                 metadata:
@@ -314,7 +305,6 @@ class exports.Tree
         if searchString is ""
             $("#searchInfo").hide()
             $("#tree").jstree("search", searchString)
-            console.log @noteOldTop
             $("#note-full").css("top", "10px")
         else
             @searchTimer = setTimeout(->
@@ -326,15 +316,12 @@ class exports.Tree
                     if @noteNewTop is undefined
                         @noteOldTop = parseInt($("#note-full").css("top"))
                         @noteNewTop = parseInt($("#note-full").css("top")) + parseInt($("#searchInfo").css("height")) + 24
-                    console.log @noteNewTop
-                    console.log @noteOldTop
                     $("#note-full").css("top", @noteNewTop)
             , 1000) 
 
 
     _addButton: (event) ->
         # TODO : these listeners should be set when the node is created in the tree.
-        # console.log '#tree.mouseover'
         $("#tree a").mouseover (e) ->
 
             $("#tree-buttons").appendTo( this )
@@ -344,5 +331,4 @@ class exports.Tree
             # leaves the tree (?? shouldn't this hapen only once ??)
             # besides it hapens when the mouse goes over the tree-buttons
             # => not the best way to remove the tree-buttons ...
-            # console.log 'tree.mouseleave'
             $("#tree-buttons").hide()

@@ -15,10 +15,6 @@ class exports.NoteWidget extends Backbone.View
         @id = @model.slug
         @model.view = @
 
-    # When note change, its content is saved.
-    onNoteChanged: (event) =>
-        @model.saveContent $("#note-full-content").val()
-
     remove: ->
         $(@el).remove()
 

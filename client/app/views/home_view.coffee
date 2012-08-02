@@ -67,10 +67,6 @@ class exports.HomeView extends Backbone.View
         console.log noteWidget
         @currentNote.saveContent noteWidget.instEditor.getEditorContent()
 
-    # When tree is loaded, callback given in paramter when fetchData
-    # function was called is run.
-    onTreeLoaded: ->
-
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
     onNoteDropped: (newPath, oldPath, noteTitle, data) =>
@@ -83,11 +79,6 @@ class exports.HomeView extends Backbone.View
 
 
     # Initializers
-    constructor: () ->
-        super()
-    
-    render: ->
-        this
 
     # Load the home view and the tree
     initContent: (path) ->
@@ -103,6 +94,8 @@ class exports.HomeView extends Backbone.View
             size: "350"
             minSize: "350"
             resizable: true
+            spacing_open: 10
+        
             
         # TODO : expliquer le coup du cookie
         @onTreeLoaded = ->
