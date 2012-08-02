@@ -15,6 +15,7 @@ class exports.HomeView extends Backbone.View
 
     # Create a new folder inside currently selected node.
     createFolder: (path, newName, data) =>
+        console.log data.rslt.obj.data("id")
         Note.createNote
             path: path
             title: newName
@@ -25,6 +26,7 @@ class exports.HomeView extends Backbone.View
 
     # Rename currently selected node.
     renameFolder: (path, newName, data) =>
+        console.log data.rslt.obj.data("id")
         if newName?
             Note.updateNote data.rslt.obj.data("id"),
                 title: newName
@@ -60,17 +62,9 @@ class exports.HomeView extends Backbone.View
         noteWidget = new NoteWidget @currentNote
         noteWidget.render()
 
-    # When note change, its content is saved.
-    onNoteChanged: (event) =>
-        console.log "call onNoteChanged"
-        noteWidget = new NoteWidget @currentNote
-        console.log noteWidget
-        @currentNote.saveContent noteWidget.instEditor.getEditorContent()
-
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
     onNoteDropped: (newPath, oldPath, noteTitle, data) =>
-        newPath = newPath + "/" + helpers.slugify(noteTitle)
         Note.updateNote data.rslt.o.data("id"),
             path: newPath
             , () =>

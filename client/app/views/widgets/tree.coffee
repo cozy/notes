@@ -6,7 +6,6 @@ class exports.Tree
 
     sourceList = []
 
-    #source: []
 
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
@@ -26,9 +25,8 @@ class exports.Tree
         $("#textext-field")
             .textext(
                     #add ajax for database search
-                    plugins : 'suggestions tags prompt focus autocomplete arrow'
+                    plugins : 'tags prompt focus autocomplete arrow'
                     prompt : 'Search...'
-                    suggestions : []
                     #ajax :
                     #    url : '/manual/examples/data.json'
                     #    dataType : 'json'
@@ -38,8 +36,12 @@ class exports.Tree
                     'getSuggestions', (e, data) ->
                         textext = $(e.target).textext()[0]
                         query = ((if data then data.query else "")) or ""
+                        list = textext.itemManager().filter(sourceList, query)
+                        #au lieu de push il faut l'équivalent qui le met au début
+                        #faire en sorte que ca ne devienne pas un tag
+                        list.push "\"#{$("#textext-field").val()}\" à rechercher"
                         $(this).trigger "setSuggestions",
-                        result: textext.itemManager().filter(sourceList, query)
+                        result: list
                 )
         # Creation of the tree with jstree
         tree = @_convertData data
@@ -110,6 +112,22 @@ class exports.Tree
             oldName = @currentData.inst.get_text @currentData.rslt.obj
             if newName isnt "" and oldName != newName
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
+                #completeSource =  @searchField.autocomplete( "option", "source")
+                i = 0
+                #while completeSource[i] isnt oldName
+                while sourceList[i] isnt oldName
+                    i++
+                #while i isnt completeSource.length-1
+                while i isnt sourceList.length-1
+                    @exchange(sourceList, i, i+1)
+                    #completeSource[i] = completeSource[i+1]
+                    #completeSource[i+1] = completeSource[i]
+                    i++
+                #completeSource[i] = newName
+                sourceList[i] = newName
+                #@organizeArray completeSource
+                @organizeArray sourceList
+                #@searchField.autocomplete( "option", "source", completeSource)
                 #See what it changes to include the code below
                 idPath = "tree-node#{@currentPath.split("/").join("-")}"
                 @currentData.rslt.obj.attr "id", idPath
@@ -126,11 +144,12 @@ class exports.Tree
         # Tree
         @widget.bind "create.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
-            completeSource =  @searchField.autocomplete( "option", "source")
-            completeSource.push nodeName
-            #@source.push nodeName
-            @organizeArray completeSource
-            @searchField.autocomplete( "option", "source", completeSource)
+            #completeSource =  @searchField.autocomplete( "option", "source")
+            #completeSource.push nodeName
+            sourceList.push nodeName
+            #@organizeArray completeSource
+            @organizeArray sourceList
+            #@searchField.autocomplete( "option", "source", completeSource)
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
             path.pop()
@@ -145,21 +164,22 @@ class exports.Tree
             if path == "all"
                 $.jstree.rollback data.rlbk
             else if data.rslt.old_name != data.rslt.new_name
-                completeSource =  @searchField.autocomplete( "option", "source")
+                #completeSource =  @searchField.autocomplete( "option", "source")
                 i = 0
-                while completeSource[i] isnt data.rslt.old_name
-                #while @source[i] isnt data.rslt.old_name
+                #while completeSource[i] isnt data.rslt.old_name
+                while sourceList[i] isnt data.rslt.old_name
                     i++
-                while i isnt completeSource.length-1
-                #while i isnt @source.length-1
-                    @exchange(completeSource, i, i+1)
+                #while i isnt completeSource.length-1
+                while i isnt sourceList.length-1
+                    @exchange(sourceList, i, i+1)
                     #completeSource[i] = completeSource[i+1]
                     #completeSource[i+1] = completeSource[i]
                     i++
-                completeSource[i] = data.rslt.new_name
-                #@source[i] = data.rslt.new_name
-                @organizeArray completeSource
-                @searchField.autocomplete( "option", "source", completeSource)
+                #completeSource[i] = data.rslt.new_name
+                sourceList[i] = data.rslt.new_name
+                #@organizeArray completeSource
+                @organizeArray sourceList
+                #@searchField.autocomplete( "option", "source", completeSource)
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
@@ -167,19 +187,21 @@ class exports.Tree
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
-            completeSource =  @searchField.autocomplete( "option", "source")
+            #completeSource =  @searchField.autocomplete( "option", "source")
             i = 0
-            while completeSource[i] isnt nodeName
-            #while @source[i] isnt nodeName
+            #while completeSource[i] isnt nodeName
+            while sourceList[i] isnt nodeName
                 i++
-            while i isnt completeSource.length-1
-            #while i @source.length-1
-                @exchange(completeSource, i, i+1)
+            #while i isnt completeSource.length-1
+            while i isnt sourceList.length-1
+                #@exchange(completeSource, i, i+1)
+                @exchange(sourceList, i, i+1)
                 #completeSource[i] = completeSource[i+1]
                 #completeSource[i+1] = completeSource[i]
                 i++           
-            completeSource.pop()
-            @searchField.autocomplete( "option", "source", completeSource)
+            #completeSource.pop()
+            sourceList.pop()
+            #@searchField.autocomplete( "option", "source", completeSource)
             parent = data.rslt.parent
             path = @_getStringPath parent, nodeName
             if path == "all"
@@ -273,12 +295,13 @@ class exports.Tree
         for property of nodeToConvert when \
                 property isnt "name" and property isnt "id"
             nodeIdPath = "#{idpath}-#{property.replace(/_/g, "-")}"
-            completeSource =  @searchField.autocomplete( "option", "source")
-            completeSource.push nodeToConvert[property].name
-            #sourceList.push nodeToConvert[property].name
+            #completeSource =  @searchField.autocomplete( "option", "source")
+            #completeSource.push nodeToConvert[property].name
+            sourceList.push nodeToConvert[property].name
             #$("#textext-field").trigger('setSuggestions', { result : sourceList, showHideDropdown: false })
-            @organizeArray completeSource
-            @searchField.autocomplete( "option", "source", completeSource)
+            #@organizeArray completeSource
+            @organizeArray sourceList
+            #@searchField.autocomplete( "option", "source", completeSource)
             newNode =
                 data: nodeToConvert[property].name
                 metadata:
