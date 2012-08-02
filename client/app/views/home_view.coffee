@@ -95,6 +95,7 @@ class exports.HomeView extends Backbone.View
             minSize: "350"
             resizable: true
             spacing_open: 10
+            togglerHeight_open: 4
         
             
         # TODO : expliquer le coup du cookie
