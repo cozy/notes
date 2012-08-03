@@ -2478,13 +2478,19 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         });
         $("#textext-field").textext({
           plugins: 'tags prompt focus autocomplete arrow',
-          prompt: 'Search...'
+          prompt: 'Search...',
+          autocomplete: {
+            dropdownMaxHeight: '200px',
+            render: function(suggestion) {
+              return '<div><i class="icon-folder-open"></i>' + suggestion + '</div>';
+            }
+          }
         }).bind('getSuggestions', function(e, data) {
           var list, query, textext;
           textext = $(e.target).textext()[0];
           query = (data ? data.query : "") || "";
           list = textext.itemManager().filter(sourceList, query);
-          list.push("\"" + ($("#textext-field").val()) + "\" à rechercher");
+          list = ["\"" + ($("#textext-field").val()) + "\" à rechercher"].concat(list);
           return $(this).trigger("setSuggestions", {
             result: list
           });
@@ -2738,7 +2744,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           if (!(property !== "name" && property !== "id")) continue;
           nodeIdPath = "" + idpath + "-" + (property.replace(/_/g, "-"));
           sourceList.push(nodeToConvert[property].name);
-          this.organizeArray(sourceList);
+          sourceList.sort();
           newNode = {
             data: nodeToConvert[property].name,
             metadata: {

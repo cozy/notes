@@ -31,15 +31,19 @@ class exports.Tree
                     #    url : '/manual/examples/data.json'
                     #    dataType : 'json'
                     #    cacheResults : true
+                    autocomplete : 
+                        dropdownMaxHeight : '200px',
+
+                        render : (suggestion) ->
+                            '<div><i class="icon-folder-open"></i>' + suggestion + '</div>'
                 )
             .bind(
                     'getSuggestions', (e, data) ->
                         textext = $(e.target).textext()[0]
                         query = ((if data then data.query else "")) or ""
                         list = textext.itemManager().filter(sourceList, query)
-                        #au lieu de push il faut l'équivalent qui le met au début
                         #faire en sorte que ca ne devienne pas un tag
-                        list.push "\"#{$("#textext-field").val()}\" à rechercher"
+                        list = ["\"#{$("#textext-field").val()}\" à rechercher"].concat(list) 
                         $(this).trigger "setSuggestions",
                         result: list
                 )
@@ -126,7 +130,8 @@ class exports.Tree
                 #completeSource[i] = newName
                 sourceList[i] = newName
                 #@organizeArray completeSource
-                @organizeArray sourceList
+                #@organizeArray sourceList
+                sourceList.sort()
                 #@searchField.autocomplete( "option", "source", completeSource)
                 #See what it changes to include the code below
                 idPath = "tree-node#{@currentPath.split("/").join("-")}"
@@ -148,7 +153,8 @@ class exports.Tree
             #completeSource.push nodeName
             sourceList.push nodeName
             #@organizeArray completeSource
-            @organizeArray sourceList
+            #@organizeArray sourceList
+            sourceList.sort()
             #@searchField.autocomplete( "option", "source", completeSource)
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
@@ -178,7 +184,8 @@ class exports.Tree
                 #completeSource[i] = data.rslt.new_name
                 sourceList[i] = data.rslt.new_name
                 #@organizeArray completeSource
-                @organizeArray sourceList
+                #@organizeArray sourceList
+                sourceList.sort()
                 #@searchField.autocomplete( "option", "source", completeSource)
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
@@ -300,7 +307,8 @@ class exports.Tree
             sourceList.push nodeToConvert[property].name
             #$("#textext-field").trigger('setSuggestions', { result : sourceList, showHideDropdown: false })
             #@organizeArray completeSource
-            @organizeArray sourceList
+            #@organizeArray sourceList
+            sourceList.sort()
             #@searchField.autocomplete( "option", "source", completeSource)
             newNode =
                 data: nodeToConvert[property].name
