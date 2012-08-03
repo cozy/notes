@@ -22,6 +22,12 @@ class exports.Tree
                     source: []
                 )
 
+        selectIcon = (suggestion, array) ->
+            if suggestion is "\"#{$("#textext-field").val()}\" à rechercher"
+                "<i class='icon-search'></i>"
+            else
+                "<i class='icon-folder-open'></i>"
+
         $("#textext-field")
             .textext(
                     #add ajax for database search
@@ -35,7 +41,7 @@ class exports.Tree
                         dropdownMaxHeight : '200px',
 
                         render : (suggestion) ->
-                            '<div><i class="icon-folder-open"></i>' + suggestion + '</div>'
+                            '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
                 )
             .bind(
                     'getSuggestions', (e, data) ->

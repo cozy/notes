@@ -2468,7 +2468,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         this._onSearchChanged = __bind(this._onSearchChanged, this);
         this._convertData = __bind(this._convertData, this);
         this._getStringPath = __bind(this._getStringPath, this);
-        var tree;
+        var selectIcon, tree;
         this.setToolbar(navEl);
         this.searchField = $("#tree-search-field");
         this.searchButton = $("#tree-search");
@@ -2476,13 +2476,20 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         this.searchField.autocomplete({
           source: []
         });
+        selectIcon = function(suggestion, array) {
+          if (suggestion === ("\"" + ($("#textext-field").val()) + "\" à rechercher")) {
+            return "<i class='icon-search'></i>";
+          } else {
+            return "<i class='icon-folder-open'></i>";
+          }
+        };
         $("#textext-field").textext({
           plugins: 'tags prompt focus autocomplete arrow',
           prompt: 'Search...',
           autocomplete: {
             dropdownMaxHeight: '200px',
             render: function(suggestion) {
-              return '<div><i class="icon-folder-open"></i>' + suggestion + '</div>';
+              return '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>';
             }
           }
         }).bind('getSuggestions', function(e, data) {
@@ -2584,7 +2591,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
               i++;
             }
             sourceList[i] = newName;
-            _this.organizeArray(sourceList);
+            sourceList.sort();
             idPath = "tree-node" + (_this.currentPath.split("/").join("-"));
             _this.currentData.rslt.obj.attr("id", idPath);
             _this.rebuildIds(_this.currentData, _this.currentData.rslt.obj, idPath);
@@ -2601,7 +2608,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           var idPath, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           sourceList.push(nodeName);
-          _this.organizeArray(sourceList);
+          sourceList.sort();
           parent = data.rslt.parent;
           path = _this._getPath(parent, nodeName);
           path.pop();
@@ -2626,7 +2633,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
               i++;
             }
             sourceList[i] = data.rslt.new_name;
-            _this.organizeArray(sourceList);
+            sourceList.sort();
             idPath = "tree-node" + (_this._getPath(parent, nodeName).join("-"));
             data.rslt.obj.attr("id", idPath);
             _this.rebuildIds(data, data.rslt.obj, idPath);
