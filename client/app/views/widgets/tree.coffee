@@ -4,6 +4,7 @@ slugify = require("helpers").slugify
 # Widget to easily manipulate data tree (navigation for cozy apps)
 class exports.Tree
 
+    #array for the autocompletion
     sourceList = []
 
 
@@ -17,10 +18,6 @@ class exports.Tree
         @searchField = $("#tree-search-field")
         @searchButton = $("#tree-search")
         @noteFull = $("#note-full")
-        @searchField
-            .autocomplete(
-                    source: []
-                )
 
         selectIcon = (suggestion, array) ->
             if suggestion is "\"#{$("#textext-field").val()}\" à rechercher"
@@ -99,12 +96,6 @@ class exports.Tree
         tmp = array[i]
         array[i] = array[j]
         array[j] = tmp
-            
-    organizeArray: (array)->
-        i = array.length-1
-        while i isnt 0 and array[i] < array[i-1]
-            @exchange(array, i-1, i)
-            i--
  
     currentPath: ""
  
@@ -122,23 +113,13 @@ class exports.Tree
             oldName = @currentData.inst.get_text @currentData.rslt.obj
             if newName isnt "" and oldName != newName
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
-                #completeSource =  @searchField.autocomplete( "option", "source")
+                #searching the targeted node to change his name
                 i = 0
-                #while completeSource[i] isnt oldName
                 while sourceList[i] isnt oldName
                     i++
-                #while i isnt completeSource.length-1
-                while i isnt sourceList.length-1
-                    @exchange(sourceList, i, i+1)
-                    #completeSource[i] = completeSource[i+1]
-                    #completeSource[i+1] = completeSource[i]
-                    i++
-                #completeSource[i] = newName
                 sourceList[i] = newName
-                #@organizeArray completeSource
-                #@organizeArray sourceList
+                #sorting the array to place the newName
                 sourceList.sort()
-                #@searchField.autocomplete( "option", "source", completeSource)
                 #See what it changes to include the code below
                 idPath = "tree-node#{@currentPath.split("/").join("-")}"
                 @currentData.rslt.obj.attr "id", idPath
@@ -155,13 +136,9 @@ class exports.Tree
         # Tree
         @widget.bind "create.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
-            #completeSource =  @searchField.autocomplete( "option", "source")
-            #completeSource.push nodeName
+            #add nodeName to the autocomplete list
             sourceList.push nodeName
-            #@organizeArray completeSource
-            #@organizeArray sourceList
             sourceList.sort()
-            #@searchField.autocomplete( "option", "source", completeSource)
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
             path.pop()
@@ -176,23 +153,12 @@ class exports.Tree
             if path == "all"
                 $.jstree.rollback data.rlbk
             else if data.rslt.old_name != data.rslt.new_name
-                #completeSource =  @searchField.autocomplete( "option", "source")
+                #searching the targeted node to change his name
                 i = 0
-                #while completeSource[i] isnt data.rslt.old_name
                 while sourceList[i] isnt data.rslt.old_name
                     i++
-                #while i isnt completeSource.length-1
-                while i isnt sourceList.length-1
-                    @exchange(sourceList, i, i+1)
-                    #completeSource[i] = completeSource[i+1]
-                    #completeSource[i+1] = completeSource[i]
-                    i++
-                #completeSource[i] = data.rslt.new_name
                 sourceList[i] = data.rslt.new_name
-                #@organizeArray completeSource
-                #@organizeArray sourceList
                 sourceList.sort()
-                #@searchField.autocomplete( "option", "source", completeSource)
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
@@ -200,21 +166,15 @@ class exports.Tree
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
-            #completeSource =  @searchField.autocomplete( "option", "source")
+            #searching the element to remove
             i = 0
-            #while completeSource[i] isnt nodeName
             while sourceList[i] isnt nodeName
                 i++
-            #while i isnt completeSource.length-1
+            #moving it to the end of the array in attend to "pop" it
             while i isnt sourceList.length-1
-                #@exchange(completeSource, i, i+1)
                 @exchange(sourceList, i, i+1)
-                #completeSource[i] = completeSource[i+1]
-                #completeSource[i+1] = completeSource[i]
                 i++           
-            #completeSource.pop()
             sourceList.pop()
-            #@searchField.autocomplete( "option", "source", completeSource)
             parent = data.rslt.parent
             path = @_getStringPath parent, nodeName
             if path == "all"
@@ -308,14 +268,9 @@ class exports.Tree
         for property of nodeToConvert when \
                 property isnt "name" and property isnt "id"
             nodeIdPath = "#{idpath}-#{property.replace(/_/g, "-")}"
-            #completeSource =  @searchField.autocomplete( "option", "source")
-            #completeSource.push nodeToConvert[property].name
+            #updating autocompletion's array
             sourceList.push nodeToConvert[property].name
-            #$("#textext-field").trigger('setSuggestions', { result : sourceList, showHideDropdown: false })
-            #@organizeArray completeSource
-            #@organizeArray sourceList
             sourceList.sort()
-            #@searchField.autocomplete( "option", "source", completeSource)
             newNode =
                 data: nodeToConvert[property].name
                 metadata:

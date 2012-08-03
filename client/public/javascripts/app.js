@@ -2473,9 +2473,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         this.searchField = $("#tree-search-field");
         this.searchButton = $("#tree-search");
         this.noteFull = $("#note-full");
-        this.searchField.autocomplete({
-          source: []
-        });
         selectIcon = function(suggestion, array) {
           if (suggestion === ("\"" + ($("#textext-field").val()) + "\" à rechercher")) {
             return "<i class='icon-search'></i>";
@@ -2555,17 +2552,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         return array[j] = tmp;
       };
 
-      Tree.prototype.organizeArray = function(array) {
-        var i, _results;
-        i = array.length - 1;
-        _results = [];
-        while (i !== 0 && array[i] < array[i - 1]) {
-          this.exchange(array, i - 1, i);
-          _results.push(i--);
-        }
-        return _results;
-      };
-
       Tree.prototype.currentPath = "";
 
       Tree.prototype.setListeners = function(callbacks) {
@@ -2584,10 +2570,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             _this.currentData.inst.rename_node(_this.currentData.rslt.obj, newName);
             i = 0;
             while (sourceList[i] !== oldName) {
-              i++;
-            }
-            while (i !== sourceList.length - 1) {
-              _this.exchange(sourceList, i, i + 1);
               i++;
             }
             sourceList[i] = newName;
@@ -2626,10 +2608,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           } else if (data.rslt.old_name !== data.rslt.new_name) {
             i = 0;
             while (sourceList[i] !== data.rslt.old_name) {
-              i++;
-            }
-            while (i !== sourceList.length - 1) {
-              _this.exchange(sourceList, i, i + 1);
               i++;
             }
             sourceList[i] = data.rslt.new_name;
