@@ -59,6 +59,7 @@ class exports.Tree
             #autocomplete list adding a proposition of what the user is typing
             .bind(
                     'getSuggestions', (e, data) ->
+                        console.log data.query
                         textext = $(e.target).textext()[0]
                         query = ((if data then data.query else "")) or ""
                         list = textext.itemManager().nameField(sourceList)
