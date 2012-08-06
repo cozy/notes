@@ -2089,7 +2089,6 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
       function HomeView() {
         this.onNoteDropped = __bind(this.onNoteDropped, this);
-        this.onNoteChanged = __bind(this.onNoteChanged, this);
         this.selectFolder = __bind(this.selectFolder, this);
         this.deleteFolder = __bind(this.deleteFolder, this);
         this.renameFolder = __bind(this.renameFolder, this);
@@ -2101,6 +2100,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
       HomeView.prototype.createFolder = function(path, newName, data) {
         var _this = this;
+        console.log(data.rslt.obj.data("id"));
         return Note.createNote({
           path: path,
           title: newName
@@ -2113,6 +2113,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
       HomeView.prototype.renameFolder = function(path, newName, data) {
         var _this = this;
+        console.log(data.rslt.obj.data("id"));
         if (newName != null) {
           return Note.updateNote(data.rslt.obj.data("id"), {
             title: newName
@@ -2156,17 +2157,8 @@ window.require.define({"views/home_view": function(exports, require, module) {
         return noteWidget.render();
       };
 
-      HomeView.prototype.onNoteChanged = function(event) {
-        var noteWidget;
-        console.log("call onNoteChanged");
-        noteWidget = new NoteWidget(this.currentNote);
-        console.log(noteWidget);
-        return this.currentNote.saveContent(noteWidget.instEditor.getEditorContent());
-      };
-
       HomeView.prototype.onNoteDropped = function(newPath, oldPath, noteTitle, data) {
         var _this = this;
-        newPath = newPath + "/" + helpers.slugify(noteTitle);
         return Note.updateNote(data.rslt.o.data("id"), {
           path: newPath
         }, function() {
@@ -2450,11 +2442,7 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   buf.push(attrs({ 'id':('tree-search-field'), 'type':("text"), 'placeholder':("Search…"), "class": ('span2') }));
   buf.push('/><button');
   buf.push(attrs({ "class": ('btn') }));
-  buf.push('>Search !</button><br');
-  buf.push(attrs({  }));
-  buf.push('/><input');
-  buf.push(attrs({ 'id':('textext-field') }));
-  buf.push('/></div></div>');
+  buf.push('>Search !</button></div></div>');
   }
   return buf.join("");
   };
@@ -2468,32 +2456,85 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
     slugify = require("helpers").slugify;
 
     exports.Tree = (function() {
-      var sourceList;
+      var cozyFilter, list, sortFunction, sourceList;
 
       sourceList = [];
+
+      list = [];
+
+      cozyFilter = function(array, searchString) {
+        var char, exp, filtered, name, regSentence, _i, _j, _len, _len2;
+        filtered = [];
+        regSentence = "";
+        for (_i = 0, _len = searchString.length; _i < _len; _i++) {
+          char = searchString[_i];
+          regSentence += ".*" + char;
+        }
+        exp = new RegExp(regSentence, "i");
+        for (_j = 0, _len2 = array.length; _j < _len2; _j++) {
+          name = array[_j];
+          if (exp.test(name)) filtered.push(name);
+        }
+        return filtered;
+      };
 
       function Tree(navEl, data, callbacks) {
         this._onSearchChanged = __bind(this._onSearchChanged, this);
         this._convertData = __bind(this._convertData, this);
         this._getStringPath = __bind(this._getStringPath, this);
-        var tree;
+        var selectIcon, tree;
         this.setToolbar(navEl);
         this.searchField = $("#tree-search-field");
         this.searchButton = $("#tree-search");
         this.noteFull = $("#note-full");
-        this.searchField.autocomplete({
-          source: []
-        });
-        $("#textext-field").textext({
-          plugins: 'suggestions tags prompt focus autocomplete arrow',
+        selectIcon = function(suggestion, array) {
+          var i;
+          if (suggestion === ("\"" + ($("#tree-search-field").val()) + "\" à rechercher")) {
+            return "<i class='icon-search'></i>";
+          } else {
+            i = 0;
+            while (suggestion !== array[i].name) {
+              i++;
+            }
+            switch (array[i].type) {
+              case "folder":
+                return "<i class='icon-folder-open'></i>";
+              default:
+                return "";
+            }
+          }
+        };
+        $("#tree-search-field").textext({
+          plugins: 'tags prompt focus autocomplete arrow',
           prompt: 'Search...',
-          suggestions: []
+          autocomplete: {
+            dropdownMaxHeight: '200px',
+            render: function(suggestion) {
+              return '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>';
+            }
+          },
+          ext: {
+            itemManager: {
+              nameField: function(array) {
+                var i, retArray, _i, _len;
+                retArray = [];
+                for (_i = 0, _len = array.length; _i < _len; _i++) {
+                  i = array[_i];
+                  retArray.push(i.name);
+                }
+                return retArray;
+              }
+            }
+          }
         }).bind('getSuggestions', function(e, data) {
           var query, textext;
           textext = $(e.target).textext()[0];
           query = (data ? data.query : "") || "";
+          list = textext.itemManager().nameField(sourceList);
+          list = cozyFilter(list, query);
+          list = ["\"" + ($("#tree-search-field").val()) + "\" à rechercher"].concat(list);
           return $(this).trigger("setSuggestions", {
-            result: textext.itemManager().filter(sourceList, query)
+            result: list
           });
         });
         tree = this._convertData(data);
@@ -2549,15 +2590,14 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         return array[j] = tmp;
       };
 
-      Tree.prototype.organizeArray = function(array) {
-        var i, _results;
-        i = array.length - 1;
-        _results = [];
-        while (i !== 0 && array[i] < array[i - 1]) {
-          this.exchange(array, i - 1, i);
-          _results.push(i--);
+      sortFunction = function(a, b) {
+        if (a.name > b.name) {
+          return 1;
+        } else if (a.name === b.name) {
+          return 0;
+        } else if (a.name < b.name) {
+          return -1;
         }
-        return _results;
       };
 
       Tree.prototype.currentPath = "";
@@ -2571,11 +2611,17 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           return _this.treeEl.jstree("rename");
         });
         $("#note-full-title").blur(function() {
-          var idPath, newName, oldName;
+          var i, idPath, newName, oldName;
           newName = $("#note-full-title").text();
           oldName = _this.currentData.inst.get_text(_this.currentData.rslt.obj);
           if (newName !== "" && oldName !== newName) {
             _this.currentData.inst.rename_node(_this.currentData.rslt.obj, newName);
+            i = 0;
+            while (sourceList[i] !== oldName) {
+              i++;
+            }
+            sourceList[i] = newName;
+            sourceList.sort();
             idPath = "tree-node" + (_this.currentPath.split("/").join("-"));
             _this.currentData.rslt.obj.attr("id", idPath);
             _this.rebuildIds(_this.currentData, _this.currentData.rslt.obj, idPath);
@@ -2589,12 +2635,11 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         this.searchField.keyup(this._onSearchChanged);
         $("#tree").mouseover(this._addButton);
         this.widget.bind("create.jstree", function(e, data) {
-          var completeSource, idPath, nodeName, parent, path;
+          var idPath, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
-          completeSource = _this.searchField.autocomplete("option", "source");
-          completeSource.push(nodeName);
-          _this.organizeArray(completeSource);
-          _this.searchField.autocomplete("option", "source", completeSource);
+          sourceList.push(nodeName);
+          sourceList.sort();
+          sourceList.sort();
           parent = data.rslt.parent;
           path = _this._getPath(parent, nodeName);
           path.pop();
@@ -2603,25 +2648,19 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           return callbacks.onCreate(path.join("/"), data.rslt.name, data);
         });
         this.widget.bind("rename.jstree", function(e, data) {
-          var completeSource, i, idPath, nodeName, parent, path;
+          var i, idPath, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           parent = data.inst._get_parent(data.rslt.parent);
           path = _this._getStringPath(parent, data.rslt.old_name);
           if (path === "all") {
             return $.jstree.rollback(data.rlbk);
           } else if (data.rslt.old_name !== data.rslt.new_name) {
-            completeSource = _this.searchField.autocomplete("option", "source");
             i = 0;
-            while (completeSource[i] !== data.rslt.old_name) {
+            while (sourceList[i] !== data.rslt.old_name) {
               i++;
             }
-            while (i !== completeSource.length - 1) {
-              _this.exchange(completeSource, i, i + 1);
-              i++;
-            }
-            completeSource[i] = data.rslt.new_name;
-            _this.organizeArray(completeSource);
-            _this.searchField.autocomplete("option", "source", completeSource);
+            sourceList[i] = data.rslt.new_name;
+            sourceList.sort();
             idPath = "tree-node" + (_this._getPath(parent, nodeName).join("-"));
             data.rslt.obj.attr("id", idPath);
             _this.rebuildIds(data, data.rslt.obj, idPath);
@@ -2629,19 +2668,17 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           }
         });
         this.widget.bind("remove.jstree", function(e, data) {
-          var completeSource, i, nodeName, parent, path;
+          var i, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
-          completeSource = _this.searchField.autocomplete("option", "source");
           i = 0;
-          while (completeSource[i] !== nodeName) {
+          while (sourceList[i] !== nodeName) {
             i++;
           }
-          while (i !== completeSource.length - 1) {
-            _this.exchange(completeSource, i, i + 1);
+          while (i !== sourceList.length - 1) {
+            _this.exchange(sourceList, i, i + 1);
             i++;
           }
-          completeSource.pop();
-          _this.searchField.autocomplete("option", "source", completeSource);
+          sourceList.pop();
           parent = data.rslt.parent;
           path = _this._getStringPath(parent, nodeName);
           if (path === "all") {
@@ -2735,15 +2772,17 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       };
 
       Tree.prototype._convertNode = function(parentNode, nodeToConvert, idpath) {
-        var completeSource, newNode, nodeIdPath, property, _results;
+        var newNode, nodeIdPath, object, property, _results;
         _results = [];
         for (property in nodeToConvert) {
           if (!(property !== "name" && property !== "id")) continue;
           nodeIdPath = "" + idpath + "-" + (property.replace(/_/g, "-"));
-          completeSource = this.searchField.autocomplete("option", "source");
-          completeSource.push(nodeToConvert[property].name);
-          this.organizeArray(completeSource);
-          this.searchField.autocomplete("option", "source", completeSource);
+          object = {
+            type: "folder",
+            name: nodeToConvert[property].name
+          };
+          sourceList.push(object);
+          sourceList.sort(sortFunction);
           newNode = {
             data: nodeToConvert[property].name,
             metadata: {

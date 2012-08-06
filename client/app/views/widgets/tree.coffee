@@ -4,9 +4,20 @@ slugify = require("helpers").slugify
 # Widget to easily manipulate data tree (navigation for cozy apps)
 class exports.Tree
 
+    #array for the autocompletion
     sourceList = []
-
-    #source: []
+    list = []
+    
+    cozyFilter = (array, searchString) ->
+        filtered = []
+        regSentence = ""
+        for char in searchString
+            regSentence += ".*#{char}"
+        exp = new RegExp(regSentence,"i")
+        for name in array
+            if exp.test(name)
+                filtered.push name
+        filtered
 
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
@@ -18,29 +29,68 @@ class exports.Tree
         @searchField = $("#tree-search-field")
         @searchButton = $("#tree-search")
         @noteFull = $("#note-full")
-        @searchField
-            .autocomplete(
-                    source: []
-                )
 
-        $("#textext-field")
+        #attach an icon to a type of the elements in the autocomplete list
+        selectIcon = (suggestion, array) ->
+            if suggestion is "\"#{$("#tree-search-field").val()}\" à rechercher"
+                "<i class='icon-search'></i>"
+            else
+                i = 0
+                while suggestion isnt array[i].name
+                    i++
+                #when you add a new type please add the corresponding icon here
+                switch array[i].type
+                    when "folder" then "<i class='icon-folder-open'></i>"
+                    else ""
+
+        #$("#textext-field")
+        $("#tree-search-field")
             .textext(
                     #add ajax for database search
-                    plugins : 'suggestions tags prompt focus autocomplete arrow'
+                    plugins : 'tags prompt focus autocomplete arrow'
                     prompt : 'Search...'
-                    suggestions : []
                     #ajax :
                     #    url : '/manual/examples/data.json'
                     #    dataType : 'json'
                     #    cacheResults : true
+                    autocomplete : 
+                        dropdownMaxHeight : '200px',
+
+                        render : (suggestion) ->
+                            '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
+                    ext : 
+                        itemManager: 
+                            nameField: (array) ->
+                                retArray = []
+                                for i in array
+                                    retArray.push i.name
+                                retArray
                 )
+                
+            #every keyup(<=> getSuggestions) in the textext's input show sourceList as a
+            #autocomplete list adding a proposition of what the user is typing
             .bind(
                     'getSuggestions', (e, data) ->
                         textext = $(e.target).textext()[0]
                         query = ((if data then data.query else "")) or ""
+                        list = textext.itemManager().nameField(sourceList)
+                        list = cozyFilter(list, query)
+                        #list = textext.itemManager().filter(list, query)
+                        #faire en sorte que ca ne devienne pas un tag
+                        list = ["\"#{$("#tree-search-field").val()}\" à rechercher"].concat(list) 
                         $(this).trigger "setSuggestions",
-                        result: textext.itemManager().filter(sourceList, query)
+                        result: list
                 )
+            #essaye de bind avec autre chose et de changer l'apparence du tag
+            #.bind(
+            #        'isTagAllowed', (e, data) ->
+            #            if data.tag is list[0]
+            #                data.result = false
+            #                #$('#tree-search-field').val("oyeaaa")
+            #                #console.log $("#tree-search-field").textext.TextExt.input()
+            #                #console.log $("#tree-search-field").val()
+            #    )
+
         # Creation of the tree with jstree
         tree = @_convertData data
         @treeEl = $("#tree")
@@ -87,12 +137,15 @@ class exports.Tree
         tmp = array[i]
         array[i] = array[j]
         array[j] = tmp
-            
-    organizeArray: (array)->
-        i = array.length-1
-        while i isnt 0 and array[i] < array[i-1]
-            @exchange(array, i-1, i)
-            i--
+ 
+    #for .sort() method (array)
+    sortFunction = (a, b) ->
+        if a.name > b.name
+            1
+        else if a.name is b.name
+            0
+        else if a.name < b.name
+            -1
  
     currentPath: ""
  
@@ -110,6 +163,13 @@ class exports.Tree
             oldName = @currentData.inst.get_text @currentData.rslt.obj
             if newName isnt "" and oldName != newName
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
+                #searching the targeted node to change his name
+                i = 0
+                while sourceList[i] isnt oldName
+                    i++
+                sourceList[i] = newName
+                #sorting the array to place the newName
+                sourceList.sort()
                 #See what it changes to include the code below
                 idPath = "tree-node#{@currentPath.split("/").join("-")}"
                 @currentData.rslt.obj.attr "id", idPath
@@ -126,11 +186,10 @@ class exports.Tree
         # Tree
         @widget.bind "create.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
-            completeSource =  @searchField.autocomplete( "option", "source")
-            completeSource.push nodeName
-            #@source.push nodeName
-            @organizeArray completeSource
-            @searchField.autocomplete( "option", "source", completeSource)
+            #add nodeName to the autocomplete list
+            sourceList.push nodeName
+            sourceList.sort()
+            sourceList.sort()
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
             path.pop()
@@ -145,21 +204,12 @@ class exports.Tree
             if path == "all"
                 $.jstree.rollback data.rlbk
             else if data.rslt.old_name != data.rslt.new_name
-                completeSource =  @searchField.autocomplete( "option", "source")
+                #searching the targeted node to change his name
                 i = 0
-                while completeSource[i] isnt data.rslt.old_name
-                #while @source[i] isnt data.rslt.old_name
+                while sourceList[i] isnt data.rslt.old_name
                     i++
-                while i isnt completeSource.length-1
-                #while i isnt @source.length-1
-                    @exchange(completeSource, i, i+1)
-                    #completeSource[i] = completeSource[i+1]
-                    #completeSource[i+1] = completeSource[i]
-                    i++
-                completeSource[i] = data.rslt.new_name
-                #@source[i] = data.rslt.new_name
-                @organizeArray completeSource
-                @searchField.autocomplete( "option", "source", completeSource)
+                sourceList[i] = data.rslt.new_name
+                sourceList.sort()
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
@@ -167,19 +217,15 @@ class exports.Tree
 
         @widget.bind "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
-            completeSource =  @searchField.autocomplete( "option", "source")
+            #searching the element to remove
             i = 0
-            while completeSource[i] isnt nodeName
-            #while @source[i] isnt nodeName
+            while sourceList[i] isnt nodeName
                 i++
-            while i isnt completeSource.length-1
-            #while i @source.length-1
-                @exchange(completeSource, i, i+1)
-                #completeSource[i] = completeSource[i+1]
-                #completeSource[i+1] = completeSource[i]
+            #moving it to the end of the array in attend to "pop" it
+            while i isnt sourceList.length-1
+                @exchange(sourceList, i, i+1)
                 i++           
-            completeSource.pop()
-            @searchField.autocomplete( "option", "source", completeSource)
+            sourceList.pop()
             parent = data.rslt.parent
             path = @_getStringPath parent, nodeName
             if path == "all"
@@ -273,12 +319,11 @@ class exports.Tree
         for property of nodeToConvert when \
                 property isnt "name" and property isnt "id"
             nodeIdPath = "#{idpath}-#{property.replace(/_/g, "-")}"
-            completeSource =  @searchField.autocomplete( "option", "source")
-            completeSource.push nodeToConvert[property].name
+            #updating autocompletion's array
+            object = {type: "folder", name: nodeToConvert[property].name}
+            sourceList.push object
             #sourceList.push nodeToConvert[property].name
-            #$("#textext-field").trigger('setSuggestions', { result : sourceList, showHideDropdown: false })
-            @organizeArray completeSource
-            @searchField.autocomplete( "option", "source", completeSource)
+            sourceList.sort(sortFunction)
             newNode =
                 data: nodeToConvert[property].name
                 metadata:
