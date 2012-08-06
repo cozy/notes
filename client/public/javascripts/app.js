@@ -2442,11 +2442,7 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   buf.push(attrs({ 'id':('tree-search-field'), 'type':("text"), 'placeholder':("Search…"), "class": ('span2') }));
   buf.push('/><button');
   buf.push(attrs({ "class": ('btn') }));
-  buf.push('>Search !</button><br');
-  buf.push(attrs({  }));
-  buf.push('/><input');
-  buf.push(attrs({ 'id':('textext-field'), 'type':("text") }));
-  buf.push('/></div></div>');
+  buf.push('>Search !</button></div></div>');
   }
   return buf.join("");
   };
