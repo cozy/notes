@@ -2460,11 +2460,27 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
     slugify = require("helpers").slugify;
 
     exports.Tree = (function() {
-      var list, sortFunction, sourceList;
+      var cozyFilter, list, sortFunction, sourceList;
 
       sourceList = [];
 
       list = [];
+
+      cozyFilter = function(array, searchString) {
+        var char, exp, filtered, name, regSentence, _i, _j, _len, _len2;
+        filtered = [];
+        regSentence = "";
+        for (_i = 0, _len = searchString.length; _i < _len; _i++) {
+          char = searchString[_i];
+          regSentence += ".*" + char;
+        }
+        exp = new RegExp(regSentence, "i");
+        for (_j = 0, _len2 = array.length; _j < _len2; _j++) {
+          name = array[_j];
+          if (exp.test(name)) filtered.push(name);
+        }
+        return filtered;
+      };
 
       function Tree(navEl, data, callbacks) {
         this._onSearchChanged = __bind(this._onSearchChanged, this);
@@ -2519,7 +2535,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           textext = $(e.target).textext()[0];
           query = (data ? data.query : "") || "";
           list = textext.itemManager().nameField(sourceList);
-          list = textext.itemManager().filter(list, query);
+          list = cozyFilter(list, query);
           list = ["\"" + ($("#tree-search-field").val()) + "\" à rechercher"].concat(list);
           return $(this).trigger("setSuggestions", {
             result: list
@@ -2626,6 +2642,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           var idPath, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           sourceList.push(nodeName);
+          sourceList.sort();
           sourceList.sort();
           parent = data.rslt.parent;
           path = _this._getPath(parent, nodeName);

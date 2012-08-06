@@ -7,6 +7,17 @@ class exports.Tree
     #array for the autocompletion
     sourceList = []
     list = []
+    
+    cozyFilter = (array, searchString) ->
+        filtered = []
+        regSentence = ""
+        for char in searchString
+            regSentence += ".*#{char}"
+        exp = new RegExp(regSentence,"i")
+        for name in array
+            if exp.test(name)
+                filtered.push name
+        filtered
 
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
@@ -55,15 +66,16 @@ class exports.Tree
                                     retArray.push i.name
                                 retArray
                 )
+                
             #every keyup(<=> getSuggestions) in the textext's input show sourceList as a
             #autocomplete list adding a proposition of what the user is typing
             .bind(
                     'getSuggestions', (e, data) ->
-                        console.log data.query
                         textext = $(e.target).textext()[0]
                         query = ((if data then data.query else "")) or ""
                         list = textext.itemManager().nameField(sourceList)
-                        list = textext.itemManager().filter(list, query)
+                        list = cozyFilter(list, query)
+                        #list = textext.itemManager().filter(list, query)
                         #faire en sorte que ca ne devienne pas un tag
                         list = ["\"#{$("#tree-search-field").val()}\" à rechercher"].concat(list) 
                         $(this).trigger "setSuggestions",
@@ -176,6 +188,7 @@ class exports.Tree
             nodeName = data.inst.get_text data.rslt.obj
             #add nodeName to the autocomplete list
             sourceList.push nodeName
+            sourceList.sort()
             sourceList.sort()
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
