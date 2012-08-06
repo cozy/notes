@@ -2445,7 +2445,7 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   buf.push('>Search !</button><br');
   buf.push(attrs({  }));
   buf.push('/><input');
-  buf.push(attrs({ 'id':('textext-field') }));
+  buf.push(attrs({ 'id':('textext-field'), 'type':("text") }));
   buf.push('/></div></div>');
   }
   return buf.join("");
@@ -2460,9 +2460,11 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
     slugify = require("helpers").slugify;
 
     exports.Tree = (function() {
-      var sourceList;
+      var list, sortFunction, sourceList;
 
       sourceList = [];
+
+      list = [];
 
       function Tree(navEl, data, callbacks) {
         this._onSearchChanged = __bind(this._onSearchChanged, this);
@@ -2474,13 +2476,23 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         this.searchButton = $("#tree-search");
         this.noteFull = $("#note-full");
         selectIcon = function(suggestion, array) {
-          if (suggestion === ("\"" + ($("#textext-field").val()) + "\" à rechercher")) {
+          var i;
+          if (suggestion === ("\"" + ($("#tree-search-field").val()) + "\" à rechercher")) {
             return "<i class='icon-search'></i>";
           } else {
-            return "<i class='icon-folder-open'></i>";
+            i = 0;
+            while (suggestion !== array[i].name) {
+              i++;
+            }
+            switch (array[i].type) {
+              case "folder":
+                return "<i class='icon-folder-open'></i>";
+              default:
+                return "";
+            }
           }
         };
-        $("#textext-field").textext({
+        $("#tree-search-field").textext({
           plugins: 'tags prompt focus autocomplete arrow',
           prompt: 'Search...',
           autocomplete: {
@@ -2488,13 +2500,27 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             render: function(suggestion) {
               return '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>';
             }
+          },
+          ext: {
+            itemManager: {
+              nameField: function(array) {
+                var i, retArray, _i, _len;
+                retArray = [];
+                for (_i = 0, _len = array.length; _i < _len; _i++) {
+                  i = array[_i];
+                  retArray.push(i.name);
+                }
+                return retArray;
+              }
+            }
           }
         }).bind('getSuggestions', function(e, data) {
-          var list, query, textext;
+          var query, textext;
           textext = $(e.target).textext()[0];
           query = (data ? data.query : "") || "";
-          list = textext.itemManager().filter(sourceList, query);
-          list = ["\"" + ($("#textext-field").val()) + "\" à rechercher"].concat(list);
+          list = textext.itemManager().nameField(sourceList);
+          list = textext.itemManager().filter(list, query);
+          list = ["\"" + ($("#tree-search-field").val()) + "\" à rechercher"].concat(list);
           return $(this).trigger("setSuggestions", {
             result: list
           });
@@ -2550,6 +2576,16 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         tmp = array[i];
         array[i] = array[j];
         return array[j] = tmp;
+      };
+
+      sortFunction = function(a, b) {
+        if (a.name > b.name) {
+          return 1;
+        } else if (a.name === b.name) {
+          return 0;
+        } else if (a.name < b.name) {
+          return -1;
+        }
       };
 
       Tree.prototype.currentPath = "";
@@ -2723,13 +2759,17 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       };
 
       Tree.prototype._convertNode = function(parentNode, nodeToConvert, idpath) {
-        var newNode, nodeIdPath, property, _results;
+        var newNode, nodeIdPath, object, property, _results;
         _results = [];
         for (property in nodeToConvert) {
           if (!(property !== "name" && property !== "id")) continue;
           nodeIdPath = "" + idpath + "-" + (property.replace(/_/g, "-"));
-          sourceList.push(nodeToConvert[property].name);
-          sourceList.sort();
+          object = {
+            type: "folder",
+            name: nodeToConvert[property].name
+          };
+          sourceList.push(object);
+          sourceList.sort(sortFunction);
           newNode = {
             data: nodeToConvert[property].name,
             metadata: {

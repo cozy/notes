@@ -6,7 +6,7 @@ class exports.Tree
 
     #array for the autocompletion
     sourceList = []
-
+    list = []
 
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
@@ -19,13 +19,21 @@ class exports.Tree
         @searchButton = $("#tree-search")
         @noteFull = $("#note-full")
 
+        #attach an icon to a type of the elements in the autocomplete list
         selectIcon = (suggestion, array) ->
-            if suggestion is "\"#{$("#textext-field").val()}\" à rechercher"
+            if suggestion is "\"#{$("#tree-search-field").val()}\" à rechercher"
                 "<i class='icon-search'></i>"
             else
-                "<i class='icon-folder-open'></i>"
+                i = 0
+                while suggestion isnt array[i].name
+                    i++
+                #when you add a new type please add the corresponding icon here
+                switch array[i].type
+                    when "folder" then "<i class='icon-folder-open'></i>"
+                    else ""
 
-        $("#textext-field")
+        #$("#textext-field")
+        $("#tree-search-field")
             .textext(
                     #add ajax for database search
                     plugins : 'tags prompt focus autocomplete arrow'
@@ -39,17 +47,37 @@ class exports.Tree
 
                         render : (suggestion) ->
                             '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
+                    ext : 
+                        itemManager: 
+                            nameField: (array) ->
+                                retArray = []
+                                for i in array
+                                    retArray.push i.name
+                                retArray
                 )
+            #every keyup(<=> getSuggestions) in the textext's input show sourceList as a
+            #autocomplete list adding a proposition of what the user is typing
             .bind(
                     'getSuggestions', (e, data) ->
                         textext = $(e.target).textext()[0]
                         query = ((if data then data.query else "")) or ""
-                        list = textext.itemManager().filter(sourceList, query)
+                        list = textext.itemManager().nameField(sourceList)
+                        list = textext.itemManager().filter(list, query)
                         #faire en sorte que ca ne devienne pas un tag
-                        list = ["\"#{$("#textext-field").val()}\" à rechercher"].concat(list) 
+                        list = ["\"#{$("#tree-search-field").val()}\" à rechercher"].concat(list) 
                         $(this).trigger "setSuggestions",
                         result: list
                 )
+            #essaye de bind avec autre chose et de changer l'apparence du tag
+            #.bind(
+            #        'isTagAllowed', (e, data) ->
+            #            if data.tag is list[0]
+            #                data.result = false
+            #                #$('#tree-search-field').val("oyeaaa")
+            #                #console.log $("#tree-search-field").textext.TextExt.input()
+            #                #console.log $("#tree-search-field").val()
+            #    )
+
         # Creation of the tree with jstree
         tree = @_convertData data
         @treeEl = $("#tree")
@@ -96,6 +124,15 @@ class exports.Tree
         tmp = array[i]
         array[i] = array[j]
         array[j] = tmp
+ 
+    #for .sort() method (array)
+    sortFunction = (a, b) ->
+        if a.name > b.name
+            1
+        else if a.name is b.name
+            0
+        else if a.name < b.name
+            -1
  
     currentPath: ""
  
@@ -269,8 +306,10 @@ class exports.Tree
                 property isnt "name" and property isnt "id"
             nodeIdPath = "#{idpath}-#{property.replace(/_/g, "-")}"
             #updating autocompletion's array
-            sourceList.push nodeToConvert[property].name
-            sourceList.sort()
+            object = {type: "folder", name: nodeToConvert[property].name}
+            sourceList.push object
+            #sourceList.push nodeToConvert[property].name
+            sourceList.sort(sortFunction)
             newNode =
                 data: nodeToConvert[property].name
                 metadata:
