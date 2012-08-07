@@ -9,19 +9,27 @@ class exports.Tree
     list = []    
     
     cozyFilter = (array, searchString) ->
+        filteredFirst = []
         filtered = []
         regSentence = ""
         for char in searchString
             regSentence += ".*(#{char})"
+        expFirst = new RegExp("^#{searchString}","i")
         expBold = new RegExp("([#{searchString}])","gi")
         exp = new RegExp(regSentence,"i")
         for name in array
+            if expFirst.test(name)
+                nameBold = name.replace(expBold, (match, p1) ->
+                    "<span class='bold-name'>#{p1}</span>"
+                )
+                filteredFirst.push nameBold
             if exp.test(name)
                 nameBold = name.replace(expBold, (match, p1) ->
                     "<span class='bold-name'>#{p1}</span>"
                 )
-                filtered.push nameBold
-        filtered
+                if !(nameBold in filteredFirst)
+                    filtered.push nameBold
+        filteredFirst.concat(filtered)
 
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
@@ -41,7 +49,6 @@ class exports.Tree
             else
                 i = 0
                 suggestion2 = suggestion.replace(/<.*?>/g,"")
-                console.log suggestion2
                 while suggestion2 isnt array[i].name
                     i++
                 #when you add a new type, please add the corresponding icon here

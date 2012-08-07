@@ -2451,7 +2451,8 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
 window.require.define({"views/widgets/tree": function(exports, require, module) {
   (function() {
     var slugify,
-      __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+      __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+      __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
     slugify = require("helpers").slugify;
 
@@ -2463,25 +2464,35 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       list = [];
 
       cozyFilter = function(array, searchString) {
-        var char, exp, expBold, filtered, name, nameBold, regSentence, _i, _j, _len, _len2;
+        var char, exp, expBold, expFirst, filtered, filteredFirst, name, nameBold, regSentence, _i, _j, _len, _len2;
+        filteredFirst = [];
         filtered = [];
         regSentence = "";
         for (_i = 0, _len = searchString.length; _i < _len; _i++) {
           char = searchString[_i];
           regSentence += ".*(" + char + ")";
         }
+        expFirst = new RegExp("^" + searchString, "i");
         expBold = new RegExp("([" + searchString + "])", "gi");
         exp = new RegExp(regSentence, "i");
         for (_j = 0, _len2 = array.length; _j < _len2; _j++) {
           name = array[_j];
+          if (expFirst.test(name)) {
+            nameBold = name.replace(expBold, function(match, p1) {
+              return "<span class='bold-name'>" + p1 + "</span>";
+            });
+            filteredFirst.push(nameBold);
+          }
           if (exp.test(name)) {
             nameBold = name.replace(expBold, function(match, p1) {
               return "<span class='bold-name'>" + p1 + "</span>";
             });
-            filtered.push(nameBold);
+            if (!(__indexOf.call(filteredFirst, nameBold) >= 0)) {
+              filtered.push(nameBold);
+            }
           }
         }
-        return filtered;
+        return filteredFirst.concat(filtered);
       };
 
       function Tree(navEl, data, callbacks) {
@@ -2500,7 +2511,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           } else {
             i = 0;
             suggestion2 = suggestion.replace(/<.*?>/g, "");
-            console.log(suggestion2);
             while (suggestion2 !== array[i].name) {
               i++;
             }
