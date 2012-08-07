@@ -2468,12 +2468,15 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         regSentence = "";
         for (_i = 0, _len = searchString.length; _i < _len; _i++) {
           char = searchString[_i];
-          regSentence += ".*" + char;
+          regSentence += ".*(" + char + ")";
         }
         exp = new RegExp(regSentence, "i");
         for (_j = 0, _len2 = array.length; _j < _len2; _j++) {
           name = array[_j];
-          if (exp.test(name)) filtered.push(name);
+          if (exp.test(name)) {
+            name.replace(exp, '<strong>$1</strong>');
+            filtered.push(name);
+          }
         }
         return filtered;
       };
@@ -2508,10 +2511,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           plugins: 'tags prompt focus autocomplete arrow',
           prompt: 'Search...',
           autocomplete: {
-            dropdownMaxHeight: '200px',
-            render: function(suggestion) {
-              return '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>';
-            }
+            dropdownMaxHeight: '200px'
           },
           ext: {
             itemManager: {

@@ -12,10 +12,18 @@ class exports.Tree
         filtered = []
         regSentence = ""
         for char in searchString
-            regSentence += ".*#{char}"
+            regSentence += ".*(#{char})"
         exp = new RegExp(regSentence,"i")
         for name in array
             if exp.test(name)
+                name.replace(exp, '<strong>$1</strong>')
+                #(str, p1, p2, p3) ->
+                #    console.log "str: #{str}"
+                #    console.log "p1: #{p1}"
+                #    console.log "p2: #{p2}"
+                #    console.log "p3: #{p3}"
+                #    "<span class='bold-name'>#{p2}</span>"
+                #)
                 filtered.push name
         filtered
 
@@ -43,7 +51,6 @@ class exports.Tree
                     when "folder" then "<i class='icon-folder-open'></i>"
                     else ""
 
-        #$("#textext-field")
         $("#tree-search-field")
             .textext(
                     #add ajax for database search
@@ -56,8 +63,8 @@ class exports.Tree
                     autocomplete : 
                         dropdownMaxHeight : '200px',
 
-                        render : (suggestion) ->
-                            '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
+                        #render : (suggestion) ->
+                        #    '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
                     ext : 
                         itemManager: 
                             nameField: (array) ->
@@ -75,7 +82,6 @@ class exports.Tree
                         query = ((if data then data.query else "")) or ""
                         list = textext.itemManager().nameField(sourceList)
                         list = cozyFilter(list, query)
-                        #list = textext.itemManager().filter(list, query)
                         #faire en sorte que ca ne devienne pas un tag
                         list = ["\"#{$("#tree-search-field").val()}\" à rechercher"].concat(list) 
                         $(this).trigger "setSuggestions",
