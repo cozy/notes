@@ -6,25 +6,21 @@ class exports.Tree
 
     #array for the autocompletion
     sourceList = []
-    list = []
+    list = []    
     
     cozyFilter = (array, searchString) ->
         filtered = []
         regSentence = ""
         for char in searchString
             regSentence += ".*(#{char})"
+        expBold = new RegExp("([#{searchString}])","gi")
         exp = new RegExp(regSentence,"i")
         for name in array
             if exp.test(name)
-                name.replace(exp, '<strong>$1</strong>')
-                #(str, p1, p2, p3) ->
-                #    console.log "str: #{str}"
-                #    console.log "p1: #{p1}"
-                #    console.log "p2: #{p2}"
-                #    console.log "p3: #{p3}"
-                #    "<span class='bold-name'>#{p2}</span>"
-                #)
-                filtered.push name
+                nameBold = name.replace(expBold, (match, p1) ->
+                    "<span class='bold-name'>#{p1}</span>"
+                )
+                filtered.push nameBold
         filtered
 
     # Initialize jsTree tree with options : sorting, create/rename/delete,
@@ -44,9 +40,11 @@ class exports.Tree
                 "<i class='icon-search'></i>"
             else
                 i = 0
-                while suggestion isnt array[i].name
+                suggestion2 = suggestion.replace(/<.*?>/g,"")
+                console.log suggestion2
+                while suggestion2 isnt array[i].name
                     i++
-                #when you add a new type please add the corresponding icon here
+                #when you add a new type, please add the corresponding icon here
                 switch array[i].type
                     when "folder" then "<i class='icon-folder-open'></i>"
                     else ""
@@ -63,8 +61,8 @@ class exports.Tree
                     autocomplete : 
                         dropdownMaxHeight : '200px',
 
-                        #render : (suggestion) ->
-                        #    '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
+                        render : (suggestion) ->
+                            '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
                     ext : 
                         itemManager: 
                             nameField: (array) ->

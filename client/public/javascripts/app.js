@@ -2463,19 +2463,22 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       list = [];
 
       cozyFilter = function(array, searchString) {
-        var char, exp, filtered, name, regSentence, _i, _j, _len, _len2;
+        var char, exp, expBold, filtered, name, nameBold, regSentence, _i, _j, _len, _len2;
         filtered = [];
         regSentence = "";
         for (_i = 0, _len = searchString.length; _i < _len; _i++) {
           char = searchString[_i];
           regSentence += ".*(" + char + ")";
         }
+        expBold = new RegExp("([" + searchString + "])", "gi");
         exp = new RegExp(regSentence, "i");
         for (_j = 0, _len2 = array.length; _j < _len2; _j++) {
           name = array[_j];
           if (exp.test(name)) {
-            name.replace(exp, '<strong>$1</strong>');
-            filtered.push(name);
+            nameBold = name.replace(expBold, function(match, p1) {
+              return "<span class='bold-name'>" + p1 + "</span>";
+            });
+            filtered.push(nameBold);
           }
         }
         return filtered;
@@ -2491,12 +2494,14 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         this.searchButton = $("#tree-search");
         this.noteFull = $("#note-full");
         selectIcon = function(suggestion, array) {
-          var i;
+          var i, suggestion2;
           if (suggestion === ("\"" + ($("#tree-search-field").val()) + "\" à rechercher")) {
             return "<i class='icon-search'></i>";
           } else {
             i = 0;
-            while (suggestion !== array[i].name) {
+            suggestion2 = suggestion.replace(/<.*?>/g, "");
+            console.log(suggestion2);
+            while (suggestion2 !== array[i].name) {
               i++;
             }
             switch (array[i].type) {
@@ -2511,7 +2516,10 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           plugins: 'tags prompt focus autocomplete arrow',
           prompt: 'Search...',
           autocomplete: {
-            dropdownMaxHeight: '200px'
+            dropdownMaxHeight: '200px',
+            render: function(suggestion) {
+              return '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>';
+            }
           },
           ext: {
             itemManager: {
