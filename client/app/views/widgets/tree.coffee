@@ -6,7 +6,6 @@ class exports.Tree
 
     #array for the autocompletion
     sourceList = []
-    list = []    
     
     cozyFilter = (array, searchString) ->
         filteredFirst = []
@@ -59,7 +58,7 @@ class exports.Tree
         $("#tree-search-field")
             .textext(
                     #add ajax for database search
-                    plugins : 'tags prompt focus autocomplete arrow'
+                    plugins : 'tags prompt focus autocomplete'
                     prompt : 'Search...'
                     #ajax :
                     #    url : '/manual/examples/data.json'
@@ -70,6 +69,7 @@ class exports.Tree
 
                         render : (suggestion) ->
                             '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
+
                     ext : 
                         itemManager: 
                             nameField: (array) ->
@@ -77,6 +77,11 @@ class exports.Tree
                                 for i in array
                                     retArray.push i.name
                                 retArray
+                            itemToString: (item) ->
+                                if /".*" à rechercher/.test(item)
+                                    item = item.replace(/"(.*)" à rechercher/, (str, p1) -> p1)
+                                else
+                                    item = item.replace(/<.*?>/g,"")
                 )
                 
             #every keyup(<=> getSuggestions) in the textext's input show sourceList as a
@@ -92,15 +97,6 @@ class exports.Tree
                         $(this).trigger "setSuggestions",
                         result: list
                 )
-            #essaye de bind avec autre chose et de changer l'apparence du tag
-            #.bind(
-            #        'isTagAllowed', (e, data) ->
-            #            if data.tag is list[0]
-            #                data.result = false
-            #                #$('#tree-search-field').val("oyeaaa")
-            #                #console.log $("#tree-search-field").textext.TextExt.input()
-            #                #console.log $("#tree-search-field").val()
-            #    )
 
         # Creation of the tree with jstree
         tree = @_convertData data
@@ -143,11 +139,6 @@ class exports.Tree
     # Create toolbar inside DOM.
     setToolbar: (navEl) ->
         navEl.prepend require('../templates/tree_buttons')
-            
-    exchange: (array, i, j) ->
-        tmp = array[i]
-        array[i] = array[j]
-        array[j] = tmp
  
     #for .sort() method (array)
     sortFunction = (a, b) ->
@@ -176,11 +167,11 @@ class exports.Tree
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
                 #searching the targeted node to change his name
                 i = 0
-                while sourceList[i] isnt oldName
+                while sourceList[i].name isnt oldName
                     i++
-                sourceList[i] = newName
+                sourceList[i].name = newName
                 #sorting the array to place the newName
-                sourceList.sort()
+                sourceList.sort(sortFunction)
                 #See what it changes to include the code below
                 idPath = "tree-node#{@currentPath.split("/").join("-")}"
                 @currentData.rslt.obj.attr "id", idPath
@@ -198,9 +189,9 @@ class exports.Tree
         @widget.bind "create.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
             #add nodeName to the autocomplete list
-            sourceList.push nodeName
-            sourceList.sort()
-            sourceList.sort()
+            object = {type: "folder", name: nodeName}
+            sourceList.push object
+            sourceList.sort(sortFunction)
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
             path.pop()
@@ -217,10 +208,10 @@ class exports.Tree
             else if data.rslt.old_name != data.rslt.new_name
                 #searching the targeted node to change his name
                 i = 0
-                while sourceList[i] isnt data.rslt.old_name
+                while sourceList[i].name isnt data.rslt.old_name
                     i++
-                sourceList[i] = data.rslt.new_name
-                sourceList.sort()
+                sourceList[i].name = data.rslt.new_name
+                sourceList.sort(sortFunction)
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
@@ -230,13 +221,10 @@ class exports.Tree
             nodeName = data.inst.get_text data.rslt.obj
             #searching the element to remove
             i = 0
-            while sourceList[i] isnt nodeName
+            while sourceList[i].name isnt nodeName
                 i++
-            #moving it to the end of the array in attend to "pop" it
-            while i isnt sourceList.length-1
-                @exchange(sourceList, i, i+1)
-                i++           
-            sourceList.pop()
+            #delete the element of index i in the array of suggestions
+            sourceList.splice(i,i)
             parent = data.rslt.parent
             path = @_getStringPath parent, nodeName
             if path == "all"
@@ -333,7 +321,6 @@ class exports.Tree
             #updating autocompletion's array
             object = {type: "folder", name: nodeToConvert[property].name}
             sourceList.push object
-            #sourceList.push nodeToConvert[property].name
             sourceList.sort(sortFunction)
             newNode =
                 data: nodeToConvert[property].name
@@ -356,6 +343,7 @@ class exports.Tree
     # input val as argument.
     _onSearchChanged: (event) =>
         searchString = @searchField.val()
+        console.log searchString
         info = "Recherche: \"#{searchString}\""
         clearTimeout @searchTimer
         if searchString is ""

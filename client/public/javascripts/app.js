@@ -2100,7 +2100,6 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
       HomeView.prototype.createFolder = function(path, newName, data) {
         var _this = this;
-        console.log(data.rslt.obj.data("id"));
         return Note.createNote({
           path: path,
           title: newName
@@ -2113,7 +2112,6 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
       HomeView.prototype.renameFolder = function(path, newName, data) {
         var _this = this;
-        console.log(data.rslt.obj.data("id"));
         if (newName != null) {
           return Note.updateNote(data.rslt.obj.data("id"), {
             title: newName
@@ -2457,11 +2455,9 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
     slugify = require("helpers").slugify;
 
     exports.Tree = (function() {
-      var cozyFilter, list, sortFunction, sourceList;
+      var cozyFilter, sortFunction, sourceList;
 
       sourceList = [];
-
-      list = [];
 
       cozyFilter = function(array, searchString) {
         var char, exp, expBold, expFirst, filtered, filteredFirst, name, nameBold, regSentence, _i, _j, _len, _len2;
@@ -2523,7 +2519,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           }
         };
         $("#tree-search-field").textext({
-          plugins: 'tags prompt focus autocomplete arrow',
+          plugins: 'tags prompt focus autocomplete',
           prompt: 'Search...',
           autocomplete: {
             dropdownMaxHeight: '200px',
@@ -2541,11 +2537,20 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
                   retArray.push(i.name);
                 }
                 return retArray;
+              },
+              itemToString: function(item) {
+                if (/".*" à rechercher/.test(item)) {
+                  return item = item.replace(/"(.*)" à rechercher/, function(str, p1) {
+                    return p1;
+                  });
+                } else {
+                  return item = item.replace(/<.*?>/g, "");
+                }
               }
             }
           }
         }).bind('getSuggestions', function(e, data) {
-          var query, textext;
+          var list, query, textext;
           textext = $(e.target).textext()[0];
           query = (data ? data.query : "") || "";
           list = textext.itemManager().nameField(sourceList);
@@ -2601,13 +2606,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         return navEl.prepend(require('../templates/tree_buttons'));
       };
 
-      Tree.prototype.exchange = function(array, i, j) {
-        var tmp;
-        tmp = array[i];
-        array[i] = array[j];
-        return array[j] = tmp;
-      };
-
       sortFunction = function(a, b) {
         if (a.name > b.name) {
           return 1;
@@ -2635,11 +2633,11 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           if (newName !== "" && oldName !== newName) {
             _this.currentData.inst.rename_node(_this.currentData.rslt.obj, newName);
             i = 0;
-            while (sourceList[i] !== oldName) {
+            while (sourceList[i].name !== oldName) {
               i++;
             }
-            sourceList[i] = newName;
-            sourceList.sort();
+            sourceList[i].name = newName;
+            sourceList.sort(sortFunction);
             idPath = "tree-node" + (_this.currentPath.split("/").join("-"));
             _this.currentData.rslt.obj.attr("id", idPath);
             _this.rebuildIds(_this.currentData, _this.currentData.rslt.obj, idPath);
@@ -2653,11 +2651,14 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         this.searchField.keyup(this._onSearchChanged);
         $("#tree").mouseover(this._addButton);
         this.widget.bind("create.jstree", function(e, data) {
-          var idPath, nodeName, parent, path;
+          var idPath, nodeName, object, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
-          sourceList.push(nodeName);
-          sourceList.sort();
-          sourceList.sort();
+          object = {
+            type: "folder",
+            name: nodeName
+          };
+          sourceList.push(object);
+          sourceList.sort(sortFunction);
           parent = data.rslt.parent;
           path = _this._getPath(parent, nodeName);
           path.pop();
@@ -2674,11 +2675,11 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             return $.jstree.rollback(data.rlbk);
           } else if (data.rslt.old_name !== data.rslt.new_name) {
             i = 0;
-            while (sourceList[i] !== data.rslt.old_name) {
+            while (sourceList[i].name !== data.rslt.old_name) {
               i++;
             }
-            sourceList[i] = data.rslt.new_name;
-            sourceList.sort();
+            sourceList[i].name = data.rslt.new_name;
+            sourceList.sort(sortFunction);
             idPath = "tree-node" + (_this._getPath(parent, nodeName).join("-"));
             data.rslt.obj.attr("id", idPath);
             _this.rebuildIds(data, data.rslt.obj, idPath);
@@ -2689,14 +2690,10 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           var i, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           i = 0;
-          while (sourceList[i] !== nodeName) {
+          while (sourceList[i].name !== nodeName) {
             i++;
           }
-          while (i !== sourceList.length - 1) {
-            _this.exchange(sourceList, i, i + 1);
-            i++;
-          }
-          sourceList.pop();
+          sourceList.splice(i, i);
           parent = data.rslt.parent;
           path = _this._getStringPath(parent, nodeName);
           if (path === "all") {
@@ -2827,6 +2824,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       Tree.prototype._onSearchChanged = function(event) {
         var info, searchString;
         searchString = this.searchField.val();
+        console.log(searchString);
         info = "Recherche: \"" + searchString + "\"";
         clearTimeout(this.searchTimer);
         if (searchString === "") {
