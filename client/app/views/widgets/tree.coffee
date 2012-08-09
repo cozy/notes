@@ -6,18 +6,29 @@ class exports.Tree
 
     #array for the autocompletion
     sourceList = []
-    list = []
     
     cozyFilter = (array, searchString) ->
+        filteredFirst = []
         filtered = []
         regSentence = ""
         for char in searchString
-            regSentence += ".*#{char}"
+            regSentence += ".*(#{char})"
+        expFirst = new RegExp("^#{searchString}","i")
+        expBold = new RegExp("([#{searchString}])","gi")
         exp = new RegExp(regSentence,"i")
         for name in array
+            if expFirst.test(name)
+                nameBold = name.replace(expBold, (match, p1) ->
+                    "<span class='bold-name'>#{p1}</span>"
+                )
+                filteredFirst.push nameBold
             if exp.test(name)
-                filtered.push name
-        filtered
+                nameBold = name.replace(expBold, (match, p1) ->
+                    "<span class='bold-name'>#{p1}</span>"
+                )
+                if !(nameBold in filteredFirst)
+                    filtered.push nameBold
+        filteredFirst.concat(filtered)
 
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
@@ -36,18 +47,18 @@ class exports.Tree
                 "<i class='icon-search'></i>"
             else
                 i = 0
-                while suggestion isnt array[i].name
+                suggestion2 = suggestion.replace(/<.*?>/g,"")
+                while suggestion2 isnt array[i].name
                     i++
-                #when you add a new type please add the corresponding icon here
+                #when you add a new type, please add the corresponding icon here
                 switch array[i].type
                     when "folder" then "<i class='icon-folder-open'></i>"
                     else ""
 
-        #$("#textext-field")
         $("#tree-search-field")
             .textext(
                     #add ajax for database search
-                    plugins : 'tags prompt focus autocomplete arrow'
+                    plugins : 'tags prompt focus autocomplete'
                     prompt : 'Search...'
                     #ajax :
                     #    url : '/manual/examples/data.json'
@@ -58,6 +69,7 @@ class exports.Tree
 
                         render : (suggestion) ->
                             '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
+
                     ext : 
                         itemManager: 
                             nameField: (array) ->
@@ -65,6 +77,11 @@ class exports.Tree
                                 for i in array
                                     retArray.push i.name
                                 retArray
+                            itemToString: (item) ->
+                                if /".*" à rechercher/.test(item)
+                                    item = item.replace(/"(.*)" à rechercher/, (str, p1) -> p1)
+                                else
+                                    item = item.replace(/<.*?>/g,"")
                 )
                 
             #every keyup(<=> getSuggestions) in the textext's input show sourceList as a
@@ -75,21 +92,11 @@ class exports.Tree
                         query = ((if data then data.query else "")) or ""
                         list = textext.itemManager().nameField(sourceList)
                         list = cozyFilter(list, query)
-                        #list = textext.itemManager().filter(list, query)
                         #faire en sorte que ca ne devienne pas un tag
                         list = ["\"#{$("#tree-search-field").val()}\" à rechercher"].concat(list) 
                         $(this).trigger "setSuggestions",
                         result: list
                 )
-            #essaye de bind avec autre chose et de changer l'apparence du tag
-            #.bind(
-            #        'isTagAllowed', (e, data) ->
-            #            if data.tag is list[0]
-            #                data.result = false
-            #                #$('#tree-search-field').val("oyeaaa")
-            #                #console.log $("#tree-search-field").textext.TextExt.input()
-            #                #console.log $("#tree-search-field").val()
-            #    )
 
         # Creation of the tree with jstree
         tree = @_convertData data
@@ -132,11 +139,6 @@ class exports.Tree
     # Create toolbar inside DOM.
     setToolbar: (navEl) ->
         navEl.prepend require('../templates/tree_buttons')
-            
-    exchange: (array, i, j) ->
-        tmp = array[i]
-        array[i] = array[j]
-        array[j] = tmp
  
     #for .sort() method (array)
     sortFunction = (a, b) ->
@@ -165,11 +167,11 @@ class exports.Tree
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
                 #searching the targeted node to change his name
                 i = 0
-                while sourceList[i] isnt oldName
+                while sourceList[i].name isnt oldName
                     i++
-                sourceList[i] = newName
+                sourceList[i].name = newName
                 #sorting the array to place the newName
-                sourceList.sort()
+                sourceList.sort(sortFunction)
                 #See what it changes to include the code below
                 idPath = "tree-node#{@currentPath.split("/").join("-")}"
                 @currentData.rslt.obj.attr "id", idPath
@@ -187,9 +189,9 @@ class exports.Tree
         @widget.bind "create.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
             #add nodeName to the autocomplete list
-            sourceList.push nodeName
-            sourceList.sort()
-            sourceList.sort()
+            object = {type: "folder", name: nodeName}
+            sourceList.push object
+            sourceList.sort(sortFunction)
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
             path.pop()
@@ -206,10 +208,10 @@ class exports.Tree
             else if data.rslt.old_name != data.rslt.new_name
                 #searching the targeted node to change his name
                 i = 0
-                while sourceList[i] isnt data.rslt.old_name
+                while sourceList[i].name isnt data.rslt.old_name
                     i++
-                sourceList[i] = data.rslt.new_name
-                sourceList.sort()
+                sourceList[i].name = data.rslt.new_name
+                sourceList.sort(sortFunction)
                 idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
                 data.rslt.obj.attr "id", idPath
                 @rebuildIds data, data.rslt.obj, idPath
@@ -219,13 +221,10 @@ class exports.Tree
             nodeName = data.inst.get_text data.rslt.obj
             #searching the element to remove
             i = 0
-            while sourceList[i] isnt nodeName
+            while sourceList[i].name isnt nodeName
                 i++
-            #moving it to the end of the array in attend to "pop" it
-            while i isnt sourceList.length-1
-                @exchange(sourceList, i, i+1)
-                i++           
-            sourceList.pop()
+            #delete the element of index i in the array of suggestions
+            sourceList.splice(i,i)
             parent = data.rslt.parent
             path = @_getStringPath parent, nodeName
             if path == "all"
@@ -322,7 +321,6 @@ class exports.Tree
             #updating autocompletion's array
             object = {type: "folder", name: nodeToConvert[property].name}
             sourceList.push object
-            #sourceList.push nodeToConvert[property].name
             sourceList.sort(sortFunction)
             newNode =
                 data: nodeToConvert[property].name
@@ -345,6 +343,7 @@ class exports.Tree
     # input val as argument.
     _onSearchChanged: (event) =>
         searchString = @searchField.val()
+        console.log searchString
         info = "Recherche: \"#{searchString}\""
         clearTimeout @searchTimer
         if searchString is ""

@@ -15,7 +15,6 @@ class exports.HomeView extends Backbone.View
 
     # Create a new folder inside currently selected node.
     createFolder: (path, newName, data) =>
-        console.log data.rslt.obj.data("id")
         Note.createNote
             path: path
             title: newName
@@ -26,7 +25,6 @@ class exports.HomeView extends Backbone.View
 
     # Rename currently selected node.
     renameFolder: (path, newName, data) =>
-        console.log data.rslt.obj.data("id")
         if newName?
             Note.updateNote data.rslt.obj.data("id"),
                 title: newName
