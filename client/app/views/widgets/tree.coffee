@@ -117,9 +117,11 @@ class exports.Tree
                     rename_node: false
                     move_node: false
                     start_drag: false
+            cookies:
+                save_selected: false
             ui:
                 select_limit: 1
-                initially_select: [ "tree-node-all" ]
+                # initially_select: [ "tree-node-all" ]
             themes:
                 theme: "default"
                 dots: false
