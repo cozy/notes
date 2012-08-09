@@ -60,17 +60,9 @@ class exports.HomeView extends Backbone.View
         noteWidget = new NoteWidget @currentNote
         noteWidget.render()
 
-    # When note change, its content is saved.
-    onNoteChanged: (event) =>
-        console.log "call onNoteChanged"
-        noteWidget = new NoteWidget @currentNote
-        console.log noteWidget
-        @currentNote.saveContent noteWidget.instEditor.getEditorContent()
-
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
     onNoteDropped: (newPath, oldPath, noteTitle, data) =>
-        newPath = newPath + "/" + helpers.slugify(noteTitle)
         Note.updateNote data.rslt.o.data("id"),
             path: newPath
             , () =>
