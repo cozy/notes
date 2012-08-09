@@ -181,9 +181,20 @@ class exports.Tree
             @treeEl.jstree("remove")
         $("#searchInfo").hide()
         @searchField.keyup @_onSearchChanged
-        # TODO : this event occures many many times when in the tree : not the best way
-        # to add the tree-buttons
-        $("#tree").mouseover @_addButton
+        
+        # add listeners for the tree-buttons appear when mouse is over
+        @widget.bind "hover_node.jstree", (event, data) ->
+            # event & data - check the core doc of jstree for a detailed description
+            console.log ("event : hover_node.jstree")
+            $("#tree-buttons").appendTo( data.args[0] )
+            $("#tree-buttons").css("display","block")
+
+        # add listeners for the tree-buttons disappear when mouse leaves
+        @widget.bind "dehover_node.jstree", (event, data) ->
+            # event & data - check the core doc of jstree for a detailed description
+            console.log("event : dehover_node.jstree")
+            $("#tree-buttons").css("display","none")
+            $("#tree-buttons").appendTo( $("body") )
 
         # Tree
         @widget.bind "create.jstree", (e, data) =>
@@ -362,17 +373,3 @@ class exports.Tree
                         @noteNewTop = parseInt($("#note-full").css("top")) + parseInt($("#searchInfo").css("height")) + 24
                     $("#note-full").css("top", @noteNewTop)
             , 1000) 
-
-
-    _addButton: (event) ->
-        # TODO : these listeners should be set when the node is created in the tree.
-        $("#tree a").mouseover (e) ->
-
-            $("#tree-buttons").appendTo( this )
-            $("#tree-buttons").show()
-        $("#tree").mouseleave ->
-            # TODO : this event occurs several times when the mouse
-            # leaves the tree (?? shouldn't this hapen only once ??)
-            # besides it hapens when the mouse goes over the tree-buttons
-            # => not the best way to remove the tree-buttons ...
-            $("#tree-buttons").hide()
