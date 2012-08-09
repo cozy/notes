@@ -154,14 +154,32 @@ class exports.Tree
     currentPath: ""
  
     # Bind listeners given in parameters with comment events (creation,
-    # update, deletion, selection).
+    # update, deletion, selection). Called by the constructor once.
     setListeners: (callbacks) ->
         
-        # Toolbar
-        $("#tree-create").click =>
+        # tree-buttons : they appear in nodes of the tree when mouseisover
+        $("#tree-create").on "click", (e) =>
             @treeEl.jstree("create")
-        $("#tree-rename").click =>
+            e.stopPropagation()
+            e.preventDefault()
+        $("#tree-rename").on "click", (e) =>
             @treeEl.jstree("rename")
+            e.stopPropagation()
+        $("#tree-remove").on "click", (e) =>
+            @treeEl.jstree("remove")
+            e.stopPropagation()
+
+        # add listeners for the tree-buttons appear & disappear when mouse is over/out
+        tree_buttons = $("#tree-buttons")
+        @widget.on "hover_node.jstree", (event, data) ->
+            # event & data - check the core doc of jstree for a detailed description
+            tree_buttons.appendTo( data.args[0] )
+            tree_buttons.css("display","block")
+        @widget.on "dehover_node.jstree", (event, data) ->
+            # event & data - check the core doc of jstree for a detailed description
+            tree_buttons.css("display","none")
+            tree_buttons.appendTo( $("body") )
+        
         $("#note-full-title").blur =>
             newName = $("#note-full-title").text()
             oldName = @currentData.inst.get_text @currentData.rslt.obj
@@ -179,27 +197,12 @@ class exports.Tree
                 @currentData.rslt.obj.attr "id", idPath
                 @rebuildIds @currentData, @currentData.rslt.obj, idPath
                 callbacks.onRename @currentPath, newName, @currentData
-        $("#tree-remove").click =>
-            @treeEl.jstree("remove")
+
         $("#searchInfo").hide()
         @searchField.keyup @_onSearchChanged
         
-        # add listeners for the tree-buttons appear when mouse is over
-        @widget.bind "hover_node.jstree", (event, data) ->
-            # event & data - check the core doc of jstree for a detailed description
-            console.log ("event : hover_node.jstree")
-            $("#tree-buttons").appendTo( data.args[0] )
-            $("#tree-buttons").css("display","block")
-
-        # add listeners for the tree-buttons disappear when mouse leaves
-        @widget.bind "dehover_node.jstree", (event, data) ->
-            # event & data - check the core doc of jstree for a detailed description
-            console.log("event : dehover_node.jstree")
-            $("#tree-buttons").css("display","none")
-            $("#tree-buttons").appendTo( $("body") )
-
         # Tree
-        @widget.bind "create.jstree", (e, data) =>
+        @widget.on "create.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
             #add nodeName to the autocomplete list
             object = {type: "folder", name: nodeName}
@@ -207,12 +210,11 @@ class exports.Tree
             sourceList.sort(sortFunction)
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
-            path.pop()
             idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
             data.rslt.obj.attr "id", idPath
             callbacks.onCreate path.join("/"), data.rslt.name, data
 
-        @widget.bind "rename.jstree", (e, data) =>
+        @widget.on "rename.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.inst._get_parent data.rslt.parent
             path = @_getStringPath parent, data.rslt.old_name
@@ -230,7 +232,7 @@ class exports.Tree
                 @rebuildIds data, data.rslt.obj, idPath
                 callbacks.onRename path, data.rslt.new_name, data          
 
-        @widget.bind "remove.jstree", (e, data) =>
+        @widget.on "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
             #searching the element to remove
             i = 0
@@ -245,7 +247,7 @@ class exports.Tree
             else
                 callbacks.onRemove path
 
-        @widget.bind "select_node.jstree", (e, data) =>
+        @widget.on "select_node.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.inst._get_parent data.rslt.parent
             path = @_getStringPath parent, nodeName
@@ -253,7 +255,7 @@ class exports.Tree
             @currentData = data
             callbacks.onSelect path, data.rslt.obj.data("id")
                     
-        @widget.bind "move_node.jstree", (e, data) =>
+        @widget.on "move_node.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.o
             parent = data.inst._get_parent data.rslt.o
             newPath = @_getPath parent, nodeName
@@ -268,7 +270,7 @@ class exports.Tree
                 callbacks.onDrop newPath.join("/"), oldPath.join("/"), \
                                  nodeName, data
 
-        @widget.bind "loaded.jstree", (e, data) =>
+        @widget.on "loaded.jstree", (e, data) =>
             callbacks.onLoaded()
                 
 
