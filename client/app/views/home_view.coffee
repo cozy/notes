@@ -1,8 +1,10 @@
 Tree = require("./widgets/tree").Tree
 NoteWidget = require("./note_view").NoteWidget
 Note = require("../models/note").Note
-###
+
+###*
 # Main view that manages interaction between toolbar, navigation and notes
+    id : ='home-view'
     @treeCreationCallback 
     @noteArea 
     @noteFull 
@@ -11,7 +13,38 @@ Note = require("../models/note").Note
 class exports.HomeView extends Backbone.View
     id: 'home-view'
 
-    # Tree functions
+    # Load the home view and the tree - called once by the main-router
+    initContent: (path) ->
+        
+        # add the html in the element of the view
+        $(@el).html require('./templates/home')
+        @noteArea = $("#editor")
+        @noteFull = $("#note-full")
+        @noteFull.hide()
+        
+        # Use jquery layout to set main layout of current window.
+        $('#home-view').layout
+            size: "350"
+            minSize: "350"
+            resizable: true
+            spacing_open: 10
+        
+            
+        # Path to open when the tree will be loaded
+        @onTreeLoaded = ->
+            app.homeView.selectNote path
+
+        # creation of the tree
+        $.get "tree/",  (data) =>
+            @tree = new Tree( @.$("#nav"), data, 
+                    onCreate: @createFolder
+                    onRename: @renameFolder
+                    onRemove: @deleteFolder
+                    onSelect: @selectFolder
+                    onLoaded: @onTreeLoaded
+                    onDrop  : @onNoteDropped
+                )
+
 
     # Create a new folder inside currently selected node.
     createFolder: (path, newName, data) =>
@@ -70,40 +103,4 @@ class exports.HomeView extends Backbone.View
                 data.inst.select_node data.rslt.o
 
 
-    # Initializers
 
-    # Load the home view and the tree
-    initContent: (path) ->
-        
-        # add the html in the element of the view
-        $(@el).html require('./templates/home')
-        @noteArea = $("#editor")
-        @noteFull = $("#note-full")
-        @noteFull.hide()
-        
-        # Use jquery layout to set main layout of current window.
-        $('#home-view').layout
-            size: "350"
-            minSize: "350"
-            resizable: true
-            spacing_open: 10
-        
-            
-        # TODO : expliquer le coup du cookie
-        @onTreeLoaded = ->
-            setTimeout(
-                ->
-                    app.homeView.selectNote path
-                , 100
-            )
-        
-        # creation of the tree
-        $.get "tree/",  (data) =>
-            @tree = new Tree( @.$("#nav"), data, 
-                    onCreate: @createFolder
-                    onRename: @renameFolder
-                    onRemove: @deleteFolder
-                    onSelect: @selectFolder
-                    onLoaded: @onTreeLoaded
-                    onDrop  : @onNoteDropped
-                )

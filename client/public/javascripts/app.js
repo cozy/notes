@@ -2076,8 +2076,9 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
     Note = require("../models/note").Note;
 
-    /*
+    /**
     # Main view that manages interaction between toolbar, navigation and notes
+        id : ='home-view'
         @treeCreationCallback 
         @noteArea 
         @noteFull
@@ -2097,6 +2098,33 @@ window.require.define({"views/home_view": function(exports, require, module) {
       }
 
       HomeView.prototype.id = 'home-view';
+
+      HomeView.prototype.initContent = function(path) {
+        var _this = this;
+        $(this.el).html(require('./templates/home'));
+        this.noteArea = $("#editor");
+        this.noteFull = $("#note-full");
+        this.noteFull.hide();
+        $('#home-view').layout({
+          size: "350",
+          minSize: "350",
+          resizable: true,
+          spacing_open: 10
+        });
+        this.onTreeLoaded = function() {
+          return app.homeView.selectNote(path);
+        };
+        return $.get("tree/", function(data) {
+          return _this.tree = new Tree(_this.$("#nav"), data, {
+            onCreate: _this.createFolder,
+            onRename: _this.renameFolder,
+            onRemove: _this.deleteFolder,
+            onSelect: _this.selectFolder,
+            onLoaded: _this.onTreeLoaded,
+            onDrop: _this.onNoteDropped
+          });
+        });
+      };
 
       HomeView.prototype.createFolder = function(path, newName, data) {
         var _this = this;
@@ -2162,35 +2190,6 @@ window.require.define({"views/home_view": function(exports, require, module) {
         }, function() {
           data.inst.deselect_all();
           return data.inst.select_node(data.rslt.o);
-        });
-      };
-
-      HomeView.prototype.initContent = function(path) {
-        var _this = this;
-        $(this.el).html(require('./templates/home'));
-        this.noteArea = $("#editor");
-        this.noteFull = $("#note-full");
-        this.noteFull.hide();
-        $('#home-view').layout({
-          size: "350",
-          minSize: "350",
-          resizable: true,
-          spacing_open: 10
-        });
-        this.onTreeLoaded = function() {
-          return setTimeout(function() {
-            return app.homeView.selectNote(path);
-          }, 100);
-        };
-        return $.get("tree/", function(data) {
-          return _this.tree = new Tree(_this.$("#nav"), data, {
-            onCreate: _this.createFolder,
-            onRename: _this.renameFolder,
-            onRemove: _this.deleteFolder,
-            onSelect: _this.selectFolder,
-            onLoaded: _this.onTreeLoaded,
-            onDrop: _this.onNoteDropped
-          });
         });
       };
 
@@ -2582,9 +2581,11 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
               start_drag: false
             }
           },
+          cookies: {
+            save_selected: false
+          },
           ui: {
-            select_limit: 1,
-            initially_select: ["tree-node-all"]
+            select_limit: 1
           },
           themes: {
             theme: "default",
@@ -2624,15 +2625,32 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       Tree.prototype.currentPath = "";
 
       Tree.prototype.setListeners = function(callbacks) {
-        var _this = this;
-        $("#tree-create").click(function() {
-          return _this.treeEl.jstree("create");
+        var tree_buttons,
+          _this = this;
+        $("#tree-create").on("click", function(e) {
+          _this.treeEl.jstree("create");
+          e.stopPropagation();
+          return e.preventDefault();
         });
-        $("#tree-rename").click(function() {
-          return _this.treeEl.jstree("rename");
+        $("#tree-rename").on("click", function(e) {
+          _this.treeEl.jstree("rename");
+          return e.stopPropagation();
         });
         $("#note-full-title").live("keypress", function(e) {
           if (e.keyCode === 13) return false;
+        });
+        $("#tree-remove").on("click", function(e) {
+          _this.treeEl.jstree("remove");
+          return e.stopPropagation();
+        });
+        tree_buttons = $("#tree-buttons");
+        this.widget.on("hover_node.jstree", function(event, data) {
+          tree_buttons.appendTo(data.args[0]);
+          return tree_buttons.css("display", "block");
+        });
+        this.widget.on("dehover_node.jstree", function(event, data) {
+          tree_buttons.css("display", "none");
+          return tree_buttons.appendTo($("body"));
         });
         $("#note-full-title").blur(function() {
           var i, idPath, newName, oldName;
@@ -2652,13 +2670,9 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             return callbacks.onRename(_this.currentPath, newName, _this.currentData);
           }
         });
-        $("#tree-remove").click(function() {
-          return _this.treeEl.jstree("remove");
-        });
-        $("#searchInfo").hide();
         $("#search-button").click(this._onSearchChanged);
         $("#tree").mouseover(this._addButton);
-        this.widget.bind("create.jstree", function(e, data) {
+        this.widget.on("create.jstree", function(e, data) {
           var idPath, nodeName, object, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           object = {
@@ -2669,12 +2683,11 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           sourceList.sort(sortFunction);
           parent = data.rslt.parent;
           path = _this._getPath(parent, nodeName);
-          path.pop();
           idPath = "tree-node" + (_this._getPath(parent, nodeName).join("-"));
           data.rslt.obj.attr("id", idPath);
           return callbacks.onCreate(path.join("/"), data.rslt.name, data);
         });
-        this.widget.bind("rename.jstree", function(e, data) {
+        this.widget.on("rename.jstree", function(e, data) {
           var i, idPath, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           parent = data.inst._get_parent(data.rslt.parent);
@@ -2694,7 +2707,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             return callbacks.onRename(path, data.rslt.new_name, data);
           }
         });
-        this.widget.bind("remove.jstree", function(e, data) {
+        this.widget.on("remove.jstree", function(e, data) {
           var i, nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           i = 0;
@@ -2710,7 +2723,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             return callbacks.onRemove(path);
           }
         });
-        this.widget.bind("select_node.jstree", function(e, data) {
+        this.widget.on("select_node.jstree", function(e, data) {
           var nodeName, parent, path;
           nodeName = data.inst.get_text(data.rslt.obj);
           parent = data.inst._get_parent(data.rslt.parent);
@@ -2719,7 +2732,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           _this.currentData = data;
           return callbacks.onSelect(path, data.rslt.obj.data("id"));
         });
-        this.widget.bind("move_node.jstree", function(e, data) {
+        this.widget.on("move_node.jstree", function(e, data) {
           var newPath, nodeName, oldParent, oldPath, parent;
           nodeName = data.inst.get_text(data.rslt.o);
           parent = data.inst._get_parent(data.rslt.o);
@@ -2735,7 +2748,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             return callbacks.onDrop(newPath.join("/"), oldPath.join("/"), nodeName, data);
           }
         });
-        return this.widget.bind("loaded.jstree", function(e, data) {
+        return this.widget.on("loaded.jstree", function(e, data) {
           return callbacks.onLoaded();
         });
       };
