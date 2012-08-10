@@ -28,6 +28,7 @@ class exports.HomeView extends Backbone.View
             minSize: "350"
             resizable: true
             spacing_open: 10
+            spacing_closed: 10
         
             
         # Path to open when the tree will be loaded

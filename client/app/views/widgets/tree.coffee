@@ -69,7 +69,7 @@ class exports.Tree
 
                         render : (suggestion) ->
                             selectIcon(suggestion, sourceList) + suggestion
-
+                            
                     ext : 
                         itemManager: 
                             nameField: (array) ->
@@ -97,9 +97,13 @@ class exports.Tree
                         $(this).trigger "setSuggestions",
                         result: list
                 )
+            .bind(
+                    'onSetInputData', (e, data) ->
+                        console.log "kikoo"
+                )
         $(".text-selected").click =>
-            console.log "tokidoki"
-            $("#tree-search-field").textext.addTags(tags)
+            $("#tree-search-field").textext.addTags()
+        
 
         # Creation of the tree with jstree
         tree = @_convertData data

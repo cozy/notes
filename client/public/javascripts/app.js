@@ -2109,7 +2109,8 @@ window.require.define({"views/home_view": function(exports, require, module) {
           size: "350",
           minSize: "350",
           resizable: true,
-          spacing_open: 10
+          spacing_open: 10,
+          spacing_closed: 10
         });
         this.onTreeLoaded = function() {
           return app.homeView.selectNote(path);
@@ -2559,10 +2560,11 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           return $(this).trigger("setSuggestions", {
             result: list
           });
+        }).bind('onSetInputData', function(e, data) {
+          return console.log("kikoo");
         });
         $(".text-selected").click(function() {
-          console.log("tokidoki");
-          return $("#tree-search-field").textext.addTags(tags);
+          return $("#tree-search-field").textext.addTags();
         });
         tree = this._convertData(data);
         this.treeEl = $("#tree");
