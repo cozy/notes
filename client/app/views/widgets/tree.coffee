@@ -68,7 +68,7 @@ class exports.Tree
                         dropdownMaxHeight : '200px',
 
                         render : (suggestion) ->
-                            '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
+                            selectIcon(suggestion, sourceList) + suggestion
 
                     ext : 
                         itemManager: 
@@ -97,6 +97,9 @@ class exports.Tree
                         $(this).trigger "setSuggestions",
                         result: list
                 )
+        $(".text-selected").click =>
+            console.log "tokidoki"
+            $("#tree-search-field").textext.addTags(tags)
 
         # Creation of the tree with jstree
         tree = @_convertData data
@@ -105,7 +108,7 @@ class exports.Tree
             plugins: [
                 "themes", "json_data", "ui", "crrm",
                 "unique", "sort", "cookies", "types",
-                "hotkeys", "dnd", "search"
+                "dnd", "search"
             ]
             json_data: tree
             types:
@@ -155,11 +158,15 @@ class exports.Tree
     # update, deletion, selection).
     setListeners: (callbacks) ->
         
-        # Toolbar
+        # Toolbar        
         $("#tree-create").click =>
             @treeEl.jstree("create")
         $("#tree-rename").click =>
             @treeEl.jstree("rename")
+        $("#note-full-title").live("keypress", (e) ->
+            if e.keyCode is 13
+                false
+            )
         $("#note-full-title").blur =>
             newName = $("#note-full-title").text()
             oldName = @currentData.inst.get_text @currentData.rslt.obj
@@ -180,7 +187,7 @@ class exports.Tree
         $("#tree-remove").click =>
             @treeEl.jstree("remove")
         $("#searchInfo").hide()
-        @searchField.keyup @_onSearchChanged
+        $("#search-button").click @_onSearchChanged
         # TODO : this event occures many many times when in the tree : not the best way
         # to add the tree-buttons
         $("#tree").mouseover @_addButton
@@ -342,26 +349,15 @@ class exports.Tree
     # When quick search changes, the jstree quick search function is run with
     # input val as argument.
     _onSearchChanged: (event) =>
-        searchString = @searchField.val()
-        console.log searchString
-        info = "Recherche: \"#{searchString}\""
+        searchString = $(".text-tag .text-label")[0].innerHTML
+        console.log $(".text-tag .text-label")[0].innerHTML
         clearTimeout @searchTimer
         if searchString is ""
-            $("#searchInfo").hide()
             $("#tree").jstree("search", searchString)
-            $("#note-full").css("top", "10px")
         else
-            @searchTimer = setTimeout(->
-                $("#tree").jstree("search", searchString)
-                $("#searchInfo").html info
-                if $("#searchInfo").is(":hidden")
-                    $("#searchInfo").show()
-                    #24 represents the size of the margin from the searchInfo
-                    if @noteNewTop is undefined
-                        @noteOldTop = parseInt($("#note-full").css("top"))
-                        @noteNewTop = parseInt($("#note-full").css("top")) + parseInt($("#searchInfo").css("height")) + 24
-                    $("#note-full").css("top", @noteNewTop)
-            , 1000) 
+            #@searchTimer = setTimeout(->
+            $("#tree").jstree("search", searchString)
+            #, 1000) 
 
 
     _addButton: (event) ->

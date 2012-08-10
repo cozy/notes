@@ -2439,7 +2439,7 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   buf.push('><input');
   buf.push(attrs({ 'id':('tree-search-field'), 'type':("text"), 'placeholder':("Search…"), "class": ('span2') }));
   buf.push('/><button');
-  buf.push(attrs({ "class": ('btn') }));
+  buf.push(attrs({ 'id':('search-button'), "class": ('btn') }));
   buf.push('>Search !</button></div></div>');
   }
   return buf.join("");
@@ -2495,7 +2495,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         this._onSearchChanged = __bind(this._onSearchChanged, this);
         this._convertData = __bind(this._convertData, this);
         this._getStringPath = __bind(this._getStringPath, this);
-        var selectIcon, tree;
+        var selectIcon, tree,
+          _this = this;
         this.setToolbar(navEl);
         this.searchField = $("#tree-search-field");
         this.searchButton = $("#tree-search");
@@ -2524,7 +2525,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           autocomplete: {
             dropdownMaxHeight: '200px',
             render: function(suggestion) {
-              return '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>';
+              return selectIcon(suggestion, sourceList) + suggestion;
             }
           },
           ext: {
@@ -2560,10 +2561,14 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             result: list
           });
         });
+        $(".text-selected").click(function() {
+          console.log("tokidoki");
+          return $("#tree-search-field").textext.addTags(tags);
+        });
         tree = this._convertData(data);
         this.treeEl = $("#tree");
         this.widget = this.treeEl.jstree({
-          plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort", "cookies", "types", "hotkeys", "dnd", "search"],
+          plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort", "cookies", "types", "dnd", "search"],
           json_data: tree,
           types: {
             "default": {
@@ -2626,6 +2631,9 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         $("#tree-rename").click(function() {
           return _this.treeEl.jstree("rename");
         });
+        $("#note-full-title").live("keypress", function(e) {
+          if (e.keyCode === 13) return false;
+        });
         $("#note-full-title").blur(function() {
           var i, idPath, newName, oldName;
           newName = $("#note-full-title").text();
@@ -2648,7 +2656,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           return _this.treeEl.jstree("remove");
         });
         $("#searchInfo").hide();
-        this.searchField.keyup(this._onSearchChanged);
+        $("#search-button").click(this._onSearchChanged);
         $("#tree").mouseover(this._addButton);
         this.widget.bind("create.jstree", function(e, data) {
           var idPath, nodeName, object, parent, path;
@@ -2822,28 +2830,14 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       Tree.prototype.searchTimer = null;
 
       Tree.prototype._onSearchChanged = function(event) {
-        var info, searchString;
-        searchString = this.searchField.val();
-        console.log(searchString);
-        info = "Recherche: \"" + searchString + "\"";
+        var searchString;
+        searchString = $(".text-tag .text-label")[0].innerHTML;
+        console.log($(".text-tag .text-label")[0].innerHTML);
         clearTimeout(this.searchTimer);
         if (searchString === "") {
-          $("#searchInfo").hide();
-          $("#tree").jstree("search", searchString);
-          return $("#note-full").css("top", "10px");
+          return $("#tree").jstree("search", searchString);
         } else {
-          return this.searchTimer = setTimeout(function() {
-            $("#tree").jstree("search", searchString);
-            $("#searchInfo").html(info);
-            if ($("#searchInfo").is(":hidden")) {
-              $("#searchInfo").show();
-              if (this.noteNewTop === void 0) {
-                this.noteOldTop = parseInt($("#note-full").css("top"));
-                this.noteNewTop = parseInt($("#note-full").css("top")) + parseInt($("#searchInfo").css("height")) + 24;
-              }
-              return $("#note-full").css("top", this.noteNewTop);
-            }
-          }, 1000);
+          return $("#tree").jstree("search", searchString);
         }
       };
 
