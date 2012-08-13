@@ -68,8 +68,8 @@ class exports.Tree
                         dropdownMaxHeight : '200px',
 
                         render : (suggestion) ->
-                            '<div>' + selectIcon(suggestion, sourceList) + suggestion + '</div>'
-
+                            selectIcon(suggestion, sourceList) + suggestion
+                            
                     ext : 
                         itemManager: 
                             nameField: (array) ->
@@ -96,7 +96,7 @@ class exports.Tree
                         list = ["\"#{$("#tree-search-field").val()}\" à rechercher"].concat(list) 
                         $(this).trigger "setSuggestions",
                         result: list
-                )
+                )        
 
         # Creation of the tree with jstree
         tree = @_convertData data
@@ -105,7 +105,7 @@ class exports.Tree
             plugins: [
                 "themes", "json_data", "ui", "crrm",
                 "unique", "sort", "cookies", "types",
-                "hotkeys", "dnd", "search"
+                "dnd", "search"
             ]
             json_data: tree
             types:
@@ -157,6 +157,7 @@ class exports.Tree
     # update, deletion, selection). Called by the constructor once.
     setListeners: (callbacks) ->
         
+
         # tree-buttons : they appear in nodes of the tree when mouseisover
         $("#tree-create").on "click", (e) =>
             @treeEl.jstree("create")
@@ -165,6 +166,10 @@ class exports.Tree
         $("#tree-rename").on "click", (e) =>
             @treeEl.jstree("rename")
             e.stopPropagation()
+        $("#note-full-title").live("keypress", (e) ->
+            if e.keyCode is 13
+                $("#note-full-title").trigger "blur"
+            )
         $("#tree-remove").on "click", (e) =>
             @treeEl.jstree("remove")
             e.stopPropagation()
@@ -198,8 +203,10 @@ class exports.Tree
                 @rebuildIds @currentData, @currentData.rslt.obj, idPath
                 callbacks.onRename @currentPath, newName, @currentData
 
-        $("#searchInfo").hide()
-        @searchField.keyup @_onSearchChanged
+        $("#search-button").click @_onSearchChanged
+        # TODO : this event occures many many times when in the tree : not the best way
+        # to add the tree-buttons
+        $("#tree").mouseover @_addButton
         
         # Tree
         @widget.on "create.jstree", (e, data) =>
@@ -357,23 +364,27 @@ class exports.Tree
     # When quick search changes, the jstree quick search function is run with
     # input val as argument.
     _onSearchChanged: (event) =>
-        searchString = @searchField.val()
-        console.log searchString
-        info = "Recherche: \"#{searchString}\""
+        searchString = $(".text-tag .text-label")[0].innerHTML
+        console.log $(".text-tag .text-label")[0].innerHTML
         clearTimeout @searchTimer
         if searchString is ""
-            $("#searchInfo").hide()
             $("#tree").jstree("search", searchString)
-            $("#note-full").css("top", "10px")
         else
-            @searchTimer = setTimeout(->
-                $("#tree").jstree("search", searchString)
-                $("#searchInfo").html info
-                if $("#searchInfo").is(":hidden")
-                    $("#searchInfo").show()
-                    #24 represents the size of the margin from the searchInfo
-                    if @noteNewTop is undefined
-                        @noteOldTop = parseInt($("#note-full").css("top"))
-                        @noteNewTop = parseInt($("#note-full").css("top")) + parseInt($("#searchInfo").css("height")) + 24
-                    $("#note-full").css("top", @noteNewTop)
-            , 1000) 
+            #@searchTimer = setTimeout(->
+            $("#tree").jstree("search", searchString)
+            #, 1000) 
+
+
+    _addButton: (event) ->
+        # TODO : these listeners should be set when the node is created in the tree.
+        $("#tree a").mouseover (e) ->
+
+            $("#tree-buttons").appendTo( this )
+            $("#tree-buttons").show()
+        $("#tree").mouseleave ->
+            # TODO : this event occurs several times when the mouse
+            # leaves the tree (?? shouldn't this hapen only once ??)
+            # besides it hapens when the mouse goes over the tree-buttons
+            # => not the best way to remove the tree-buttons ...
+            $("#tree-buttons").hide()
+
