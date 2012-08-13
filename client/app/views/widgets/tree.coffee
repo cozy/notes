@@ -96,14 +96,7 @@ class exports.Tree
                         list = ["\"#{$("#tree-search-field").val()}\" à rechercher"].concat(list) 
                         $(this).trigger "setSuggestions",
                         result: list
-                )
-            .bind(
-                    'onSetInputData', (e, data) ->
-                        console.log "kikoo"
-                )
-        $(".text-selected").click =>
-            $("#tree-search-field").textext.addTags()
-        
+                )        
 
         # Creation of the tree with jstree
         tree = @_convertData data
@@ -175,7 +168,7 @@ class exports.Tree
             e.stopPropagation()
         $("#note-full-title").live("keypress", (e) ->
             if e.keyCode is 13
-                false
+                $("#note-full-title").trigger "blur"
             )
         $("#tree-remove").on "click", (e) =>
             @treeEl.jstree("remove")
