@@ -43,7 +43,7 @@ class exports.Tree
 
         #attach an icon to a type of the elements in the autocomplete list
         selectIcon = (suggestion, array) ->
-            if suggestion is "\"#{$("#tree-search-field").val()}\" à rechercher"
+            if suggestion is "\"#{$("#tree-search-field").val()}\""
                 "<i class='icon-search'></i>"
             else
                 i = 0
@@ -78,8 +78,8 @@ class exports.Tree
                                     retArray.push i.name
                                 retArray
                             itemToString: (item) ->
-                                if /".*" à rechercher/.test(item)
-                                    item = item.replace(/"(.*)" à rechercher/, (str, p1) -> p1)
+                                if /".*"/.test(item)
+                                    item = item.replace(/"(.*)"/, (str, p1) -> p1)
                                 else
                                     item = item.replace(/<.*?>/g,"")
                 )
@@ -93,11 +93,16 @@ class exports.Tree
                         list = textext.itemManager().nameField(sourceList)
                         list = cozyFilter(list, query)
                         #faire en sorte que ca ne devienne pas un tag
-                        list = ["\"#{$("#tree-search-field").val()}\" à rechercher"].concat(list) 
+                        list = ["\"#{$("#tree-search-field").val()}\""].concat(list) 
                         $(this).trigger "setSuggestions",
                         result: list
-                )        
-
+                )
+            #.bind(
+            #        'isTagAllowed', (e, data) ->
+            #            console.log data.tag
+            #            if /.*/.test(data.tag)
+            #                console.log $(".text-selected")                            
+            #    )
         # Creation of the tree with jstree
         tree = @_convertData data
         @treeEl = $("#tree")
@@ -203,7 +208,8 @@ class exports.Tree
                 @rebuildIds @currentData, @currentData.rslt.obj, idPath
                 callbacks.onRename @currentPath, newName, @currentData
 
-        $("#search-button").click @_onSearchChanged
+        $("#search-button").click =>
+            $(".text-tags").empty()
         # TODO : this event occures many many times when in the tree : not the best way
         # to add the tree-buttons
         $("#tree").mouseover @_addButton
@@ -370,9 +376,9 @@ class exports.Tree
         if searchString is ""
             $("#tree").jstree("search", searchString)
         else
-            #@searchTimer = setTimeout(->
+            @searchTimer = setTimeout(->
             $("#tree").jstree("search", searchString)
-            #, 1000) 
+            , 1000) 
 
 
     _addButton: (event) ->
