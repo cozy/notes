@@ -186,7 +186,7 @@ class exports.Tree
             tree_buttons.appendTo( $("body") )
         
         $("#note-full-title").blur =>
-            newName = $("#note-full-title").text()
+            newName = $("#note-full-title").val()
             oldName = @currentData.inst.get_text @currentData.rslt.obj
             if newName isnt "" and oldName != newName
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
