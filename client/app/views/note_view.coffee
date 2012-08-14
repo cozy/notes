@@ -49,9 +49,12 @@ class exports.NoteWidget extends Backbone.View
         # Callback to execute when the editor is ready
         # this refers to the editor during instanciation
         note = @model
+              
+        saveTimer = null
                 
         callBackEditor = () ->
             editorCtrl = this
+            saveButton = $("#save-editor-content")
             # load the base's content into the editor
             if myContent
                 editorCtrl.setEditorContent(myContent)
@@ -71,16 +74,19 @@ class exports.NoteWidget extends Backbone.View
                 editorCtrl._addHistory()
                 editorCtrl.titleList()
             $("iframe").on "onKeyUp", () =>
-                if $("#save-editor-content").hasClass("btn-info")
-                    $("#save-editor-content").addClass("btn-primary").removeClass("active btn-info")
+                clearTimeout(saveTimer)
+                if saveButton.hasClass("btn-info")
+                        saveButton.addClass("btn-primary").removeClass("active btn-info")
+                saveTimer = setTimeout( ->
+                        note.saveContent editorCtrl.getEditorContent()
+                        if saveButton.hasClass("btn-primary")
+                            saveButton.addClass("active btn-info").removeClass("btn-primary")
+                    , 3000)
             $("#save-editor-content").on "click", () ->
-                if $("#save-editor-content").hasClass("btn-primary")
-                    $("#save-editor-content").addClass("active btn-info").removeClass("btn-primary")
-                editorCtrl._addHistory()
-            $("iframe").on "onHistoryChanged", () =>
-                note.saveContent @.getEditorContent()
-                if $("#save-editor-content").hasClass("btn-primary")
-                    $("#save-editor-content").addClass("active btn-info").removeClass("btn-primary")
+                clearTimeout(saveTimer)
+                note.saveContent editorCtrl.getEditorContent()
+                if saveButton.hasClass("btn-primary")
+                    saveButton.addClass("active btn-info").removeClass("btn-primary")
         # creation of the editor itself
         instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)
         

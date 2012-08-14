@@ -74,6 +74,8 @@ class exports.CNEditor extends Backbone.View
                 editorBody$.on 'mouseup', () =>
                     @newPosition = true
                 editorBody$.on 'keypress', @_keyPressListener
+                editorBody$.on 'keyup', () ->
+                    iframe$.trigger jQuery.Event("onKeyUp")
                 editorBody$.on 'paste', (e) =>
                     console.log "pasting..."
                     @paste(e)
@@ -117,8 +119,8 @@ class exports.CNEditor extends Backbone.View
                 editorBody$.on 'keypress', @_keyPressListener
                 editorBody$.on 'mouseup', () =>
                     @newPosition = true
-                #editorBody$.on 'keyup', () ->
-                #    node$.trigger jQuery.Event("onKeyUp")
+                editorBody$.on 'keyup', () ->
+                    node$.trigger jQuery.Event("onKeyUp")
                 editorBody$.on 'paste', (e) =>
                     console.log "pasting..."
                     @paste(e)
@@ -228,8 +230,6 @@ class exports.CNEditor extends Backbone.View
 
             
     _normalize : (range) ->
-
-        isRangeModified = false
         
         startContainer = range.startContainer
         # 1. if startC is a div
@@ -245,9 +245,7 @@ class exports.CNEditor extends Backbone.View
                 # place caret at the end of the last child (before br)
                 elt = startContainer.lastChild.previousElementSibling
                 @_putStartOnEnd(range, elt)
-                
-            isRangeModified = true
-                
+               
         # 2. if startC is a span, a, img
         else if startContainer.nodeName in ["SPAN","IMG","A"]
             # 2.1 if caret is between two textNode children
@@ -290,6 +288,8 @@ class exports.CNEditor extends Backbone.View
                 elt = endContainer.lastChild
                 @putEndOnEnd(range, elt)
         # 3. if endC is a textNode ;   do nothing
+
+        return range
 
 
     
@@ -390,29 +390,36 @@ class exports.CNEditor extends Backbone.View
                 @newPosition = false
                 # TODO: following line is just for test, must be somewhere else.
                 $("#editorPropertiesDisplay").text("newPosition = false")
-                
-                #sel = rangy.getIframeSelection(@editorIframe)
+
+                # get the current range and normalize it
                 sel = @getEditorSelection()
-                # if sthg is selected
-                num = sel.rangeCount
-                if num > 0
-                    # for each selected area
-                    for i in [0..num-1]
-                        range = sel.getRangeAt(i)
-                        @_normalize(range)
-                        # set the modified selection
-                        sel.setSingleRange(range)
-                        
+                range = sel.getRangeAt(0)
+                normalizedRange = rangy.createRange()
+                normalizedRange = @_normalize(range)
+
+                # update window selection so it is normalized
+                normalizedSel = @getEditorSelection()
+                normalizedSel._ranges[0] = normalizedRange
+                normalizedSel.setSingleRange(normalizedRange)
+                #normalizedSel.refresh()
+                #
+                #TEST 
+                #selection = window.getSelection()
+                #if selection.rangeCount > 0
+                #    selection.removeAllRanges()
+                #ranger = document.createRange()
+                #ranger.setStart(normalizedRange.startContainer, normalizedRange.startOffset)
+                #ranger.setEnd(normalizedRange.endContainer, normalizedRange.endOffset)
+                #selection.addRange(ranger)
+
+                
         # 4- the current selection is initialized on each keypress
         this.currentSel = null
   
         # Record last key pressed and eventually update the history
         if @_lastKey != shortcut and shortcut in ["-tab", "-return", "-backspace", "-suppr", "CtrlShift-down", "CtrlShift-up", "Ctrl-C", "Shift-tab", "-space", "-other"]
             @_addHistory()
-        # if a key is pressed and history is not updated, fire onKeyUp event
-        else
-            $(@editorTarget).trigger jQuery.Event("onKeyUp")
-            
+           
         @_lastKey = shortcut
                  
         # 5- launch the action corresponding to the pressed shortcut
@@ -565,7 +572,6 @@ class exports.CNEditor extends Backbone.View
     ###
     titleList : () ->
         # 1- Variables
-        #sel                = rangy.getIframeSelection(@editorIframe)
         sel                 = @getEditorSelection()
         range              = sel.getRangeAt(0)
         startContainer     = range.startContainer
@@ -618,7 +624,6 @@ class exports.CNEditor extends Backbone.View
             startDivID = l.lineID
             endLineID  = startDivID
         else
-            #range              = rangy.getIframeSelection(@editorIframe).getRangeAt(0)
             range = @getEditorSelection().getRangeAt(0)
             # what is this line doing down there?
             # endContainer       = 
@@ -715,7 +720,6 @@ class exports.CNEditor extends Backbone.View
     ###
     _toggleLineType : () ->
         # 1- Variables
-        #sel                = rangy.getIframeSelection(@editorIframe)
         sel                = @getEditorSelection()
         range              = sel.getRangeAt(0)
         startContainer     = range.startContainer
@@ -809,7 +813,6 @@ class exports.CNEditor extends Backbone.View
             startDiv = l.line$[0]
             endDiv   = startDiv
         else
-            #sel      = rangy.getIframeSelection(@editorIframe)
             sel                = @getEditorSelection()
             range    = sel.getRangeAt(0)
             startDiv = range.startContainer
@@ -917,8 +920,7 @@ class exports.CNEditor extends Backbone.View
         if myRange?
             range = myRange
         else
-            #sel   = rangy.getIframeSelection(@editorIframe)
-            sel                = @getEditorSelection()
+            sel   = @getEditorSelection()
             range = sel.getRangeAt(0)
             
         startDiv           = range.startContainer
@@ -1347,7 +1349,6 @@ class exports.CNEditor extends Backbone.View
     _findLines : () ->
         if this.currentSel == null
             # 1- Variables
-            #sel                = rangy.getIframeSelection(@editorIframe)
             sel                = @getEditorSelection()
             range              = sel.getRangeAt(0)
             startContainer     = range.startContainer
@@ -1402,7 +1403,6 @@ class exports.CNEditor extends Backbone.View
         if this.currentSel == null
             
             # 1- Variables
-            #sel                = rangy.getIframeSelection(@editorIframe)
             sel                = @getEditorSelection()
             range              = sel.getRangeAt(0)
             startContainer     = range.startContainer
@@ -1559,7 +1559,6 @@ class exports.CNEditor extends Backbone.View
                 linePrev     : lineNext.linePrev
                 lineNext     : lineNext.lineNext
 
-            #savedSel = rangy.saveSelection(rangy.dom.getIframeWindow @editorIframe)
             savedSel = @saveEditorSelection()
                 
             # 2 - Delete the lowerline content then restore initial selection
@@ -1628,10 +1627,10 @@ class exports.CNEditor extends Backbone.View
                 
                 while numOfUntab >= 0
                     @shiftTab(myRange)
-                    numOfUntab -= 1 
+                    numOfUntab -= 1
 
 
-    #
+    ### ------------------------------------------------------------------------
     # _moveLinesUp:
     #
     # -variables:
@@ -1650,6 +1649,7 @@ class exports.CNEditor extends Backbone.View
     #    4.else (linePrev less indented than lineNext), select the block
     #      (lineNext and some lines below) that is more indented than linePrev
     #      and untab it until it is ok
+    ###
     _moveLinesUp : () ->
         
         # 0 - Set variables with informations on the selected lines
@@ -1676,7 +1676,6 @@ class exports.CNEditor extends Backbone.View
                 linePrev     : linePrev.linePrev
                 lineNext     : linePrev.lineNext
 
-            # savedSel = rangy.saveSelection(rangy.dom.getIframeWindow @editorIframe)
             savedSel = @saveEditorSelection()
             
             # 2 - Delete the upperline content then restore initial selection
@@ -1767,7 +1766,6 @@ class exports.CNEditor extends Backbone.View
     #
     # What is saved in the history:
     #  - current html content
-    #  - current structure of lines
     #  - current selection
     #  - current scrollbar position
     ###
@@ -1778,8 +1776,6 @@ class exports.CNEditor extends Backbone.View
         savedSel = @saveEditorSelection()
         # save html selection
         @_history.historySelect.push savedSel
-        # save lines structure
-        @_history.historyLines.push @_lines
         # save scrollbar position
         savedScroll = 
             xcoord: @editorBody$.scrollTop()
@@ -1790,8 +1786,6 @@ class exports.CNEditor extends Backbone.View
         rangy.removeMarkers(savedSel)
         # 2 - update the index
         @_history.index = @_history.history.length-1
-        # 3 - fire an event indicating history has changed
-        $(@editorTarget).trigger jQuery.Event("onHistoryChanged")
 
 
     # Return true only if unDo can be called
@@ -1817,15 +1811,15 @@ class exports.CNEditor extends Backbone.View
             @editorBody$.html @_history.history[@_history.index]
             # 1 - restore selection
             savedSel = @_history.historySelect[@_history.index]
-            rangy.restoreSelection(savedSel)
             savedSel.restored = false
+            rangy.restoreSelection(savedSel)
             # 2 - restore scrollbar position
             xcoord = @_history.historyScroll[@_history.index].xcoord
             ycoord = @_history.historyScroll[@_history.index].ycoord
             @editorBody$.scrollTop(xcoord)
             @editorBody$.scrollLeft(ycoord)
             # 3 - restore the lines structure
-            @_lines = @_history.historyLines[@_history.index]
+            @_readHtml()
             # 4 - update the index
             @_history.index -= 1
 
@@ -1840,15 +1834,15 @@ class exports.CNEditor extends Backbone.View
             @editorBody$.html @_history.history[@_history.index+1]
             # 2 - restore selection
             savedSel = @_history.historySelect[@_history.index+1]
-            rangy.restoreSelection(savedSel)
             savedSel.restored = false
+            rangy.restoreSelection(savedSel)
             # 3 - restore scrollbar position
             xcoord = @_history.historyScroll[@_history.index+1].xcoord
             ycoord = @_history.historyScroll[@_history.index+1].ycoord
             @editorBody$.scrollTop(xcoord)
             @editorBody$.scrollLeft(ycoord)
             # 4 - restore lines structure
-            @_lines = @_history.historyLines[@_history.index+1]
+            @_readHtml()
 
 
     ### ------------------------------------------------------------------------
@@ -1913,7 +1907,6 @@ class exports.CNEditor extends Backbone.View
         # get 
         mySandBox = @_initClipBoard()
         # save current selection
-        #savedSel = rangy.saveSelection(rangy.dom.getIframeWindow @editorIframe)
         savedSel = @saveEditorSelection()
         # move carret into the sandbox
         
@@ -1965,7 +1958,7 @@ class exports.CNEditor extends Backbone.View
         console.log(pasteddata)
         
    
-    ###
+    ### ------------------------------------------------------------------------
     #  MARKUP LANGUAGE CONVERTERS
     # _cozy2md (Read a string of editor html code format and turns it into a
     #           string in markdown format)
