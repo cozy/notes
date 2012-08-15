@@ -162,21 +162,21 @@ class exports.Tree
     # update, deletion, selection). Called by the constructor once.
     setListeners: (callbacks) ->
         
-
         # tree-buttons : they appear in nodes of the tree when mouseisover
-        $("#tree-create").on "click", (e) =>
-            @treeEl.jstree("create")
+        treeEl=@treeEl
+        $("#tree-create").on "click", (e) ->
+            treeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
             e.stopPropagation()
             e.preventDefault()
-        $("#tree-rename").on "click", (e) =>
-            @treeEl.jstree("rename")
+        $("#tree-rename").on "click", (e) ->
+            treeEl.jstree("rename", this.parentElement.parentElement)
             e.stopPropagation()
         $("#note-full-title").live("keypress", (e) ->
             if e.keyCode is 13
                 $("#note-full-title").trigger "blur"
             )
-        $("#tree-remove").on "click", (e) =>
-            @treeEl.jstree("remove")
+        $("#tree-remove").on "click", (e) ->
+            treeEl.jstree("remove", this.parentElement.parentElement)
             e.stopPropagation()
 
         # add listeners for the tree-buttons appear & disappear when mouse is over/out
@@ -191,7 +191,7 @@ class exports.Tree
             tree_buttons.appendTo( $("body") )
         
         $("#note-full-title").blur =>
-            newName = $("#note-full-title").text()
+            newName = $("#note-full-title").val()
             oldName = @currentData.inst.get_text @currentData.rslt.obj
             if newName isnt "" and oldName != newName
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
