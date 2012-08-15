@@ -208,8 +208,14 @@ class exports.Tree
                 @rebuildIds @currentData, @currentData.rslt.obj, idPath
                 callbacks.onRename @currentPath, newName, @currentData
 
-        $("#search-button").click =>
+        $("#suppr-button").click =>
             $(".text-tags").empty()
+            $("#tree-search-field").css("padding-left", "5px")
+            $("#tree-search-field").css("padding-top", "3px")
+            $(".text-prompt").css("padding-left", "5px")
+            $(".text-prompt").css("padding-top", "3px")
+            $(".text-wrap").css("height", "22px")
+            $(".text-core").css("height", "22px")
         # TODO : this event occures many many times when in the tree : not the best way
         # to add the tree-buttons
         $("#tree").mouseover @_addButton
