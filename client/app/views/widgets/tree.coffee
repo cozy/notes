@@ -97,6 +97,10 @@ class exports.Tree
                         $(this).trigger "setSuggestions",
                         result: list
                 )
+            .bind(
+                    'addTags', (e, data) ->
+                        console.log "kikoo"
+                )
             #.bind(
             #        'isTagAllowed', (e, data) ->
             #            console.log data.tag
