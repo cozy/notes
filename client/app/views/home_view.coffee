@@ -14,7 +14,7 @@ class exports.HomeView extends Backbone.View
     id: 'home-view'
 
     # Load the home view and the tree - called once by the main-router
-    initContent: (path) ->
+    initContent: (path) ->  #TODO BJA : pas patch mais id
         
         # add the html in the element of the view
         $(@el).html require('./templates/home')
@@ -47,13 +47,14 @@ class exports.HomeView extends Backbone.View
                 )
 
 
-    # Create a new folder inside currently selected node.
-    createFolder: (path, newName, data) =>
+    # Create a new folder of path : fullPath and of name : newName
+    createFolder: (fullPath, newName, data) =>
         Note.createNote
-            path: path
+            path : fullPath
             title: newName
             , (note) =>
                 data.rslt.obj.data("id", note.id)
+                data.rslt.obj.prop("id", note.id)
                 data.inst.deselect_all()
                 data.inst.select_node data.rslt.obj
 

@@ -9,16 +9,20 @@ class exports.MainRouter extends Backbone.Router
         @route(/^note\/(.*?)$/, 'note')
 
     # Entry point, render app and select last selected note.
-    home: (path) ->
-        $('body').append( app.homeView.el )
-        app.homeView.initContent(path)
+    home: () ->
+        @_initializeTree("")
 
     # Select given note (represented by its path), if tree is already 
     # rendered, note is directly selected else it loads tree then it selects 
     # given note.
     note: (path) ->
-
+        id = path.substr(0,24)  # TODOBJA
         if $("#tree-create").length > 0
-            app.homeView.selectNote path
+            app.homeView.selectNote id
         else
-            @home( path )
+            @_initializeTree( id )
+
+    _initializeTree : (initPath) ->
+        $('body').append(app.homeView.el)
+        app.homeView.initContent(initPath)
+

@@ -1,7 +1,17 @@
 slugify = require("helpers").slugify
 
 
-# Widget to easily manipulate data tree (navigation for cozy apps)
+### Widget to easily manipulate data tree (navigation for cozy apps)
+Properties :
+    currentPath = ex : /all/coutries/great_britain  ("great_britain" is the uglified name of the note)
+    currentData = data : jstree data obj sent by the select
+    widget 
+    searchField = $("#tree-search-field")
+    searchButton = $("#tree-search")
+    noteFull
+    treeEl = $("#tree")
+###
+
 class exports.Tree
 
     #array for the autocompletion
@@ -33,8 +43,9 @@ class exports.Tree
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
     constructor: (navEl, data, callbacks) ->
-        @setToolbar navEl
-
+        
+        # Create toolbar inside DOM.
+        navEl.prepend require('../templates/tree_buttons')
 
         #Autocomplete
         @searchField = $("#tree-search-field")
@@ -98,8 +109,8 @@ class exports.Tree
                         result: list
                 )        
 
-        # Creation of the tree with jstree
-        tree = @_convertData data
+        # Creation of the jstree
+        treeData = @_convertData data
         @treeEl = $("#tree")
         @widget = @treeEl.jstree(
             plugins: [
@@ -107,7 +118,7 @@ class exports.Tree
                 "unique", "sort", "cookies", "types",
                 "dnd", "search"
             ]
-            json_data: tree
+            json_data: treeData
             types:
                 "default":
                     valid_children: "default"
@@ -137,10 +148,6 @@ class exports.Tree
         )
     
         @setListeners( callbacks )
-
-    # Create toolbar inside DOM.
-    setToolbar: (navEl) ->
-        navEl.prepend require('../templates/tree_buttons')
  
     #for .sort() method (array)
     sortFunction = (a, b) ->
@@ -166,9 +173,9 @@ class exports.Tree
         $("#tree-rename").on "click", (e) ->
             treeEl.jstree("rename", this.parentElement.parentElement)
             e.stopPropagation()
-        $("#note-full-title").live("keypress", (e) ->
+        $("#note-full-title").live("keypress", (e) -> #TODO BJA : à déplacer ds note_view !!!
             if e.keyCode is 13
-                $("#note-full-title").trigger "blur"
+                $("#note-full-title").trigger "blur"  # rq BJA : étonnement pas besoin de preventDefault, bizare
             )
         $("#tree-remove").on "click", (e) ->
             treeEl.jstree("remove", this.parentElement.parentElement)
@@ -185,22 +192,23 @@ class exports.Tree
             tree_buttons.css("display","none")
             tree_buttons.appendTo( $("body") )
         
-        $("#note-full-title").blur =>
+        $("#note-full-title").blur =>  #TODO BJA : à déplacer ds note_view !!!
             newName = $("#note-full-title").val()
-            oldName = @currentData.inst.get_text @currentData.rslt.obj
+            oldName = @currentData.inst.get_text()
             if newName isnt "" and oldName != newName
                 @currentData.inst.rename_node(@currentData.rslt.obj, newName)
+                
                 #searching the targeted node to change his name
                 i = 0
                 while sourceList[i].name isnt oldName
                     i++
                 sourceList[i].name = newName
-                #sorting the array to place the newName
                 sourceList.sort(sortFunction)
+                
                 #See what it changes to include the code below
-                idPath = "tree-node#{@currentPath.split("/").join("-")}"
-                @currentData.rslt.obj.attr "id", idPath
-                @rebuildIds @currentData, @currentData.rslt.obj, idPath
+                idPath = @currentPath
+                # @currentData.rslt.obj.attr "id", idPath
+                @rebuildIds @currentData, @currentData.rslt.obj, idPath # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
                 callbacks.onRename @currentPath, newName, @currentData
 
         $("#search-button").click @_onSearchChanged
@@ -215,10 +223,9 @@ class exports.Tree
             object = {type: "folder", name: nodeName}
             sourceList.push object
             sourceList.sort(sortFunction)
+            
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
-            idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
-            data.rslt.obj.attr "id", idPath
             callbacks.onCreate path.join("/"), data.rslt.name, data
 
         @widget.on "rename.jstree", (e, data) =>
@@ -228,7 +235,7 @@ class exports.Tree
             if path == "all"
                 $.jstree.rollback data.rlbk
             else if data.rslt.old_name != data.rslt.new_name
-                #searching the targeted node to change his name
+                # searching the targeted node to change his name
                 i = 0
                 while sourceList[i].name isnt data.rslt.old_name
                     i++
@@ -242,11 +249,11 @@ class exports.Tree
         @widget.on "remove.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
             #searching the element to remove
-            i = 0
-            while sourceList[i].name isnt nodeName
-                i++
-            #delete the element of index i in the array of suggestions
-            sourceList.splice(i,i)
+            # i = 0
+            # while sourceList[i].name isnt nodeName
+            #     i++
+            # #delete the element of index i in the array of suggestions
+            # sourceList.splice(i,i)
             parent = data.rslt.parent
             path = @_getStringPath parent, nodeName
             if path == "all"
@@ -257,7 +264,7 @@ class exports.Tree
         @widget.on "select_node.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
             parent = data.inst._get_parent data.rslt.parent
-            path = @_getStringPath parent, nodeName
+            path = "/"+ data.rslt.obj[0].id + @_getStringPath parent, nodeName
             @currentPath = path
             @currentData = data
             callbacks.onSelect path, data.rslt.obj.data("id")
@@ -296,7 +303,9 @@ class exports.Tree
         node = $("#tree-node-#{nodePath}")
         
         tree = $("#tree").jstree("deselect_all", null)
-        tree = $("#tree").jstree("select_node", node)
+        # tree = $("#tree").jstree("select_node", node)
+        tree = $("#tree").jstree("select_node", "##{path}")  # TODOBJA : nom variable path
+
 
 
     # Returns path to a node for a given node.
@@ -349,7 +358,7 @@ class exports.Tree
                 metadata:
                     id: nodeToConvert[property].id
                 attr:
-                    id: "tree-node#{nodeIdPath}"
+                    id: nodeToConvert[property].id # TODOBJA : to improve
                     rel: "default"
                 children: []
             if parentNode.children == undefined
