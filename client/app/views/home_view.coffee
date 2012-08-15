@@ -29,7 +29,7 @@ class exports.HomeView extends Backbone.View
             resizable: true
             spacing_open: 10
             spacing_closed: 10
-        
+            togglerLength_closed: "100%"
             
         # Path to open when the tree will be loaded
         @onTreeLoaded = ->
