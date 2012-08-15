@@ -101,7 +101,8 @@ class exports.Tree
             #        'isTagAllowed', (e, data) ->
             #            console.log data.tag
             #            if /.*/.test(data.tag)
-            #                console.log $(".text-selected")                            
+            #                $(".text-tags").append(data.tag)
+            #                return false
             #    )
         # Creation of the tree with jstree
         tree = @_convertData data
