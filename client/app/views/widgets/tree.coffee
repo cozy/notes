@@ -6,6 +6,7 @@ class exports.Tree
 
     #array for the autocompletion
     sourceList = []
+    list = []
     
     cozyFilter = (array, searchString) ->
         filteredFirst = []
@@ -82,6 +83,26 @@ class exports.Tree
                                     item = item.replace(/"(.*)"/, (str, p1) -> p1)
                                 else
                                     item = item.replace(/<.*?>/g,"")
+                        ##########################################################
+                        # Modif de Florian: rendu changé pour le tag spécial
+                        ##########################################################
+                        tags:
+                            renderTag: (tag) ->
+                                self = this
+                                node = $(self.opts('html.tag'))
+
+                                node.find('.text-label').text(self.itemManager().itemToString(tag))
+
+                                if /icon-search/.test($(".text-selected")[0].innerHTML)
+                                    node.find('.text-button').addClass("tag-special")
+                                    node.find('.text-button').removeClass("text-button")
+                                    node.data('text-tag', tag)
+                                else
+                                    node.data('text-tag', tag)
+                                return node
+                        ##########################################################
+                        #fin ici
+                        ##########################################################
                 )
                 
             #every keyup(<=> getSuggestions) in the textext's input show sourceList as a
@@ -97,17 +118,7 @@ class exports.Tree
                         $(this).trigger "setSuggestions",
                         result: list
                 )
-            .bind(
-                    'addTags', (e, data) ->
-                        console.log "kikoo"
-                )
-            #.bind(
-            #        'isTagAllowed', (e, data) ->
-            #            console.log data.tag
-            #            if /.*/.test(data.tag)
-            #                $(".text-tags").append(data.tag)
-            #                return false
-            #    )
+
         # Creation of the tree with jstree
         tree = @_convertData data
         @treeEl = $("#tree")
