@@ -156,8 +156,14 @@ class exports.Tree
             ui:
                 select_limit: 1
                 # initially_select: [ "tree-node-all" ]
+            ################
+            # Modif de Florian
+            ################
             hotkeys:
                 del: false
+            ################
+            #fin ici
+            ################
             themes:
                 theme: "default"
                 dots: false
