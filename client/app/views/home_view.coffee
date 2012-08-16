@@ -15,7 +15,7 @@ class exports.HomeView extends Backbone.View
 
     # Load the home view and the tree - called once by the main-router
     initContent: (path) ->  #TODO BJA : pas patch mais id
-        
+        console.log "HomeView.initContent"
         # add the html in the element of the view
         $(@el).html require('./templates/home')
         @noteArea = $("#editor")
@@ -49,6 +49,7 @@ class exports.HomeView extends Backbone.View
 
     # Create a new folder of path : fullPath and of name : newName
     createFolder: (fullPath, newName, data) =>
+        console.log "HomeView.createFolder()"
         Note.createNote
             path : fullPath
             title: newName
@@ -60,6 +61,7 @@ class exports.HomeView extends Backbone.View
 
     # Rename currently selected node.
     renameFolder: (path, newName, data) =>
+        console.log "HomeView.renameFolder()"
         if newName?
             Note.updateNote data.rslt.obj.data("id"),
                 title: newName
@@ -69,12 +71,14 @@ class exports.HomeView extends Backbone.View
             
     # Delete currently selected node.
     deleteFolder: (path) =>
-        @noteFull.hide()
+        console.log "HomeView.deleteFolder()"
+        # @noteFull.hide()
         @currentNote.destroy()
 
     # When a note is selected, the note widget is displayed and fill with
     # note data.
     selectFolder: (path, id) =>
+        console.log "HomeView.selectFolder()"
         path = "/#{path}" if path.indexOf("/")
         app.router.navigate "note#{path}", trigger: false
         if id?
@@ -86,10 +90,12 @@ class exports.HomeView extends Backbone.View
 
     # Force selection inside tree of note represented by given path.
     selectNote: (path) ->
+        console.log "HomeView.selectNote()"
         @tree.selectNode path
 
     # Fill note widget with note data.
     renderNote: (note) ->
+        console.log "HomeView.renderNote()"
         note.url = "notes/#{note.id}"
         @currentNote = note
         noteWidget = new NoteWidget @currentNote
@@ -98,6 +104,7 @@ class exports.HomeView extends Backbone.View
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
     onNoteDropped: (newPath, oldPath, noteTitle, data) =>
+        console.log "HomeView.onNoteDropped()"
         Note.updateNote data.rslt.o.data("id"),
             path: newPath
             , () =>
