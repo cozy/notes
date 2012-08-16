@@ -6,7 +6,13 @@ class exports.Tree
 
     #array for the autocompletion
     sourceList = []
+    #############
+    # Modif de Florian: list est maintenant une variable globale
+    #############
     list = []
+    #############
+    # fin ici
+    #############
     
     cozyFilter = (array, searchString) ->
         filteredFirst = []
@@ -126,6 +132,13 @@ class exports.Tree
             plugins: [
                 "themes", "json_data", "ui", "crrm",
                 "unique", "sort", "cookies", "types",
+                ######
+                #Modif de Florian
+                ######
+                "hotkeys",
+                ######
+                #fin ici
+                ######
                 "dnd", "search"
             ]
             json_data: tree
@@ -143,6 +156,8 @@ class exports.Tree
             ui:
                 select_limit: 1
                 # initially_select: [ "tree-node-all" ]
+            hotkeys:
+                del: false
             themes:
                 theme: "default"
                 dots: false
@@ -156,7 +171,6 @@ class exports.Tree
             search:
                 show_only_matches: true
         )
-    
         @setListeners( callbacks )
 
     # Create toolbar inside DOM.
@@ -205,7 +219,7 @@ class exports.Tree
             # event & data - check the core doc of jstree for a detailed description
             tree_buttons.css("display","none")
             tree_buttons.appendTo( $("body") )
-        
+
         $("#note-full-title").blur =>
             newName = $("#note-full-title").val()
             oldName = @currentData.inst.get_text @currentData.rslt.obj
@@ -224,6 +238,9 @@ class exports.Tree
                 @rebuildIds @currentData, @currentData.rslt.obj, idPath
                 callbacks.onRename @currentPath, newName, @currentData
 
+        ##########################################################################
+        # Modif de Florian: bouton de suppression des tags dans l'input
+        ##########################################################################
         $("#suppr-button").click =>
             $(".text-tags").empty()
             $("#tree-search-field").css("padding-left", "5px")
@@ -232,6 +249,9 @@ class exports.Tree
             $(".text-prompt").css("padding-top", "3px")
             $(".text-wrap").css("height", "22px")
             $(".text-core").css("height", "22px")
+        ##########################################################################
+        # fin ici
+        ##########################################################################
         # TODO : this event occures many many times when in the tree : not the best way
         # to add the tree-buttons
         $("#tree").mouseover @_addButton
