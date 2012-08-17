@@ -18,6 +18,9 @@ class exports.NoteWidget extends Backbone.View
     remove: ->
         $(@el).remove()
 
+    initialize:->
+        console.log "NoteWidget.initialize()"
+
     ### configuration ###
     
 
@@ -43,7 +46,7 @@ class exports.NoteWidget extends Backbone.View
         #give a title to the note
         $("#note-full-title").val @model.title
         # load the base's content into the editor
-        $("#note-area").html require('./templates/editor')
+        $("#editor").html require('./templates/editor')
         myContent = @model.content
         
         # Callback to execute when the editor is ready
@@ -91,3 +94,6 @@ class exports.NoteWidget extends Backbone.View
         instEditor = new CNEditor($('#editorIframe')[0], callBackEditor)
         
         return @el
+
+    rename: (newName) ->
+

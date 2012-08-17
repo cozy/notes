@@ -5,6 +5,7 @@ slugify = require("helpers").slugify
 Properties :
     currentPath = ex : /all/coutries/great_britain  ("great_britain" is the uglified name of the note)
     currentData = data : jstree data obj sent by the select
+    currentNote_uuid : uuid of the currently selected note
     widget 
     searchField = $("#tree-search-field")
     searchButton = $("#tree-search")
@@ -39,10 +40,19 @@ class exports.Tree
                 if !(nameBold in filteredFirst)
                     filtered.push nameBold
         filteredFirst.concat(filtered)
+ 
+    #for .sort() method (array)
+    sortFunction = (a, b) ->
+        if a.name > b.name
+            1
+        else if a.name is b.name
+            0
+        else if a.name < b.name
+            -1
 
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
-    constructor: (navEl, data, callbacks) ->
+    constructor: (navEl, data, homeViewCbk) ->
         
         # Create toolbar inside DOM.
         navEl.prepend require('../templates/tree_buttons')
@@ -115,7 +125,7 @@ class exports.Tree
         @widget = @treeEl.jstree(
             plugins: [
                 "themes", "json_data", "ui", "crrm",
-                "unique", "sort", "cookies", "types",
+                "cookies", "types",
                 "dnd", "search"
             ]
             json_data: treeData
@@ -147,23 +157,15 @@ class exports.Tree
                 show_only_matches: true
         )
     
-        @setListeners( callbacks )
+        @setListeners( homeViewCbk )
+
  
-    #for .sort() method (array)
-    sortFunction = (a, b) ->
-        if a.name > b.name
-            1
-        else if a.name is b.name
-            0
-        else if a.name < b.name
-            -1
- 
-    currentPath: ""
- 
+
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection). Called by the constructor once.
-    setListeners: (callbacks) ->
+    setListeners: (homeViewCbk) ->
         
+
         # tree-buttons : they appear in nodes of the tree when mouseisover
         treeEl=@treeEl
         tree_buttons = $("#tree-buttons")
@@ -173,40 +175,22 @@ class exports.Tree
             e.preventDefault()
         $("#tree-rename").on "click", (e) ->
             treeEl.jstree("rename", this.parentElement.parentElement)
+            e.preventDefault()
             e.stopPropagation()
         $("#note-full-title").live("keypress", (e) -> #TODO BJA : à déplacer ds note_view !!!
             if e.keyCode is 13
                 $("#note-full-title").trigger "blur"  # rq BJA : étonnement pas besoin de preventDefault, bizare
             )
 
-        isMobile_tree_buttons = true
-        tree_buttons_target = $("#nav")
+        
 
         $("#tree-remove").on "click", (e) ->
             console.log "event : tree-remove.click"
             nodeToDelete = this.parentElement.parentElement.parentElement
             noteToDelete_id=nodeToDelete.id
-            # if (isMobile_tree_buttons)
-            #     # tree_buttons.css("display","none")
-            #     tree_buttons.appendTo( tree_buttons_target )
-            # remove node from the jstree
-            # treeEl.jstree("remove", nodeToDelete)
-            treeEl.jstree("remove" , nodeToDelete)
-            
-            setTimeout ->
-                console.log "setTimeout for jstree.remove"
-            , 1000
-
-
-            # loc = window.location.assign
-            # window.location.assign = -> 
-            #     console.log "_____window.location.assign_____"
-            #     loc(arguments)
-
-            # parent = treeEl.jstree("_get_parent", nodeElt)
-            # nodeName = data.inst.get_text data.rslt.obj
-            # path = @_getStringPath parent, nodeName
-            # path = ""
+            if noteToDelete_id != 'tree-node-all'
+                treeEl.jstree("remove" , nodeToDelete)
+                homeViewCbk.onRemove noteToDelete_id
 
             #searching the element to remove
             # i = 0
@@ -215,30 +199,22 @@ class exports.Tree
             # #delete the element of index i in the array of suggestions
             # sourceList.splice(i,i)
             # parent = data.rslt.parent
-            # if path == "all"
-            #     $.jstree.rollback data.rlbk
-            # else
-            callbacks.onRemove noteToDelete_id  # BJA : pourquoi transmettre path, il n'est pas utilisé par homeView.deleteFolder ...
-
+            
+            # DO NOT CHANGE  :-)
             e.preventDefault()
             e.stopPropagation()
 
 
-
-
-
         # add listeners for the tree-buttons appear & disappear when mouse is over/out
+        tree_buttons_target = $("#nav")
         @widget.on "hover_node.jstree", (event, data) ->
             # event & data - check the core doc of jstree for a detailed description
-            if (isMobile_tree_buttons)
-                tree_buttons.appendTo( data.args[0] )
-                # tree_buttons.css("display","block")
-            
+            tree_buttons.appendTo( data.args[0] )
+            tree_buttons.css("display","block")
         @widget.on "dehover_node.jstree", (event, data) ->
             # event & data - check the core doc of jstree for a detailed description
-            if (isMobile_tree_buttons)
-                # tree_buttons.css("display","none")
-                tree_buttons.appendTo( tree_buttons_target )
+            tree_buttons.css("display","none")
+            tree_buttons.appendTo( tree_buttons_target )
 
         
         $("#note-full-title").blur =>  #TODO BJA : à déplacer ds note_view !!!
@@ -259,12 +235,12 @@ class exports.Tree
                 idPath = @currentPath
                 # @currentData.rslt.obj.attr "id", idPath
                 @rebuildIds @currentData, @currentData.rslt.obj, idPath # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
-                callbacks.onRename @currentPath, newName, @currentData
+                homeViewCbk.onRename @currentPath, newName, @currentData
 
+
+        # TODO : à mettre au bon endroit
         $("#search-button").click @_onSearchChanged
-        # TODO : this event occures many many times when in the tree : not the best way
-        # to add the tree-buttons
-        # $("#tree").mouseover @_addButton
+
         
         # Tree
         @widget.on "create.jstree", (e, data) =>
@@ -277,52 +253,40 @@ class exports.Tree
             
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
-            callbacks.onCreate path.join("/"), data.rslt.name, data
+            homeViewCbk.onCreate path.join("/"), data.rslt.name, data
+
 
         @widget.on "rename.jstree", (e, data) =>
             console.log "event : rename.jstree"
-            nodeName = data.inst.get_text data.rslt.obj
-            parent = data.inst._get_parent data.rslt.parent
-            path = @_getStringPath parent, data.rslt.old_name
-            if path == "all"
+            newNodeName = data.rslt.new_name
+            oldNodeName = data.rslt.old_name
+            if newNodeName == "all"
                 $.jstree.rollback data.rlbk
-            else if data.rslt.old_name != data.rslt.new_name
+            else if oldNodeName != newNodeName
                 # searching the targeted node to change his name  TODOBJA : autocomplétion : à revoir
                 # i = 0
                 # while sourceList[i].name isnt data.rslt.old_name
                 #     i++
                 # sourceList[i].name = data.rslt.new_name
                 # sourceList.sort(sortFunction)
-                idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
-                data.rslt.obj.attr "id", idPath
-                @rebuildIds data, data.rslt.obj, idPath
-                callbacks.onRename path, data.rslt.new_name, data          
+                homeViewCbk.onRename data.rslt.obj[0].id, newNodeName
 
-        @widget.on "remove.jstree", (e, data) =>
-             console.log "event : remove.jsTree (desactivated)"
-        #     nodeName = data.inst.get_text data.rslt.obj
-        #     #searching the element to remove
-        #     # i = 0
-        #     # while sourceList[i].name isnt nodeName
-        #     #     i++
-        #     # #delete the element of index i in the array of suggestions
-        #     # sourceList.splice(i,i)
-        #     parent = data.rslt.parent
-        #     path = @_getStringPath parent, nodeName
-        #     if path == "all"
-        #         $.jstree.rollback data.rlbk
-        #     else
-        #         callbacks.onRemove path
 
         @widget.on "select_node.jstree", (e, data) =>
             console.log "event : select_node.jstree"
-            nodeName = data.inst.get_text data.rslt.obj
-            parent = data.inst._get_parent data.rslt.parent
-            path = "/"+ data.rslt.obj[0].id + @_getStringPath parent, nodeName
+            note_uuid = data.rslt.obj[0].id
+            if note_uuid == "tree-node-all"
+                path = "/all"
+            else
+                nodeName = data.inst.get_text data.rslt.obj
+                parent = data.inst._get_parent data.rslt.parent
+                path = "/"+ data.rslt.obj[0].id + @_getSlugPath parent, nodeName
             @currentPath = path
             @currentData = data
-            callbacks.onSelect path, data.rslt.obj.data("id")
+            @currentNote_uuid = note_uuid
+            homeViewCbk.onSelect path, data.rslt.obj.data("id")
                     
+
         @widget.on "move_node.jstree", (e, data) =>
             console.log "event : move_node.jstree"
             nodeName = data.inst.get_text data.rslt.o
@@ -336,12 +300,13 @@ class exports.Tree
             if newPath.length == 0
                 $.jstree.rollback data.rlbk
             else
-                callbacks.onDrop newPath.join("/"), oldPath.join("/"), \
+                homeViewCbk.onDrop newPath.join("/"), oldPath.join("/"), \
                                  nodeName, data
+
 
         @widget.on "loaded.jstree", (e, data) =>
             console.log "event : loaded.jstree"
-            callbacks.onLoaded()
+            homeViewCbk.onLoaded()
                 
 
     # Rebuild ids of obj children. 
@@ -354,13 +319,17 @@ class exports.Tree
 
 
     # Select node corresponding to given path
-    selectNode: (path) ->
-        nodePath = path.replace(/\//g, "-")
-        node = $("#tree-node-#{nodePath}")
-        
-        tree = $("#tree").jstree("deselect_all", null)
-        # tree = $("#tree").jstree("select_node", node)
-        tree = $("#tree").jstree("select_node", "##{path}")  # TODOBJA : nom variable path
+    # if note_uuid exists in the jstree it is selected
+    # otherwise if there is no seleted node, we select the root
+    selectNode: (note_uuid) ->
+        console.log "Tree.selectNode( #{note_uuid} )"
+        node = $("##{note_uuid}")
+        if node[0] 
+            tree = $("#tree").jstree("deselect_all", null)
+            tree = $("#tree").jstree("select_node", node)
+        else if !this.widget.jstree("get_selected")[0]
+            tree = $("#tree").jstree("select_node", "#tree-node-all")
+
 
 
 
@@ -377,7 +346,7 @@ class exports.Tree
         nodes
 
     # Return path for a node at string format.
-    _getStringPath: (parent, nodeName) =>
+    _getSlugPath: (parent, nodeName) =>
         @_getPath(parent, nodeName).join("/")
        
     # Convert tree coming from server to jstree format.
@@ -438,18 +407,3 @@ class exports.Tree
             #@searchTimer = setTimeout(->
             $("#tree").jstree("search", searchString)
             #, 1000) 
-
-
-    # _addButton: (event) ->
-    #     # TODO : these listeners should be set when the node is created in the tree.
-    #     $("#tree a").mouseover (e) ->
-
-    #         $("#tree-buttons").appendTo( this )
-    #         $("#tree-buttons").show()
-    #     $("#tree").mouseleave ->
-    #         # TODO : this event occurs several times when the mouse
-    #         # leaves the tree (?? shouldn't this hapen only once ??)
-    #         # besides it hapens when the mouse goes over the tree-buttons
-    #         # => not the best way to remove the tree-buttons ...
-    #         $("#tree-buttons").hide()
-
