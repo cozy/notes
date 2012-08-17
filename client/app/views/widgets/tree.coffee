@@ -175,8 +175,32 @@ class exports.Tree
                 error_callback: (node, p, func) ->
                     alert "A note has already that name: '#{node}'"
             search:
+                search_method: "jstree_contains_multi"
+                #(a,i,m) ->
+                #    console.log "kiko"
+                #    searchFor = m[3].toLowerCase().replace(/^\s+/g,'').replace(/\s+$/g,'')
+                #    if searchFor.indexOf(' ')>=0
+                #        words = searchFor.split(' ')
+                #    else
+                #        words = [searchFor]
+                #    for word in words
+                #        if (a.textContent or a.innerText or "").toLowerCase().indexOf(word)>=0
+                #            return true
+                #    return false
                 show_only_matches: true
         )
+        $.jstree.plugin("jstree_contains_multi", _fn = (a,i,m) ->
+                    console.log "kiko"
+                    searchFor = m[3].toLowerCase().replace(/^\s+/g,'').replace(/\s+$/g,'')
+                    if searchFor.indexOf(' ')>=0
+                        words = searchFor.split(' ')
+                    else
+                        words = [searchFor]
+                    for word in words
+                        if (a.textContent or a.innerText or "").toLowerCase().indexOf(word)>=0
+                            return true
+                    return false
+            )
         @setListeners( callbacks )
 
     # Create toolbar inside DOM.
@@ -214,6 +238,7 @@ class exports.Tree
         $("#tree-remove").on "click", (e) ->
             treeEl.jstree("remove", this.parentElement.parentElement)
             e.stopPropagation()
+        $("#tree-search-field").keyup @_onSearchChanged
 
         # add listeners for the tree-buttons appear & disappear when mouse is over/out
         tree_buttons = $("#tree-buttons")
@@ -418,8 +443,9 @@ class exports.Tree
     # When quick search changes, the jstree quick search function is run with
     # input val as argument.
     _onSearchChanged: (event) =>
-        searchString = $(".text-tag .text-label")[0].innerHTML
-        console.log $(".text-tag .text-label")[0].innerHTML
+        #searchString = $(".text-tag .text-label")[0].innerHTML
+        searchString = $("#tree-search-field").val()
+        #console.log $(".text-tag .text-label")[0].innerHTML
         clearTimeout @searchTimer
         if searchString is ""
             $("#tree").jstree("search", searchString)
