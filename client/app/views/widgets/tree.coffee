@@ -179,21 +179,34 @@ class exports.Tree
                 $("#note-full-title").trigger "blur"  # rq BJA : étonnement pas besoin de preventDefault, bizare
             )
 
-
+        isMobile_tree_buttons = true
+        tree_buttons_target = $("#nav")
 
         $("#tree-remove").on "click", (e) ->
             console.log "event : tree-remove.click"
-            nodeElt = this.parentElement.parentElement
-            # tree_buttons.css("display","none")
-            # tree_buttons.appendTo( $("body") )
+            nodeToDelete = this.parentElement.parentElement.parentElement
+            noteToDelete_id=nodeToDelete.id
+            # if (isMobile_tree_buttons)
+            #     # tree_buttons.css("display","none")
+            #     tree_buttons.appendTo( tree_buttons_target )
+            # remove node from the jstree
+            # treeEl.jstree("remove", nodeToDelete)
+            treeEl.jstree("remove" , nodeToDelete)
             
-            treeEl.jstree("remove", undefined)
-            # treeEl.jstree("remove", nodeElt)
+            setTimeout ->
+                console.log "setTimeout for jstree.remove"
+            , 1000
+
+
+            # loc = window.location.assign
+            # window.location.assign = -> 
+            #     console.log "_____window.location.assign_____"
+            #     loc(arguments)
 
             # parent = treeEl.jstree("_get_parent", nodeElt)
             # nodeName = data.inst.get_text data.rslt.obj
             # path = @_getStringPath parent, nodeName
-            path = ""
+            # path = ""
 
             #searching the element to remove
             # i = 0
@@ -202,11 +215,12 @@ class exports.Tree
             # #delete the element of index i in the array of suggestions
             # sourceList.splice(i,i)
             # parent = data.rslt.parent
-            if path == "all"
-                $.jstree.rollback data.rlbk
-            else
-                callbacks.onRemove path  # BJA : pourquoi transmettre path, il n'est pas utilisé par homeView.deleteFolder ...
+            # if path == "all"
+            #     $.jstree.rollback data.rlbk
+            # else
+            callbacks.onRemove noteToDelete_id  # BJA : pourquoi transmettre path, il n'est pas utilisé par homeView.deleteFolder ...
 
+            e.preventDefault()
             e.stopPropagation()
 
 
@@ -216,12 +230,16 @@ class exports.Tree
         # add listeners for the tree-buttons appear & disappear when mouse is over/out
         @widget.on "hover_node.jstree", (event, data) ->
             # event & data - check the core doc of jstree for a detailed description
-            # tree_buttons.appendTo( data.args[0] )
-            # tree_buttons.css("display","block")
+            if (isMobile_tree_buttons)
+                tree_buttons.appendTo( data.args[0] )
+                # tree_buttons.css("display","block")
+            
         @widget.on "dehover_node.jstree", (event, data) ->
             # event & data - check the core doc of jstree for a detailed description
-            # tree_buttons.css("display","none")
-            # tree_buttons.appendTo( $("body") )
+            if (isMobile_tree_buttons)
+                # tree_buttons.css("display","none")
+                tree_buttons.appendTo( tree_buttons_target )
+
         
         $("#note-full-title").blur =>  #TODO BJA : à déplacer ds note_view !!!
             console.log "event : note-full-title.blur"

@@ -70,15 +70,23 @@ class exports.HomeView extends Backbone.View
                 data.inst.select_node data.rslt.obj
             
     # Delete currently selected node.
-    deleteFolder: (path) =>
-        console.log "HomeView.deleteFolder()"
-        # @noteFull.hide()
-        @currentNote.destroy()
+    deleteFolder: (note_id) =>
+        console.log "HomeView.deleteFolder(#{note_id})"
+        console.log "  @currentNote.id(#{@currentNote.id})"
+        console.log "  @currentNote.id == note_id(#{@currentNote.id == note_id})"
+        if @currentNote.id == note_id
+            # @noteFull.hide()
+            @currentNote.destroy()
+        else
+            console.log "ready to request for deletion on server (desactivated)"
+            # Note.getNote note_id, (note) =>
+            #     console.log "Note.getNote(#{note_id}).success, ready to destroy !"
+            #     note.destroy()
 
     # When a note is selected, the note widget is displayed and fill with
     # note data.
     selectFolder: (path, id) =>
-        console.log "HomeView.selectFolder()"
+        console.log "HomeView.selectFolder(#{id})"
         path = "/#{path}" if path.indexOf("/")
         app.router.navigate "note#{path}", trigger: false
         if id?
@@ -104,7 +112,7 @@ class exports.HomeView extends Backbone.View
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
     onNoteDropped: (newPath, oldPath, noteTitle, data) =>
-        console.log "HomeView.onNoteDropped()"
+        console.log "HomeView.selectFolder()"
         Note.updateNote data.rslt.o.data("id"),
             path: newPath
             , () =>
