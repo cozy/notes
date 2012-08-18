@@ -3,14 +3,14 @@ slugify = require("helpers").slugify
 
 ### Widget to easily manipulate data tree (navigation for cozy apps)
 Properties :
-    currentPath = ex : /all/coutries/great_britain  ("great_britain" is the uglified name of the note)
-    currentData = data : jstree data obj sent by the select
+    currentPath      = ex : /all/coutries/great_britain  ("great_britain" is the uglified name of the note)
+    currentData      = data : jstree data obj sent by the select
     currentNote_uuid : uuid of the currently selected note
     widget 
-    searchField = $("#tree-search-field")
-    searchButton = $("#tree-search")
+    searchField      = $("#tree-search-field")
+    searchButton     = $("#tree-search")
     noteFull
-    treeEl = $("#tree")
+    jstreeEl         = $("#tree")
 ###
 
 class exports.Tree
@@ -49,9 +49,10 @@ class exports.Tree
             0
         else if a.name < b.name
             -1
-
+    ###*
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
+    ###
     constructor: (navEl, data, homeViewCbk) ->
         
         # Create toolbar inside DOM.
@@ -121,8 +122,8 @@ class exports.Tree
 
         # Creation of the jstree
         treeData = @_convertData data
-        @treeEl = $("#tree")
-        @widget = @treeEl.jstree(
+        @jstreeEl = $("#tree")
+        @widget = @jstreeEl.jstree(
             plugins: [
                 "themes", "json_data", "ui", "crrm",
                 "cookies", "types",
@@ -167,21 +168,20 @@ class exports.Tree
         
 
         # tree-buttons : they appear in nodes of the tree when mouseisover
-        treeEl=@treeEl
+        jstreeEl=@jstreeEl
         tree_buttons = $("#tree-buttons")
         $("#tree-create").on "click", (e) ->
-            treeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
+            jstreeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
             e.stopPropagation()
             e.preventDefault()
         $("#tree-rename").on "click", (e) ->
-            treeEl.jstree("rename", this.parentElement.parentElement)
+            jstreeEl.jstree("rename", this.parentElement.parentElement)
             e.preventDefault()
             e.stopPropagation()
         $("#note-full-title").live("keypress", (e) -> #TODO BJA : à déplacer ds note_view !!!
             if e.keyCode is 13
                 $("#note-full-title").trigger "blur"  # rq BJA : étonnement pas besoin de preventDefault, bizare
             )
-
         
 
         $("#tree-remove").on "click", (e) ->
@@ -189,7 +189,7 @@ class exports.Tree
             nodeToDelete = this.parentElement.parentElement.parentElement
             noteToDelete_id=nodeToDelete.id
             if noteToDelete_id != 'tree-node-all'
-                treeEl.jstree("remove" , nodeToDelete)
+                jstreeEl.jstree("remove" , nodeToDelete)
                 homeViewCbk.onRemove noteToDelete_id
 
             #searching the element to remove
@@ -215,27 +215,6 @@ class exports.Tree
             # event & data - check the core doc of jstree for a detailed description
             tree_buttons.css("display","none")
             tree_buttons.appendTo( tree_buttons_target )
-
-        
-        $("#note-full-title").blur =>  #TODO BJA : à déplacer ds note_view !!!
-            console.log "event : note-full-title.blur"
-            newName = $("#note-full-title").val()
-            oldName = @currentData.inst.get_text()
-            if newName isnt "" and oldName != newName
-                @currentData.inst.rename_node(@currentData.rslt.obj, newName)
-                
-                #searching the targeted node to change his name TODOBJA : autocomplétion : à revoir
-                # i = 0
-                # while sourceList[i].name isnt oldName
-                #     i++
-                # sourceList[i].name = newName
-                # sourceList.sort(sortFunction)
-                
-                #See what it changes to include the code below
-                idPath = @currentPath
-                # @currentData.rslt.obj.attr "id", idPath
-                @rebuildIds @currentData, @currentData.rslt.obj, idPath # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
-                homeViewCbk.onRename @currentPath, newName, @currentData
 
 
         # TODO : à mettre au bon endroit
@@ -329,7 +308,6 @@ class exports.Tree
             tree = $("#tree").jstree("select_node", node)
         else if !this.widget.jstree("get_selected")[0]
             tree = $("#tree").jstree("select_node", "#tree-node-all")
-
 
 
 

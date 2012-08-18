@@ -1,5 +1,5 @@
 Tree = require("./widgets/tree").Tree
-NoteWidget = require("./note_view").NoteWidget
+NoteView = require("./note_view").NoteView
 Note = require("../models/note").Note
 
 ###*
@@ -8,6 +8,9 @@ Note = require("../models/note").Note
     @treeCreationCallback 
     @noteFull
     @tree
+    @noteView
+    @treeLoaded
+    @iframeLoaded
 ###
 
 class exports.HomeView extends Backbone.View
@@ -21,8 +24,25 @@ class exports.HomeView extends Backbone.View
         
         console.log "HomeView.initContent(#{note_uuid})"
 
+        # when the tree and iframe of the editor will be loaded : select the note
+        hv = this
+        iframeLoaded = false
+        treeLoaded = false
+        onTreeLoaded = ->
+            console.log "event HomeView.onTreeLoaded #{iframeLoaded}"
+            treeLoaded = true
+            if iframeLoaded
+                app.homeView.selectNote note_uuid
+        onIFrameLoaded = ->
+            console.log "event HomeView.onIFrameLoaded #{iframeLoaded}"
+            iframeLoaded = true
+            if treeLoaded
+                hv.selectNote note_uuid
+
         # add the html in the element of the view
         $(@el).html require('./templates/home')
+        @noteView = new NoteView(onIFrameLoaded)
+        @noteView.homeView = this
         @noteFull = $("#note-full")
         @noteFull.hide()
         
@@ -34,10 +54,6 @@ class exports.HomeView extends Backbone.View
             spacing_open: 10
             spacing_closed: 10
         
-        # when the tree will be loaded : select the note
-        @onTreeLoaded = ->
-            console.log "event HomeView.onTreeLoaded"
-            app.homeView.selectNote note_uuid
 
         # creation of the tree
         $.get "tree/", (data) =>
@@ -46,7 +62,7 @@ class exports.HomeView extends Backbone.View
                     onRename: @onTreeRename
                     onRemove: @onTreeRemove
                     onSelect: @onTreeSelectionChg
-                    onLoaded: @onTreeLoaded
+                    onLoaded: onTreeLoaded
                     onDrop  : @onNoteDropped
                 )
 
@@ -64,18 +80,27 @@ class exports.HomeView extends Backbone.View
                 data.inst.deselect_all()
                 data.inst.select_node data.rslt.obj
     ###*
-    # Only called by jsTree event "rename.jstree"
-    # may rename another note than the currently selected node.
+    # Only called by jsTree event "rename.jstree" trigered when a node
+    # is renamed.
+    # May be called by another note than the currently selected node.
     ###
-    onTreeRename: (uuid, newName) ->
+    onTreeRename: (uuid, newName) =>
         console.log "HomeView.onTreeRename()"
         if newName?
-            if @tree.currentNote_uuid == note_uuid
-                d=2 
+            if @tree.currentNote_uuid == uuid
+                @noteView.setTitle(newName)
             Note.updateNote uuid,
                 title: newName
             , () =>
-            
+    
+    onNoteTitleChange:(uuid, newName) =>
+        console.log "HomeView.onNoteTitleChange()"
+        if newName?
+            @tree.jstreeEl.jstree("rename_node", "##{uuid}", newName)
+            Note.updateNote uuid,
+                title: newName
+            , () =>
+
     ###*
     # Only called by jsTree event "select_node.jstree"
     # Delete currently selected node.
@@ -111,7 +136,7 @@ class exports.HomeView extends Backbone.View
     ###*
     # Force selection inside tree of note of a given uuid.
     ###
-    selectNote: (note_uuid) ->
+    selectNote: (note_uuid) =>
         console.log "HomeView.selectNote(#{note_uuid})"
         if note_uuid=="all"
            note_uuid = 'tree-node-all'
@@ -124,8 +149,9 @@ class exports.HomeView extends Backbone.View
         console.log "HomeView.renderNote()"
         note.url = "notes/#{note.id}"
         @currentNote = note
-        noteWidget = new NoteWidget @currentNote
-        noteWidget.render()
+        # noteWidget = new NoteWidget note
+        # noteWidget.render()
+        @noteView.setModel(note)
 
     ###*
     # When note is dropped, its old path and its new path are sent to server
