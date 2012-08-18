@@ -37,6 +37,9 @@ class exports.Note extends BaseModel
     @updateNote = (id, data, callback) ->
         request "PUT", "notes/#{id}", data, callback
 
+    @deleteNote = (id, callback) ->
+        request "DELETE", "notes/#{id}", callback
+
     @moveNote = (data, callback) ->
         request "POST", "tree/path/move", data, callback
 
