@@ -1,18 +1,22 @@
 slugify = require("helpers").slugify
 
 
-# Widget to easily manipulate data tree (navigation for cozy apps)
+### Widget to easily manipulate data tree (navigation for cozy apps)
+Properties :
+    currentPath      = ex : /all/coutries/great_britain  ("great_britain" is the uglified name of the note)
+    currentData      = data : jstree data obj sent by the select
+    currentNote_uuid : uuid of the currently selected note
+    widget 
+    searchField      = $("#tree-search-field")
+    searchButton     = $("#tree-search")
+    noteFull
+    jstreeEl         = $("#tree")
+###
+
 class exports.Tree
 
     #array for the autocompletion
-    sourceList = []
-    #############
-    # Modif de Florian: list est maintenant une variable globale
-    #############
-    list = []
-    #############
-    # fin ici
-    #############
+    suggestionList = []
     
     cozyFilter = (array, searchString) ->
         filteredFirst = []
@@ -36,12 +40,46 @@ class exports.Tree
                 if !(nameBold in filteredFirst)
                     filtered.push nameBold
         filteredFirst.concat(filtered)
-
+ 
+    #for .sort() method (array)
+    sortFunction = (a, b) ->
+        if a.name > b.name
+            1
+        else if a.name is b.name
+            0
+        else if a.name < b.name
+            -1
+    
+    updateSuggestionList: (action, nodeName, oldName) ->
+        if action is "create"
+            #add nodeName to the autocomplete list
+            object = {type: "folder", name: nodeName}
+            suggestionList.push object
+            suggestionList.sort(sortFunction)   
+        else if action is "rename"
+            console.log "ICI MODAFAKA"
+            # searching the targeted node to change his name  TODOBJA : autocomplétion : à revoir
+            i = 0
+            while suggestionList[i].name isnt oldName
+                i++
+            suggestionList[i].name = nodeName
+            suggestionList.sort(sortFunction)
+        else if action is "remove"
+            #searching the element to remove
+            i = 0
+            while suggestionList[i].name isnt nodeName
+                i++
+            #delete the element of index i in the array of suggestions
+            suggestionList.splice(i,i)
+            
+    ###*
     # Initialize jsTree tree with options : sorting, create/rename/delete,
     # unique children and json data for loading.
-    constructor: (navEl, data, callbacks) ->
-        @setToolbar navEl
-
+    ###
+    constructor: (navEl, data, homeViewCbk) ->
+        
+        # Create toolbar inside DOM.
+        navEl.prepend require('../templates/tree_buttons')
 
         #Autocomplete
         @searchField = $("#tree-search-field")
@@ -75,7 +113,7 @@ class exports.Tree
                         dropdownMaxHeight : '200px',
 
                         render : (suggestion) ->
-                            selectIcon(suggestion, sourceList) + suggestion
+                            selectIcon(suggestion, suggestionList) + suggestion
                             
                     ext : 
                         itemManager: 
@@ -89,9 +127,6 @@ class exports.Tree
                                     item = item.replace(/"(.*)"/, (str, p1) -> p1)
                                 else
                                     item = item.replace(/<.*?>/g,"")
-                        ##########################################################
-                        # Modif de Florian: rendu changé pour le tag spécial
-                        ##########################################################
                         tags:
                             renderTag: (tag) ->
                                 self = this
@@ -106,42 +141,31 @@ class exports.Tree
                                 else
                                     node.data('text-tag', tag)
                                 return node
-                        ##########################################################
-                        #fin ici
-                        ##########################################################
                 )
                 
-            #every keyup(<=> getSuggestions) in the textext's input show sourceList as a
+            #every keyup(<=> getSuggestions) in the textext's input show suggestionList as a
             #autocomplete list adding a proposition of what the user is typing
             .bind(
                     'getSuggestions', (e, data) ->
                         textext = $(e.target).textext()[0]
                         query = ((if data then data.query else "")) or ""
-                        list = textext.itemManager().nameField(sourceList)
+                        list = textext.itemManager().nameField(suggestionList)
                         list = cozyFilter(list, query)
-                        #faire en sorte que ca ne devienne pas un tag
                         list = ["\"#{$("#tree-search-field").val()}\""].concat(list) 
                         $(this).trigger "setSuggestions",
                         result: list
                 )
 
-        # Creation of the tree with jstree
-        tree = @_convertData data
-        @treeEl = $("#tree")
-        @widget = @treeEl.jstree(
+        # Creation of the jstree
+        treeData = @_convertData data
+        @jstreeEl = $("#tree")
+        @widget = @jstreeEl.jstree(
             plugins: [
                 "themes", "json_data", "ui", "crrm",
                 "unique", "sort", "cookies", "types",
-                ######
-                #Modif de Florian
-                ######
-                "hotkeys",
-                ######
-                #fin ici
-                ######
-                "dnd", "search"
+                "hotkeys", "dnd", "search"
             ]
-            json_data: tree
+            json_data: treeData
             types:
                 "default":
                     valid_children: "default"
@@ -156,14 +180,8 @@ class exports.Tree
             ui:
                 select_limit: 1
                 # initially_select: [ "tree-node-all" ]
-            ################
-            # Modif de Florian
-            ################
             hotkeys:
                 del: false
-            ################
-            #fin ici
-            ################
             themes:
                 theme: "default"
                 dots: false
@@ -175,73 +193,52 @@ class exports.Tree
                 error_callback: (node, p, func) ->
                     alert "A note has already that name: '#{node}'"
             search:
-                search_method: "jstree_contains_multi"
-                #(a,i,m) ->
-                #    console.log "kiko"
-                #    searchFor = m[3].toLowerCase().replace(/^\s+/g,'').replace(/\s+$/g,'')
-                #    if searchFor.indexOf(' ')>=0
-                #        words = searchFor.split(' ')
-                #    else
-                #        words = [searchFor]
-                #    for word in words
-                #        if (a.textContent or a.innerText or "").toLowerCase().indexOf(word)>=0
-                #            return true
-                #    return false
                 show_only_matches: true
         )
-        $.jstree.plugin("jstree_contains_multi", _fn = (a,i,m) ->
-                    console.log "kiko"
-                    searchFor = m[3].toLowerCase().replace(/^\s+/g,'').replace(/\s+$/g,'')
-                    if searchFor.indexOf(' ')>=0
-                        words = searchFor.split(' ')
-                    else
-                        words = [searchFor]
-                    for word in words
-                        if (a.textContent or a.innerText or "").toLowerCase().indexOf(word)>=0
-                            return true
-                    return false
-            )
-        @setListeners( callbacks )
+    
+        @setListeners( homeViewCbk )
 
-    # Create toolbar inside DOM.
-    setToolbar: (navEl) ->
-        navEl.prepend require('../templates/tree_buttons')
  
-    #for .sort() method (array)
-    sortFunction = (a, b) ->
-        if a.name > b.name
-            1
-        else if a.name is b.name
-            0
-        else if a.name < b.name
-            -1
- 
-    currentPath: ""
- 
+
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection). Called by the constructor once.
-    setListeners: (callbacks) ->
-        
+    setListeners: (homeViewCbk) ->
+        Tree = this
+
         # tree-buttons : they appear in nodes of the tree when mouseisover
-        treeEl=@treeEl
+        jstreeEl=@jstreeEl
+        tree_buttons = $("#tree-buttons")
         $("#tree-create").on "click", (e) ->
-            treeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
+            jstreeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
             e.stopPropagation()
             e.preventDefault()
         $("#tree-rename").on "click", (e) ->
-            treeEl.jstree("rename", this.parentElement.parentElement)
+            jstreeEl.jstree("rename", this.parentElement.parentElement)
+            e.preventDefault()
             e.stopPropagation()
-        $("#note-full-title").live("keypress", (e) ->
+        $("#note-full-title").live("keypress", (e) -> #TODO BJA : à déplacer ds note_view !!!
             if e.keyCode is 13
-                $("#note-full-title").trigger "blur"
+                $("#note-full-title").trigger "blur"  # rq BJA : étonnement pas besoin de preventDefault, bizare
             )
+        
+
         $("#tree-remove").on "click", (e) ->
-            treeEl.jstree("remove", this.parentElement.parentElement)
+            console.log "event : tree-remove.click"
+            nodeToDelete = this.parentElement.parentElement.parentElement
+            Tree.updateSuggestionList("remove", this.parentElement.parentElement.text.replace(/\s/, ""), null)
+            noteToDelete_id=nodeToDelete.id
+            if noteToDelete_id != 'tree-node-all'
+                jstreeEl.jstree("remove" , nodeToDelete)
+                homeViewCbk.onRemove noteToDelete_id
+            
+            # DO NOT CHANGE  :-)
+            e.preventDefault()
             e.stopPropagation()
-        $("#tree-search-field").keyup @_onSearchChanged
+        #$("#tree-search-field").keyup @_onSearchChanged
+
 
         # add listeners for the tree-buttons appear & disappear when mouse is over/out
-        tree_buttons = $("#tree-buttons")
+        tree_buttons_target = $("#nav")
         @widget.on "hover_node.jstree", (event, data) ->
             # event & data - check the core doc of jstree for a detailed description
             tree_buttons.appendTo( data.args[0] )
@@ -249,29 +246,8 @@ class exports.Tree
         @widget.on "dehover_node.jstree", (event, data) ->
             # event & data - check the core doc of jstree for a detailed description
             tree_buttons.css("display","none")
-            tree_buttons.appendTo( $("body") )
+            tree_buttons.appendTo( tree_buttons_target )
 
-        $("#note-full-title").blur =>
-            newName = $("#note-full-title").val()
-            oldName = @currentData.inst.get_text @currentData.rslt.obj
-            if newName isnt "" and oldName != newName
-                @currentData.inst.rename_node(@currentData.rslt.obj, newName)
-                #searching the targeted node to change his name
-                i = 0
-                while sourceList[i].name isnt oldName
-                    i++
-                sourceList[i].name = newName
-                #sorting the array to place the newName
-                sourceList.sort(sortFunction)
-                #See what it changes to include the code below
-                idPath = "tree-node#{@currentPath.split("/").join("-")}"
-                @currentData.rslt.obj.attr "id", idPath
-                @rebuildIds @currentData, @currentData.rslt.obj, idPath
-                callbacks.onRename @currentPath, newName, @currentData
-
-        ##########################################################################
-        # Modif de Florian: bouton de suppression des tags dans l'input
-        ##########################################################################
         $("#suppr-button").click =>
             $(".text-tags").empty()
             $("#tree-search-field").css("padding-left", "5px")
@@ -280,68 +256,46 @@ class exports.Tree
             $(".text-prompt").css("padding-top", "3px")
             $(".text-wrap").css("height", "22px")
             $(".text-core").css("height", "22px")
-        ##########################################################################
-        # fin ici
-        ##########################################################################
-        # TODO : this event occures many many times when in the tree : not the best way
-        # to add the tree-buttons
-        $("#tree").mouseover @_addButton
+
         
         # Tree
         @widget.on "create.jstree", (e, data) =>
+            console.log "event : create.jstree"
             nodeName = data.inst.get_text data.rslt.obj
-            #add nodeName to the autocomplete list
-            object = {type: "folder", name: nodeName}
-            sourceList.push object
-            sourceList.sort(sortFunction)
+            @updateSuggestionList("create", nodeName, null)
+            
             parent = data.rslt.parent
             path = @_getPath parent, nodeName
-            idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
-            data.rslt.obj.attr "id", idPath
-            callbacks.onCreate path.join("/"), data.rslt.name, data
+            homeViewCbk.onCreate path.join("/"), data.rslt.name, data
+
 
         @widget.on "rename.jstree", (e, data) =>
-            nodeName = data.inst.get_text data.rslt.obj
-            parent = data.inst._get_parent data.rslt.parent
-            path = @_getStringPath parent, data.rslt.old_name
-            if path == "all"
+            console.log "event : rename.jstree"
+            newNodeName = data.rslt.new_name
+            oldNodeName = data.rslt.old_name
+            @updateSuggestionList("rename", newNodeName, oldNodeName)
+            if newNodeName == "all"
                 $.jstree.rollback data.rlbk
-            else if data.rslt.old_name != data.rslt.new_name
-                #searching the targeted node to change his name
-                i = 0
-                while sourceList[i].name isnt data.rslt.old_name
-                    i++
-                sourceList[i].name = data.rslt.new_name
-                sourceList.sort(sortFunction)
-                idPath = "tree-node#{@_getPath(parent, nodeName).join("-")}"
-                data.rslt.obj.attr "id", idPath
-                @rebuildIds data, data.rslt.obj, idPath
-                callbacks.onRename path, data.rslt.new_name, data          
-
-        @widget.on "remove.jstree", (e, data) =>
-            nodeName = data.inst.get_text data.rslt.obj
-            #searching the element to remove
-            i = 0
-            while sourceList[i].name isnt nodeName
-                i++
-            #delete the element of index i in the array of suggestions
-            sourceList.splice(i,i)
-            parent = data.rslt.parent
-            path = @_getStringPath parent, nodeName
-            if path == "all"
-                $.jstree.rollback data.rlbk
-            else
-                callbacks.onRemove path
+            else if oldNodeName != newNodeName
+                homeViewCbk.onRename data.rslt.obj[0].id, newNodeName
 
         @widget.on "select_node.jstree", (e, data) =>
-            nodeName = data.inst.get_text data.rslt.obj
-            parent = data.inst._get_parent data.rslt.parent
-            path = @_getStringPath parent, nodeName
+            console.log "event : select_node.jstree"
+            note_uuid = data.rslt.obj[0].id
+            if note_uuid == "tree-node-all"
+                path = "/all"
+            else
+                nodeName = data.inst.get_text data.rslt.obj
+                parent = data.inst._get_parent data.rslt.parent
+                path = "/"+ data.rslt.obj[0].id + @_getSlugPath parent, nodeName
             @currentPath = path
             @currentData = data
-            callbacks.onSelect path, data.rslt.obj.data("id")
+            @currentNote_uuid = note_uuid
+            homeViewCbk.onSelect path, data.rslt.obj.data("id")
                     
+
         @widget.on "move_node.jstree", (e, data) =>
+            console.log "event : move_node.jstree"
             nodeName = data.inst.get_text data.rslt.o
             parent = data.inst._get_parent data.rslt.o
             newPath = @_getPath parent, nodeName
@@ -353,33 +307,30 @@ class exports.Tree
             if newPath.length == 0
                 $.jstree.rollback data.rlbk
             else
-                callbacks.onDrop newPath.join("/"), oldPath.join("/"), \
+                homeViewCbk.onDrop newPath.join("/"), oldPath.join("/"), \
                                  nodeName, data
 
+
         @widget.on "loaded.jstree", (e, data) =>
-            callbacks.onLoaded()
-                
-
-    # Rebuild ids of obj children. 
-    # Not sure about the efficiency of this function
-    rebuildIds: (data, obj, idPath) ->
-        for child in data.inst._get_children obj
-            newIdPath = idPath + "-" + slugify($(child).children("a:eq(0)").text())
-            $(child).attr "id", newIdPath
-            @rebuildIds data, child, newIdPath
-
+            console.log "event : loaded.jstree"
+            homeViewCbk.onLoaded()
 
     # Select node corresponding to given path
-    selectNode: (path) ->
-        nodePath = path.replace(/\//g, "-")
-        node = $("#tree-node-#{nodePath}")
-        
-        tree = $("#tree").jstree("deselect_all", null)
-        tree = $("#tree").jstree("select_node", node)
+    # if note_uuid exists in the jstree it is selected
+    # otherwise if there is no seleted node, we select the root
+    selectNode: (note_uuid) ->
+        console.log "Tree.selectNode( #{note_uuid} )"
+        node = $("##{note_uuid}")
+        if node[0] 
+            tree = $("#tree").jstree("deselect_all", null)
+            tree = $("#tree").jstree("select_node", node)
+        else if !this.widget.jstree("get_selected")[0]
+            tree = $("#tree").jstree("select_node", "#tree-node-all")
+
 
 
     # Returns path to a node for a given node.
-    # data.inst is the js tree instance
+    # data.inst is the jstree instance
     _getPath: (parent, nodeName) ->
         nodes = [slugify nodeName] if nodeName?
 
@@ -391,7 +342,7 @@ class exports.Tree
         nodes
 
     # Return path for a node at string format.
-    _getStringPath: (parent, nodeName) =>
+    _getSlugPath: (parent, nodeName) =>
         @_getPath(parent, nodeName).join("/")
        
     # Convert tree coming from server to jstree format.
@@ -419,16 +370,13 @@ class exports.Tree
         for property of nodeToConvert when \
                 property isnt "name" and property isnt "id"
             nodeIdPath = "#{idpath}-#{property.replace(/_/g, "-")}"
-            #updating autocompletion's array
-            object = {type: "folder", name: nodeToConvert[property].name}
-            sourceList.push object
-            sourceList.sort(sortFunction)
+            @updateSuggestionList("create", nodeToConvert[property].name, null)
             newNode =
                 data: nodeToConvert[property].name
                 metadata:
                     id: nodeToConvert[property].id
                 attr:
-                    id: "tree-node#{nodeIdPath}"
+                    id: nodeToConvert[property].id # TODOBJA : to improve
                     rel: "default"
                 children: []
             if parentNode.children == undefined
@@ -443,9 +391,8 @@ class exports.Tree
     # When quick search changes, the jstree quick search function is run with
     # input val as argument.
     _onSearchChanged: (event) =>
-        #searchString = $(".text-tag .text-label")[0].innerHTML
-        searchString = $("#tree-search-field").val()
-        #console.log $(".text-tag .text-label")[0].innerHTML
+        searchString = $(".text-tag .text-label")[0].innerHTML
+        #searchString = $("#tree-search-field").val()
         clearTimeout @searchTimer
         if searchString is ""
             $("#tree").jstree("search", searchString)
@@ -453,18 +400,3 @@ class exports.Tree
             @searchTimer = setTimeout(->
             $("#tree").jstree("search", searchString)
             , 1000) 
-
-
-    _addButton: (event) ->
-        # TODO : these listeners should be set when the node is created in the tree.
-        $("#tree a").mouseover (e) ->
-
-            $("#tree-buttons").appendTo( this )
-            $("#tree-buttons").show()
-        $("#tree").mouseleave ->
-            # TODO : this event occurs several times when the mouse
-            # leaves the tree (?? shouldn't this hapen only once ??)
-            # besides it hapens when the mouse goes over the tree-buttons
-            # => not the best way to remove the tree-buttons ...
-            $("#tree-buttons").hide()
-
