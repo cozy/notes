@@ -1,7 +1,7 @@
 template = require('./templates/note')
 CNEditor = require('./editor').CNEditor
 Note = require('../models/note').Note
-Test = require('./widgets/tree')
+TreeInst = require('./widgets/tree')
 
 ###*
 model
@@ -30,7 +30,6 @@ class exports.NoteView extends Backbone.View
         console.log "NoteWidget.initialize()"
         # load the base's content into the editor
         $("#editor").html require('./templates/editor')
-        console.log Test.Tree.prototype.updateSuggestionList
         # Callback to execute when the editor is ready
         # this refers to the editor during instanciation
         @model     = undefined
@@ -84,7 +83,7 @@ class exports.NoteView extends Backbone.View
             oldName = @model.title
             if newName isnt "" and oldName != newName
                 @homeView.onNoteTitleChange(@model.id, newName)
-                Test.Tree.prototype.updateSuggestionList("rename", newName, oldName)
+                TreeInst.Tree.prototype.updateSuggestionList("rename", newName, oldName)
                 @updateBreadcrum()
                 
                 # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
