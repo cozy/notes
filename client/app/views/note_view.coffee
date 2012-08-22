@@ -44,6 +44,7 @@ class exports.NoteView extends Backbone.View
         @editorCtrl=editorCtrl
 
         # buttons for the editor
+
         $("#indentBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.tab()
@@ -76,6 +77,11 @@ class exports.NoteView extends Backbone.View
             @model.saveContent editorCtrl.getEditorContent()
             if saveButton.hasClass("btn-primary")
                 saveButton.addClass("active btn-info").removeClass("btn-primary")
+
+        $("#note-full-title").live("keypress", (e) ->
+            if e.keyCode is 13
+                $("#note-full-title").trigger "blur"
+            )
 
         $("#note-full-title").blur => 
             console.log "event : note-full-title.blur"

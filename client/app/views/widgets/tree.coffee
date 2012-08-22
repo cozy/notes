@@ -15,18 +15,35 @@ Properties :
 
 class exports.Tree
 
-    #array for the autocompletion
+    #Autocompletion
+
+    #suggestionList is a global array containing all the suggestions for the
+    #autocompletion plugin
+    #this array contains objects with the nature of the suggestion
+    #(folder, tag, search string...) and the string corresponding to the suggestion
     suggestionList = []
     
+    #this function allow to select what appears in the suggestion list while
+    #the user type something in the search input
+    #entries : array of suggestions, current string in the search input
+    #outputs : an array containing strings corresponding to suggestions 
+    #depending on the searchstring
     cozyFilter = (array, searchString) ->
+        #the output is separated in two parts : the strings which begin with the
+        #search string then the strings which contain the search string
         filteredFirst = []
         filtered = []
+        #set regular expression with the characters of the search strings
         regSentence = ""
         for char in searchString
             regSentence += ".*(#{char})"
+        #matches the suggestions which begin with searchString
         expFirst = new RegExp("^#{searchString}","i")
+        #matches the suggestions which contain searchString
         expBold = new RegExp("([#{searchString}])","gi")
         exp = new RegExp(regSentence,"i")
+        #completing and ordering the output array plus adding bold characters
+        #which match the searchString
         for name in array
             if expFirst.test(name)
                 nameBold = name.replace(expBold, (match, p1) ->
@@ -41,7 +58,7 @@ class exports.Tree
                     filtered.push nameBold
         filteredFirst.concat(filtered)
  
-    #for .sort() method (array)
+    #used by the .sort() method to be efficient with our structure
     sortFunction = (a, b) ->
         if a.name > b.name
             1
@@ -50,6 +67,13 @@ class exports.Tree
         else if a.name < b.name
             -1
     
+    #this method update the array suggestionList when the user add, rename or remove
+    #a node
+    #entries: action : neither create, rename or remove,
+    #nodeName : in case of create and remove : the name of the new note or the note to remove
+    # in case of rename : the new name of the note
+    #oldName : only for rename : the name that will be replaced in the note
+    #output : suggestionList updated
     updateSuggestionList: (action, nodeName, oldName) ->
         if action is "create"
             #add nodeName to the autocomplete list
@@ -57,8 +81,6 @@ class exports.Tree
             suggestionList.push object
             suggestionList.sort(sortFunction)   
         else if action is "rename"
-            console.log "ICI MODAFAKA"
-            # searching the targeted node to change his name  TODOBJA : autocomplétion : à revoir
             i = 0
             while suggestionList[i].name isnt oldName
                 i++
@@ -81,12 +103,11 @@ class exports.Tree
         # Create toolbar inside DOM.
         navEl.prepend require('../templates/tree_buttons')
 
-        #Autocomplete
-        @searchField = $("#tree-search-field")
-        @searchButton = $("#tree-search")
-        @noteFull = $("#note-full")
-
-        #attach an icon to a type of the elements in the autocomplete list
+        #used by textext to change the render of the suggestion list
+        #attach an icon to a certain type in the autocomplete list
+        #entries : suggestion : a string which is the suggestion, 
+        #array : the array is suggestionList containing all the suggestions
+        # possible and their nature
         selectIcon = (suggestion, array) ->
             if suggestion is "\"#{$("#tree-search-field").val()}\""
                 "<i class='icon-search'></i>"
@@ -102,13 +123,11 @@ class exports.Tree
 
         $("#tree-search-field")
             .textext(
-                    #add ajax for database search
+
                     plugins : 'tags prompt focus autocomplete'
+                    
                     prompt : 'Search...'
-                    #ajax :
-                    #    url : '/manual/examples/data.json'
-                    #    dataType : 'json'
-                    #    cacheResults : true
+                    
                     autocomplete : 
                         dropdownMaxHeight : '200px',
 
@@ -122,6 +141,8 @@ class exports.Tree
                                 for i in array
                                     retArray.push i.name
                                 retArray
+                            #changing the content of a tag to avoid the view of 
+                            #balises in it
                             itemToString: (item) ->
                                 if /".*"/.test(item)
                                     item = item.replace(/"(.*)"/, (str, p1) -> p1)
@@ -147,13 +168,21 @@ class exports.Tree
             #autocomplete list adding a proposition of what the user is typing
             .bind(
                     'getSuggestions', (e, data) ->
+                        
                         textext = $(e.target).textext()[0]
                         query = ((if data then data.query else "")) or ""
                         list = textext.itemManager().nameField(suggestionList)
                         list = cozyFilter(list, query)
                         list = ["\"#{$("#tree-search-field").val()}\""].concat(list) 
+                        treeHeight = list.length*22 + 10
+                        $("#tree").css("margin-top", treeHeight)
                         $(this).trigger "setSuggestions",
                         result: list
+                )
+            .bind(
+                    'isTagAllowed', (e, data) ->
+                        $("#tree").css("margin-top", 10)
+                        $("#suppr-button").css("display","block")
                 )
 
         # Creation of the jstree
@@ -203,7 +232,6 @@ class exports.Tree
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection). Called by the constructor once.
     setListeners: (homeViewCbk) ->
-        Tree = this
 
         # tree-buttons : they appear in nodes of the tree when mouseisover
         jstreeEl=@jstreeEl
@@ -216,10 +244,6 @@ class exports.Tree
             jstreeEl.jstree("rename", this.parentElement.parentElement)
             e.preventDefault()
             e.stopPropagation()
-        $("#note-full-title").live("keypress", (e) -> #TODO BJA : à déplacer ds note_view !!!
-            if e.keyCode is 13
-                $("#note-full-title").trigger "blur"  # rq BJA : étonnement pas besoin de preventDefault, bizare
-            )
         
 
         $("#tree-remove").on "click", (e) ->
@@ -235,7 +259,10 @@ class exports.Tree
             e.preventDefault()
             e.stopPropagation()
         #$("#tree-search-field").keyup @_onSearchChanged
-
+        $("#tree-search-field").live("keypress", (e) ->
+            if e.keyCode is 8 and $(".text-tags").children()[0] is undefined and $("#tree-search-field").val() is ""
+                $("#suppr-button").css("display","none")
+            )
 
         # add listeners for the tree-buttons appear & disappear when mouse is over/out
         tree_buttons_target = $("#nav")
@@ -248,6 +275,9 @@ class exports.Tree
             tree_buttons.css("display","none")
             tree_buttons.appendTo( tree_buttons_target )
 
+        $("#tree-search-field").blur ->
+            $("#tree").css("margin-top", 10)
+
         $("#suppr-button").click =>
             $(".text-tags").empty()
             $("#tree-search-field").css("padding-left", "5px")
@@ -256,6 +286,8 @@ class exports.Tree
             $(".text-prompt").css("padding-top", "3px")
             $(".text-wrap").css("height", "22px")
             $(".text-core").css("height", "22px")
+            $(".text-dropdown").css("top", "22px")
+            $("#suppr-button").css("display","none")
 
         
         # Tree

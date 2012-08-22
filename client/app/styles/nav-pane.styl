@@ -15,6 +15,7 @@
 #tree
     font-size 14px
     background-color transparent
+    margin-top 10px
 
 #tree li
     padding 0 // padding arround the content of a list item (leaf of the tree)
@@ -60,13 +61,25 @@
     padding-right: 5px
 
 .tag-special
-    background-color: #90EE90
-    border: 1px solid #9DCC9E
-    border-radius: 2px 2px 2px 2px
+    background-color: white
+    border: none
     margin: 0 2px 2px 0;
-    padding: 0 3px 0 3px;
+    padding: 0 1px 0 1px;
     color: #000000
     font: 11px "lucida grande",tahoma,verdana,arial,sans-serif
+
+#tree-search-field
+    width: 200px
+    padding-right: 20px
+    
+#suppr-button
+    position: absolute
+    top: 23px
+    left: 202px
+    z-index: 2
+    
+#suppr-button:hover
+    cursor: pointer
 
 // separator between nav-pane and content-pane
 .ui-layout-west
