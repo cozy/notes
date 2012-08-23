@@ -14,20 +14,24 @@ Properties :
 ###
 
 class exports.Tree
-
+    
+    ###*
     #Autocompletion
-
+    #
     #suggestionList is a global array containing all the suggestions for the
     #autocompletion plugin
     #this array contains objects with the nature of the suggestion
     #(folder, tag, search string...) and the string corresponding to the suggestion
+    ###
     suggestionList = []
     
+    ###*
     #this function allow to select what appears in the suggestion list while
     #the user type something in the search input
     #entries : array of suggestions, current string in the search input
     #outputs : an array containing strings corresponding to suggestions 
     #depending on the searchstring
+    ###
     cozyFilter = (array, searchString) ->
         #the output is separated in two parts : the strings which begin with the
         #search string then the strings which contain the search string
@@ -57,8 +61,9 @@ class exports.Tree
                 if !(nameBold in filteredFirst)
                     filtered.push nameBold
         filteredFirst.concat(filtered)
- 
+    ###*
     #used by the .sort() method to be efficient with our structure
+    ###
     sortFunction = (a, b) ->
         if a.name > b.name
             1
@@ -66,7 +71,7 @@ class exports.Tree
             0
         else if a.name < b.name
             -1
-    
+    ###*
     #this method update the array suggestionList when the user add, rename or remove
     #a node
     #entries: action : neither create, rename or remove,
@@ -74,6 +79,7 @@ class exports.Tree
     # in case of rename : the new name of the note
     #oldName : only for rename : the name that will be replaced in the note
     #output : suggestionList updated
+    ###
     updateSuggestionList: (action, nodeName, oldName) ->
         if action is "create"
             #add nodeName to the autocomplete list
@@ -259,7 +265,7 @@ class exports.Tree
             # DO NOT CHANGE  :-)
             e.preventDefault()
             e.stopPropagation()
-        #$("#tree-search-field").keyup @_onSearchChanged
+        $("#tree-search-field").keyup @_onSearchChanged
         $("#tree-search-field").live("keypress", (e) ->
             if e.keyCode is 8 and $(".text-tags").children()[0] is undefined and $("#tree-search-field").val() is ""
                 $("#suppr-button").css("display","none")
@@ -427,11 +433,11 @@ class exports.Tree
     # When quick search changes, the jstree quick search function is run with
     # input val as argument.
     _onSearchChanged: (event) =>
-        searchString = $(".text-tag .text-label")[0].innerHTML
-        #searchString = $("#tree-search-field").val()
+        #searchString = $(".text-tag .text-label")[0].innerHTML
+        searchString = $("#tree-search-field").val()
         clearTimeout @searchTimer
         if searchString is ""
-            $("#tree").jstree("search", searchString)
+            console.log $("#tree").jstree("search", searchString)
         else
             @searchTimer = setTimeout(->
             $("#tree").jstree("search", searchString)
