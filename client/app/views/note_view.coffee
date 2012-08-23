@@ -95,7 +95,6 @@ class exports.NoteView extends Backbone.View
                 # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
                 # @rebuildIds @currentData, @currentData.rslt.obj, @currentPath 
 
-
     setModel : (noteModel) ->
         @model = noteModel
         @setTitle(noteModel.title)

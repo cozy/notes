@@ -313,6 +313,7 @@ class exports.Tree
 
         @widget.on "select_node.jstree", (e, data) =>
             console.log "event : select_node.jstree"
+            $(".bar").css("width","60%")
             note_uuid = data.rslt.obj[0].id
             if note_uuid == "tree-node-all"
                 path = "/all"
@@ -345,6 +346,7 @@ class exports.Tree
 
         @widget.on "loaded.jstree", (e, data) =>
             console.log "event : loaded.jstree"
+            $(".bar").css("width","20%")
             homeViewCbk.onLoaded()
 
     # Select node corresponding to given path
@@ -352,6 +354,7 @@ class exports.Tree
     # otherwise if there is no seleted node, we select the root
     selectNode: (note_uuid) ->
         console.log "Tree.selectNode( #{note_uuid} )"
+        $(".bar").css("width","50%")
         node = $("##{note_uuid}")
         if node[0] 
             tree = $("#tree").jstree("deselect_all", null)

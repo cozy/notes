@@ -3,7 +3,7 @@ NoteView = require("./note_view").NoteView
 Note = require("../models/note").Note
 
 ###*
-# Main view that manages interaction between toolbar, navigation and notes
+# Main view that manages interaction between tool$(".bar"), navigation and notes
     id : ='home-view'
     @treeCreationCallback 
     @noteFull
@@ -30,11 +30,13 @@ class exports.HomeView extends Backbone.View
         treeLoaded = false
         onTreeLoaded = ->
             console.log "event HomeView.onTreeLoaded #{iframeLoaded}"
+            $(".bar").css("width","30%")
             treeLoaded = true
             if iframeLoaded
                 app.homeView.selectNote note_uuid
         onIFrameLoaded = ->
             console.log "event HomeView.onIFrameLoaded #{iframeLoaded}"
+            $(".bar").css("width","10%")
             iframeLoaded = true
             if treeLoaded
                 hv.selectNote note_uuid
@@ -54,7 +56,18 @@ class exports.HomeView extends Backbone.View
             spacing_open: 10
             spacing_closed: 10
             togglerLength_closed: "100%"
-            
+        
+        #Progress bar
+        $(".ui-layout-center").append(
+            "<div class='progress progress-striped active'>
+                <div class='bar' style='width: 0%;'></div>
+            </div>")
+        @progress = $(".progress")
+        progressBarLeftPosition = $(".ui-layout-center").width()/3-77
+        progressBarTopPosition = $(".ui-layout-center").height()/2
+        @progress.css("left", progressBarLeftPosition)
+        @progress.css("top", progressBarTopPosition)
+        
         # Path to open when the tree will be loaded
         #@onTreeLoaded = ->
         #    app.homeView.selectNote path
@@ -129,6 +142,7 @@ class exports.HomeView extends Backbone.View
     onTreeSelectionChg: (path, id) =>
     # selectFolder: (path, id) =>
         console.log "HomeView.selectFolder( path:#{path} - id:#{id})"
+        $(".bar").css("width","70%")
         path = "/#{path}" if path.indexOf("/")
         app.router.navigate "note#{path}", trigger: false
         if id?
@@ -143,6 +157,7 @@ class exports.HomeView extends Backbone.View
     ###
     selectNote: (note_uuid) =>
         console.log "HomeView.selectNote(#{note_uuid})"
+        $(".bar").css("width","40%")
         if note_uuid=="all"
            note_uuid = 'tree-node-all'
         @tree.selectNode note_uuid
@@ -152,11 +167,15 @@ class exports.HomeView extends Backbone.View
     ###
     renderNote: (note) ->
         console.log "HomeView.renderNote()"
+        $(".bar").css("width","90%")
         note.url = "notes/#{note.id}"
         @currentNote = note
         # noteWidget = new NoteWidget note
         # noteWidget.render()
         @noteView.setModel(note)
+        #removing progress bar
+        @progress.remove()
+
 
     ###*
     # When note is dropped, its old path and its new path are sent to server
