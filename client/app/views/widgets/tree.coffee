@@ -232,6 +232,7 @@ class exports.Tree
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection). Called by the constructor once.
     setListeners: (homeViewCbk) ->
+        Tree = this
 
         # tree-buttons : they appear in nodes of the tree when mouseisover
         jstreeEl=@jstreeEl
