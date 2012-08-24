@@ -142,7 +142,11 @@ class exports.HomeView extends Backbone.View
     onTreeSelectionChg: (path, id) =>
     # selectFolder: (path, id) =>
         console.log "HomeView.selectFolder( path:#{path} - id:#{id})"
-        $(".bar").css("width","70%")
+        if id is undefined
+            #removing progress bar
+            @progress.remove()
+        else
+            $(".bar").css("width","70%")
         path = "/#{path}" if path.indexOf("/")
         app.router.navigate "note#{path}", trigger: false
         if id?

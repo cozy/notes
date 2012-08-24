@@ -202,9 +202,9 @@ class exports.Tree
             ]
             json_data: treeData
             types:
-                "default":
+                default:
                     valid_children: "default"
-                "root":
+                root:
                     valid_children: null
                     delete_node: false
                     rename_node: false
@@ -228,6 +228,7 @@ class exports.Tree
                 error_callback: (node, p, func) ->
                     alert "A note has already that name: '#{node}'"
             search:
+                search_method: "jstree_contains_multi"
                 show_only_matches: true
         )
     
@@ -433,12 +434,13 @@ class exports.Tree
     # When quick search changes, the jstree quick search function is run with
     # input val as argument.
     _onSearchChanged: (event) =>
-        #searchString = $(".text-tag .text-label")[0].innerHTML
-        searchString = $("#tree-search-field").val()
+        searchString = ""
+        for string in $(".text-tag .text-label")
+            searchString += "_#{string.innerHTML}"
         clearTimeout @searchTimer
         if searchString is ""
-            console.log $("#tree").jstree("search", searchString)
+            $("#tree").jstree("search", searchString)
         else
             @searchTimer = setTimeout(->
-            $("#tree").jstree("search", searchString)
+                $("#tree").jstree("search", searchString)
             , 1000) 
