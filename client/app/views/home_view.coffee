@@ -171,7 +171,6 @@ class exports.HomeView extends Backbone.View
     ###
     renderNote: (note, data) ->
         console.log "HomeView.renderNote()"
-        console.log note
         $(".bar").css("width","90%")
         note.url = "notes/#{note.id}"
         @currentNote = note

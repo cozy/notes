@@ -105,7 +105,7 @@ class exports.NoteView extends Backbone.View
 
     setTitle : (nTitle) ->
         #give a title to the note
-        $("#note-full-title").val @model.title
+        $("#note-full-title").val nTitle
 
 
     setContent : (content) ->
