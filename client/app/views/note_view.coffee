@@ -33,6 +33,7 @@ class exports.NoteView extends Backbone.View
         # Callback to execute when the editor is ready
         # this refers to the editor during instanciation
         @model     = undefined
+        model      = undefined
         saveTimer  = null
         saveButton = $("#save-editor-content")
         
@@ -74,7 +75,7 @@ class exports.NoteView extends Backbone.View
 
         $("#save-editor-content").on "click", () ->
             clearTimeout(saveTimer)
-            @model.saveContent editorCtrl.getEditorContent()
+            model.saveContent editorCtrl.getEditorContent()
             if saveButton.hasClass("btn-primary")
                 saveButton.addClass("active btn-info").removeClass("btn-primary")
 
@@ -90,16 +91,16 @@ class exports.NoteView extends Backbone.View
             if newName isnt "" and oldName != newName
                 @homeView.onNoteTitleChange(@model.id, newName)
                 TreeInst.Tree.prototype.updateSuggestionList("rename", newName, oldName)
-                @updateBreadcrum()
+                @updateBreadcrumb(newName)
                 
                 # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
                 # @rebuildIds @currentData, @currentData.rslt.obj, @currentPath 
 
-    setModel : (noteModel) ->
+    setModel : (noteModel, data) ->
         @model = noteModel
         @setTitle(noteModel.title)
         @setContent(noteModel.content)
-        @updateBreadcrum()
+        @createBreadcrumb(noteModel, data)
 
 
     setTitle : (nTitle) ->
@@ -115,24 +116,23 @@ class exports.NoteView extends Backbone.View
             @editorCtrl.deleteContent()
 
 
-    updateBreadcrum : ->
+    createBreadcrumb : (noteModel, data) ->
         #breadcrumb will contain the path of the selected note in a link format(<a>)
         # the code below generates the breadcrumb corresponding
         # to the current note path
-            i = 0
+            i = noteModel.humanPath.split(",").length - 1
             breadcrumb = ""
             linkToThePath = []
-            while i < @model.humanPath.split(",").length
-                linkToThePath[i] = @model.humanPath.split(",")[0..i].join("/")
-                path = "/#note/#{linkToThePath[i]}".toLowerCase()
-                path = path.replace(/\s+/g, "-")
-                linkToThePath[i] = "<a href='#{path}'> #{@model.humanPath.split(",")[i]}</a>"
-                if i is 0
-                    breadcrumb += "#{linkToThePath[i]}"
-                else
-                    breadcrumb += " > #{linkToThePath[i]}"
-                i++
+            parent = undefined
+            while i >= 1
+                parent = data.inst._get_parent(parent)
+                path = "/#note/#{parent[0].id}"
+                breadcrumb = "<a href='#{path}'> #{noteModel.humanPath.split(",")[i-1]}</a> > #{breadcrumb}"
+                i--
+            path = "/#note/#{noteModel.id}"
+            breadcrumb = "#{breadcrumb} <a href='#{path}' > #{noteModel.title}</a>"
                 
             $("#note-full-breadcrumb").html breadcrumb
 
-
+    updateBreadcrumb : (newName) ->
+        $("#note-full-breadcrumb a:last").text(newName)

@@ -50,8 +50,8 @@ class exports.HomeView extends Backbone.View
         
         # Use jquery layout to set main layout of current window.
         $('#home-view').layout
-            size: "350"
-            minSize: "350"
+            size: "250"
+            minSize: "250"
             resizable: true
             spacing_open: 10
             spacing_closed: 10
@@ -106,7 +106,7 @@ class exports.HomeView extends Backbone.View
         if newName?
             if @tree.currentNote_uuid == uuid
                 @noteView.setTitle(newName)
-                @noteView.updateBreadcrum
+                @noteView.updateBreadcrumb(newName)
             Note.updateNote uuid,
                 title: newName
             , () =>
@@ -139,7 +139,7 @@ class exports.HomeView extends Backbone.View
     # When a node is selected, the note widget is displayed and fill with
     # note data.
     ###
-    onTreeSelectionChg: (path, id) =>
+    onTreeSelectionChg: (path, id, data) =>
     # selectFolder: (path, id) =>
         console.log "HomeView.selectFolder( path:#{path} - id:#{id})"
         if id is undefined
@@ -151,7 +151,7 @@ class exports.HomeView extends Backbone.View
         app.router.navigate "note#{path}", trigger: false
         if id?
             Note.getNote id, (note) =>
-                @renderNote note
+                @renderNote note, data
                 @noteFull.show()
         else
             @noteFull.hide()
@@ -169,14 +169,15 @@ class exports.HomeView extends Backbone.View
     ###*
     # Fill note widget with note data.
     ###
-    renderNote: (note) ->
+    renderNote: (note, data) ->
         console.log "HomeView.renderNote()"
+        console.log note
         $(".bar").css("width","90%")
         note.url = "notes/#{note.id}"
         @currentNote = note
         # noteWidget = new NoteWidget note
         # noteWidget.render()
-        @noteView.setModel(note)
+        @noteView.setModel(note, data)
         #removing progress bar
         @progress.remove()
 

@@ -268,9 +268,12 @@ class exports.Tree
             e.stopPropagation()
         $("#tree-search-field").keyup @_onSearchChanged
         $("#tree-search-field").live("keypress", (e) ->
-            if e.keyCode is 8 and $(".text-tags").children()[0] is undefined and $("#tree-search-field").val() is ""
+            if $(".text-tags").children()[0] is undefined and $("#tree-search-field").val() is ""
                 $("#suppr-button").css("display","none")
             )
+
+        $("#tree-search-field").blur ->
+            $("#tree").css("margin-top", 10)
 
         # add listeners for the tree-buttons appear & disappear when mouse is over/out
         tree_buttons_target = $("#nav")
@@ -281,10 +284,7 @@ class exports.Tree
         @widget.on "dehover_node.jstree", (event, data) ->
             # event & data - check the core doc of jstree for a detailed description
             tree_buttons.css("display","none")
-            tree_buttons.appendTo( tree_buttons_target )
-
-        $("#tree-search-field").blur ->
-            $("#tree").css("margin-top", 10)
+            tree_buttons.appendTo( tree_buttons_target )  
 
         $("#suppr-button").click =>
             $(".text-tags").empty()
@@ -296,6 +296,7 @@ class exports.Tree
             $(".text-core").css("height", "22px")
             $(".text-dropdown").css("top", "22px")
             $("#suppr-button").css("display","none")
+            $("#tree").jstree("search", "")
 
         
         # Tree
@@ -327,12 +328,12 @@ class exports.Tree
                 path = "/all"
             else
                 nodeName = data.inst.get_text data.rslt.obj
-                parent = data.inst._get_parent data.rslt.parent
+                parent = data.inst._get_parent()
                 path = "/"+ data.rslt.obj[0].id + @_getSlugPath parent, nodeName
             @currentPath = path
             @currentData = data
             @currentNote_uuid = note_uuid
-            homeViewCbk.onSelect path, data.rslt.obj.data("id")
+            homeViewCbk.onSelect path, data.rslt.obj.data("id"), data
                     
 
         @widget.on "move_node.jstree", (e, data) =>
@@ -437,10 +438,9 @@ class exports.Tree
         searchString = ""
         for string in $(".text-tag .text-label")
             searchString += "_#{string.innerHTML}"
+            console.log searchString
         clearTimeout @searchTimer
         if searchString is ""
             $("#tree").jstree("search", searchString)
         else
-            @searchTimer = setTimeout(->
-                $("#tree").jstree("search", searchString)
-            , 1000) 
+            $("#tree").jstree("search", searchString)
