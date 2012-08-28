@@ -28,7 +28,7 @@ class exports.Tree
     ###*
     #this function allow to select what appears in the suggestion list while
     #the user type something in the search input
-    #entries : array of suggestions, current string in the search input
+    #input : array of suggestions, current string in the search input
     #outputs : an array containing strings corresponding to suggestions 
     #depending on the searchstring
     ###
@@ -61,6 +61,7 @@ class exports.Tree
                 if !(nameBold in filteredFirst)
                     filtered.push nameBold
         filteredFirst.concat(filtered)
+    
     ###*
     #used by the .sort() method to be efficient with our structure
     ###
@@ -74,7 +75,7 @@ class exports.Tree
     ###*
     #this method update the array suggestionList when the user add, rename or remove
     #a node
-    #entries: action : neither create, rename or remove,
+    #input: action : neither create, rename or remove,
     #nodeName : in case of create and remove : the name of the new note or the note to remove
     # in case of rename : the new name of the note
     #oldName : only for rename : the name that will be replaced in the note
@@ -101,19 +102,21 @@ class exports.Tree
             suggestionList.splice(i,i)
             
     ###*
-    # Initialize jsTree tree with options : sorting, create/rename/delete,
-    # unique children and json data for loading.
+    #Initialize jsTree tree with options : sorting, create/rename/delete,
+    #unique children and json data for loading.
     ###
     constructor: (navEl, data, homeViewCbk) ->
         
         # Create toolbar inside DOM.
         navEl.prepend require('../templates/tree_buttons')
 
+        ###*
         #used by textext to change the render of the suggestion list
         #attach an icon to a certain type in the autocomplete list
-        #entries : suggestion : a string which is the suggestion, 
+        #input : suggestion : a string which is the suggestion, 
         #array : the array is suggestionList containing all the suggestions
         # possible and their nature
+        ###
         selectIcon = (suggestion, array) ->
             if suggestion is "\"#{$("#tree-search-field").val()}\""
                 "<i class='icon-search'></i>"
@@ -122,39 +125,70 @@ class exports.Tree
                 suggestion2 = suggestion.replace(/<.*?>/g,"")
                 while suggestion2 isnt array[i].name
                     i++
+                    
                 #when you add a new type, please add the corresponding icon here
                 switch array[i].type
                     when "folder" then "<i class='icon-folder-open'></i>"
                     else ""
 
+        ###*
+        #treat the content of the input and launch the jstree search function
+        ###
+        searchFunction = (searchString) ->
+            for string in $(".text-tag .text-label")
+                searchString += "_#{string.innerHTML}"
+            $("#tree").jstree("search", searchString)
+
+
+
+        ###*
+        #Textext plugin is used to implement the autocomplete plugin
+        #Please visit http://textextjs.com/ for more information about this plugin
+        ###
         $("#tree-search-field")
             .textext(
-
+                    ###*
+                    #tags: add tags to the input
+                    #prompt: print Search... in the input
+                    #focus: change CSS when the input has the focus
+                    #autocomplete: add a suggestion list to the input
+                    ###
                     plugins : 'tags prompt focus autocomplete'
                     
                     prompt : 'Search...'
                     
                     autocomplete : 
                         dropdownMaxHeight : '200px',
-
+                        ###*
+                        #change the render in the suggestion list (add the icons)
+                        ###
                         render : (suggestion) ->
                             selectIcon(suggestion, suggestionList) + suggestion
                             
                     ext : 
                         itemManager: 
+                            ###*
+                            #create an array with the "name" field of a suggestion list
+                            ###
                             nameField: (array) ->
                                 retArray = []
                                 for i in array
                                     retArray.push i.name
-                                retArray
+                                return retArray
+                            ###*
                             #changing the content of a tag to avoid the view of 
                             #balises in it
+                            ###
                             itemToString: (item) ->
                                 if /".*"/.test(item)
                                     item = item.replace(/"(.*)"/, (str, p1) -> p1)
                                 else
                                     item = item.replace(/<.*?>/g,"")
                         tags:
+                            ###*
+                            #change the render of a tag in case the tag is referring
+                            #to what the user is typing
+                            ###
                             renderTag: (tag) ->
                                 self = this
                                 node = $(self.opts('html.tag'))
@@ -172,28 +206,47 @@ class exports.Tree
                 
             #every keyup(<=> getSuggestions) in the textext's input show suggestionList as a
             #autocomplete list adding a proposition of what the user is typing
+            
             .bind(
                     'getSuggestions', (e, data) ->
                         
                         textext = $(e.target).textext()[0]
                         query = ((if data then data.query else "")) or ""
+                        #create a list with the name in the suggestion list
                         list = textext.itemManager().nameField(suggestionList)
+                        #filter with the input's value
                         list = cozyFilter(list, query)
+                        #add what is typing the user in the list
                         list = ["\"#{$("#tree-search-field").val()}\""].concat(list) 
+                        #move the tree in order to be visible with the dropdown open
                         treeHeight = list.length*22 + 10
                         $("#tree").css("margin-top", treeHeight)
                         $(this).trigger "setSuggestions",
                         result: list
                 )
+            
+            #this event trigger when the user add a tag by clicking on it or
+            #pressing enter
+            
             .bind(
                     'isTagAllowed', (e, data) ->
+                        #move tree to its original place
                         $("#tree").css("margin-top", 10)
+                        #add the suppression button for the input field
                         $("#suppr-button").css("display","block")
+                        #launching the searching function in jstree
+                        searchFunction data.tag
+                        
                 )
+
 
         # Creation of the jstree
         treeData = @_convertData data
         @jstreeEl = $("#tree")
+        ###*
+        #jstree is a plugin to implement the node tree
+        #Please visit http://www.jstree.com/ for more information about the plugin
+        ###
         @widget = @jstreeEl.jstree(
             plugins: [
                 "themes", "json_data", "ui", "crrm",
@@ -235,9 +288,10 @@ class exports.Tree
         @setListeners( homeViewCbk )
 
  
-
+    ###*
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection). Called by the constructor once.
+    ###
     setListeners: (homeViewCbk) ->
         Tree = this
 
@@ -266,7 +320,9 @@ class exports.Tree
             # DO NOT CHANGE  :-)
             e.preventDefault()
             e.stopPropagation()
-        $("#tree-search-field").keyup @_onSearchChanged
+        
+        #$("#tree-search-field").keyup @_onSearchChanged
+        #if the input is empty the suppression button is hidden
         $("#tree-search-field").live("keypress", (e) ->
             if $(".text-tags").children()[0] is undefined and $("#tree-search-field").val() is ""
                 $("#suppr-button").css("display","none")
@@ -286,7 +342,9 @@ class exports.Tree
             tree_buttons.css("display","none")
             tree_buttons.appendTo( tree_buttons_target )  
 
-        $("#suppr-button").click =>
+        #repositionning the input field, tree and suggestion list when the suppression
+        # button is used
+        $("#suppr-button").click ->
             $(".text-tags").empty()
             $("#tree-search-field").css("padding-left", "5px")
             $("#tree-search-field").css("padding-top", "3px")
@@ -297,6 +355,7 @@ class exports.Tree
             $(".text-dropdown").css("top", "22px")
             $("#suppr-button").css("display","none")
             $("#tree").jstree("search", "")
+            
 
         
         # Tree
@@ -358,9 +417,11 @@ class exports.Tree
             $(".bar").css("width","20%")
             homeViewCbk.onLoaded()
 
-    # Select node corresponding to given path
-    # if note_uuid exists in the jstree it is selected
-    # otherwise if there is no seleted node, we select the root
+    ###*
+    #Select node corresponding to given path
+    #if note_uuid exists in the jstree it is selected
+    #otherwise if there is no seleted node, we select the root
+    ###
     selectNode: (note_uuid) ->
         console.log "Tree.selectNode( #{note_uuid} )"
         $(".bar").css("width","50%")
@@ -372,9 +433,10 @@ class exports.Tree
             tree = $("#tree").jstree("select_node", "#tree-node-all")
 
 
-
-    # Returns path to a node for a given node.
-    # data.inst is the jstree instance
+    
+    #Returns path to a node for a given node.
+    #data.inst is the jstree instance
+    
     _getPath: (parent, nodeName) ->
         nodes = [slugify nodeName] if nodeName?
 
@@ -384,13 +446,17 @@ class exports.Tree
             nodes.unshift slugify(name)
             parent = parent.parent().parent()
         nodes
-
-    # Return path for a node at string format.
+    
+    
+    #Return path for a node at string format.
+    
     _getSlugPath: (parent, nodeName) =>
         @_getPath(parent, nodeName).join("/")
        
-    # Convert tree coming from server to jstree format.
-    # It builds the root of the tree then recursively add node to it.
+    
+    #Convert tree coming from server to jstree format.
+    #It builds the root of the tree then recursively add node to it.
+    
     _convertData: (data) =>
         # root node
         tree =
@@ -405,11 +471,13 @@ class exports.Tree
         tree.data = "loading..." if tree.data.length == 0
         tree
 
-    # Convert a node coming from node server to jstree format. Then convertNode
-    # is called recursively on node children.
-    # * parentNode is the node on which converted node will be set.
-    # * noteToConvert is the node that is going to be converted
-    # * idpath is the current path used to build the node DOM id. 
+    
+    #Convert a node coming from node server to jstree format. Then convertNode
+    #is called recursively on node children.
+    #* parentNode is the node on which converted node will be set.
+    #* noteToConvert is the node that is going to be converted
+    #* idpath is the current path used to build the node DOM id. 
+    
     _convertNode: (parentNode, nodeToConvert, idpath) ->
         for property of nodeToConvert when \
                 property isnt "name" and property isnt "id"
@@ -429,18 +497,3 @@ class exports.Tree
                 parentNode.children.push newNode
             @_convertNode newNode, nodeToConvert[property], nodeIdPath
 
-
-    searchTimer: null
-
-    # When quick search changes, the jstree quick search function is run with
-    # input val as argument.
-    _onSearchChanged: (event) =>
-        searchString = ""
-        for string in $(".text-tag .text-label")
-            searchString += "_#{string.innerHTML}"
-            console.log searchString
-        clearTimeout @searchTimer
-        if searchString is ""
-            $("#tree").jstree("search", searchString)
-        else
-            $("#tree").jstree("search", searchString)

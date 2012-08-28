@@ -17,8 +17,8 @@ class exports.HomeView extends Backbone.View
     id: 'home-view'
 
     ###*
-    Load the home view and the tree
-    Called once by the main_router
+    #Load the home view and the tree
+    #Called once by the main_router
     ###
     initContent: (note_uuid) -> 
         

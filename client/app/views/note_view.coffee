@@ -62,6 +62,10 @@ class exports.NoteView extends Backbone.View
             editorCtrl._addHistory()
             editorCtrl.titleList()
 
+        ###*
+        # every keyUp in the note's editor will trigger a countdown of 3s, after
+        # 3s and if the user didn't type anything, the content will be saved
+        ###
         $("iframe").on "onKeyUp", () =>
             clearTimeout(saveTimer)
             if saveButton.hasClass("btn-info")
@@ -73,17 +77,27 @@ class exports.NoteView extends Backbone.View
                         saveButton.addClass("active btn-info").removeClass("btn-primary")
                 , 3000)
 
+        ###*
+        # allow the user to save the content of a note before the 3s of the
+        # automatic save
+        ###
         $("#save-editor-content").on "click", () ->
             clearTimeout(saveTimer)
             model.saveContent editorCtrl.getEditorContent()
             if saveButton.hasClass("btn-primary")
                 saveButton.addClass("active btn-info").removeClass("btn-primary")
 
+        ###*
+        # forbidden a new line in the title
+        ###
         $("#note-full-title").live("keypress", (e) ->
             if e.keyCode is 13
                 $("#note-full-title").trigger "blur"
             )
 
+        ###*
+        # allow to rename a note by directly writing in the title
+        ###
         $("#note-full-title").blur => 
             console.log "event : note-full-title.blur"
             newName = $("#note-full-title").val()
@@ -115,7 +129,12 @@ class exports.NoteView extends Backbone.View
         else
             @editorCtrl.deleteContent()
 
-
+    ###*
+    # create a breadcrumb showing a clickable way from the root to the current note
+    # input: noteModel, contains the informations of the current note
+    #  data, allow to reach the id of the parents of the current note
+    # output: the breadcrumb html is modified
+    ###
     createBreadcrumb : (noteModel, data) ->
         #breadcrumb will contain the path of the selected note in a link format(<a>)
         # the code below generates the breadcrumb corresponding
@@ -124,6 +143,7 @@ class exports.NoteView extends Backbone.View
             breadcrumb = ""
             linkToThePath = []
             parent = undefined
+            # ATTENTION! Parfois le humanPath n'est pas le bon ... je ne sais pas pourquoi
             while i >= 1
                 parent = data.inst._get_parent(parent)
                 path = "/#note/#{parent[0].id}"
@@ -134,5 +154,8 @@ class exports.NoteView extends Backbone.View
                 
             $("#note-full-breadcrumb").html breadcrumb
 
+    ###*
+    # in case of renaming a note this function update the breadcrumb in consequences
+    ###
     updateBreadcrumb : (newName) ->
         $("#note-full-breadcrumb a:last").text(newName)
