@@ -164,8 +164,20 @@ class exports.Tree
                         ###
                         render : (suggestion) ->
                             selectIcon(suggestion, suggestionList) + suggestion
-                            
+                    
                     ext : 
+                        core:
+                            onGetFormData: (e, data, keyCode) ->
+                                textInput = this.input().val()
+                                console.log textInput
+                                data[0] = { 'input' : textInput, 'form' : textInput }
+                                if textInput is ""
+                                    searchFunction("")
+                                    console.log $(".text-tag .text-label")[0]
+                                    if $(".text-tag .text-label")[0] is undefined
+                                        $("#suppr-button").css("display","none")
+                                                                
+                            
                         itemManager: 
                             ###*
                             #create an array with the "name" field of a suggestion list
@@ -184,24 +196,25 @@ class exports.Tree
                                     item = item.replace(/"(.*)"/, (str, p1) -> p1)
                                 else
                                     item = item.replace(/<.*?>/g,"")
-                    tags:
-                        ###*
-                        #change the render of a tag in case the tag is referring
-                        #to what the user is typing
-                        ###
-                        renderTag: (tag) ->
-                            self = this
-                            node = $(self.opts('html.tag'))
+                        tags:
+                            ###*
+                            #change the render of a tag in case the tag is referring
+                            #to what the user is typing
+                            ###
+                            renderTag: (tag) ->
+                                self = this
+                                node = $(self.opts('html.tag'))
 
-                            node.find('.text-label').text(self.itemManager().itemToString(tag))
+                                node.find('.text-label').text(self.itemManager().itemToString(tag))
 
-                            if /icon-search/.test($(".text-selected")[0].innerHTML)
-                                node.find('.text-button').addClass("tag-special")
-                                node.find('.text-button').removeClass("text-button")
-                                node.data('text-tag', tag)
-                            else
-                                node.data('text-tag', tag)
-                            return node
+                                if /icon-search/.test($(".text-selected")[0].innerHTML)
+                                    node.find('.text-button').addClass("tag-special")
+                                    node.find('.text-button').removeClass("text-button")
+                                    node.data('text-tag', tag)
+                                else
+                                    node.data('text-tag', tag)
+                                return node
+
                 )
                 
             #every keyup(<=> getSuggestions) in the textext's input show suggestionList as a
@@ -237,6 +250,10 @@ class exports.Tree
                         #launching the searching function in jstree
                         searchFunction data.tag
                         
+                )
+            .bind(
+                    'tagClick', (e, data) ->
+                        console.log "okokokokokok"
                 )
 
 
@@ -294,6 +311,9 @@ class exports.Tree
     ###
     setListeners: (homeViewCbk) ->
         Tree = this
+
+        console.log $("#tree-search-field").textext()[0].onGetFormData
+
 
         # tree-buttons : they appear in nodes of the tree when mouseisover
         jstreeEl=@jstreeEl
