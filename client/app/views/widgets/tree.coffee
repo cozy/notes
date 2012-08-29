@@ -6,7 +6,7 @@ Properties :
     currentPath      = ex : /all/coutries/great_britain  ("great_britain" is the uglified name of the note)
     currentData      = data : jstree data obj sent by the select
     currentNote_uuid : uuid of the currently selected note
-    widget 
+    widget           = @jstreeEl.jstree
     searchField      = $("#tree-search-field")
     searchButton     = $("#tree-search")
     noteFull
@@ -110,6 +110,9 @@ class exports.Tree
         # Create toolbar inside DOM.
         navEl.prepend require('../templates/tree_buttons')
 
+        # DOM elements of the Tree widget
+        @searchField = $("#tree-search-field")
+
         ###*
         #used by textext to change the render of the suggestion list
         #attach an icon to a certain type in the autocomplete list
@@ -145,7 +148,7 @@ class exports.Tree
         #Textext plugin is used to implement the autocomplete plugin
         #Please visit http://textextjs.com/ for more information about this plugin
         ###
-        $("#tree-search-field")
+        @searchField
             .textext(
                     ###*
                     #tags: add tags to the input
@@ -433,6 +436,7 @@ class exports.Tree
             @currentPath = path
             @currentData = data
             @currentNote_uuid = note_uuid
+            @jstreeEl[0].focus()
             homeViewCbk.onSelect path, data.rslt.obj.data("id"), data
                     
 

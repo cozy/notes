@@ -136,7 +136,7 @@ class exports.HomeView extends Backbone.View
 
     ###*
     # Only called by jsTree event "select_node"
-    # When a node is selected, the note widget is displayed and fill with
+    # When a node is selected, the note_view is displayed and filled with
     # note data.
     ###
     onTreeSelectionChg: (path, id, data) =>
