@@ -406,7 +406,7 @@ class exports.Tree
             @currentPath = path
             @currentData = data
             @currentNote_uuid = note_uuid
-            @searchField.blur()
+            @jstreeEl[0].focus()
             homeViewCbk.onSelect path, data.rslt.obj.data("id"), data
                     
 
