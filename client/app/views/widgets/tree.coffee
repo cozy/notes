@@ -184,24 +184,24 @@ class exports.Tree
                                     item = item.replace(/"(.*)"/, (str, p1) -> p1)
                                 else
                                     item = item.replace(/<.*?>/g,"")
-                        tags:
-                            ###*
-                            #change the render of a tag in case the tag is referring
-                            #to what the user is typing
-                            ###
-                            renderTag: (tag) ->
-                                self = this
-                                node = $(self.opts('html.tag'))
+                    tags:
+                        ###*
+                        #change the render of a tag in case the tag is referring
+                        #to what the user is typing
+                        ###
+                        renderTag: (tag) ->
+                            self = this
+                            node = $(self.opts('html.tag'))
 
-                                node.find('.text-label').text(self.itemManager().itemToString(tag))
+                            node.find('.text-label').text(self.itemManager().itemToString(tag))
 
-                                if /icon-search/.test($(".text-selected")[0].innerHTML)
-                                    node.find('.text-button').addClass("tag-special")
-                                    node.find('.text-button').removeClass("text-button")
-                                    node.data('text-tag', tag)
-                                else
-                                    node.data('text-tag', tag)
-                                return node
+                            if /icon-search/.test($(".text-selected")[0].innerHTML)
+                                node.find('.text-button').addClass("tag-special")
+                                node.find('.text-button').removeClass("text-button")
+                                node.data('text-tag', tag)
+                            else
+                                node.data('text-tag', tag)
+                            return node
                 )
                 
             #every keyup(<=> getSuggestions) in the textext's input show suggestionList as a
