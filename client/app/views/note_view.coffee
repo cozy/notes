@@ -105,7 +105,7 @@ class exports.NoteView extends Backbone.View
             if newName isnt "" and oldName != newName
                 @homeView.onNoteTitleChange(@model.id, newName)
                 TreeInst.Tree.prototype.updateSuggestionList("rename", newName, oldName)
-                @updateBreadcrumb(newName)
+                @updateBreadcrumbOnTitleChange(newName)
                 
                 # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
                 # @rebuildIds @currentData, @currentData.rslt.obj, @currentPath 
@@ -149,6 +149,8 @@ class exports.NoteView extends Backbone.View
                 path = "/#note/#{parent[0].id}"
                 breadcrumb = "<a href='#{path}'> #{noteModel.humanPath.split(",")[i-1]}</a> > #{breadcrumb}"
                 i--
+            #avoir le meme path qu'avec path = "/"+ data.rslt.obj[0].id + @_getSlugPath parent, nodeName
+            #faire appel à selectnote
             path = "/#note/#{noteModel.id}"
             breadcrumb = "#{breadcrumb} <a href='#{path}' > #{noteModel.title}</a>"
                 
@@ -157,5 +159,5 @@ class exports.NoteView extends Backbone.View
     ###*
     # in case of renaming a note this function update the breadcrumb in consequences
     ###
-    updateBreadcrumb : (newName) ->
+    updateBreadcrumbOnTitleChange : (newName) ->
         $("#note-full-breadcrumb a:last").text(newName)

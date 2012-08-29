@@ -106,7 +106,7 @@ class exports.HomeView extends Backbone.View
         if newName?
             if @tree.currentNote_uuid == uuid
                 @noteView.setTitle(newName)
-                @noteView.updateBreadcrumb(newName)
+                @noteView.updateBreadcrumbOnTitleChange(newName)
             Note.updateNote uuid,
                 title: newName
             , () =>

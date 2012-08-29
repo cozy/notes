@@ -301,6 +301,7 @@ class exports.Tree
         # tree-buttons : they appear in nodes of the tree when mouseisover
         jstreeEl=@jstreeEl
         tree_buttons = $("#tree-buttons")
+        tree_buttons_root = $("#tree-buttons-root")
         $("#tree-create").on "click", (e) ->
             jstreeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
             e.stopPropagation()
@@ -336,14 +337,24 @@ class exports.Tree
 
         # add listeners for the tree-buttons appear & disappear when mouse is over/out
         tree_buttons_target = $("#nav")
+        
         @widget.on "hover_node.jstree", (event, data) ->
             # event & data - check the core doc of jstree for a detailed description
-            tree_buttons.appendTo( data.args[0] )
-            tree_buttons.css("display","block")
+            if data.rslt.obj[0].id is "tree-node-all"
+                tree_buttons_root.appendTo( data.args[0] )
+                tree_buttons_root.css("display","block")
+            else
+                tree_buttons.appendTo( data.args[0] )
+                tree_buttons.css("display","block")
+            
         @widget.on "dehover_node.jstree", (event, data) ->
             # event & data - check the core doc of jstree for a detailed description
-            tree_buttons.css("display","none")
-            tree_buttons.appendTo( tree_buttons_target )  
+            if data.rslt.obj[0].id is "tree-node-all"
+                tree_buttons_root.css("display","none")
+                tree_buttons_root.appendTo( tree_buttons_target )  
+            else
+                tree_buttons.css("display","none")
+                tree_buttons.appendTo( tree_buttons_target )  
 
         #repositionning the input field, tree and suggestion list when the suppression
         # button is used
