@@ -172,11 +172,9 @@ class exports.Tree
                         core:
                             onGetFormData: (e, data, keyCode) ->
                                 textInput = this.input().val()
-                                console.log textInput
                                 data[0] = { 'input' : textInput, 'form' : textInput }
                                 if textInput is ""
                                     searchFunction("")
-                                    console.log $(".text-tag .text-label")[0]
                                     if $(".text-tag .text-label")[0] is undefined
                                         $("#suppr-button").css("display","none")
                                                                 
@@ -254,10 +252,6 @@ class exports.Tree
                         searchFunction data.tag
                         
                 )
-            .bind(
-                    'tagClick', (e, data) ->
-                        console.log "okokokokokok"
-                )
 
 
         # Creation of the jstree
@@ -314,8 +308,6 @@ class exports.Tree
     ###
     setListeners: (homeViewCbk) ->
         Tree = this
-
-        console.log $("#tree-search-field").textext()[0].onGetFormData
 
 
         # tree-buttons : they appear in nodes of the tree when mouseisover
