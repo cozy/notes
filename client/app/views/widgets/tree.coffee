@@ -99,7 +99,7 @@ class exports.Tree
             while suggestionList[i].name isnt nodeName
                 i++
             #delete the element of index i in the array of suggestions
-            suggestionList.splice(i,i)
+            suggestionList.splice(i,1)
             
     ###*
     #Initialize jsTree tree with options : sorting, create/rename/delete,
@@ -303,16 +303,27 @@ class exports.Tree
             jstreeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
             e.stopPropagation()
             e.preventDefault()
+        $("#tree-create-root").on "click", (e) ->
+            jstreeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
+            e.stopPropagation()
+            e.preventDefault()
         $("#tree-rename").on "click", (e) ->
             jstreeEl.jstree("rename", this.parentElement.parentElement)
             e.preventDefault()
             e.stopPropagation()
         
+        recursiveRemoveSuggestionList = (nodeToDelete) ->
+            if nodeToDelete.children[2] is undefined
+                Tree.updateSuggestionList("remove", nodeToDelete.children[1].text.replace(/\s/, ""), null)
+            else
+                for node in nodeToDelete.children[2].children
+                    recursiveRemoveSuggestionList(node)
+                Tree.updateSuggestionList("remove", nodeToDelete.children[1].text.replace(/\s/, ""), null)
 
         $("#tree-remove").on "click", (e) ->
             console.log "event : tree-remove.click"
             nodeToDelete = this.parentElement.parentElement.parentElement
-            Tree.updateSuggestionList("remove", this.parentElement.parentElement.text.replace(/\s/, ""), null)
+            recursiveRemoveSuggestionList(nodeToDelete)
             noteToDelete_id=nodeToDelete.id
             if noteToDelete_id != 'tree-node-all'
                 jstreeEl.jstree("remove" , nodeToDelete)
@@ -322,12 +333,11 @@ class exports.Tree
             e.preventDefault()
             e.stopPropagation()
         
-        #$("#tree-search-field").keyup @_onSearchChanged
         #if the input is empty the suppression button is hidden
-        $("#tree-search-field").live("keypress", (e) ->
-            if $(".text-tags").children()[0] is undefined and $("#tree-search-field").val() is ""
-                $("#suppr-button").css("display","none")
-            )
+        #$("#tree-search-field").live("keypress", (e) ->
+        #    if $(".text-tags").children()[0] is undefined and $("#tree-search-field").val() is ""
+        #        $("#suppr-button").css("display","none")
+        #    )
 
         $("#tree-search-field").blur ->
             $("#tree").css("margin-top", 10)
