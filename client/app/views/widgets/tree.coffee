@@ -167,7 +167,7 @@ class exports.Tree
                         ###
                         render : (suggestion) ->
                             selectIcon(suggestion, suggestionList) + suggestion
-                    
+                                        
                     ext : 
                         core:
                             onGetFormData: (e, data, keyCode) ->
@@ -308,7 +308,6 @@ class exports.Tree
     ###
     setListeners: (homeViewCbk) ->
         Tree = this
-
 
         # tree-buttons : they appear in nodes of the tree when mouseisover
         jstreeEl=@jstreeEl
