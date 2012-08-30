@@ -56,6 +56,10 @@ class exports.HomeView extends Backbone.View
             spacing_open: 10
             spacing_closed: 10
             togglerLength_closed: "100%"
+            onresize_start: ->
+                $("#drag").css("z-index","1")
+            onresize_end: ->
+                $("#drag").css("z-index","-1")
         
         #Progress bar
         $(".ui-layout-center").append(
