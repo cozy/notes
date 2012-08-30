@@ -101,8 +101,10 @@ action 'update', ->
                 send error: 'Note can not be updated', 400
             else
                 send success: 'Note updated'
-
-    if body.title != @note.title and body.title?
+    console.log "update"
+    console.log body
+    if body.title? and body.title != @note.title
+        console.log "update.title"
         dataTree = new DataTree JSON.parse(@tree.struct)
 
         # Build new path from current path and new name
@@ -126,6 +128,7 @@ action 'update', ->
 
     else if body.path? and body.path != @note.path
 
+        console.log "update.path " + @tree.struct
         @dataTree = new DataTree JSON.parse(@tree.struct)
         @dest = body.path.split("/")
         @dest.pop()

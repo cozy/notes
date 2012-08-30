@@ -186,7 +186,7 @@ class exports.HomeView extends Backbone.View
     # for persistence.
     ###
     onNoteDropped: (newPath, oldPath, noteTitle, data) =>
-        console.log "HomeView.onNoteDropped()"
+        console.log "HomeView.onNoteDropped() id=" + data.rslt.o.data("id") + " oldPath=" + oldPath + " newPath=" + newPath
         Note.updateNote data.rslt.o.data("id"),
             path: newPath
             , () =>
