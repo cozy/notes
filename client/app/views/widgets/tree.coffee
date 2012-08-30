@@ -122,7 +122,7 @@ class exports.Tree
         ###
         selectIcon = (suggestion, array) ->
             if suggestion is "\"#{$("#tree-search-field").val()}\""
-                "<i class='icon-search'></i>"
+                "<i class='icon-search icon-suggestion'></i>"
             else
                 i = 0
                 suggestion2 = suggestion.replace(/<.*?>/g,"")
@@ -131,7 +131,7 @@ class exports.Tree
                     
                 #when you add a new type, please add the corresponding icon here
                 switch array[i].type
-                    when "folder" then "<i class='icon-folder-open'></i>"
+                    when "folder" then "<i class='icon-folder-open icon-suggestion'></i>"
                     else ""
 
         ###*
@@ -167,7 +167,8 @@ class exports.Tree
                         ###
                         render : (suggestion) ->
                             selectIcon(suggestion, suggestionList) + suggestion
-                    
+                        
+                                                                    
                     ext : 
                         core:
                             onGetFormData: (e, data, keyCode) ->
@@ -177,7 +178,16 @@ class exports.Tree
                                     searchFunction("")
                                     if $(".text-tag .text-label")[0] is undefined
                                         $("#suppr-button").css("display","none")
-                                                                
+                                        
+                        autocomplete:
+                            onClick : (e) ->
+                                self = this
+                                target = $(e.target)
+                                if(target.is('.text-suggestion') || target.is('.text-label') || target.is('.icon-suggestion') ||target.is('.bold-name'))
+                                    self.trigger('enterKeyPress')
+
+                                if (self.core().hasPlugin('tags'))
+                                    self.val('')
                             
                         itemManager: 
                             ###*
@@ -308,7 +318,6 @@ class exports.Tree
     ###
     setListeners: (homeViewCbk) ->
         Tree = this
-
 
         # tree-buttons : they appear in nodes of the tree when mouseisover
         jstreeEl=@jstreeEl
