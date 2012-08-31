@@ -46,21 +46,42 @@ class exports.NoteView extends Backbone.View
 
         # buttons for the editor
 
+        $("#indentBtn").tooltip(
+            placement: "bottom"
+            title: "Indent the selection"
+            )
         $("#indentBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.tab()
 
+        $("#unIndentBtn").tooltip(
+            placement: "bottom"
+            title: "Unindent the selection"
+            )
         $("#unIndentBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.shiftTab()
 
+        $("#markerListBtn").tooltip(
+            placement: "bottom"
+            title: "Change selection from titles to marker list"
+            )
         $("#markerListBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.markerList()
 
+        $("#titleBtn").tooltip(
+            placement: "bottom"
+            title: "Change selection from marker list to titles"
+            )
         $("#titleBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.titleList()
+            
+        $("#save-editor-content").tooltip(
+            placement: "bottom"
+            title: "Save the current content"
+            )       
 
         ###*
         # every keyUp in the note's editor will trigger a countdown of 3s, after

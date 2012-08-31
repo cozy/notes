@@ -351,16 +351,31 @@ class exports.Tree
         tree_buttons = $("#tree-buttons")
         # tree_buttons_root : the jstree root has only an add button
         tree_buttons_root = $("#tree-buttons-root")
+        $("#tree-create").tooltip(
+            placement: "bottom"
+            title: "Add a note"
+            )
         $("#tree-create").on "click", (e) ->
             jstreeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
+            $(this).tooltip('hide')
             e.stopPropagation()
             e.preventDefault()
+        $("#tree-create-root").tooltip(
+            placement: "bottom"
+            title: "Add a note"
+            )
         $("#tree-create-root").on "click", (e) ->
             jstreeEl.jstree("create", this.parentElement.parentElement , 0 , "New note")
+            $(this).tooltip('hide')
             e.stopPropagation()
             e.preventDefault()
+        $("#tree-rename").tooltip(
+            placement: "bottom"
+            title: "Rename a note"
+            )
         $("#tree-rename").on "click", (e) ->
             jstreeEl.jstree("rename", this.parentElement.parentElement)
+            $(this).tooltip('hide')
             e.preventDefault()
             e.stopPropagation()
         
@@ -375,18 +390,33 @@ class exports.Tree
                     recursiveRemoveSuggestionList(node)
                 Tree._updateSuggestionList("remove", nodeToDelete.children[1].text.replace(/\s/, ""), null)
 
+        $("#tree-remove").tooltip(
+            placement: "bottom"
+            title: "Remove a note"
+            )
         $("#tree-remove").on "click", (e) ->
             console.log "event : tree-remove.click"
+            $(this).tooltip('hide')
             nodeToDelete = this.parentElement.parentElement.parentElement
-            recursiveRemoveSuggestionList(nodeToDelete)
-            noteToDelete_id=nodeToDelete.id
-            if noteToDelete_id != 'tree-node-all'
-                jstreeEl.jstree("remove" , nodeToDelete)
-                homeViewCbk.onRemove noteToDelete_id
-            
-            # DO NOT CHANGE  :-)
-            e.preventDefault()
-            e.stopPropagation()
+            if nodeToDelete.children[2] isnt undefined
+                $('#myModal').modal('show')
+                $("#yes-button").on "click", (e) ->
+                    console.log "event : tree-remove.click"
+                    recursiveRemoveSuggestionList(nodeToDelete)
+                    noteToDelete_id=nodeToDelete.id
+                    if noteToDelete_id != 'tree-node-all'
+                        jstreeEl.jstree("remove" , nodeToDelete)
+                        homeViewCbk.onRemove noteToDelete_id                           
+            else
+                recursiveRemoveSuggestionList(nodeToDelete)
+                noteToDelete_id=nodeToDelete.id
+                if noteToDelete_id != 'tree-node-all'
+                    jstreeEl.jstree("remove" , nodeToDelete)
+                    homeViewCbk.onRemove noteToDelete_id
+                # DO NOT CHANGE  :-)
+                e.preventDefault()
+                e.stopPropagation()
+        
 
         searchField.blur ->
             jstreeEl.css("margin-top", 10)
