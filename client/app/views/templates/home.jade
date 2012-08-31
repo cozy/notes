@@ -8,3 +8,12 @@
             input#note-full-title
         div#editor
         div#drag
+
+div#myModal.modal.hide.fade.in(tabindex="-1", role="dialog", aria-labelledby="myModalLabel", aria-hidden="true")
+    div.modal-header
+        h3#myModalLabel Warning!
+    div.modal-body
+        p You are about to delete this folder and all this content. Do you want to continue?
+    div.modal-footer
+        button#yes-button.btn(data-dismiss="modal", aria-hidden="true") Yes
+        button.btn(data-dismiss="modal", aria-hidden="true") No
