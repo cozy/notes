@@ -46,21 +46,42 @@ class exports.NoteView extends Backbone.View
 
         # buttons for the editor
 
+        $("#indentBtn").tooltip(
+            placement: "bottom"
+            title: "Indent the selection"
+            )
         $("#indentBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.tab()
 
+        $("#unIndentBtn").tooltip(
+            placement: "bottom"
+            title: "Unindent the selection"
+            )
         $("#unIndentBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.shiftTab()
 
+        $("#markerListBtn").tooltip(
+            placement: "bottom"
+            title: "Change selection from titles to marker list"
+            )
         $("#markerListBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.markerList()
 
+        $("#titleBtn").tooltip(
+            placement: "bottom"
+            title: "Change selection from marker list to titles"
+            )
         $("#titleBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.titleList()
+            
+        $("#save-editor-content").tooltip(
+            placement: "bottom"
+            title: "Save the current content"
+            )       
 
         ###*
         # every keyUp in the note's editor will trigger a countdown of 3s, after
@@ -87,24 +108,27 @@ class exports.NoteView extends Backbone.View
             if saveButton.hasClass("btn-primary")
                 saveButton.addClass("active btn-info").removeClass("btn-primary")
 
+        @noteFullTitle = $("#note-full-title")
+        noteFullTitle = @noteFullTitle
+
         ###*
         # forbidden a new line in the title
         ###
-        $("#note-full-title").live("keypress", (e) ->
+        noteFullTitle.live("keypress", (e) ->
             if e.keyCode is 13
-                $("#note-full-title").trigger "blur"
+                noteFullTitle.trigger "blur"
             )
 
         ###*
         # allow to rename a note by directly writing in the title
         ###
-        $("#note-full-title").blur => 
+        noteFullTitle.blur => 
             console.log "event : note-full-title.blur"
-            newName = $("#note-full-title").val()
+            newName = noteFullTitle.val()
             oldName = @model.title
             if newName isnt "" and oldName != newName
                 @homeView.onNoteTitleChange(@model.id, newName)
-                TreeInst.Tree.prototype.updateSuggestionList("rename", newName, oldName)
+                TreeInst.Tree.prototype._updateSuggestionList("rename", newName, oldName)
                 @updateBreadcrumbOnTitleChange(newName)
                 
                 # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
@@ -118,8 +142,9 @@ class exports.NoteView extends Backbone.View
 
 
     setTitle : (nTitle) ->
+        noteFullTitle = @noteFullTitle
         #give a title to the note
-        $("#note-full-title").val nTitle
+        noteFullTitle.val nTitle
 
 
     setContent : (content) ->

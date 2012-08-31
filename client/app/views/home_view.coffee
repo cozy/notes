@@ -3,7 +3,7 @@ NoteView = require("./note_view").NoteView
 Note = require("../models/note").Note
 
 ###*
-# Main view that manages interaction between tool$(".bar"), navigation and notes
+# Main view that manages interaction between toolprogressBar, navigation and notes
     id : ='home-view'
     @treeCreationCallback 
     @noteFull
@@ -23,20 +23,21 @@ class exports.HomeView extends Backbone.View
     initContent: (note_uuid) -> 
         
         console.log "HomeView.initContent(#{note_uuid})"
-
+        @progressBar = $(".bar")
+        progressBar = @progressBar
         # when the tree and iframe of the editor will be loaded : select the note
         hv = this
         iframeLoaded = false
         treeLoaded = false
         onTreeLoaded = ->
             console.log "event HomeView.onTreeLoaded #{iframeLoaded}"
-            $(".bar").css("width","30%")
+            progressBar.css("width","30%")
             treeLoaded = true
             if iframeLoaded
                 app.homeView.selectNote note_uuid
         onIFrameLoaded = ->
             console.log "event HomeView.onIFrameLoaded #{iframeLoaded}"
-            $(".bar").css("width","10%")
+            progressBar.css("width","10%")
             iframeLoaded = true
             if treeLoaded
                 hv.selectNote note_uuid
@@ -47,7 +48,7 @@ class exports.HomeView extends Backbone.View
         @noteView.homeView = this
         @noteFull = $("#note-full")
         @noteFull.hide()
-        
+        drag = $("#drag")
         # Use jquery layout to set main layout of current window.
         $('#home-view').layout
             size: "250"
@@ -57,9 +58,9 @@ class exports.HomeView extends Backbone.View
             spacing_closed: 10
             togglerLength_closed: "100%"
             onresize_start: ->
-                $("#drag").css("z-index","1")
+                drag.css("z-index","1")
             onresize_end: ->
-                $("#drag").css("z-index","-1")
+                drag.css("z-index","-1")
         
         #Progress bar
         $(".ui-layout-center").append(
@@ -144,13 +145,13 @@ class exports.HomeView extends Backbone.View
     # note data.
     ###
     onTreeSelectionChg: (path, id, data) =>
-    # selectFolder: (path, id) =>
+        progressBar = @progressBar
         console.log "HomeView.selectFolder( path:#{path} - id:#{id})"
         if id is undefined
             #removing progress bar
             @progress.remove()
         else
-            $(".bar").css("width","70%")
+            progressBar.css("width","70%")
         path = "/#{path}" if path.indexOf("/")
         app.router.navigate "note#{path}", trigger: false
         if id?
@@ -164,8 +165,9 @@ class exports.HomeView extends Backbone.View
     # Force selection inside tree of note of a given uuid.
     ###
     selectNote: (note_uuid) =>
+        progressBar = @progressBar
         console.log "HomeView.selectNote(#{note_uuid})"
-        $(".bar").css("width","40%")
+        progressBar.css("width","40%")
         if note_uuid=="all"
            note_uuid = 'tree-node-all'
         @tree.selectNode note_uuid
@@ -174,8 +176,9 @@ class exports.HomeView extends Backbone.View
     # Fill note widget with note data.
     ###
     renderNote: (note, data) ->
+        progressBar = @progressBar
         console.log "HomeView.renderNote()"
-        $(".bar").css("width","90%")
+        progressBar.css("width","90%")
         note.url = "notes/#{note.id}"
         @currentNote = note
         # noteWidget = new NoteWidget note
