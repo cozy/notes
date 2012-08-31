@@ -13,6 +13,7 @@ describe "Tree tools", ->
             tree = new Tree
         it "I have a tree with just one root", ->
             should.exist tree.all
+            console.log tree.all
 
 
     describe "Add a node", ->

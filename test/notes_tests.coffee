@@ -10,7 +10,6 @@ DataTree = require("../lib/tree").Tree
 client = new Client("http://localhost:8888/")
 
 
-
 #helpers 
 
 createNoteFunction = (title, path, content) ->
@@ -37,9 +36,9 @@ describe "/notes", ->
 
         it "When I create several notes", (done) ->
             async.series [
-                createNoteFunction "Recipe", "/all/recipe", "01"
-                createNoteFunction "Dessert", "/all/recipe/dessert", "02"
-                createNoteFunction "Todo", "/all/todo", "03"
+                createNoteFunction "Recipe", "/all/recipe", "\n+ 01\n"
+                createNoteFunction "Dessert", "/all/recipe/dessert", "\n+ 02\n"
+                createNoteFunction "Todo", "/all/todo", "\n+ 03\n"
             ], ->
                 done()
 
@@ -95,8 +94,8 @@ describe "/notes", ->
         
         it "When I add two new notes", (done) ->
             async.series [
-                createNoteFunction "Travel", "/all/travel", "04"
-                createNoteFunction "Cambodia", "/all/travel/cambodia", "05"
+                createNoteFunction "Travel", "/all/travel", "\n+ 04\n"
+                createNoteFunction "Cambodia", "/all/travel/cambodia", "\n+ 05\n"
             ], ->
                 done()
 
