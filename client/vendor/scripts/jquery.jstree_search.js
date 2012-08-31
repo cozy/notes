@@ -1,3 +1,15 @@
+/*
+* This function is a plugin for jstree search method. It allows the search method
+* to make a multiple word search in jstree. The search string has to separate each
+* word by an underscore.
+* input:
+*   a: represent the a balise in each node from jstree (contains node title)
+*   i: no idea (I only saw two values: 0 and 1)
+*   m: an array which the last term is the search string
+* output: return true if "a" contains one word from the search string 
+*/
+
+
 (function ($) {
 
     $.expr[':'].jstree_contains_multi = function(a,i,m){
