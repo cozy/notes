@@ -21,6 +21,9 @@ Note.destroySome = (condition, callback) ->
         data.forEach (obj) ->
             obj.destroy done
 
+Note.debug = ->
+    t=2
+
 # Delete all notes.
 Note.destroyAll = (callback) ->
     Note.destroySome {}, callback

@@ -28,7 +28,7 @@ walk = (dir, fileList) ->
     return fileList
 
 
-task 'tests', 'run server tests through mocha', (opts) ->
+task 'tests', 'run server tests, ./test is parsed by default, otherwise use -f or --dir', (opts) ->
     options   = opts
     testFiles = []
     if options.dir

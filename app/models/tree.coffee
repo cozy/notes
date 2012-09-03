@@ -1,5 +1,28 @@
 async = require("async")
-DataTree = require('../../lib/tree').Tree
+DataTree = require('../../lib/data-tree').DataTree
+
+
+Tree.addNode = (note, parent_id, cbk)->
+
+    _addNode = ->
+        Tree.dataTree.addNode(note,parent_id)
+        Tree.tree.updateAttributes struct: Tree.dataTree.toJson(), (err) ->
+            if err
+                console.log err
+                cbk(err)
+            else
+                cbk(null)
+
+    if !(Tree.tree)
+        Tree.getOrCreate (err,tree)->
+            if err
+                cbk(err)
+            else
+                _addNode()
+    else
+        _addNode()
+
+
 
 # Destroy all tree corresponding at given condition.
 Tree.destroySome = (condition, callback) ->
@@ -25,16 +48,23 @@ Tree.destroySome = (condition, callback) ->
 Tree.destroyAll = (callback) ->
     Tree.destroySome {}, callback
 
+
 # Normally only one tree should be stored for this app. This function return
 # that tree if it exists. If is does note exist a new empty tree is created
 # and returned.
+# returns callback(err,tree)
 Tree.getOrCreate = (callback) ->
     Tree.all where: type:"Note", (err, trees) ->
         if err
-            console.log err
             send error: 'An error occured', 500
         else if trees.length == 0
-            Tree.create { struct: new DataTree().toJson(), type: "Note" }, callback
+            newDataTree =  new DataTree()
+            Tree.create { struct: newDataTree.toJson(), type: "Note" }, (err,tree)->
+                Tree.dataTree = newDataTree
+                Tree.tree     = tree
+                callback(null,tree)
         else
-            callback null, trees[0]
+            Tree.tree = trees[0]
+            Tree.dataTree = new DataTree(trees[0].struct)
+            callback(null, trees[0])
 

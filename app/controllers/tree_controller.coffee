@@ -1,5 +1,5 @@
 
-DataTree = require('../../lib/tree').Tree
+DataTree = require('../../lib/data-tree').DataTree  # TODO BJA : utilité à vérifier 
 helpers = require('../../client/app/helpers')
 
 load 'application'
@@ -13,7 +13,9 @@ before 'load tree', ->
             console.log err
             send error: 'An error occured while loading tree', 500
         else
-            @tree = tree
+            # useless, already done in Tree.getOrCreate
+            # Tree.tree = tree 
+            # JSON.parse(@tree.struct)
             next()
 
     Tree.getOrCreate createTreeCb
@@ -24,5 +26,5 @@ before 'load tree', ->
 
 # Returns complete tree.
 action 'tree', ->
-    send JSON.parse(@tree.struct)
+    send Tree.dataTree.toJsTreeJson()
 

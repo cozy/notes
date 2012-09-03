@@ -5,7 +5,7 @@ Note = define 'Note', ->
     property 'lastModificationDate', Date, default: Date
     property 'tags', [String]
     property 'tagParent', String
-    property 'path', String
+    property 'path', [String]
     property 'humanPath', [String]
 
 Tree = define 'Tree', ->
