@@ -62,9 +62,10 @@ action 'create', ->
                     # TODO : roll back the creation of the note.
                     send error: 'Note can not be created'
                 else
-                    console.log 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-                    console.log note.path
+                    console.log 'xxxBJAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+                    console.log typeof note.path
                     debugger;
+
                     note.updateAttributes path: note.path, (err) ->
                         if err
                             # TODO : roll back the creation of the note.
