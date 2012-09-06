@@ -71,17 +71,17 @@ class exports.Tree
     ###
     constructor: (navEl, data, homeViewCbk) ->
        
-        @jstreeEl = $("#tree") 
-        jstreeEl = @jstreeEl
+        jstreeEl  = $("#tree") 
+        @jstreeEl = jstreeEl
         # Create toolbar inside DOM.
         navEl.prepend require('../templates/tree_buttons')
 
         # DOM elements of the Tree widget
         @searchField = $("#tree-search-field")
-        searchField = @searchField
+        searchField  = @searchField
         
-        @supprButton = $("#suppr-button")
-        supprButton = @supprButton
+        supprButton  = $("#suppr-button")
+        @supprButton = supprButton
         
         ###*
         #Autocompletion
@@ -290,6 +290,12 @@ class exports.Tree
         # Creation of the jstree
         treeData = @_convertData data
         
+        # TODO BJA : to be cleaned
+        data = JSON.parse(data)
+        console.log "ttttttttttttt"
+        console.log data
+        data = {data:data}
+
         ###*
         #jstree is a plugin to implement the node tree
         #Please visit http://www.jstree.com/ for more information about the plugin
@@ -300,7 +306,7 @@ class exports.Tree
                 "unique", "sort", "cookies", "types",
                 "hotkeys", "dnd", "search"
             ]
-            json_data: treeData
+            json_data: data
             types:
                 default:
                     valid_children: "default"
@@ -485,6 +491,8 @@ class exports.Tree
             console.log "event : select_node.jstree"
             progressBar.css("width","60%")
             note_uuid = data.rslt.obj[0].id
+            console.log "note_uuid"
+            console.log note_uuid
             if note_uuid == "tree-node-all"
                 path = "/all"
             else
@@ -495,7 +503,8 @@ class exports.Tree
             @currentData = data
             @currentNote_uuid = note_uuid
             @jstreeEl[0].focus()
-            homeViewCbk.onSelect path, data.rslt.obj.data("id"), data
+            # homeViewCbk.onSelect path, data.rslt.obj.data("id"), data
+            homeViewCbk.onSelect path, note_uuid, data
                     
 
         @widget.on "move_node.jstree", (e, data) =>

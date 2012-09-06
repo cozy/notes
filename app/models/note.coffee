@@ -1,11 +1,11 @@
-async = require("async")
-helpers = require('../../client/app/helpers')
+async = require("async")  # TODO BJA should'nt we declare all global librairies in a centralized point ?
+helpers = require('../../client/app/helpers') # TODO BJA : should'nt we store helpers common to server and client at root level ? cozy-note/common-helpers/ for instance ?
 
 # DestroyNote corresponding to given condition
 # TODO optimise deletion : each deletion requires on request.
 Note.destroySome = (condition, callback) ->
 
-    # Replace this with async lib call.
+    # TODO FRU : Replace this with async lib call.
     wait = 0
     error = null
     done = (err) ->

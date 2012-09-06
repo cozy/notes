@@ -164,20 +164,41 @@ class exports.NoteView extends Backbone.View
         #breadcrumb will contain the path of the selected note in a link format(<a>)
         # the code below generates the breadcrumb corresponding
         # to the current note path
-            i = noteModel.humanPath.split(",").length - 1
+
+            # i = noteModel.humanPath.split(",").length - 1
+
+            paths = noteModel.path
+            i = paths.length
+            i-- 
+
             breadcrumb = ""
-            linkToThePath = []
-            parent = undefined
-            # ATTENTION! Parfois le humanPath n'est pas le bon ... je ne sais pas pourquoi
-            while i >= 1
-                parent = data.inst._get_parent(parent)
+            # TODO BJA : optimiser ce plat de nouilles : 
+            parent = this.homeView.tree.jstreeEl.jstree("get_selected")
+            while i >= 0
                 path = "/#note/#{parent[0].id}"
-                breadcrumb = "<a href='#{path}'> #{noteModel.humanPath.split(",")[i-1]}</a> > #{breadcrumb}"
+                breadcrumb = "<a href='#{path}'> #{paths[i]}</a> >#{breadcrumb}"
+                parent = data.inst._get_parent(parent)
                 i--
-            #avoir le meme path qu'avec path = "/"+ data.rslt.obj[0].id + @_getSlugPath parent, nodeName
-            #faire appel à selectnote
-            path = "/#note/#{noteModel.id}"
-            breadcrumb = "#{breadcrumb} <a href='#{path}' > #{noteModel.title}</a>"
+
+            path = "/#note/all"
+            breadcrumb = "<a href='/#note/all'> All</a> >#{breadcrumb}"
+            parent = data.inst._get_parent(parent)
+
+            # breadcrumb = ""
+            # linkToThePath = []
+            # parent = undefined
+            # # ATTENTION! Parfois le humanPath n'est pas le bon ... je ne sais pas pourquoi
+            # while i >= 1
+            #     parent = data.inst._get_parent(parent)
+            #     path = "/#note/#{parent[0].id}"
+            #     breadcrumb = "<a href='#{path}'> #{noteModel.humanPath.split(",")[i-1]}</a> > #{breadcrumb}"
+            #     i--
+            # #avoir le meme path qu'avec path = "/"+ data.rslt.obj[0].id + @_getSlugPath parent, nodeName
+            # #faire appel à selectnote
+            # path = "/#note/#{noteModel.id}"
+            # breadcrumb = "#{breadcrumb} <a href='#{path}' > #{noteModel.title}</a>"
+
+
                 
             $("#note-full-breadcrumb").html breadcrumb
 

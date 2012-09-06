@@ -73,12 +73,11 @@ class exports.HomeView extends Backbone.View
         @progress.css("left", progressBarLeftPosition)
         @progress.css("top", progressBarTopPosition)
         
-        # Path to open when the tree will be loaded
-        #@onTreeLoaded = ->
-        #    app.homeView.selectNote path
-        
         # creation of the tree
         $.get "tree/", (data) =>
+            console.log "rrrrrrrrrrrrrrr"
+            console.log data
+            window.tree = data
             @tree = new Tree( @.$("#nav"), data, 
                     onCreate: @createFolder
                     onRename: @onTreeRename
@@ -89,7 +88,10 @@ class exports.HomeView extends Backbone.View
                 )
 
     ###*
-    Create a new folder of path : fullPath and of name : newName
+    Create a new folder of path : 
+    Params :
+        fullPath : path of the folder
+        newName : name of the folder
     ###
     createFolder: (fullPath, newName, data) =>
         console.log "HomeView.createFolder()"
@@ -101,6 +103,7 @@ class exports.HomeView extends Backbone.View
                 data.rslt.obj.prop("id", note.id)
                 data.inst.deselect_all()
                 data.inst.select_node data.rslt.obj
+
     ###*
     # Only called by jsTree event "rename.jstree" trigered when a node
     # is renamed.
