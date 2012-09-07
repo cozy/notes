@@ -1,27 +1,31 @@
-helpers = require('../../client/app/helpers')
+# helpers = require('../../client/app/helpers')
 
-load 'application'
+# load 'application'
 
 
 ###--------------------------------------#
 # Helpers
 ###
 
+###
 # Return to client a note list like this
 # { length: number of note, rows: note list }
+###
 returnNotes = (err, notes) ->
     if err
+        console.log "retun ???????"
         console.log err
         send error: "Retrieve notes failed.", 500
     else
         # due to jugglingdb pb, arrays are stored as json
-        notes.forEach (n)->
-            n.path = JSON.parse n.path 
-
+        notes.forEach (nt)->
+            nt.path = JSON.parse nt.path 
         send length: notes.length, rows: notes
 
+###
 # Grab note corresponding to id given in url before 
 # update, destroy or show actions
+###
 before 'load note', ->
     Note.find params.id, (err, note) =>
         if err
@@ -32,14 +36,16 @@ before 'load note', ->
             note.path = JSON.parse note.path # due to jugglingdb pb, arrays are stored as json
             @note = note
             next()
-, only: ['update', 'destroy', 'show']
+, only: ['destroy', 'show']
 
 
+###
 # Before each note list modification current tree is loaded. If it does not 
 # exist it is created.
+###
 before 'load tree', ->
 
-    createTreeCb = (err, tree) =>
+    createTreeCb = (err, tree) ->
         if err
             console.log err
             send error: 'An error occured while loading tree', 500
@@ -70,26 +76,25 @@ action 'show', ->
 # Create a new note from data given in the body of request
 ###
 action 'create', ->
-    # note = new Note body
-    Tree.getPath body.parent_id, (err, path)->
+    console.log " \nACTION CREATE - " + body.title
+    console.log body
+    path = Tree.getPath body.parent_id
+    path.push(body.title)
+    console.log path
+    body.path = JSON.stringify(path) # due to jugglingdb pb, arrays are stored as json
+    Note.create body, (err, note) ->
         if err
             # TODO : roll back the creation of the note.
-            send {error: 'note can not be created'}
+            send error: 'Note can not be created'
         else
-            path.push(body.title)
-            body.path = JSON.stringify(path) # due to jugglingdb pb, arrays are stored as json
-            Note.create body, (err, note) ->
+            Tree.addNode note, body.parent_id, (err)->
                 if err
                     # TODO : roll back the creation of the note.
                     send error: 'Note can not be created'
                 else
-                    Tree.addNode note, body.parent_id, (err)->
-                        if err
-                            # TODO : roll back the creation of the note.
-                            send error: 'Note can not be created'
-                        else
-                            note.path = JSON.parse(note.path) # due to jugglingdb pb, arrays are stored as json
-                            send note, 201
+                    note.path = JSON.parse(note.path) # due to jugglingdb pb, arrays are stored as json
+                    console.log note
+                    send note, 201
 ###
 # Update the note and tree in case of :
 #   change of the title
@@ -97,42 +102,85 @@ action 'create', ->
 #   change of the content
 ###
 action 'update', ->
-
+    console.log "\nSERV SERV SERV SERV SERV SERV SERV SERV : update"
     console.log body
-    
-    updateNote = =>
-        @note.updateAttributes body, (err) =>
+    cbk = (err) ->
             if err
-                console.log err
                 send error: 'Note can not be updated', 400
             else
                 send success: 'Note updated', 200
 
     #if the title of the note changes
-    if body.title? and body.title != @note.title
+    dataTreeNode = Tree.dataTree.nodes[params.id]
+    isNewTitle   = body.title? and body.title != dataTreeNode.data
+    isNewParent  = body.parent_id? and body.parent_id != dataTreeNode._parent._id
+    if isNewTitle or isNewParent
         # update the path of the note in the tree.
-        # rq : by doing this operation, the path of note's children are updated
-        #      since the path of all notes is stored in the dataTree (chain 
-        #      of node's parents)
-        Tree.updateTitle @note, body.title, (err,newPath)->
-            if err
-                send error : "Note can not be renamed", 400
+        # rq : the path of note's children are impacted, this operation updates
+        #      the note and its children paths and the tree.
+        #      The call back is called only when the tree and notes are saved.
+        console.log "Title has changed or note is moved"
+        # console.log body
+        # console.log params
+        Tree.updateTitle params.id, body.title, body.parent_id, (err)->
+
+            newData    = {}
+            isToUpdate = false
+            # console.log "isToUpdate"
+            # console.log isToUpdate
+            if body.content
+                newData.content = body.content
+                isToUpdate = true
+            if isNewTitle
+                newData.title = body.title
+                isToUpdate = true
+            if body.tags
+                newData.tags = body.tags
+                isToUpdate = true
+            if isNewParent
+                newData.parent_id = body.parent_id
+                isToUpdate = true
+
+            if isToUpdate
+                # console.log "isToUpdate"
+                # console.log isToUpdate
+                newData.id = params.id
+                # console.log newData
+                Note.upsert(newData, cbk)
             else
-                path[path.length-1] = body.title
-                body.path = JSON.stringify(path) # due to jugglingdb pb, arrays are stored as json
-                updateNote()
+                cbk(null)
+    else
+
+        newData    = {}
+        isToUpdate = false
+        # console.log "isToUpdate"
+        # console.log isToUpdate
+        if body.content
+            newData.content = body.content
+            isToUpdate = true
+        if body.tags
+            newData.tags = body.tags
+            isToUpdate = true
+        if isToUpdate
+            # console.log "isToUpdate"
+            # console.log isToUpdate
+            newData.id = params.id
+            # console.log newData
+            Note.upsert(newData, cbk)
+        else
+            cbk(null)
+
+
+                # newPath[newPath.length-1] = body.title
+                # body.path = JSON.stringify(newPath) # due to jugglingdb pb, arrays are stored as json
+                # Note.updateNote(@note, body, cbk)
 
     # if note is moved in the tree ()
-    else if body.parent_id? and body.parent_id != @note.parent_id
-        Tree.moveNote @note, body.parent_id, (err,newPath)->
-            if err
-                send error : "Note can not be moved", 400
-            else
-                updateNote()
+    # else if isNewParent
+    #     console.log "Note has moved"
+    #     Tree.moveNote params.id, body.parent_id, cbk
     
     # the update does'nt impact the tree, the note can be updated immediately
-    else
-        updateNote()
             
         
 

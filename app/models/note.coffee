@@ -1,8 +1,10 @@
 async = require("async")  # TODO BJA should'nt we declare all global librairies in a centralized point ?
 helpers = require('../../client/app/helpers') # TODO BJA : should'nt we store helpers common to server and client at root level ? cozy-note/common-helpers/ for instance ?
 
+###
 # DestroyNote corresponding to given condition
 # TODO optimise deletion : each deletion requires on request.
+###
 Note.destroySome = (condition, callback) ->
 
     # TODO FRU : Replace this with async lib call.
@@ -21,26 +23,35 @@ Note.destroySome = (condition, callback) ->
         data.forEach (obj) ->
             obj.destroy done
 
-Note.debug = ->
-    t=2
 
+###
 # Delete all notes.
+###
 Note.destroyAll = (callback) ->
     Note.destroySome {}, callback
 
+
+###
 # Return notes which live under given path.
+###
 Note.allForPath = (path, callback) ->
     regExp = helpers.getPathRegExp path
     Note.all { where: { path: { regex: regExp } } }, callback
 
+
+###
 # Destroy notes which live under given path.
+###
 Note.destroyForPath = (path, callback) ->
     regExp = helpers.getPathRegExp path
     Note.destroySome { where: { path: { regex: regExp } } }, callback
 
+
+###
 # Change path for every note which are children of given path to the 
 # new given one.
 # It is the result of moving notes inside tree.
+###
 Note.updatePath = (path, newPath, newName, callback) ->
     Note.allForPath path, (err, notes) ->
         return callback(err) if err
@@ -62,8 +73,11 @@ Note.updatePath = (path, newPath, newName, callback) ->
             note.humanPath = humanNames
             note.save done
 
+
+###
 # When a node is moved, all notes that are linked to this node are
 # updated : sub-path are replaced by new node path.
+###
 Note.movePath = (path, dest, humanDest, callback) ->
     Note.allForPath path, (err, notes) ->
         return callback(err) if err

@@ -23,6 +23,7 @@ slugify = require('../client/app/helpers').slugify
 ###
 class exports.DataTree
 
+
     ###
     # constructor (jsonStruct)
     #    jsonStruct : optionnal : a json sting that represents a DataTree. Used when
@@ -77,30 +78,82 @@ class exports.DataTree
 
 
     ###
-    updates the title of a node, wich corresponds to its "data" propertie.
+    # updates the title of a node, wich corresponds to its "data" propertie.
     ###
-    updateTitle: (note, newTitle) ->
-        @nodes[note.id].data = newTitle
+    updateTitle: (noteId, newTitle) ->
+        @nodes[noteId].data = newTitle
 
 
     deleteNode: (nodeId) ->
 
-    moveNode: (nodeToMove,nodeParent) ->
+
+    ###
+    # Move a node to a new parent
+    ###
+    moveNode: (noteId, newParentId) ->
+        # var
+        newParent = @nodes[newParentId]
+        node      = @nodes[noteId]
+        oldPtChd = node._parent.children
+        # remove from the children of its parent
+        debugger;
+        i = 0
+        while i < oldPtChd.length
+            c = oldPtChd[i]
+            if c._id == noteId
+                node._parent.children = oldPtChd.splice(i-1,1)
+                break
+            i++
+        # add to the children of its new parent
+        newParent.children.push(node)
+        node._parent = newParent
 
 
     ###
-    params :
-        node : a reference to a node or the id of a node.
+    # params :
+    #     node : a reference to a node or the id of a node.
     ###
     getPath: (node)->
-        # console.log '***** getPath '+node
         if typeof node == "string"
             node = @nodes[node]
         path = []
+        # console.log "DataTree.getPath - " + node._id
+        path.unshift(node.data)
         while node._parent != null
             node = node._parent
-            path.push(node.data)
+            path.unshift(node.data)
+        path.shift()
         return path
+
+
+    ###
+    # retrieves all the paths of a note and its children
+    # returns an array : [{id:note_id,path:note_path}, ... ]
+    # params :
+    #     nodeid : a reference to a node or the id of a node.
+    ###
+    getPaths: (node) ->
+        if typeof node == "string"
+            node = @nodes[node]
+        # console.log '\n***** DataTree.getPaths( '+node.data+') ********************'
+        
+        p    = @getPath(node)
+        list = [ {id:node._id,path:p} ]
+        
+        if node.children.length > 0
+            @_addChildrenPaths(node, p.slice(), list)
+
+        return list
+
+    _addChildrenPaths: (node, nodePath, list) ->
+        # console.log "_addChildrenPaths"
+        for c in node.children
+            nodePath.push(c.data)
+            data = 
+                id:c._id
+                path:nodePath
+            list.push data
+            @_addChildrenPaths(c,nodePath.slice(),list)
 
 
     ###
@@ -109,7 +162,6 @@ class exports.DataTree
     # The _initWalk method adds _parent and @nodes when the json is retrieved
     # from db.
     ###
-
     toJson: ()->
         filter = ->
             if arguments[0] == '_parent'
@@ -123,7 +175,6 @@ class exports.DataTree
     # Return a json string of the root for the jsTree of web client
     # properties with a name beginning by "_" are filtered
     ###
-
     toJsTreeJson: ->
         filter = ->
             if arguments[0].charAt(0) == '_'
@@ -131,5 +182,4 @@ class exports.DataTree
             else
                 return arguments[1]
         return JSON.stringify(@root, filter)
-        # return @root
 

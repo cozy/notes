@@ -158,10 +158,15 @@ class exports.HomeView extends Backbone.View
         path = "/#{path}" if path.indexOf("/")
         app.router.navigate "note#{path}", trigger: false
         if id?
-            Note.getNote id, (note) =>
-                @renderNote note, data
-                @noteFull.show()
+            if id == "tree-node-all"
+                @progress.remove()
+                @noteFull.hide()
+            else
+                Note.getNote id, (note) =>
+                    @renderNote note, data
+                    @noteFull.show()
         else
+            @progress.remove()
             @noteFull.hide()
 
     ###*

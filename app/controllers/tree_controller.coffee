@@ -1,12 +1,16 @@
 
-DataTree = require('../../lib/data-tree').DataTree  # TODO BJA : utilité à vérifier 
-helpers = require('../../client/app/helpers')
 
-load 'application'
+# helpers = require('../../client/app/helpers')
 
+# load 'application'
+
+###-------------------------------------#
 # Helpers
+###
 
+###
 # Before each action current tree is loaded. If it does not exists it created.
+###
 before 'load tree', ->
     createTreeCb = (err, tree) =>
         if err
@@ -20,11 +24,13 @@ before 'load tree', ->
 
     Tree.getOrCreate createTreeCb
 
-
+###-------------------------------------#
 # Actions
+###
 
-
+###
 # Returns complete tree.
+###
 action 'tree', ->
     send Tree.dataTree.toJsTreeJson()
 
