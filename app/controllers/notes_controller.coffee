@@ -1,6 +1,4 @@
-# helpers = require('../../client/app/helpers')
-
-# load 'application'
+load 'application'
 
 
 ###--------------------------------------#
@@ -74,20 +72,24 @@ action 'show', ->
 
 ###
 # Create a new note from data given in the body of request
+# params : post object : 
+#               { title : "the title, mandatory",
+#                 parent_id : "the parent note, mandatory, null if root"}
+#          Other attributes of a note are optionnal (content, tags)
 ###
 action 'create', ->
-    console.log " \nACTION CREATE - " + body.title
+    console.log " \nACTION CREATE - " + body.title + '  ' + body.parent_id
     console.log body
-    path = Tree.getPath body.parent_id
+    parent_id = body.parent_id
+    path = Tree.getPath parent_id
     path.push(body.title)
-    console.log path
     body.path = JSON.stringify(path) # due to jugglingdb pb, arrays are stored as json
     Note.create body, (err, note) ->
         if err
             # TODO : roll back the creation of the note.
             send error: 'Note can not be created'
         else
-            Tree.addNode note, body.parent_id, (err)->
+            Tree.addNode note, parent_id, (err)->
                 if err
                     # TODO : roll back the creation of the note.
                     send error: 'Note can not be created'
@@ -102,8 +104,7 @@ action 'create', ->
 #   change of the content
 ###
 action 'update', ->
-    console.log "\nSERV SERV SERV SERV SERV SERV SERV SERV : update"
-    console.log body
+    # console.log "\nDEBUGGING UPDATE : " + body.title + '  ' + body.parent_id
     cbk = (err) ->
             if err
                 send error: 'Note can not be updated', 400
@@ -119,15 +120,9 @@ action 'update', ->
         # rq : the path of note's children are impacted, this operation updates
         #      the note and its children paths and the tree.
         #      The call back is called only when the tree and notes are saved.
-        console.log "Title has changed or note is moved"
-        # console.log body
-        # console.log params
-        Tree.updateTitle params.id, body.title, body.parent_id, (err)->
-
+        Tree.moveOrRenameNode params.id, body.title, body.parent_id, (err)->
             newData    = {}
             isToUpdate = false
-            # console.log "isToUpdate"
-            # console.log isToUpdate
             if body.content
                 newData.content = body.content
                 isToUpdate = true
@@ -140,21 +135,15 @@ action 'update', ->
             if isNewParent
                 newData.parent_id = body.parent_id
                 isToUpdate = true
-
             if isToUpdate
-                # console.log "isToUpdate"
-                # console.log isToUpdate
                 newData.id = params.id
-                # console.log newData
                 Note.upsert(newData, cbk)
             else
                 cbk(null)
+    # neither title nor path is changed, the note can be updated immediately.
     else
-
         newData    = {}
         isToUpdate = false
-        # console.log "isToUpdate"
-        # console.log isToUpdate
         if body.content
             newData.content = body.content
             isToUpdate = true
@@ -162,25 +151,10 @@ action 'update', ->
             newData.tags = body.tags
             isToUpdate = true
         if isToUpdate
-            # console.log "isToUpdate"
-            # console.log isToUpdate
             newData.id = params.id
-            # console.log newData
             Note.upsert(newData, cbk)
         else
             cbk(null)
-
-
-                # newPath[newPath.length-1] = body.title
-                # body.path = JSON.stringify(newPath) # due to jugglingdb pb, arrays are stored as json
-                # Note.updateNote(@note, body, cbk)
-
-    # if note is moved in the tree ()
-    # else if isNewParent
-    #     console.log "Note has moved"
-    #     Tree.moveNote params.id, body.parent_id, cbk
-    
-    # the update does'nt impact the tree, the note can be updated immediately
             
         
 

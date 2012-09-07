@@ -38,11 +38,11 @@ class exports.DataTree
         else
             @root = 
                     _parent  : null
-                    _id      : 'all'
+                    _id      : 'tree-node-all'
                     children : []
                     data     : 'All'
                     attr     : {id:'tree-node-all'}
-            @nodes = {all:@root}
+            @nodes = {"tree-node-all":@root}
 
 
     ### 
@@ -64,7 +64,7 @@ class exports.DataTree
     addNode: (note, parentNoteID) ->
         # console.log '***** DataTree.addNode ('+note+", " + parentNoteID
         if !parentNoteID
-            parentNoteID = 'all'
+            parentNoteID = 'tree-node-all'
         parentNode = @nodes[parentNoteID]
         newNode    =
             _parent  : parentNode
@@ -96,12 +96,11 @@ class exports.DataTree
         node      = @nodes[noteId]
         oldPtChd = node._parent.children
         # remove from the children of its parent
-        debugger;
         i = 0
         while i < oldPtChd.length
             c = oldPtChd[i]
             if c._id == noteId
-                node._parent.children = oldPtChd.splice(i-1,1)
+                oldPtChd.splice(i,1)
                 break
             i++
         # add to the children of its new parent
@@ -116,9 +115,12 @@ class exports.DataTree
     getPath: (node)->
         if typeof node == "string"
             node = @nodes[node]
+        # console.log "tttttttttttttttttTTTTTTTTTTTTTTTTTTTTTTTTTTt"
+        # console.log node
         path = []
         # console.log "DataTree.getPath - " + node._id
-        path.unshift(node.data)
+        if node._parent != null
+            path.unshift(node.data)
         while node._parent != null
             node = node._parent
             path.unshift(node.data)

@@ -18,23 +18,17 @@ Tree.addNode = (note, parent_id, cbk)->
 
 
 ###
-# Update in the dataTree the title of the node corresponding to the note.
-# Save the tree
+# Moves or rename a node.
+# Update the title in the dataTree.
 # update the path of the note and propagates to its children.
+# Save the tree
 # Call at the end : cbk(error) after the tree is saved.
 ###
-Tree.updateTitle = (noteId, newTitle, newParentId, cbk) ->
+Tree.moveOrRenameNode = (noteId, newTitle, newParentId, cbk) ->
 
     # params : noteDataItem = {id:"note id", path: "[note path, an array]"}
     _updateNotePath = (noteDataItem, cbk) ->
-        # if body.title
-        #     noteDataItem.title = body.title
-        # if body.content
-        #     noteDataItem.content = body.content
-
-        # console.log "\n_updateNotePath *******************"
         noteDataItem.path = JSON.stringify(noteDataItem.path)
-        console.log noteDataItem    
         Note.upsert noteDataItem, (err)->
             cbk()
 
@@ -44,17 +38,14 @@ Tree.updateTitle = (noteId, newTitle, newParentId, cbk) ->
         dataTree.updateTitle(noteId, newTitle) # synchronous operation
     if newParentId
         dataTree.moveNode(noteId, newParentId) # synchronous method
-    console.log dataTree
+
     # get all the children and their paths in an array to update them
     notes4pathUpdate = dataTree.getPaths(noteId)
-    # console.log "\nnotes4pathUpdate"
-    # console.log notes4pathUpdate
+
     # synchronisation of the update of all the notes
     async.forEach notes4pathUpdate, _updateNotePath, ->
         # then we can save the tree
         Tree.tree.updateAttributes struct: dataTree.toJson(), (err) ->
-            # console.log "tree.updateAttributes callback"
-            # console.log err
             if err
                 cbk(err)
             else
@@ -63,39 +54,11 @@ Tree.updateTitle = (noteId, newTitle, newParentId, cbk) ->
 
 
 ###
-# Move in the dataTree the node corresponding to the note.
-# Save the tree
-# Call at the end : cbk(error) after the tree is saved.
-###
-# Tree.moveNote = (noteId, newParentId, cbk) ->
-
-#     # params : noteDataItem = {id:"note id", path: "[note path, an array]"}
-#     _updateNotePath = (noteDataItem, cbk)->
-#         noteDataItem.path = JSON.stringify(noteDataItem.path)
-#         Note.upsert noteDataItem, cbk
-
-#     # update the dataTree
-#     dataTree = Tree.dataTree
-#     dataTree.moveNode(noteId, newParentId) # synchronous method
-#     # get all the children and their paths in an array to update them
-#     notes4pathUpdate = dataTree.getPaths(noteId)
-#     # synchronisation of the update of all the notes
-#     async.forEach notes4pathUpdate, _updateNotePath, ->
-#         # then we can save the tree
-#         Tree.tree.updateAttributes struct: dataTree.toJson(), (err) ->
-#             if err
-#                 cbk(err)
-#             else
-#                 newPath = dataTree.getPath(noteId)
-#                 cbk(null)
-
-
-###
 # Destroy all tree corresponding at given condition.
 ###
 Tree.destroySome = (condition, callback) ->
     
-    # Replace this with async lib call.
+    # TODO BJA Replace this with async lib call.
     wait = 0
     error = null
     done = (err) ->

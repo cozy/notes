@@ -128,12 +128,16 @@ class exports.NoteView extends Backbone.View
             oldName = @model.title
             if newName isnt "" and oldName != newName
                 @homeView.onNoteTitleChange(@model.id, newName)
-                TreeInst.Tree.prototype._updateSuggestionList("rename", newName, oldName)
+                TreeInst.Tree._updateSuggestionList("rename", newName, oldName)
                 @updateBreadcrumbOnTitleChange(newName)
                 
                 # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
                 # @rebuildIds @currentData, @currentData.rslt.obj, @currentPath 
 
+
+    ###*
+    # 
+    ###
     setModel : (noteModel, data) ->
         @model = noteModel
         @setTitle(noteModel.title)
@@ -141,12 +145,18 @@ class exports.NoteView extends Backbone.View
         @createBreadcrumb(noteModel, data)
 
 
+    ###*
+    # 
+    ###
     setTitle : (nTitle) ->
         noteFullTitle = @noteFullTitle
         #give a title to the note
         noteFullTitle.val nTitle
 
 
+    ###*
+    # 
+    ###
     setContent : (content) ->
         # load the base's content into the editor
         if content
@@ -164,14 +174,10 @@ class exports.NoteView extends Backbone.View
         #breadcrumb will contain the path of the selected note in a link format(<a>)
         # the code below generates the breadcrumb corresponding
         # to the current note path
-
-            # i = noteModel.humanPath.split(",").length - 1
-
             paths = noteModel.path
-            i = paths.length
-            i-- 
-
-            breadcrumb = ""
+            i = -1+paths.length
+            breadcrumb = "<a href='#{path}'> #{paths[i]}</a>"
+            i--
             # TODO BJA : optimiser ce plat de nouilles : 
             parent = this.homeView.tree.jstreeEl.jstree("get_selected")
             while i >= 0
@@ -179,27 +185,7 @@ class exports.NoteView extends Backbone.View
                 breadcrumb = "<a href='#{path}'> #{paths[i]}</a> >#{breadcrumb}"
                 parent = data.inst._get_parent(parent)
                 i--
-
-            path = "/#note/all"
             breadcrumb = "<a href='/#note/all'> All</a> >#{breadcrumb}"
-            parent = data.inst._get_parent(parent)
-
-            # breadcrumb = ""
-            # linkToThePath = []
-            # parent = undefined
-            # # ATTENTION! Parfois le humanPath n'est pas le bon ... je ne sais pas pourquoi
-            # while i >= 1
-            #     parent = data.inst._get_parent(parent)
-            #     path = "/#note/#{parent[0].id}"
-            #     breadcrumb = "<a href='#{path}'> #{noteModel.humanPath.split(",")[i-1]}</a> > #{breadcrumb}"
-            #     i--
-            # #avoir le meme path qu'avec path = "/"+ data.rslt.obj[0].id + @_getSlugPath parent, nodeName
-            # #faire appel à selectnote
-            # path = "/#note/#{noteModel.id}"
-            # breadcrumb = "#{breadcrumb} <a href='#{path}' > #{noteModel.title}</a>"
-
-
-                
             $("#note-full-breadcrumb").html breadcrumb
 
     ###*

@@ -17,15 +17,18 @@ class exports.HomeView extends Backbone.View
     id: 'home-view'
 
     ###*
-    #Load the home view and the tree
-    #Called once by the main_router
+    # Load the home view and the tree
+    # Called once by the main_router
     ###
     initContent: (note_uuid) -> 
         
         console.log "HomeView.initContent(#{note_uuid})"
+
+        # vars
         @progressBar = $(".bar")
         progressBar = @progressBar
-        # when the tree and iframe of the editor will be loaded : select the note
+
+        # when the tree and iframe of the editor are loaded : select the note
         hv = this
         iframeLoaded = false
         treeLoaded = false
@@ -49,6 +52,7 @@ class exports.HomeView extends Backbone.View
         @noteFull = $("#note-full")
         @noteFull.hide()
         drag = $("#drag")
+
         # Use jquery layout to set main layout of current window.
         $('#home-view').layout
             size: "250"
@@ -75,7 +79,6 @@ class exports.HomeView extends Backbone.View
         
         # creation of the tree
         $.get "tree/", (data) =>
-            console.log "rrrrrrrrrrrrrrr"
             console.log data
             window.tree = data
             @tree = new Tree( @.$("#nav"), data, 
@@ -93,13 +96,15 @@ class exports.HomeView extends Backbone.View
         fullPath : path of the folder
         newName : name of the folder
     ###
-    createFolder: (fullPath, newName, data) =>
+    createFolder: (parentId, newName, data) ->
         console.log "HomeView.createFolder()"
+        # if parentId == null
+        #     parentId = "tree-node-all"
         Note.createNote
-            path : fullPath
             title: newName
-            , (note) =>
-                data.rslt.obj.data("id", note.id)
+            parent_id:parentId
+            , (note) ->
+                data.rslt.obj.data("id", note.id) # TODO BJA : use case ?
                 data.rslt.obj.prop("id", note.id)
                 data.inst.deselect_all()
                 data.inst.select_node data.rslt.obj
@@ -119,6 +124,7 @@ class exports.HomeView extends Backbone.View
                 title: newName
             , () =>
     
+
     onNoteTitleChange:(uuid, newName) =>
         console.log "HomeView.onNoteTitleChange()"
         if newName?
@@ -176,8 +182,8 @@ class exports.HomeView extends Backbone.View
         progressBar = @progressBar
         console.log "HomeView.selectNote(#{note_uuid})"
         progressBar.css("width","40%")
-        if note_uuid=="all"
-           note_uuid = 'tree-node-all'
+        # if note_uuid=="all"
+        #    note_uuid = 'tree-node-all'
         @tree.selectNode note_uuid
 
     ###*
@@ -200,13 +206,12 @@ class exports.HomeView extends Backbone.View
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
     ###
-    onNoteDropped: (newPath, oldPath, noteTitle, data) =>
-        console.log "HomeView.onNoteDropped() id=" + data.rslt.o.data("id") + " oldPath=" + oldPath + " newPath=" + newPath
-        Note.updateNote data.rslt.o.data("id"),
-            path: newPath
-            , () =>
-                data.inst.deselect_all()
-                data.inst.select_node data.rslt.o
+    # onNoteDropped: (newPath, oldPath, noteTitle, data) =>
+    onNoteDropped: (nodeId, targetNodeId) ->
+        console.log "HomeView.onNoteDropped() id=" + nodeId + " targetNodeId=" + targetNodeId
+        Note.updateNote nodeId, {parent_id:targetNodeId} , () ->
+                # @tree.deselect_all()
+                # @tree.select_node "##{targetNodeId}"
 
 
 

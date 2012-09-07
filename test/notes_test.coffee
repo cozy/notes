@@ -2,14 +2,10 @@ should = require('should')
 async = require('async')
 Client = require('request-json').JsonClient
 
-request = require('request')
 URL = require('url')
 
 app = require('../server')
 helpers = require("./helpers")
-
-DataTree = require("../lib/data-tree").DataTree #TODO BJA : vérifier utilité
-
 
 client = new Client("http://localhost:8888/")
 
@@ -23,6 +19,7 @@ notesList = rnotes = {}
 note1  = note2  = note3  = null # notes with data chosen on client side
 id1    = id2    = id3    = null # notes ids
 rnote1 = rnote2 = rnote3 = null # retrieved notes from the serveur
+note4=note5=note6=note7= null
 updateData = null
 
 retrieveNotes = (notes)->
@@ -42,7 +39,7 @@ createNoteFunction = (title, parentNote_id, content, creationCbk) ->
             parent_id : parentNote_id
 
         client.post "notes/", noteData, (error, response, body) ->
-            creationCbk(body)
+            creationCbk(error, response, body)
             syncCallback()
 
 before (done) ->
@@ -62,18 +59,21 @@ after (done) ->
 describe "/notes", ->
 
 
-    describe "- POST - Creation of several notes", ->
+    describe "- POST - Creation of 3 notes", ->
 
         it "should create 3 notes", (done) ->
             async.series [
-                createNoteFunction "Note1 title", "all", "\n+ 01\n", (newNote)->
-                    note1=newNote
-                createNoteFunction "Note2 title", "all", "\n+ 02\n", (newNote)->
-                    note2=newNote
+                createNoteFunction "Note1 title", "tree-node-all", "\n+ 01\n", (err, resp, body)->
+                    resp.statusCode.should.equal 201
+                    note1=body
+                createNoteFunction "Note2 title", "tree-node-all", "\n+ 02\n", (err, resp, body)->
+                    resp.statusCode.should.equal 201
+                    note2=body
             ], ->
                 async.series [
-                    createNoteFunction "Note3 title", note1.id, "\n+ 03\n", (newNote)->
-                        note3=newNote
+                    createNoteFunction "Note3 title", note1.id, "\n+ 03\n", (err, resp, body)->
+                        resp.statusCode.should.equal 201
+                        note3=body
                 ], ->
                     id1 = note1.id
                     id2 = note2.id
@@ -269,4 +269,35 @@ describe "/notes/:id", ->
                 tree.children[0].children[0].children.length.should.equal 1
                 tree.children[0].children[0].children[0].children.length.should.equal 0
                 done()
-            
+
+
+describe "Test in many different cases", -> 
+
+    describe ": creation of a sinple note", ->
+        it "should success", (done) ->
+            client.post "notes", {title:"a simple title",parent_id:"#{note1.id}"}, (err,resp,note) ->
+                resp.statusCode.should.equal 201
+                done()
+
+    describe ": creation of a sinple note at the root", ->
+        it "should success", (done) ->
+            client.post "notes", {title:"a simple title at the root",parent_id:"tree-node-all"}, (err,resp,note) ->
+                resp.statusCode.should.equal 201
+                done()
+
+    describe ":creation of a complex tree", ->
+        it "should success", (done)->
+            async.series [
+                createNoteFunction "Recipe", "tree-node-all", "\n+ 01\n", (err, resp, body)->
+                    note4=body
+                createNoteFunction "Blanquette", "tree-node-all", "\n+ 01\n", (err, resp, body)->
+                    note5=body
+                createNoteFunction "Cassoulet", "tree-node-all", "\n+ 01\n", (err, resp, body)->
+                    note6=body
+                createNoteFunction "Pizza - the true one !", "tree-node-all", "\n+ 01\n", (err, resp, body)->
+                    note7=body
+            ], ->
+                client.put "notes/#{note5.id}", {parent_id:note4.id}, ->
+                    client.put "notes/#{note6.id}", {parent_id:note4.id}, ->
+                        client.put "notes/#{note7.id}", {parent_id:note4.id}, ->
+                            done()

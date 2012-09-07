@@ -1,8 +1,4 @@
-
-
-# helpers = require('../../client/app/helpers')
-
-# load 'application'
+load 'application'
 
 ###-------------------------------------#
 # Helpers
@@ -17,9 +13,6 @@ before 'load tree', ->
             console.log err
             send error: 'An error occured while loading tree', 500
         else
-            # useless, already done in Tree.getOrCreate
-            # Tree.tree = tree 
-            # JSON.parse(@tree.struct)
             next()
 
     Tree.getOrCreate createTreeCb
