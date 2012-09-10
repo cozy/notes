@@ -84,23 +84,25 @@ class exports.DataTree
         @nodes[noteId].data = newTitle
 
 
-    deleteNode: (nodeId) ->
-
-
     ###
     # Move a node to a new parent
     ###
     moveNode: (noteId, newParentId) ->
         # var
-        newParent = @nodes[newParentId]
-        node      = @nodes[noteId]
-        oldPtChd = node._parent.children
+        newParent   = @nodes[newParentId]
+        node        = @nodes[noteId]
+        parentChldn = node._parent.children # old parent children
         # remove from the children of its parent
+        # for child, i in parentChldn
+        #     if child._id == noteId
+        #         parentChldn.splice(i,1)
+        #         break
+
         i = 0
-        while i < oldPtChd.length
-            c = oldPtChd[i]
+        while i < parentChldn.length
+            c = parentChldn[i]
             if c._id == noteId
-                oldPtChd.splice(i,1)
+                parentChldn.splice(i,1)
                 break
             i++
         # add to the children of its new parent
@@ -115,10 +117,7 @@ class exports.DataTree
     getPath: (node)->
         if typeof node == "string"
             node = @nodes[node]
-        # console.log "tttttttttttttttttTTTTTTTTTTTTTTTTTTTTTTTTTTt"
-        # console.log node
         path = []
-        # console.log "DataTree.getPath - " + node._id
         if node._parent != null
             path.unshift(node.data)
         while node._parent != null
@@ -129,21 +128,19 @@ class exports.DataTree
 
 
     ###
-    # retrieves all the paths of a note and its children
-    # returns an array : [{id:note_id,path:note_path}, ... ]
+    # Retrieves all the paths of a note and its children
+    # Returns an array : [{id:note_id,path:note_path}, ... ]
     # params :
     #     nodeid : a reference to a node or the id of a node.
     ###
     getPaths: (node) ->
         if typeof node == "string"
             node = @nodes[node]
-        # console.log '\n***** DataTree.getPaths( '+node.data+') ********************'
         
         p    = @getPath(node)
         list = [ {id:node._id,path:p} ]
         
-        if node.children.length > 0
-            @_addChildrenPaths(node, p.slice(), list)
+        @_addChildrenPaths(node, p.slice(), list)
 
         return list
 
@@ -156,6 +153,59 @@ class exports.DataTree
                 path:nodePath
             list.push data
             @_addChildrenPaths(c,nodePath.slice(),list)
+
+
+    ###*
+     * Remove a note and all its children
+     * Returns an array of the ids of the children removed nodes : [id_node_1, ... ]
+     * @param  {node or id} node a reference to a node or the id of a node.
+     * @return {[array]}        returns an array of ids of the removed children 
+     *                          the initial node is not in the array.
+    ###
+    removeNode: (node) ->
+        
+        # vars
+        if typeof node == "string"
+            node = @nodes[node]
+        list = []
+
+        # remove all the children, ids will be stacked in list
+        @_removeNode(node, list)
+        
+        # remove from the children of its parent
+        parentChldn = node._parent.children # parent children array
+        for child, i in parentChldn
+            if child._id == node._id
+                parentChldn.splice(i,1)
+                break
+
+        return list        
+
+    _removeNode: (node, list) ->
+        for c in node.children
+            list.push c._id
+            @_removeNode(c,list)
+        delete @nodes[node._id]
+
+
+    ###*
+     * retrieves ALL children of a node (children of children etc...)
+     * returns an array of ids : [id_child_1, ... ]
+     * @param  {node or id} node a reference to a node or the id of a node.
+     * @return {[array]}        returns an array of ids : [id_child_1, ... ]
+    ###
+    getAllChildrens: (node) ->
+        if typeof node == "string"
+            node = @nodes[node]
+        list = []
+
+        @_getAllChildren(node, list)
+        return list        
+
+    _getAllChildren: (node, list) ->
+        for c in node.children
+            list.push c._id
+            @_addChildren(c,list)
 
 
     ###

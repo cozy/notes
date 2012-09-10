@@ -37,7 +37,7 @@ before 'load note', ->
 , only: ['destroy', 'show']
 
 
-###
+###*
 # Before each note list modification current tree is loaded. If it does not 
 # exist it is created.
 ###
@@ -78,8 +78,6 @@ action 'show', ->
 #          Other attributes of a note are optionnal (content, tags)
 ###
 action 'create', ->
-    console.log " \nACTION CREATE - " + body.title + '  ' + body.parent_id
-    console.log body
     parent_id = body.parent_id
     path = Tree.getPath parent_id
     path.push(body.title)
@@ -95,7 +93,6 @@ action 'create', ->
                     send error: 'Note can not be created'
                 else
                     note.path = JSON.parse(note.path) # due to jugglingdb pb, arrays are stored as json
-                    console.log note
                     send note, 201
 ###
 # Update the note and tree in case of :
@@ -156,6 +153,8 @@ action 'update', ->
         else
             cbk(null)
             
-        
+action 'destroy', ->
+    Note.destroy params.id, ->
+        send success: 'Note succesfuly deleted', 200
 
 

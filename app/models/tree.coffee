@@ -29,8 +29,7 @@ Tree.moveOrRenameNode = (noteId, newTitle, newParentId, cbk) ->
     # params : noteDataItem = {id:"note id", path: "[note path, an array]"}
     _updateNotePath = (noteDataItem, cbk) ->
         noteDataItem.path = JSON.stringify(noteDataItem.path)
-        Note.upsert noteDataItem, (err)->
-            cbk()
+        Note.upsert noteDataItem, cbk
 
     # update the dataTree
     dataTree = Tree.dataTree
@@ -55,10 +54,11 @@ Tree.moveOrRenameNode = (noteId, newTitle, newParentId, cbk) ->
 
 ###
 # Destroy all tree corresponding at given condition.
+# This method doesn't update the tree. 
+# USE FOR INIT DATABASE ONLY
 ###
 Tree.destroySome = (condition, callback) ->
     
-    # TODO BJA Replace this with async lib call.
     wait = 0
     error = null
     done = (err) ->
@@ -77,6 +77,7 @@ Tree.destroySome = (condition, callback) ->
 
 ###
 # Remove all tree from database.
+# USE FOR INIT DATABASE ONLY
 ###
 Tree.destroyAll = (callback) ->
     Tree.destroySome {}, callback

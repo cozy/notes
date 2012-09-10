@@ -19,8 +19,9 @@ notesList = rnotes = {}
 note1  = note2  = note3  = null # notes with data chosen on client side
 id1    = id2    = id3    = null # notes ids
 rnote1 = rnote2 = rnote3 = null # retrieved notes from the serveur
-note4=note5=note6=note7= null
-updateData = null
+note4=note5=note6=note7=note8=note9=null
+noteToDestroy =null
+updateData    = null
 
 retrieveNotes = (notes)->
     rows = notes.rows
@@ -63,9 +64,9 @@ describe "/notes", ->
 
         it "should create 3 notes", (done) ->
             async.series [
-                createNoteFunction "Note1 title", "tree-node-all", "\n+ 01\n", (err, resp, body)->
-                    resp.statusCode.should.equal 201
-                    note1=body
+                createNoteFunction "Note1 title", "tree-node-all", "\n+ 01\n",(err, resp, body)->
+                        resp.statusCode.should.equal 201
+                        note1=body
                 createNoteFunction "Note2 title", "tree-node-all", "\n+ 02\n", (err, resp, body)->
                     resp.statusCode.should.equal 201
                     note2=body
@@ -121,9 +122,6 @@ describe "/notes", ->
                 done()
 
         it 'should affect proper path to Notes', (done)->
-            console.log note1
-            console.log note2
-            console.log note3
             note1.path.should.eql ['Note1 title']
             note2.path.should.eql ['Note2 title']
             note3.path.should.eql ['Note1 title','Note3 title']
@@ -134,8 +132,8 @@ describe "/notes", ->
             
         it "should get back all the notes", (done) ->
 
-            client.get "notes/", (error, response, notes) ->
-                response.statusCode.should.equal 200
+            client.get "notes/", (error, resp, notes) ->
+                resp.statusCode.should.equal 200
                 notes.rows.length.should.equal 3
                 n1 = notes.rows[0]
                 n2 = notes.rows[1]
@@ -192,7 +190,6 @@ describe "/notes/:id", ->
                 content : "\n+ 01 - modified\n"
             client.put "notes/#{note1.id}", updateData, (err, resp, data) ->
                 resp.statusCode.should.equal 200
-                console.log "put ok"
                 client.get "notes/", (err, resp, notes) ->
                     resp.statusCode.should.equal 200
                     retrieveNotes(notes)
@@ -277,12 +274,15 @@ describe "Test in many different cases", ->
         it "should success", (done) ->
             client.post "notes", {title:"a simple title",parent_id:"#{note1.id}"}, (err,resp,note) ->
                 resp.statusCode.should.equal 201
+                note8 = note
                 done()
 
     describe ": creation of a sinple note at the root", ->
         it "should success", (done) ->
-            client.post "notes", {title:"a simple title at the root",parent_id:"tree-node-all"}, (err,resp,note) ->
+            client.post "notes", {title:"a simple title at the root"
+            ,parent_id:"tree-node-all"}, (err,resp,note) ->
                 resp.statusCode.should.equal 201
+                note9 = note
                 done()
 
     describe ":creation of a complex tree", ->
@@ -301,3 +301,54 @@ describe "Test in many different cases", ->
                     client.put "notes/#{note6.id}", {parent_id:note4.id}, ->
                         client.put "notes/#{note7.id}", {parent_id:note4.id}, ->
                             done()
+
+describe "DEL - notes/:id", ->
+
+    describe "deletion of a 'leaf' note", ->
+
+        it "should success", (done) ->
+
+            client.del "notes/#{note1.id}", (err, resp, body) ->
+                resp.statusCode.should.equal 200
+                done()
+
+        it "should have destroyed the note1", (done) ->
+            client.get "notes/#{note1.id}", (err,resp,body) ->
+                resp.statusCode.should.equal 404
+                done()
+
+
+        it "should have destroyed the note1 children", (done) ->
+            client.get "notes/", (err,resp,notes) ->
+                resp.statusCode.should.equal 200
+                notes.length.should.equal 5
+                ids = []
+                ids.push(notes.rows[0].id)
+                ids.push(notes.rows[1].id)
+                ids.push(notes.rows[2].id)
+                ids.push(notes.rows[3].id)
+                ids.push(notes.rows[4].id)
+                should.equal note4.id in ids, true
+                should.equal note5.id in ids, true
+                should.equal note6.id in ids, true
+                should.equal note7.id in ids, true
+                should.equal note9.id in ids, true
+                done()
+
+        it "should updated the tree", (done) ->
+            should.equal Tree.dataTree.nodes[note1.id], undefined
+            should.equal Tree.dataTree.nodes[note2.id], undefined
+            should.equal Tree.dataTree.nodes[note3.id], undefined
+            should.equal Tree.dataTree.nodes[note8.id], undefined
+            Tree.dataTree.nodes[note4.id].should.exist
+            Tree.dataTree.nodes[note5.id].should.exist
+            Tree.dataTree.nodes[note6.id].should.exist
+            Tree.dataTree.nodes[note7.id].should.exist
+            Tree.dataTree.nodes[note9.id].should.exist
+            Tree.dataTree.root.children.length.should.equal 2
+
+            Tree.dataTree.root.children[0]._id.should.equal note9.id
+            Tree.dataTree.root.children[1]._id.should.equal note4.id
+            done()
+        
+

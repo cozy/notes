@@ -130,9 +130,6 @@ class exports.NoteView extends Backbone.View
                 @homeView.onNoteTitleChange(@model.id, newName)
                 TreeInst.Tree._updateSuggestionList("rename", newName, oldName)
                 @updateBreadcrumbOnTitleChange(newName)
-                
-                # TODO BJA : utilité ? sert qd les id des fils étaient impactés par le renommage, ce n'est plus le cas.
-                # @rebuildIds @currentData, @currentData.rslt.obj, @currentPath 
 
 
     ###*

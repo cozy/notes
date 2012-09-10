@@ -20,5 +20,3 @@ exports.routes = (map) ->
     # cf test/array-storage_test.coffee
     map.post '/test/arraystorage' , 'testArrayObj#create'
     map.get  '/test/arraystorage/:id' , 'testArrayObj#show'
-
-
