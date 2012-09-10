@@ -61,10 +61,20 @@ class exports.HomeView extends Backbone.View
             spacing_open: 10
             spacing_closed: 10
             togglerLength_closed: "100%"
-            onresize_start: ->
-                drag.css("z-index","1")
             onresize_end: ->
+                console.log "resize end"
                 drag.css("z-index","-1")
+
+        # we detect the start of resize with the on mousedown instead of 
+        # the onresize_start because this one happens a bit latter what may be a pb.
+        $(".ui-layout-resizer").bind 'mousedown', (e)->
+            console.log "resize start"
+            drag.css("z-index","1")
+
+        # lisen on mousedown on the layout resizer bouton in order to stop propagation
+        $('.ui-layout-toggler').bind 'mousedown', (e)->
+            console.log "prevent resize start"
+            e.stopPropagation()
         
         #Progress bar
         $(".ui-layout-center").append(
