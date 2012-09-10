@@ -45,13 +45,14 @@ class exports.Tree
     #output : suggestionList updated
     ###
     _updateSuggestionList: (action, nodeName, oldName) ->
-        # if action is "create"
-        #     #add nodeName to the autocomplete list
-        #     object = {type: "folder", name: nodeName}
-        #     suggestionList.push object
-        #     suggestionList.sort(_sortFunction)   
-        # else if action is "rename"
-        if action is "rename"
+        console.log "_updateSuggestionList ***** " + action+' '+nodeName+' '+oldName
+        if action is "create"
+            #add nodeName to the autocomplete list
+            object = {type: "folder", name: nodeName}
+            suggestionList.push object
+            suggestionList.sort(_sortFunction)   
+        else if action is "rename"
+        # if action is "rename"
             i = 0
             while suggestionList[i].name isnt oldName
                 i++
@@ -90,6 +91,65 @@ class exports.Tree
         searchField  = @searchField
 
         
+
+
+        ###*
+        # Creation of the jstree
+        # jstree is a plugin to implement the node tree
+        # Please visit http://www.jstree.com/ for more information
+        ###
+        # data is the json string representing the tree
+        data    = JSON.parse(data)
+        # creation itself
+        @widget = @jstreeEl.jstree(
+            plugins: [
+                "themes", "json_data", "ui", "crrm",
+                "unique", "sort", "cookies", "types",
+                "hotkeys", "dnd", "search"
+            ]
+            json_data:
+                data:data
+            types:
+                default:
+                    valid_children: "default"
+                root:
+                    valid_children: null
+                    delete_node: false
+                    rename_node: false
+                    move_node: false
+                    start_drag: false
+            crrm:
+                move:
+                    check_move: (data)->  # Drop over root is forbidden
+                        if data.r.attr("id") == "tree-node-all"
+                            return false
+                        else
+                            return true
+            cookies:
+                save_selected: false
+            ui:
+                select_limit: 1
+                # initially_select: [ "tree-node-all" ]
+            hotkeys:
+                del: false
+            themes:
+                theme: "default"
+                dots: false
+                icons: false
+            core:
+                animation: 0
+                initially_open: [ "tree-node-all" ]
+            # unique:
+            #     error_callback: (node, p, func) ->
+            #         alert "A note has already that name: '#{node}'"
+            search:
+                search_method: "jstree_contains_multi"
+                show_only_matches: true
+        )
+    
+        @setListeners( homeViewCbk )
+
+
         ###*
         #Autocompletion
         ###
@@ -294,69 +354,10 @@ class exports.Tree
                         searchFunction data.tag
                 )
 
-        
-
-
-        ###*
-        # Creation of the jstree
-        # jstree is a plugin to implement the node tree
-        # Please visit http://www.jstree.com/ for more information
-        ###
-        # data is the json string representing the tree
-        data    = JSON.parse(data)
-        # creation itself
-        @widget = @jstreeEl.jstree(
-            plugins: [
-                "themes", "json_data", "ui", "crrm",
-                "unique", "sort", "cookies", "types",
-                "hotkeys", "dnd", "search"
-            ]
-            json_data:
-                data:data
-            types:
-                default:
-                    valid_children: "default"
-                root:
-                    valid_children: null
-                    delete_node: false
-                    rename_node: false
-                    move_node: false
-                    start_drag: false
-            crrm:
-                move:
-                    check_move: (data)->  # Drop over root is forbidden
-                        if data.r.attr("id") == "tree-node-all"
-                            return false
-                        else
-                            return true
-            cookies:
-                save_selected: false
-            ui:
-                select_limit: 1
-                # initially_select: [ "tree-node-all" ]
-            hotkeys:
-                del: false
-            themes:
-                theme: "default"
-                dots: false
-                icons: false
-            core:
-                animation: 0
-                initially_open: [ "tree-node-all" ]
-            unique:
-                error_callback: (node, p, func) ->
-                    alert "A note has already that name: '#{node}'"
-            search:
-                search_method: "jstree_contains_multi"
-                show_only_matches: true
-        )
-    
-        @setListeners( homeViewCbk )
-
-        # initialisation of the Suggestion list        
+        # initialisation of the Suggestion list
         __initSuggestionList = (node) ->
             for c in node.children
-                object = {type: "folder", name: node.data}
+                object = {type: "folder", name: c.data}
                 suggestionList.push object
                 __initSuggestionList c
 
