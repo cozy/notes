@@ -45,7 +45,7 @@ class exports.Tree
     #output : suggestionList updated
     ###
     _updateSuggestionList: (action, nodeName, oldName) ->
-        console.log "_updateSuggestionList ***** " + action+' '+nodeName+' '+oldName
+        # console.log "_updateSuggestionList " + action+' '+nodeName+' '+oldName
         if action is "create"
             #add nodeName to the autocomplete list
             object = {type: "folder", name: nodeName}
