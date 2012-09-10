@@ -182,8 +182,8 @@ class exports.HomeView extends Backbone.View
         progressBar = @progressBar
         console.log "HomeView.selectNote(#{note_uuid})"
         progressBar.css("width","40%")
-        # if note_uuid=="all"
-        #    note_uuid = 'tree-node-all'
+        if note_uuid=="all"
+           note_uuid = 'tree-node-all'
         @tree.selectNode note_uuid
 
     ###*
