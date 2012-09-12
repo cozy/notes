@@ -70,11 +70,6 @@ class exports.HomeView extends Backbone.View
         $(".ui-layout-resizer").bind 'mousedown', (e)->
             console.log "resize start"
             drag.css("z-index","1")
-
-        # lisen on mousedown on the layout resizer bouton in order to stop propagation
-        $('.ui-layout-toggler').bind 'mousedown', (e)->
-            console.log "prevent resize start"
-            e.stopPropagation()
         
         #Progress bar
         $(".ui-layout-center").append(
