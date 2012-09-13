@@ -1,20 +1,29 @@
-DataTree = require('../../lib/tree').Tree
-helpers = require('../../client/app/helpers')
-
 load 'application'
 
-# Helpers
 
+###--------------------------------------#
+# Helpers
+###
+
+###
 # Return to client a note list like this
 # { length: number of note, rows: note list }
+###
 returnNotes = (err, notes) ->
     if err
+        console.log "retun ???????"
         console.log err
         send error: "Retrieve notes failed.", 500
     else
+        # due to jugglingdb pb, arrays are stored as json
+        notes.forEach (nt)->
+            nt.path = JSON.parse nt.path 
         send length: notes.length, rows: notes
 
-# Grab note corresponding to id given in url before loading action.
+###
+# Grab note corresponding to id given in url before 
+# update, destroy or show actions
+###
 before 'load note', ->
     Note.find params.id, (err, note) =>
         if err
@@ -22,152 +31,130 @@ before 'load note', ->
         else if note is null
             send error: 'Note not found', 404
         else
+            note.path = JSON.parse note.path # due to jugglingdb pb, arrays are stored as json
             @note = note
             next()
-, only: ['update', 'destroy', 'show']
+, only: ['destroy', 'show']
 
+
+###*
 # Before each note list modification current tree is loaded. If it does not 
 # exist it is created.
+###
 before 'load tree', ->
-    createTreeCb = (err, tree) =>
+
+    createTreeCb = (err, tree) ->
         if err
             console.log err
             send error: 'An error occured while loading tree', 500
         else
-            @tree = tree
             next()
 
-    Tree.getOrCreate createTreeCb
-, only: ['update', 'destroy', 'create']
+    Tree.getOrCreate createTreeCb, only: ['update', 'destroy', 'create']
 
 
+
+###--------------------------------------#
 # Actions
+###
 
-# Entry point, load first html page.
-action 'index', ->
-    render title: "Cozy Notes"
-
+###
 # Return all notes
+###
 action 'all', ->
-    Note.all returnNotes
+    Note.all(returnNotes)
 
-# Return notes corresponding at a given path of the tree.
-action 'allForPath', ->
-    if body.path?
-        Note.allForPath body.path, returnNotes
-    else
-        returnNotes(null, [])
-
-# Create a new note from data given in body.
-action 'create', ->
-    note = new Note body
-    dataTree = new DataTree JSON.parse(@tree.struct)
-    
-    @name = note.title
-    @path = note.path.split("/")
-    @path.pop()
-    @path = @path.join("/")
-
-    note.humanPath = dataTree.getHumanPath(@path)
-    note.humanPath.push(@name)
-
-    updateTree = (note) =>
-        dataTree.addNode @path, @name, note.id
-
-        @tree.updateAttributes struct: dataTree.toJson(), (err) =>
-            if err
-                console.log err
-                send error: "An error occured while node was created", 500
-            else
-                send note, 201
-
-    Note.create note, (err, note) =>
-        if err
-            send error: 'Note can not be created'
-        else
-            updateTree note
-
+###
 # Return a note 
+###
 action 'show', ->
     send @note, 200
 
-# Update attributes with data given in body. If no data is provided for an 
-# attribute it is not updated.
+###
+# Create a new note from data given in the body of request
+# params : post object : 
+#               { title : "the title, mandatory",
+#                 parent_id : "the parent note, mandatory, null if root"}
+#          Other attributes of a note are optionnal (content, tags)
+###
+action 'create', ->
+    parent_id = body.parent_id
+    path = Tree.getPath parent_id
+    path.push(body.title)
+    body.path = JSON.stringify(path) # due to jugglingdb pb, arrays are stored as json
+    Note.create body, (err, note) ->
+        if err
+            # TODO : roll back the creation of the note.
+            send error: 'Note can not be created'
+        else
+            Tree.addNode note, parent_id, (err)->
+                if err
+                    # TODO : roll back the creation of the note.
+                    send error: 'Note can not be created'
+                else
+                    note.path = JSON.parse(note.path) # due to jugglingdb pb, arrays are stored as json
+                    send note, 201
+###
+# Update the note and tree in case of :
+#   change of the title
+#   change of the parent_id (move in the tree)
+#   change of the content
+###
 action 'update', ->
-    updateNote = =>
-        @note.updateAttributes body, (err) =>
+    # console.log "\nDEBUGGING UPDATE : " + body.title + '  ' + body.parent_id
+    cbk = (err) ->
             if err
-                console.log err
                 send error: 'Note can not be updated', 400
             else
-                send success: 'Note updated'
+                send success: 'Note updated', 200
 
-    if body.title != @note.title and body.title?
-        dataTree = new DataTree JSON.parse(@tree.struct)
-
-        # Build new path from current path and new name
-        @newName = body.title
-        nodes = @note.path.split("/")
-        nodes.pop()
-        nodes.push helpers.slugify(@newName)
-        @newPath = nodes.join("/")
-         
-        # Update tree
-        dataTree.updateNode @note.path, @newName
-
-        # Save Tree 
-        @tree.updateAttributes struct: dataTree.toJson(), (err) =>
-            if err
-                console.log err
-                send error: "An error occured while node was created", 500
+    #if the title of the note changes
+    dataTreeNode = Tree.dataTree.nodes[params.id]
+    isNewTitle   = body.title? and body.title != dataTreeNode.data
+    isNewParent  = body.parent_id? and body.parent_id != dataTreeNode._parent._id
+    if isNewTitle or isNewParent
+        # update the path of the note in the tree.
+        # rq : the path of note's children are impacted, this operation updates
+        #      the note and its children paths and the tree.
+        #      The call back is called only when the tree and notes are saved.
+        Tree.moveOrRenameNode params.id, body.title, body.parent_id, (err)->
+            newData    = {}
+            isToUpdate = false
+            if body.content
+                newData.content = body.content
+                isToUpdate = true
+            if isNewTitle
+                newData.title = body.title
+                isToUpdate = true
+            if body.tags
+                newData.tags = body.tags
+                isToUpdate = true
+            if isNewParent
+                newData.parent_id = body.parent_id
+                isToUpdate = true
+            if isToUpdate
+                newData.id = params.id
+                Note.upsert(newData, cbk)
             else
-                # Update note children 
-                Note.updatePath @note.path, @newPath, @newName, updateNote
-
-    else if body.path? and body.path != @note.path
-
-        @dataTree = new DataTree JSON.parse(@tree.struct)
-        @dest = body.path.split("/")
-        @dest.pop()
-        @dest = @dest.join("/")
-        @dataTree.moveNode @note.path, @dest
-        @humanDest = @dataTree.getHumanPath @dest
-
-        callback = (err) ->
-             if err
-                 console.log err
-                 send error: "An error occured while node was moved", 500
-             else
-                 send success: "Node succesfully moved", 200
-
-        @tree.updateAttributes struct: @dataTree.toJson(), (err) =>
-            if err
-                console.log err
-                send error: "An error occured while node was moved", 500
-            else
-                Note.movePath @note.path, @dest, @humanDest, callback
-
+                cbk(null)
+    # neither title nor path is changed, the note can be updated immediately.
     else
-        updateNote()
-
-
-# Remove given note from db.
-action 'destroy', ->
-    
-    @dataTree = new DataTree JSON.parse(@tree.struct)
-    @dataTree.deleteNode @note.path
-
-    updateTree = =>
-        @tree.updateAttributes struct: @dataTree.toJson(), (err) =>
-            if err
-                console.log err
-                send error: "An error occured while node was deleted", 500
-            else
-                send success: 'Note succesfuly deleted'
-
-    Note.destroyForPath @note.path, (err) ->
-        if err
-            console.log err
-            send error: "An error occured while node was deleted", 500
+        newData    = {}
+        isToUpdate = false
+        if body.content
+            newData.content = body.content
+            isToUpdate = true
+        if body.tags
+            newData.tags = body.tags
+            isToUpdate = true
+        if isToUpdate
+            newData.id = params.id
+            Note.upsert(newData, cbk)
         else
-            updateTree()
+            cbk(null)
+            
+action 'destroy', ->
+    Note.destroy params.id, ->
+        send success: 'Note succesfuly deleted', 200
+
+

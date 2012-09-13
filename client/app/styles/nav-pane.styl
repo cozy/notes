@@ -15,6 +15,8 @@
 #tree
     font-size 14px
     background-color transparent
+    margin-top 10px
+    outline none // => focus on the tree is invisible
 
 #tree li
     padding 0 // padding arround the content of a list item (leaf of the tree)
@@ -39,7 +41,23 @@
 #tree a.jstree-hovered
     border 0
 
+.jstree-rename-input
+    margin-left: -18px
+    
+#tree-buttons-root
+    display none
+    top 0
+    position absolute
+    right 10px
+    top    0px
+    
+#tree-buttons-root div
+    display inline
+    cursor pointer
+    padding-left 3px
+    
 #tree-buttons
+    display none
     top 0
     position absolute
     right 10px
@@ -50,9 +68,39 @@
     cursor pointer
     padding-left 3px
 
-//class for the suggestion to change a part of it by a bold police
+// class for auto suggestion list : the characters 
+// corresponding to the user search are higlighted
 .bold-name
   font-weight: bold
+
+.text-dropdown i
+    padding-right: 5px
+
+.tag-special
+    background-color: white
+    border: none
+    border: 1px solid #FFFFFF
+    height: 14px
+    position: relative
+    margin: 0 2px 2px 0
+    padding: 0 3px 0 3px
+    color: #000000
+    font: 11px "lucida grande",tahoma,verdana,arial,sans-serif
+
+#tree-search-field
+    width: 200px
+    padding-right: 20px
+    
+    
+#suppr-button
+    position: absolute
+    top: 23px
+    left: 202px
+    z-index: 2
+    
+#suppr-button:hover
+    cursor: pointer
+
 
 // separator between nav-pane and content-pane
 .ui-layout-west

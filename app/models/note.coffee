@@ -1,11 +1,15 @@
 async = require("async")
-helpers = require('../../client/app/helpers')
+helpers = require('../../client/app/helpers') 
 
+###
 # DestroyNote corresponding to given condition
 # TODO optimise deletion : each deletion requires on request.
+# This method doesn't update the tree. 
+# USE FOR INIT DATABASE ONLY
+###
 Note.destroySome = (condition, callback) ->
 
-    # Replace this with async lib call.
+    # TODO FRU : Replace this with async lib call.
     wait = 0
     error = null
     done = (err) ->
@@ -21,72 +25,41 @@ Note.destroySome = (condition, callback) ->
         data.forEach (obj) ->
             obj.destroy done
 
+
+###
 # Delete all notes.
+# This method doesn't update the tree.
+# USE FOR INIT DATABASE ONLY
+###
 Note.destroyAll = (callback) ->
     Note.destroySome {}, callback
 
-# Return notes which live under given path.
-Note.allForPath = (path, callback) ->
-    regExp = helpers.getPathRegExp path
-    Note.all { where: { path: { regex: regExp } } }, callback
 
-# Destroy notes which live under given path.
-Note.destroyForPath = (path, callback) ->
-    regExp = helpers.getPathRegExp path
-    Note.destroySome { where: { path: { regex: regExp } } }, callback
+###*
+ * Destroy a note and its children and update the tree.
+ * @param  {string} nodeId id of the note to delete
+ * @param  {function} cbk    cbk(error) is executed at the end returning null or the error.
+###
+Note.destroy = (nodeId, cbk)->
 
-# Change path for every note which are children of given path to the 
-# new given one.
-# It is the result of moving notes inside tree.
-Note.updatePath = (path, newPath, newName, callback) ->
-    Note.allForPath path, (err, notes) ->
-        return callback(err) if err
-        return callback(new Error("No note for this path")) \
-            if notes.length == 0
+    # called in parallele to delete each note in the db
+    _deleteNote = (noteId,cbk)->
+        Note.find noteId, (err, note)->
+            note.destroy cbk
+    
+    # vars
+    dataTree = Tree.dataTree
 
-        wait = notes.length
-        done = (err) ->
-            error = error || err
-            if --wait == 0
-                callback(error)
+    # walk through dataTree to remove the node and all its children
+    nodesToDelete = dataTree.removeNode(nodeId)
+    nodesToDelete.push(nodeId)
 
-        nodeIndex = path.split("/").length - 2
+    # deletion in // of all the notes in the db
+    async.forEach nodesToDelete, _deleteNote, (err)->
 
-        for note in notes
-            note.path = newPath + note.path.substring(path.length)
-            humanNames = note.humanPath.split(",")
-            humanNames[nodeIndex] = newName
-            note.humanPath = humanNames
-            note.save done
-
-# When a node is moved, all notes that are linked to this node are
-# updated : sub-path are replaced by new node path.
-Note.movePath = (path, dest, humanDest, callback) ->
-    Note.allForPath path, (err, notes) ->
-        return callback(err) if err
-        return callback(new Error("No note for this path")) \
-            if notes.length == 0
-
-        wait = notes.length
-        done = (err) ->
-            error = error || err
-            if --wait == 0
-                callback(error)
-
-        parentPath = path.split("/")
-        parentPath.pop()
-        pathLength = parentPath.join("/").length
-        nodeIndex = parentPath.length - 1
-
-        for note in notes
-            # Replace old path by new path
-            note.path = dest + note.path.substring(pathLength)
-            
-            # Replace human path by new human path
-            humanNames = note.humanPath.split(",")
-            humanNames.shift() for i in [0..nodeIndex-1]
-            humanNames = humanDest.concat humanNames
-            note.humanPath = humanNames
-
-            note.save done
-
+        # then we can save the tree
+        Tree.tree.updateAttributes struct: dataTree.toJson(), (err) ->
+            if err
+                cbk(err)
+            else
+                cbk(null)

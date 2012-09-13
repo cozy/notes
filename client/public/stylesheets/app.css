@@ -5869,7 +5869,7 @@ button.ui-button::-moz-focus-inner { border: 0; padding: 0; } /* reset extra pad
  */
 .ui-progressbar { height:2em; text-align: left; overflow: hidden; }
 .ui-progressbar .ui-progressbar-value {margin: -1px; height:100%; }html,body{height:100%}
-body{color:#444;background-color:#e4d1a9}
+body{color:#444;background-color:#fff}
 a:focus,a:hover{text-decoration:underline}
 h1,h2,h3,h4,h5{font-weight:normal;color:#222;clear:left}
 h1{font-size:5em;line-height:1.4;margin-bottom:.5em}
@@ -5877,9 +5877,9 @@ h2{font-size:2em;line-height:1;margin-bottom:.5em}
 p{margin:0 0 1.5em}
 ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 .spacer{clear:both}
-#editor{margin:0;margin-left:320px;padding:10px;height:auto;background-color:#fff}
-#note-area{position:absolute;bottom:10px;top:65px;right:15px;left:15px}
-#note-area td{position:absolute;top:45px;bottom:10px;left:0;width:100%}
+#note-area{margin:0;margin-left:320px;padding:10px;height:auto}
+#editor{position:absolute;bottom:10px;top:65px;right:15px;left:15px}
+#editor td{position:absolute;top:45px;bottom:10px;left:0;width:100%}
 #note-full-breadcrumb{margin-left:10px;color:#006ed8}
 #note-full-breadcrumb a{color:#49a1f6}
 .note-full{background:#333;border-radius:3px;position:absolute;top:10px;bottom:10px;right:10px;left:0}
@@ -5887,6 +5887,8 @@ ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 #input-field{padding:0;position:absolute;top:20px;left:10px;right:10px;font-size:30px}
 #note-full-title:focus{box-shadow:inset 0 1px 1px rgba(0,0,0,0.07),0 0 8px rgba(82,168,236,0.60);border-color:rgba(82,168,236,0.80);outline:0 none}
 #titleBtn{color:#333;font-weight:bold}
+.progress{width:50%;position:absolute}
+#drag{z-index:-1;bottom:22px;left:17px;position:absolute;right:15px;top:112px}
 #__ed-iframe-html{background-color:#333}
 #__ed-iframe-body{overflow:auto;box-sizing:border-box;-moz-box-sizing:border-box;border:1px solid #333;border-radius:5px 5px 5px 5px;-moz-transition:border .2s linear 0,box-shadow .2s linear 0;box-shadow:inset 0 0 6px rgba(0,0,0,0.80);font:normal 13px "Helvetica Neue",Arial,Helvetica,sans-serif;color:#8c9ea0;background-color:#042029}
 p{margin-top:0;margin-bottom:0;margin-left:0;margin-right:0;color:#333055}
@@ -6030,7 +6032,7 @@ img{border:0}
 #home-view{height:100%}
 #content{height:100%;padding:0}
 html,body{height:100%}
-body{color:#444;background-color:#e4d1a9}
+body{color:#444;background-color:#fff}
 a:focus,a:hover{text-decoration:underline}
 h1,h2,h3,h4,h5{font-weight:normal;color:#222;clear:left}
 h1{font-size:5em;line-height:1.4;margin-bottom:.5em}
@@ -6038,9 +6040,9 @@ h2{font-size:2em;line-height:1;margin-bottom:.5em}
 p{margin:0 0 1.5em}
 ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 .spacer{clear:both}
-#editor{margin:0;margin-left:320px;padding:10px;height:auto;background-color:#fff}
-#note-area{position:absolute;bottom:10px;top:65px;right:15px;left:15px}
-#note-area td{position:absolute;top:45px;bottom:10px;left:0;width:100%}
+#note-area{margin:0;margin-left:320px;padding:10px;height:auto}
+#editor{position:absolute;bottom:10px;top:65px;right:15px;left:15px}
+#editor td{position:absolute;top:45px;bottom:10px;left:0;width:100%}
 #note-full-breadcrumb{margin-left:10px;color:#006ed8}
 #note-full-breadcrumb a{color:#49a1f6}
 .note-full{background:#333;border-radius:3px;position:absolute;top:10px;bottom:10px;right:10px;left:0}
@@ -6048,16 +6050,26 @@ ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 #input-field{padding:0;position:absolute;top:20px;left:10px;right:10px;font-size:30px}
 #note-full-title:focus{box-shadow:inset 0 1px 1px rgba(0,0,0,0.07),0 0 8px rgba(82,168,236,0.60);border-color:rgba(82,168,236,0.80);outline:0 none}
 #titleBtn{color:#333;font-weight:bold}
+.progress{width:50%;position:absolute}
+#drag{z-index:-1;bottom:22px;left:17px;position:absolute;right:15px;top:112px}
 #nav{position:absolute;bottom:10px;top:10px;right:0;left:10px;margin-bottom:0}
-#tree{font-size:14px;background-color:transparent}
+#tree{font-size:14px;background-color:transparent;margin-top:10px;outline:none}
 #tree li{padding:0;position:relative}
 #tree ins{width:14px}
 #tree a{padding:0 0 0 0;margin:0 0 0 0;border:0 0 0 0 solid transparent;color:#08c;left:15px;right:0;position:absolute}
 #tree a.jstree-clicked{background:#c5ebf9;border:0}
 #tree a.jstree-hovered{border:0}
-#tree-buttons{top:0;position:absolute;right:10px;top:0}
+.jstree-rename-input{margin-left:-18px}
+#tree-buttons-root{display:none;top:0;position:absolute;right:10px;top:0}
+#tree-buttons-root div{display:inline;cursor:pointer;padding-left:3px}
+#tree-buttons{display:none;top:0;position:absolute;right:10px;top:0}
 #tree-buttons div{display:inline;cursor:pointer;padding-left:3px}
 .bold-name{font-weight:bold}
+.text-dropdown i{padding-right:5px}
+.tag-special{background-color:#fff;border:none;border:1px solid #fff;height:14px;position:relative;margin:0 2px 2px 0;padding:0 3px 0 3px;color:#000;font:11px "lucida grande",tahoma,verdana,arial,sans-serif}
+#tree-search-field{width:200px;padding-right:20px}
+#suppr-button{position:absolute;top:23px;left:202px;z-index:2}
+#suppr-button:hover{cursor:pointer}
 .ui-layout-west{border:0}
 .ui-layout-center{border:0}
 .ui-layout-resizer-open:hover{background:#fff}
@@ -6066,15 +6078,23 @@ ul,ol{margin:0 1.5em 1.5em 0;list-style-type:none}
 .ui-layout-toggler{background-color:#fff;border:0;position:absolute;right:0}
 .ui-layout-resizer-open:hover .ui-layout-toggler{background-color:#bfbfbf}
 #nav{position:absolute;bottom:10px;top:10px;right:0;left:10px;margin-bottom:0}
-#tree{font-size:14px;background-color:transparent}
+#tree{font-size:14px;background-color:transparent;margin-top:10px;outline:none}
 #tree li{padding:0;position:relative}
 #tree ins{width:14px}
 #tree a{padding:0 0 0 0;margin:0 0 0 0;border:0 0 0 0 solid transparent;color:treelinkcolor;left:15px;right:0;position:absolute}
 #tree a.jstree-clicked{background:#c5ebf9;border:0}
 #tree a.jstree-hovered{border:0}
-#tree-buttons{top:0;position:absolute;right:10px;top:0}
+.jstree-rename-input{margin-left:-18px}
+#tree-buttons-root{display:none;top:0;position:absolute;right:10px;top:0}
+#tree-buttons-root div{display:inline;cursor:pointer;padding-left:3px}
+#tree-buttons{display:none;top:0;position:absolute;right:10px;top:0}
 #tree-buttons div{display:inline;cursor:pointer;padding-left:3px}
 .bold-name{font-weight:bold}
+.text-dropdown i{padding-right:5px}
+.tag-special{background-color:#fff;border:none;border:1px solid #fff;height:14px;position:relative;margin:0 2px 2px 0;padding:0 3px 0 3px;color:#000;font:11px "lucida grande",tahoma,verdana,arial,sans-serif}
+#tree-search-field{width:200px;padding-right:20px}
+#suppr-button{position:absolute;top:23px;left:202px;z-index:2}
+#suppr-button:hover{cursor:pointer}
 .ui-layout-west{border:0}
 .ui-layout-center{border:0}
 .ui-layout-resizer-open:hover{background:#fff}
@@ -6100,6 +6120,7 @@ html,body{width:100%;height:100%;padding:0;margin:0;overflow:hidden;border-spaci
 #editorBtnBar{padding:7px 7px 0 7px}
 #resultBtnBar{padding:7px 7px 0 7px}
 #divMainBtn *{display:inline-block;vertical-align:middle}
+#myModal{margin:-115px 0 0 -280px}
 /* ==|== non-semantic helper classes ========================================
    Please define your styles before this section.
    ========================================================================== */

@@ -265,6 +265,10 @@ window.require.define({"models/note": function(exports, require, module) {
         return request("PUT", "notes/" + id, data, callback);
       };
 
+      Note.deleteNote = function(id, callback) {
+        return request("DELETE", "notes/" + id, callback);
+      };
+
       Note.moveNote = function(data, callback) {
         return request("POST", "tree/path/move", data, callback);
       };
@@ -302,6 +306,13 @@ window.require.define({"routers/main_router": function(exports, require, module)
         MainRouter.__super__.constructor.apply(this, arguments);
       }
 
+      /**
+      Routes : 2 types : 
+          * '' : home : only for the initialization of the app
+          * '#note/{note_uuid : 25 char}/slugyPath' : unique url corresponding to a note.
+      slugyPath : slugified path of a note constituted with the name of its parents.
+      */
+
       MainRouter.prototype.routes = {
         '': 'home'
       };
@@ -310,17 +321,30 @@ window.require.define({"routers/main_router": function(exports, require, module)
         return this.route(/^note\/(.*?)$/, 'note');
       };
 
-      MainRouter.prototype.home = function(path) {
-        $('body').append(app.homeView.el);
-        return app.homeView.initContent(path);
+      MainRouter.prototype.home = function() {
+        console.log("event : routeur.home");
+        this.navigate("note/all", {
+          trigger: false
+        });
+        return this._initializeTree("tree-node-all");
       };
 
       MainRouter.prototype.note = function(path) {
+        var note_uuid;
+        console.log("event : routeur.note path=" + path);
+        note_uuid = path.substr(0, 24);
         if ($("#tree-create").length > 0) {
-          return app.homeView.selectNote(path);
+          return app.homeView.selectNote(note_uuid);
         } else {
-          return this.home(path);
+          if (note_uuid === "/all") note_uuid = "tree-node-all";
+          return this._initializeTree(note_uuid);
         }
+      };
+
+      MainRouter.prototype._initializeTree = function(initPath) {
+        console.log("routeur._initializeTree( " + initPath + " )");
+        $('body').append(app.homeView.el);
+        return app.homeView.initContent(initPath);
       };
 
       return MainRouter;
@@ -2375,23 +2399,26 @@ window.require.define({"views/editor": function(exports, require, module) {
 
 window.require.define({"views/home_view": function(exports, require, module) {
   (function() {
-    var Note, NoteWidget, Tree,
+    var Note, NoteView, Tree,
       __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
       __hasProp = Object.prototype.hasOwnProperty,
       __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
     Tree = require("./widgets/tree").Tree;
 
-    NoteWidget = require("./note_view").NoteWidget;
+    NoteView = require("./note_view").NoteView;
 
     Note = require("../models/note").Note;
 
     /**
-    # Main view that manages interaction between toolbar, navigation and notes
+    # Main view that manages interaction between toolprogressBar, navigation and notes
         id : ='home-view'
         @treeCreationCallback 
-        @noteArea 
         @noteFull
+        @tree
+        @noteView
+        @treeLoaded
+        @iframeLoaded
     */
 
     exports.HomeView = (function(_super) {
@@ -2399,109 +2426,227 @@ window.require.define({"views/home_view": function(exports, require, module) {
       __extends(HomeView, _super);
 
       function HomeView() {
-        this.onNoteDropped = __bind(this.onNoteDropped, this);
-        this.selectFolder = __bind(this.selectFolder, this);
-        this.deleteFolder = __bind(this.deleteFolder, this);
-        this.renameFolder = __bind(this.renameFolder, this);
-        this.createFolder = __bind(this.createFolder, this);
+        this.selectNote = __bind(this.selectNote, this);
+        this.onTreeSelectionChg = __bind(this.onTreeSelectionChg, this);
+        this.onTreeRemove = __bind(this.onTreeRemove, this);
+        this.onNoteTitleChange = __bind(this.onNoteTitleChange, this);
+        this.onTreeRename = __bind(this.onTreeRename, this);
         HomeView.__super__.constructor.apply(this, arguments);
       }
 
       HomeView.prototype.id = 'home-view';
 
-      HomeView.prototype.initContent = function(path) {
-        var _this = this;
+      /**
+      # Load the home view and the tree
+      # Called once by the main_router
+      */
+
+      HomeView.prototype.initContent = function(note_uuid) {
+        var drag, hv, iframeLoaded, onIFrameLoaded, onTreeLoaded, progressBar, progressBarLeftPosition, progressBarTopPosition, treeLoaded,
+          _this = this;
+        console.log("HomeView.initContent(" + note_uuid + ")");
+        this.progressBar = $(".bar");
+        progressBar = this.progressBar;
+        hv = this;
+        iframeLoaded = false;
+        treeLoaded = false;
+        onTreeLoaded = function() {
+          console.log("event HomeView.onTreeLoaded " + iframeLoaded);
+          progressBar.css("width", "30%");
+          treeLoaded = true;
+          if (iframeLoaded) return app.homeView.selectNote(note_uuid);
+        };
+        onIFrameLoaded = function() {
+          console.log("event HomeView.onIFrameLoaded " + iframeLoaded);
+          progressBar.css("width", "10%");
+          iframeLoaded = true;
+          if (treeLoaded) return hv.selectNote(note_uuid);
+        };
         $(this.el).html(require('./templates/home'));
-        this.noteArea = $("#editor");
+        this.noteView = new NoteView(onIFrameLoaded);
+        this.noteView.homeView = this;
         this.noteFull = $("#note-full");
         this.noteFull.hide();
+        drag = $("#drag");
         $('#home-view').layout({
-          size: "350",
-          minSize: "350",
+          size: "250",
+          minSize: "250",
           resizable: true,
           spacing_open: 10,
-          spacing_closed: 10
+          spacing_closed: 10,
+          togglerLength_closed: "100%",
+          onresize_end: function() {
+            console.log("resize end");
+            return drag.css("z-index", "-1");
+          }
         });
-        this.onTreeLoaded = function() {
-          return app.homeView.selectNote(path);
-        };
+        $(".ui-layout-resizer").bind('mousedown', function(e) {
+          console.log("resize start");
+          return drag.css("z-index", "1");
+        });
+        $(".ui-layout-center").append("<div class='progress progress-striped active'>                <div class='bar' style='width: 0%;'></div>            </div>");
+        this.progress = $(".progress");
+        progressBarLeftPosition = $(".ui-layout-center").width() / 3 - 77;
+        progressBarTopPosition = $(".ui-layout-center").height() / 2;
+        this.progress.css("left", progressBarLeftPosition);
+        this.progress.css("top", progressBarTopPosition);
         return $.get("tree/", function(data) {
+          console.log(data);
+          window.tree = data;
           return _this.tree = new Tree(_this.$("#nav"), data, {
             onCreate: _this.createFolder,
-            onRename: _this.renameFolder,
-            onRemove: _this.deleteFolder,
-            onSelect: _this.selectFolder,
-            onLoaded: _this.onTreeLoaded,
+            onRename: _this.onTreeRename,
+            onRemove: _this.onTreeRemove,
+            onSelect: _this.onTreeSelectionChg,
+            onLoaded: onTreeLoaded,
             onDrop: _this.onNoteDropped
           });
         });
       };
 
-      HomeView.prototype.createFolder = function(path, newName, data) {
-        var _this = this;
+      /**
+      Create a new folder of path : 
+      Params :
+          fullPath : path of the folder
+          newName : name of the folder
+      */
+
+      HomeView.prototype.createFolder = function(parentId, newName, data) {
+        console.log("HomeView.createFolder()");
         return Note.createNote({
-          path: path,
-          title: newName
+          title: newName,
+          parent_id: parentId
         }, function(note) {
           data.rslt.obj.data("id", note.id);
+          data.rslt.obj.prop("id", note.id);
           data.inst.deselect_all();
           return data.inst.select_node(data.rslt.obj);
         });
       };
 
-      HomeView.prototype.renameFolder = function(path, newName, data) {
+      /**
+      # Only called by jsTree event "rename.jstree" trigered when a node
+      # is renamed.
+      # May be called by another note than the currently selected node.
+      */
+
+      HomeView.prototype.onTreeRename = function(uuid, newName) {
         var _this = this;
+        console.log("HomeView.onTreeRename()");
         if (newName != null) {
-          return Note.updateNote(data.rslt.obj.data("id"), {
+          if (this.tree.currentNote_uuid === uuid) {
+            this.noteView.setTitle(newName);
+            this.noteView.updateBreadcrumbOnTitleChange(newName);
+          }
+          return Note.updateNote(uuid, {
             title: newName
-          }, function() {
-            data.inst.deselect_all();
-            return data.inst.select_node(data.rslt.obj);
+          }, function() {});
+        }
+      };
+
+      HomeView.prototype.onNoteTitleChange = function(uuid, newName) {
+        var _this = this;
+        console.log("HomeView.onNoteTitleChange()");
+        if (newName != null) {
+          this.tree.jstreeEl.jstree("rename_node", "#" + uuid, newName);
+          return Note.updateNote(uuid, {
+            title: newName
+          }, function() {});
+        }
+      };
+
+      /**
+      # Only called by jsTree event "select_node.jstree"
+      # Delete currently selected node.
+      */
+
+      HomeView.prototype.onTreeRemove = function(note_uuid) {
+        console.log("HomeView.onTreeRemove(" + note_uuid + ")");
+        if (this.currentNote && this.currentNote.id === note_uuid) {
+          console.log("indirect deletion");
+          return this.currentNote.destroy();
+        } else {
+          console.log("direct request for deletion on server");
+          return Note.deleteNote(note_uuid, function() {
+            return console.log(arguments);
           });
         }
       };
 
-      HomeView.prototype.deleteFolder = function(path) {
-        this.noteFull.hide();
-        return this.currentNote.destroy();
-      };
+      /**
+      # Only called by jsTree event "select_node"
+      # When a node is selected, the note_view is displayed and filled with
+      # note data.
+      */
 
-      HomeView.prototype.selectFolder = function(path, id) {
-        var _this = this;
+      HomeView.prototype.onTreeSelectionChg = function(path, id, data) {
+        var progressBar,
+          _this = this;
+        progressBar = this.progressBar;
+        console.log("HomeView.selectFolder( path:" + path + " - id:" + id + ")");
+        if (id === void 0) {
+          this.progress.remove();
+        } else {
+          progressBar.css("width", "70%");
+        }
         if (path.indexOf("/")) path = "/" + path;
         app.router.navigate("note" + path, {
           trigger: false
         });
         if (id != null) {
-          return Note.getNote(id, function(note) {
-            _this.renderNote(note);
-            return _this.noteFull.show();
-          });
+          if (id === "tree-node-all") {
+            this.progress.remove();
+            return this.noteFull.hide();
+          } else {
+            return Note.getNote(id, function(note) {
+              _this.renderNote(note, data);
+              return _this.noteFull.show();
+            });
+          }
         } else {
+          this.progress.remove();
           return this.noteFull.hide();
         }
       };
 
-      HomeView.prototype.selectNote = function(path) {
-        return this.tree.selectNode(path);
+      /**
+      # Force selection inside tree of note of a given uuid.
+      */
+
+      HomeView.prototype.selectNote = function(note_uuid) {
+        var progressBar;
+        progressBar = this.progressBar;
+        console.log("HomeView.selectNote(" + note_uuid + ")");
+        progressBar.css("width", "40%");
+        if (note_uuid === "all") note_uuid = 'tree-node-all';
+        return this.tree.selectNode(note_uuid);
       };
 
-      HomeView.prototype.renderNote = function(note) {
-        var noteWidget;
+      /**
+      # Fill note widget with note data.
+      */
+
+      HomeView.prototype.renderNote = function(note, data) {
+        var progressBar;
+        progressBar = this.progressBar;
+        console.log("HomeView.renderNote()");
+        progressBar.css("width", "90%");
         note.url = "notes/" + note.id;
         this.currentNote = note;
-        noteWidget = new NoteWidget(this.currentNote);
-        return noteWidget.render();
+        this.noteView.setModel(note, data);
+        return this.progress.remove();
       };
 
-      HomeView.prototype.onNoteDropped = function(newPath, oldPath, noteTitle, data) {
-        var _this = this;
-        return Note.updateNote(data.rslt.o.data("id"), {
-          path: newPath
-        }, function() {
-          data.inst.deselect_all();
-          return data.inst.select_node(data.rslt.o);
-        });
+      /**
+      # When note is dropped, its old path and its new path are sent to server
+      # for persistence.
+      */
+
+      HomeView.prototype.onNoteDropped = function(nodeId, targetNodeId) {
+        console.log("HomeView.onNoteDropped() id=" + nodeId + " targetNodeId=" + targetNodeId);
+        return Note.updateNote(nodeId, {
+          parent_id: targetNodeId
+        }, function() {});
       };
 
       return HomeView;
@@ -2514,7 +2659,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
 window.require.define({"views/note_view": function(exports, require, module) {
   (function() {
-    var CNEditor, Note, template,
+    var CNEditor, Note, TreeInst, template,
       __hasProp = Object.prototype.hasOwnProperty,
       __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
@@ -2524,105 +2669,205 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
     Note = require('../models/note').Note;
 
-    exports.NoteWidget = (function(_super) {
+    TreeInst = require('./widgets/tree');
 
-      __extends(NoteWidget, _super);
+    /**
+    model
+    homeView
+    editorCtrl
+    */
 
-      NoteWidget.prototype.className = "note-full";
+    exports.NoteView = (function(_super) {
 
-      NoteWidget.prototype.tagName = "div";
+      __extends(NoteView, _super);
+
+      NoteView.prototype.className = "note-full";
+
+      NoteView.prototype.tagName = "div";
 
       /* Constructor
       */
 
-      function NoteWidget(model) {
-        this.model = model;
-        NoteWidget.__super__.constructor.call(this);
-        this.id = this.model.slug;
-        this.model.view = this;
+      function NoteView(onIFrameLoaded) {
+        console.log("NoteWidget.constructor()");
+        this.onIFrameLoaded = onIFrameLoaded;
+        NoteView.__super__.constructor.call(this);
       }
 
-      NoteWidget.prototype.remove = function() {
+      NoteView.prototype.remove = function() {
         return $(this.el).remove();
       };
 
-      /* configuration
-      */
-
-      NoteWidget.prototype.render = function() {
-        var breadcrumb, callBackEditor, i, instEditor, linkToThePath, myContent, note, path, saveTimer;
-        i = 0;
-        breadcrumb = "";
-        linkToThePath = [];
-        while (i < this.model.humanPath.split(",").length) {
-          linkToThePath[i] = this.model.humanPath.split(",").slice(0, i + 1 || 9e9).join("/");
-          path = ("/#note/" + linkToThePath[i]).toLowerCase();
-          path = path.replace(/\s+/g, "-");
-          linkToThePath[i] = "<a href='" + path + "'> " + (this.model.humanPath.split(",")[i]) + "</a>";
-          if (i === 0) {
-            breadcrumb += "" + linkToThePath[i];
-          } else {
-            breadcrumb += " > " + linkToThePath[i];
-          }
-          i++;
-        }
-        $("#note-full-breadcrumb").html(breadcrumb);
-        $("#note-full-title").val(this.model.title);
-        $("#note-area").html(require('./templates/editor'));
-        myContent = this.model.content;
-        note = this.model;
+      NoteView.prototype.initialize = function() {
+        var editorCtrl, iframeEditorCallBack, model, noteFullTitle, onIFrameLoaded, saveButton, saveTimer,
+          _this = this;
+        console.log("NoteWidget.initialize()");
+        $("#editor").html(require('./templates/editor'));
+        this.model = void 0;
+        model = void 0;
         saveTimer = null;
-        callBackEditor = function() {
-          var editorCtrl, saveButton,
-            _this = this;
-          editorCtrl = this;
-          saveButton = $("#save-editor-content");
-          if (myContent) {
-            editorCtrl.setEditorContent(myContent);
-          } else {
-            editorCtrl.deleteContent();
+        saveButton = $("#save-editor-content");
+        onIFrameLoaded = this.onIFrameLoaded;
+        iframeEditorCallBack = function() {
+          return onIFrameLoaded();
+        };
+        editorCtrl = new CNEditor($('#editorIframe')[0], iframeEditorCallBack);
+        this.editorCtrl = editorCtrl;
+        $("#indentBtn").tooltip({
+          placement: "bottom",
+          title: "Indent the selection"
+        });
+        $("#indentBtn").on("click", function() {
+          editorCtrl._addHistory();
+          return editorCtrl.tab();
+        });
+        $("#unIndentBtn").tooltip({
+          placement: "bottom",
+          title: "Unindent the selection"
+        });
+        $("#unIndentBtn").on("click", function() {
+          editorCtrl._addHistory();
+          return editorCtrl.shiftTab();
+        });
+        $("#markerListBtn").tooltip({
+          placement: "bottom",
+          title: "Change selection from titles to marker list"
+        });
+        $("#markerListBtn").on("click", function() {
+          editorCtrl._addHistory();
+          return editorCtrl.markerList();
+        });
+        $("#titleBtn").tooltip({
+          placement: "bottom",
+          title: "Change selection from marker list to titles"
+        });
+        $("#titleBtn").on("click", function() {
+          editorCtrl._addHistory();
+          return editorCtrl.titleList();
+        });
+        $("#save-editor-content").tooltip({
+          placement: "bottom",
+          title: "Save the current content"
+        });
+        /**
+        # every keyUp in the note's editor will trigger a countdown of 3s, after
+        # 3s and if the user didn't type anything, the content will be saved
+        */
+        $("iframe").on("onKeyUp", function() {
+          clearTimeout(saveTimer);
+          if (saveButton.hasClass("btn-info")) {
+            saveButton.addClass("btn-primary").removeClass("active btn-info");
           }
-          $("#indentBtn").on("click", function() {
-            editorCtrl._addHistory();
-            return editorCtrl.tab();
-          });
-          $("#unIndentBtn").on("click", function() {
-            editorCtrl._addHistory();
-            return editorCtrl.shiftTab();
-          });
-          $("#markerListBtn").on("click", function() {
-            editorCtrl._addHistory();
-            return editorCtrl.markerList();
-          });
-          $("#titleBtn").on("click", function() {
-            editorCtrl._addHistory();
-            return editorCtrl.titleList();
-          });
-          $("iframe").on("onKeyUp", function() {
-            clearTimeout(saveTimer);
-            if (saveButton.hasClass("btn-info")) {
-              saveButton.addClass("btn-primary").removeClass("active btn-info");
-            }
-            return saveTimer = setTimeout(function() {
-              note.saveContent(editorCtrl.getEditorContent());
-              if (saveButton.hasClass("btn-primary")) {
-                return saveButton.addClass("active btn-info").removeClass("btn-primary");
-              }
-            }, 3000);
-          });
-          return $("#save-editor-content").on("click", function() {
-            clearTimeout(saveTimer);
-            note.saveContent(editorCtrl.getEditorContent());
+          model = _this.model;
+          return saveTimer = setTimeout(function() {
+            model.saveContent(editorCtrl.getEditorContent());
             if (saveButton.hasClass("btn-primary")) {
               return saveButton.addClass("active btn-info").removeClass("btn-primary");
             }
-          });
-        };
-        instEditor = new CNEditor($('#editorIframe')[0], callBackEditor);
-        return this.el;
+          }, 3000);
+        });
+        /**
+        # allow the user to save the content of a note before the 3s of the
+        # automatic save
+        */
+        $("#save-editor-content").on("click", function() {
+          clearTimeout(saveTimer);
+          model.saveContent(editorCtrl.getEditorContent());
+          if (saveButton.hasClass("btn-primary")) {
+            return saveButton.addClass("active btn-info").removeClass("btn-primary");
+          }
+        });
+        this.noteFullTitle = $("#note-full-title");
+        noteFullTitle = this.noteFullTitle;
+        /**
+        # forbidden a new line in the title
+        */
+        noteFullTitle.live("keypress", function(e) {
+          if (e.keyCode === 13) return noteFullTitle.trigger("blur");
+        });
+        /**
+        # allow to rename a note by directly writing in the title
+        */
+        return noteFullTitle.blur(function() {
+          var newName, oldName;
+          console.log("event : note-full-title.blur");
+          newName = noteFullTitle.val();
+          oldName = _this.model.title;
+          if (newName !== "" && oldName !== newName) {
+            _this.homeView.onNoteTitleChange(_this.model.id, newName);
+            _this.homeView.tree._updateSuggestionList("rename", newName, oldName);
+            return _this.updateBreadcrumbOnTitleChange(newName);
+          }
+        });
       };
 
-      return NoteWidget;
+      /**
+      #
+      */
+
+      NoteView.prototype.setModel = function(noteModel, data) {
+        this.model = noteModel;
+        this.setTitle(noteModel.title);
+        this.setContent(noteModel.content);
+        return this.createBreadcrumb(noteModel, data);
+      };
+
+      /**
+      #
+      */
+
+      NoteView.prototype.setTitle = function(nTitle) {
+        var noteFullTitle;
+        noteFullTitle = this.noteFullTitle;
+        return noteFullTitle.val(nTitle);
+      };
+
+      /**
+      #
+      */
+
+      NoteView.prototype.setContent = function(content) {
+        if (content) {
+          return this.editorCtrl.setEditorContent(content);
+        } else {
+          return this.editorCtrl.deleteContent();
+        }
+      };
+
+      /**
+      # create a breadcrumb showing a clickable way from the root to the current note
+      # input: noteModel, contains the informations of the current note
+      #  data, allow to reach the id of the parents of the current note
+      # output: the breadcrumb html is modified
+      */
+
+      NoteView.prototype.createBreadcrumb = function(noteModel, data) {
+        var breadcrumb, i, parent, path, paths;
+        paths = noteModel.path;
+        i = -1 + paths.length;
+        path = "/#note/" + noteModel.id;
+        breadcrumb = "<a href='" + path + "'> " + paths[i] + "</a>";
+        i--;
+        parent = this.homeView.tree.jstreeEl.jstree("get_selected");
+        while (i >= 0) {
+          parent = data.inst._get_parent(parent);
+          path = "/#note/" + parent[0].id;
+          breadcrumb = "<a href='" + path + "'> " + paths[i] + "</a> >" + breadcrumb;
+          i--;
+        }
+        breadcrumb = "<a href='/#note/all'> All</a> >" + breadcrumb;
+        return $("#note-full-breadcrumb").html(breadcrumb);
+      };
+
+      /**
+      # in case of renaming a note this function update the breadcrumb in consequences
+      */
+
+      NoteView.prototype.updateBreadcrumbOnTitleChange = function(newName) {
+        return $("#note-full-breadcrumb a:last").text(newName);
+      };
+
+      return NoteView;
 
     })(Backbone.View);
 
@@ -2691,9 +2936,9 @@ window.require.define({"views/templates/home": function(exports, require, module
   buf.push('><div');
   buf.push(attrs({ 'id':('nav'), "class": ('well') }));
   buf.push('><div');
-  buf.push(attrs({ 'id':('tree') }));
+  buf.push(attrs({ 'id':('tree'), 'tabIndex':('2') }));
   buf.push('></div></div></div><div');
-  buf.push(attrs({ 'id':('editor'), "class": ('ui-layout-center') }));
+  buf.push(attrs({ 'id':('note-area'), "class": ('ui-layout-center') }));
   buf.push('><div');
   buf.push(attrs({ 'id':('note-full'), "class": ('note-full') }));
   buf.push('><p');
@@ -2703,8 +2948,24 @@ window.require.define({"views/templates/home": function(exports, require, module
   buf.push('><input');
   buf.push(attrs({ 'id':('note-full-title') }));
   buf.push('/></div><div');
-  buf.push(attrs({ 'id':('note-area') }));
-  buf.push('></div></div></div>');
+  buf.push(attrs({ 'id':('editor') }));
+  buf.push('></div><div');
+  buf.push(attrs({ 'id':('drag') }));
+  buf.push('></div></div></div><div');
+  buf.push(attrs({ 'id':('myModal'), 'tabindex':("-1"), 'role':("dialog"), 'aria-labelledby':("myModalLabel"), 'aria-hidden':("true"), "class": ('modal') + ' ' + ('hide') + ' ' + ('fade') + ' ' + ('in') }));
+  buf.push('><div');
+  buf.push(attrs({ "class": ('modal-header') }));
+  buf.push('><h3');
+  buf.push(attrs({ 'id':('myModalLabel') }));
+  buf.push('>Warning!</h3></div><div');
+  buf.push(attrs({ "class": ('modal-body') }));
+  buf.push('><p>You are about to delete this folder and all this content. Do you want to continue?</p></div><div');
+  buf.push(attrs({ "class": ('modal-footer') }));
+  buf.push('><button');
+  buf.push(attrs({ 'id':('yes-button'), 'data-dismiss':("modal"), 'aria-hidden':("true"), "class": ('btn') }));
+  buf.push('>Yes</button><button');
+  buf.push(attrs({ 'data-dismiss':("modal"), 'aria-hidden':("true"), "class": ('btn') }));
+  buf.push('>No</button></div></div>');
   }
   return buf.join("");
   };
@@ -2731,6 +2992,12 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   with (locals || {}) {
   var interp;
   buf.push('<div');
+  buf.push(attrs({ 'id':('tree-buttons-root') }));
+  buf.push('><div');
+  buf.push(attrs({ 'id':('tree-create-root'), "class": ('button') }));
+  buf.push('><i');
+  buf.push(attrs({ "class": ('icon-plus') }));
+  buf.push('></i></div></div><div');
   buf.push(attrs({ 'id':('tree-buttons') }));
   buf.push('><div');
   buf.push(attrs({ 'id':('tree-create'), "class": ('button') }));
@@ -2744,7 +3011,13 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   buf.push(attrs({ 'id':('tree-rename'), "class": ('button') }));
   buf.push('><i');
   buf.push(attrs({ "class": ('icon-pencil') }));
-  buf.push('></i></div></div>');
+  buf.push('></i></div></div><div');
+  buf.push(attrs({ 'id':('tree-top-buttons') }));
+  buf.push('><input');
+  buf.push(attrs({ 'id':('tree-search-field'), 'type':("text"), "class": ('span2') }));
+  buf.push('/><i');
+  buf.push(attrs({ 'id':('suppr-button'), 'style':("display: none"), "class": ('icon-remove-circle') }));
+  buf.push('></i></div>');
   }
   return buf.join("");
   };
@@ -2753,28 +3026,118 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
 window.require.define({"views/widgets/tree": function(exports, require, module) {
   (function() {
     var slugify,
-      __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+      __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+      __indexOf = Array.prototype.indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
     slugify = require("helpers").slugify;
 
-    exports.Tree = (function() {
+    /* Widget to easily manipulate data tree (navigation for cozy apps)
+    Properties :
+        currentPath      = ex : /all/coutries/great_britain  ("great_britain" is the uglified name of the note)
+        currentData      = data : jstree data obj sent by the select
+        currentNote_uuid : uuid of the currently selected note
+        widget           = @jstreeEl.jstree
+        searchField      = $("#tree-search-field")
+        searchButton     = $("#tree-search")
+        noteFull
+        jstreeEl         = $("#tree")
+    */
 
-      function Tree(navEl, data, callbacks) {
-        this._convertData = __bind(this._convertData, this);
-        this._getStringPath = __bind(this._getStringPath, this);
-        var tree;
-        this.setToolbar(navEl);
-        this.noteFull = $("#note-full");
-        tree = this._convertData(data);
-        this.treeEl = $("#tree");
-        this.widget = this.treeEl.jstree({
-          plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort", "cookies", "types", "dnd", "search"],
-          json_data: tree,
+    exports.Tree = (function() {
+      /**
+      #suggestionList is a global array containing all the suggestions for the
+      #autocompletion plugin
+      #this array contains objects with the nature of the suggestion
+      #(folder, tag, search string...) and the string corresponding to the suggestion
+      */
+      var suggestionList, _sortFunction;
+
+      suggestionList = [];
+
+      /**
+      #used by the .sort() method to be efficient with our structure
+      */
+
+      _sortFunction = function(a, b) {
+        if (a.name > b.name) {
+          return 1;
+        } else if (a.name === b.name) {
+          return 0;
+        } else if (a.name < b.name) {
+          return -1;
+        }
+      };
+
+      /**
+      #this method update the array suggestionList when the user add, rename or remove
+      #a node
+      #input: action : neither create, rename or remove,
+      #nodeName : in case of create and remove : the name of the new note or the note to remove
+      # in case of rename : the new name of the note
+      #oldName : only for rename : the name that will be replaced in the note
+      #output : suggestionList updated
+      */
+
+      Tree.prototype._updateSuggestionList = function(action, nodeName, oldName) {
+        var i, object;
+        if (action === "create") {
+          object = {
+            type: "folder",
+            name: nodeName
+          };
+          suggestionList.push(object);
+          return suggestionList.sort(_sortFunction);
+        } else if (action === "rename") {
+          i = 0;
+          while (suggestionList[i].name !== oldName) {
+            i++;
+          }
+          suggestionList[i].name = nodeName;
+          return suggestionList.sort(_sortFunction);
+        } else if (action === "remove") {
+          i = 0;
+          while (suggestionList[i].name !== nodeName) {
+            i++;
+          }
+          return suggestionList.splice(i, 1);
+        }
+      };
+
+      /**
+      # Initialize jsTree tree with options : sorting, create/rename/delete,
+      # unique children and json data for loading.
+      # params :
+      #   navEl : 
+      #   data :
+      #   homeViewCbk :
+      */
+
+      function Tree(navEl, data, homeViewCbk) {
+        this._getSlugPath = __bind(this._getSlugPath, this);
+        var jstreeEl, searchField, searchFunction, supprButton, __initSuggestionList, _filterAutocomplete, _selectIcon;
+        jstreeEl = $("#tree");
+        this.jstreeEl = jstreeEl;
+        supprButton = $("#suppr-button");
+        this.supprButton = supprButton;
+        navEl.prepend(require('../templates/tree_buttons'));
+        this.searchField = $("#tree-search-field");
+        searchField = this.searchField;
+        /**
+        # Creation of the jstree
+        # jstree is a plugin to implement the node tree
+        # Please visit http://www.jstree.com/ for more information
+        */
+        data = JSON.parse(data);
+        this.widget = this.jstreeEl.jstree({
+          plugins: ["themes", "json_data", "ui", "crrm", "unique", "sort", "cookies", "types", "hotkeys", "dnd", "search"],
+          json_data: {
+            data: data
+          },
           types: {
             "default": {
               valid_children: "default"
             },
-            "root": {
+            root: {
               valid_children: null,
               delete_node: false,
               rename_node: false,
@@ -2782,11 +3145,25 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
               start_drag: false
             }
           },
+          crrm: {
+            move: {
+              check_move: function(data) {
+                if (data.r.attr("id") === "tree-node-all") {
+                  return false;
+                } else {
+                  return true;
+                }
+              }
+            }
+          },
           cookies: {
             save_selected: false
           },
           ui: {
             select_limit: 1
+          },
+          hotkeys: {
+            del: false
           },
           themes: {
             theme: "default",
@@ -2797,133 +3174,436 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             animation: 0,
             initially_open: ["tree-node-all"]
           },
-          unique: {
-            error_callback: function(node, p, func) {
-              return alert("A note has already that name: '" + node + "'");
-            }
-          },
           search: {
+            search_method: "jstree_contains_multi",
             show_only_matches: true
           }
         });
-        this.setListeners(callbacks);
+        this.setListeners(homeViewCbk);
+        /**
+        #Autocompletion
+        */
+        /*
+                #this function allow to select what appears in the suggestion list while
+                #the user type something in the search input
+                #input : array of suggestions, current string in the search input
+                #outputs : an array containing strings corresponding to suggestions 
+                #depending on the searchstring
+        */
+        _filterAutocomplete = function(array, searchString) {
+          var char, exp, expBold, expFirst, filtered, filteredFirst, name, nameBold, regSentence, _i, _j, _len, _len2;
+          filteredFirst = [];
+          filtered = [];
+          regSentence = "";
+          for (_i = 0, _len = searchString.length; _i < _len; _i++) {
+            char = searchString[_i];
+            regSentence += ".*(" + char + ")";
+          }
+          expFirst = new RegExp("^" + searchString, "i");
+          expBold = new RegExp("([" + searchString + "])", "gi");
+          exp = new RegExp(regSentence, "i");
+          for (_j = 0, _len2 = array.length; _j < _len2; _j++) {
+            name = array[_j];
+            if (expFirst.test(name)) {
+              nameBold = name.replace(expBold, function(match, p1) {
+                return "<span class='bold-name'>" + p1 + "</span>";
+              });
+              filteredFirst.push(nameBold);
+            }
+            if (exp.test(name)) {
+              nameBold = name.replace(expBold, function(match, p1) {
+                return "<span class='bold-name'>" + p1 + "</span>";
+              });
+              if (!(__indexOf.call(filteredFirst, nameBold) >= 0)) {
+                filtered.push(nameBold);
+              }
+            }
+          }
+          return filteredFirst.concat(filtered);
+        };
+        /**
+        #used by textext to change the render of the suggestion list
+        #attach an icon to a certain type in the autocomplete list
+        #input : suggestion : a string which is the suggestion, 
+        #array : the array is suggestionList containing all the suggestions
+        # possible and their nature
+        */
+        _selectIcon = function(suggestion, array) {
+          var i, suggestion2;
+          if (suggestion === ("\"" + (searchField.val()) + "\"")) {
+            return "<i class='icon-search icon-suggestion'></i>";
+          } else {
+            i = 0;
+            suggestion2 = suggestion.replace(/<.*?>/g, "");
+            while (suggestion2 !== array[i].name) {
+              i++;
+            }
+            switch (array[i].type) {
+              case "folder":
+                return "<i class='icon-folder-open icon-suggestion'></i>";
+              default:
+                return "";
+            }
+          }
+        };
+        /**
+        #treat the content of the input and launch the jstree search function
+        */
+        searchFunction = function(searchString) {
+          var string, _i, _len, _ref;
+          _ref = $(".text-tag .text-label");
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            string = _ref[_i];
+            searchString += "_" + string.innerHTML;
+          }
+          return jstreeEl.jstree("search", searchString);
+        };
+        /**
+        #Textext plugin is used to implement the autocomplete plugin
+        #Please visit http://textextjs.com/ for more information about this plugin
+        */
+        searchField.textext({
+          /**
+          #tags: add tags to the input
+          #prompt: print Search... in the input
+          #focus: change CSS when the input has the focus
+          #autocomplete: add a suggestion list to the input
+          */
+          plugins: 'tags prompt focus autocomplete',
+          prompt: 'Search...',
+          autocomplete: {
+            dropdownMaxHeight: '200px',
+            render: function(suggestion) {
+              return _selectIcon(suggestion, suggestionList) + suggestion;
+            }
+          },
+          /**
+          # ext allows to rewrite a textext functionality
+          */
+          ext: {
+            core: {
+              /**
+              # event that trigger when the content of the input is changing
+              */
+              onGetFormData: function(e, data, keyCode) {
+                var textInput;
+                textInput = this.input().val();
+                data[0] = {
+                  'input': textInput,
+                  'form': textInput
+                };
+                /**
+                # if a tag is deleted the search function is call
+                # and if there is no tag anymore, the suppression
+                # button is hide
+                */
+                if (textInput === "") {
+                  searchFunction("");
+                  if ($(".text-tag .text-label")[0] === void 0) {
+                    return supprButton.css("display", "none");
+                  }
+                }
+              }
+            },
+            autocomplete: {
+              /**
+              # when the user click on a suggestion (text, bold, icon or blank spot)
+              # it add a tag in the input
+              */
+              onClick: function(e) {
+                var self, target;
+                self = this;
+                target = $(e.target);
+                if (target.is('.text-suggestion') || target.is('.text-label') || target.is('.icon-suggestion') || target.is('.bold-name')) {
+                  self.trigger('enterKeyPress');
+                }
+                if (self.core().hasPlugin('tags')) return self.val('');
+              }
+            },
+            itemManager: {
+              /**
+              #create an array with the "name" field of a suggestion list
+              */
+              nameField: function(array) {
+                var i, retArray, _i, _len;
+                retArray = [];
+                for (_i = 0, _len = array.length; _i < _len; _i++) {
+                  i = array[_i];
+                  retArray.push(i.name);
+                }
+                return retArray;
+              },
+              /**
+              #changing the content of a tag to avoid the view of 
+              #balises in it
+              */
+              itemToString: function(item) {
+                if (/".*"/.test(item)) {
+                  return item = item.replace(/"(.*)"/, function(str, p1) {
+                    return p1;
+                  });
+                } else {
+                  return item = item.replace(/<.*?>/g, "");
+                }
+              }
+            },
+            tags: {
+              /**
+              #change the render of a tag in case the tag is referring
+              #to what the user is typing
+              */
+              renderTag: function(tag) {
+                var node, self;
+                self = this;
+                node = $(self.opts('html.tag'));
+                node.find('.text-label').text(self.itemManager().itemToString(tag));
+                if (/icon-search/.test($(".text-selected")[0].innerHTML)) {
+                  node.find('.text-button').addClass("tag-special");
+                  node.find('.text-button').removeClass("text-button");
+                  node.data('text-tag', tag);
+                } else {
+                  node.data('text-tag', tag);
+                }
+                return node;
+              }
+            }
+          }
+        }).bind('getSuggestions', function(e, data) {
+          var list, query, textext, treeHeight;
+          textext = $(e.target).textext()[0];
+          query = (data ? data.query : "") || "";
+          list = textext.itemManager().nameField(suggestionList);
+          list = _filterAutocomplete(list, query);
+          list = ["\"" + (searchField.val()) + "\""].concat(list);
+          treeHeight = list.length * 22 + 10;
+          jstreeEl.css("margin-top", treeHeight);
+          return $(this).trigger("setSuggestions", {
+            result: list
+          });
+        }).bind('isTagAllowed', function(e, data) {
+          jstreeEl.css("margin-top", 10);
+          supprButton.css("display", "block");
+          return searchFunction(data.tag);
+        });
+        __initSuggestionList = function(node) {
+          var c, object, _i, _len, _ref, _results;
+          _ref = node.children;
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            c = _ref[_i];
+            object = {
+              type: "folder",
+              name: c.data
+            };
+            suggestionList.push(object);
+            _results.push(__initSuggestionList(c));
+          }
+          return _results;
+        };
+        __initSuggestionList(data);
+        suggestionList.sort(_sortFunction);
       }
 
-      Tree.prototype.setToolbar = function(navEl) {
-        return navEl.prepend(require('../templates/tree_buttons'));
-      };
+      /**
+      # Bind listeners given in parameters with comment events (creation,
+      # update, deletion, selection). Called by the constructor once.
+      */
 
-      Tree.prototype.currentPath = "";
-
-      Tree.prototype.setListeners = function(callbacks) {
-        var _this = this;
+      Tree.prototype.setListeners = function(homeViewCbk) {
+        var Tree, jstreeEl, progressBar, recursiveRemoveSuggestionList, searchField, supprButton, textPrompt, tree_buttons, tree_buttons_root, tree_buttons_target,
+          _this = this;
+        Tree = this;
+        jstreeEl = this.jstreeEl;
+        searchField = this.searchField;
+        supprButton = this.supprButton;
+        this.progressBar = $(".bar");
+        progressBar = this.progressBar;
+        tree_buttons = $("#tree-buttons");
+        tree_buttons_root = $("#tree-buttons-root");
+        $("#tree-create").tooltip({
+          placement: "bottom",
+          title: "Add a note"
+        });
         $("#tree-create").on("click", function(e) {
-          return _this.treeEl.jstree("create");
+          jstreeEl.jstree("create", this.parentElement.parentElement, 0, "New note");
+          $(this).tooltip('hide');
+          e.stopPropagation();
+          return e.preventDefault();
+        });
+        $("#tree-create-root").tooltip({
+          placement: "bottom",
+          title: "Add a note"
+        });
+        $("#tree-create-root").on("click", function(e) {
+          jstreeEl.jstree("create", this.parentElement.parentElement, 0, "New note");
+          $(this).tooltip('hide');
+          e.stopPropagation();
+          return e.preventDefault();
+        });
+        $("#tree-rename").tooltip({
+          placement: "bottom",
+          title: "Rename a note"
         });
         $("#tree-rename").on("click", function(e) {
-          return _this.treeEl.jstree("rename");
+          jstreeEl.jstree("rename", this.parentElement.parentElement);
+          $(this).tooltip('hide');
+          e.preventDefault();
+          return e.stopPropagation();
         });
-        $("#note-full-title").live("keypress", function(e) {
-          if (e.keyCode === 13) return $("#note-full-title").trigger("blur");
+        /**
+        # this function remove the sons of a removed node in the suggestion list
+        */
+        recursiveRemoveSuggestionList = function(nodeToDelete) {
+          var node, _i, _len, _ref;
+          if (nodeToDelete.children[2] === void 0) {
+            return Tree._updateSuggestionList("remove", nodeToDelete.children[1].text.replace(/\s/, ""), null);
+          } else {
+            _ref = nodeToDelete.children[2].children;
+            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+              node = _ref[_i];
+              recursiveRemoveSuggestionList(node);
+            }
+            return Tree._updateSuggestionList("remove", nodeToDelete.children[1].text.replace(/\s/, ""), null);
+          }
+        };
+        $("#tree-remove").tooltip({
+          placement: "bottom",
+          title: "Remove a note"
         });
         $("#tree-remove").on("click", function(e) {
-          return _this.treeEl.jstree("remove");
-        });
-        $("#note-full-title").blur(function() {
-          var idPath, newName, oldName;
-          newName = $("#note-full-title").val();
-          oldName = _this.currentData.inst.get_text(_this.currentData.rslt.obj);
-          if (newName !== "" && oldName !== newName) {
-            _this.currentData.inst.rename_node(_this.currentData.rslt.obj, newName);
-            idPath = "tree-node" + (_this.currentPath.split("/").join("-"));
-            _this.currentData.rslt.obj.attr("id", idPath);
-            _this.rebuildIds(_this.currentData, _this.currentData.rslt.obj, idPath);
-            return callbacks.onRename(_this.currentPath, newName, _this.currentData);
+          var nodeToDelete, noteToDelete_id;
+          console.log("event : tree-remove.click");
+          $(this).tooltip('hide');
+          nodeToDelete = this.parentElement.parentElement.parentElement;
+          if (nodeToDelete.children[2] !== void 0) {
+            $('#myModal').modal('show');
+            return $("#yes-button").on("click", function(e) {
+              var noteToDelete_id;
+              console.log("event : tree-remove.click");
+              recursiveRemoveSuggestionList(nodeToDelete);
+              noteToDelete_id = nodeToDelete.id;
+              if (noteToDelete_id !== 'tree-node-all') {
+                jstreeEl.jstree("remove", nodeToDelete);
+                return homeViewCbk.onRemove(noteToDelete_id);
+              }
+            });
+          } else {
+            recursiveRemoveSuggestionList(nodeToDelete);
+            noteToDelete_id = nodeToDelete.id;
+            if (noteToDelete_id !== 'tree-node-all') {
+              jstreeEl.jstree("remove", nodeToDelete);
+              homeViewCbk.onRemove(noteToDelete_id);
+            }
+            e.preventDefault();
+            return e.stopPropagation();
           }
+        });
+        searchField.blur(function() {
+          return jstreeEl.css("margin-top", 10);
+        });
+        tree_buttons_target = $("#nav");
+        this.widget.on("hover_node.jstree", function(event, data) {
+          if (data.rslt.obj[0].id === "tree-node-all") {
+            tree_buttons_root.appendTo(data.args[0]);
+            return tree_buttons_root.css("display", "block");
+          } else {
+            tree_buttons.appendTo(data.args[0]);
+            return tree_buttons.css("display", "block");
+          }
+        });
+        this.widget.on("dehover_node.jstree", function(event, data) {
+          if (data.rslt.obj[0].id === "tree-node-all") {
+            tree_buttons_root.css("display", "none");
+            return tree_buttons_root.appendTo(tree_buttons_target);
+          } else {
+            tree_buttons.css("display", "none");
+            return tree_buttons.appendTo(tree_buttons_target);
+          }
+        });
+        textPrompt = $(".text-prompt");
+        supprButton.click(function() {
+          $(".text-tags").empty();
+          searchField.css("padding-left", "5px");
+          searchField.css("padding-top", "3px");
+          textPrompt.css("padding-left", "5px");
+          textPrompt.css("padding-top", "3px");
+          $(".text-wrap").css("height", "22px");
+          $(".text-core").css("height", "22px");
+          $(".text-dropdown").css("top", "22px");
+          supprButton.css("display", "none");
+          return jstreeEl.jstree("search", "");
         });
         this.widget.on("create.jstree", function(e, data) {
-          var idPath, nodeName, parent, path;
+          var nodeName, parentId;
+          console.log("event : create.jstree");
           nodeName = data.inst.get_text(data.rslt.obj);
-          parent = data.rslt.parent;
-          path = _this._getPath(parent, nodeName);
-          idPath = "tree-node" + (_this._getPath(parent, nodeName).join("-"));
-          data.rslt.obj.attr("id", idPath);
-          return callbacks.onCreate(path.join("/"), data.rslt.name, data);
+          _this._updateSuggestionList("create", nodeName, null);
+          parentId = data.rslt.parent[0].id;
+          return homeViewCbk.onCreate(parentId, data.rslt.name, data);
         });
         this.widget.on("rename.jstree", function(e, data) {
-          var idPath, nodeName, parent, path;
-          nodeName = data.inst.get_text(data.rslt.obj);
-          parent = data.inst._get_parent(data.rslt.parent);
-          path = _this._getStringPath(parent, data.rslt.old_name);
-          if (path === "all") {
-            return $.jstree.rollback(data.rlbk);
-          } else if (data.rslt.old_name !== data.rslt.new_name) {
-            idPath = "tree-node" + (_this._getPath(parent, nodeName).join("-"));
-            data.rslt.obj.attr("id", idPath);
-            _this.rebuildIds(data, data.rslt.obj, idPath);
-            return callbacks.onRename(path, data.rslt.new_name, data);
-          }
-        });
-        this.widget.on("remove.jstree", function(e, data) {
-          var nodeName, parent, path;
-          nodeName = data.inst.get_text(data.rslt.obj);
-          parent = data.rslt.parent;
-          path = _this._getStringPath(parent, nodeName);
-          if (path === "all") {
-            return $.jstree.rollback(data.rlbk);
-          } else {
-            return callbacks.onRemove(path);
+          var newNodeName, oldNodeName;
+          console.log("event : rename.jstree");
+          newNodeName = data.rslt.new_name;
+          oldNodeName = data.rslt.old_name;
+          _this._updateSuggestionList("rename", newNodeName, oldNodeName);
+          if (oldNodeName !== newNodeName) {
+            return homeViewCbk.onRename(data.rslt.obj[0].id, newNodeName);
           }
         });
         this.widget.on("select_node.jstree", function(e, data) {
-          var nodeName, parent, path;
-          nodeName = data.inst.get_text(data.rslt.obj);
-          parent = data.inst._get_parent(data.rslt.parent);
-          path = _this._getStringPath(parent, nodeName);
+          var nodeName, note_uuid, parent, path;
+          console.log("event : select_node.jstree");
+          progressBar.css("width", "60%");
+          note_uuid = data.rslt.obj[0].id;
+          console.log("note_uuid");
+          console.log(note_uuid);
+          if (note_uuid === "tree-node-all") {
+            path = "/all";
+          } else {
+            nodeName = data.inst.get_text(data.rslt.obj);
+            parent = data.inst._get_parent();
+            path = "/" + data.rslt.obj[0].id + _this._getSlugPath(parent, nodeName);
+          }
           _this.currentPath = path;
           _this.currentData = data;
-          return callbacks.onSelect(path, data.rslt.obj.data("id"));
+          _this.currentNote_uuid = note_uuid;
+          _this.jstreeEl[0].focus();
+          return homeViewCbk.onSelect(path, note_uuid, data);
         });
         this.widget.on("move_node.jstree", function(e, data) {
-          var newPath, nodeName, oldParent, oldPath, parent;
-          nodeName = data.inst.get_text(data.rslt.o);
-          parent = data.inst._get_parent(data.rslt.o);
-          newPath = _this._getPath(parent, nodeName);
-          newPath.pop();
-          oldParent = data.inst.get_text(data.rslt.op);
-          parent = data.inst._get_parent(data.rslt.op);
-          oldPath = _this._getPath(parent, oldParent);
-          oldPath.push(slugify(nodeName));
-          if (newPath.length === 0) {
-            return $.jstree.rollback(data.rlbk);
-          } else {
-            return callbacks.onDrop(newPath.join("/"), oldPath.join("/"), nodeName, data);
-          }
+          var nodeId, targetNodeId;
+          console.log("event : move_node.jstree");
+          nodeId = data.rslt.o[0].id;
+          targetNodeId = data.rslt.o[0].parentElement.parentElement.id;
+          return homeViewCbk.onDrop(nodeId, targetNodeId);
         });
         return this.widget.on("loaded.jstree", function(e, data) {
-          return callbacks.onLoaded();
+          console.log("event : loaded.jstree");
+          progressBar.css("width", "20%");
+          return homeViewCbk.onLoaded();
         });
       };
 
-      Tree.prototype.rebuildIds = function(data, obj, idPath) {
-        var child, newIdPath, _i, _len, _ref, _results;
-        _ref = data.inst._get_children(obj);
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          child = _ref[_i];
-          newIdPath = idPath + "-" + slugify($(child).children("a:eq(0)").text());
-          $(child).attr("id", newIdPath);
-          _results.push(this.rebuildIds(data, child, newIdPath));
-        }
-        return _results;
-      };
+      /**
+      #Select node corresponding to given path
+      #if note_uuid exists in the jstree it is selected
+      #otherwise if there is no seleted node, we select the root
+      */
 
-      Tree.prototype.selectNode = function(path) {
-        var node, nodePath, tree;
-        nodePath = path.replace(/\//g, "-");
-        node = $("#tree-node-" + nodePath);
-        tree = $("#tree").jstree("deselect_all", null);
-        return tree = $("#tree").jstree("select_node", node);
+      Tree.prototype.selectNode = function(note_uuid) {
+        var jstreeEl, node, progressBar, tree;
+        progressBar = this.progressBar;
+        jstreeEl = this.jstreeEl;
+        console.log("Tree.selectNode( " + note_uuid + " )");
+        progressBar.css("width", "50%");
+        node = $("#" + note_uuid);
+        if (node[0]) {
+          tree = jstreeEl.jstree("deselect_all", null);
+          return tree = jstreeEl.jstree("select_node", node);
+        } else if (!this.widget.jstree("get_selected")[0]) {
+          return tree = jstreeEl.jstree("select_node", "#tree-node-all");
+        }
       };
 
       Tree.prototype._getPath = function(parent, nodeName) {
@@ -2938,52 +3618,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         return nodes;
       };
 
-      Tree.prototype._getStringPath = function(parent, nodeName) {
+      Tree.prototype._getSlugPath = function(parent, nodeName) {
         return this._getPath(parent, nodeName).join("/");
-      };
-
-      Tree.prototype._convertData = function(data) {
-        var tree;
-        tree = {
-          data: {
-            data: "all",
-            attr: {
-              id: "tree-node-all",
-              rel: "root"
-            },
-            children: []
-          }
-        };
-        this._convertNode(tree.data, data.all, "-all");
-        if (tree.data.length === 0) tree.data = "loading...";
-        return tree;
-      };
-
-      Tree.prototype._convertNode = function(parentNode, nodeToConvert, idpath) {
-        var newNode, nodeIdPath, property, _results;
-        _results = [];
-        for (property in nodeToConvert) {
-          if (!(property !== "name" && property !== "id")) continue;
-          nodeIdPath = "" + idpath + "-" + (property.replace(/_/g, "-"));
-          newNode = {
-            data: nodeToConvert[property].name,
-            metadata: {
-              id: nodeToConvert[property].id
-            },
-            attr: {
-              id: "tree-node" + nodeIdPath,
-              rel: "default"
-            },
-            children: []
-          };
-          if (parentNode.children === void 0) {
-            parentNode.data.push(newNode);
-          } else {
-            parentNode.children.push(newNode);
-          }
-          _results.push(this._convertNode(newNode, nodeToConvert[property], nodeIdPath));
-        }
-        return _results;
       };
 
       return Tree;

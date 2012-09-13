@@ -1,9 +1,19 @@
 #nav1.ui-layout-west
     #nav.well
-        #tree
-#editor.ui-layout-center
+        #tree(tabIndex='2')
+#note-area.ui-layout-center
     #note-full.note-full
         p#note-full-breadcrumb /
         div#input-field
             input#note-full-title
-        div#note-area            
+        div#editor
+        div#drag
+
+div#myModal.modal.hide.fade.in(tabindex="-1", role="dialog", aria-labelledby="myModalLabel", aria-hidden="true")
+    div.modal-header
+        h3#myModalLabel Warning!
+    div.modal-body
+        p You are about to delete this folder and all this content. Do you want to continue?
+    div.modal-footer
+        button#yes-button.btn(data-dismiss="modal", aria-hidden="true") Yes
+        button.btn(data-dismiss="modal", aria-hidden="true") No
