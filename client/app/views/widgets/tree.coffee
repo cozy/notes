@@ -370,15 +370,18 @@ class exports.Tree
     # update, deletion, selection). Called by the constructor once.
     ###
     setListeners: (homeViewCbk) ->
-        Tree = this
 
-        # tree-buttons : they appear in nodes of the tree when mouseisover
-        jstreeEl=@jstreeEl
-        searchField = @searchField
-        supprButton = @supprButton
+        # vars
+        Tree = this
+        jstreeEl     = @jstreeEl
+        searchField  = @searchField
+        supprButton  = @supprButton
         @progressBar = $(".bar")
-        progressBar = @progressBar
+        progressBar  = @progressBar
         tree_buttons = $("#tree-buttons")
+        modalAlert   = $('#myModal')
+        modalYesBtn  = $("#modal-yes")
+    
 
         # tree_buttons_root : the jstree root has only an add button
         tree_buttons_root = $("#tree-buttons-root")
@@ -435,24 +438,18 @@ class exports.Tree
             console.log "event : tree-remove.click"
             $(this).tooltip('hide')
             nodeToDelete = this.parentElement.parentElement.parentElement
-            if nodeToDelete.children[2] isnt undefined
-                $('#myModal').modal('show')
-                $("#yes-button").on "click", (e) ->
-                    console.log "event : tree-remove.click"
-                    recursiveRemoveSuggestionList(nodeToDelete)
-                    noteToDelete_id=nodeToDelete.id
-                    if noteToDelete_id != 'tree-node-all'
-                        jstreeEl.jstree("remove" , nodeToDelete)
-                        homeViewCbk.onRemove noteToDelete_id                           
-            else
+            modalAlert.modal('show')
+            modalYesBtn.on "click", (e) ->
+                console.log "event : tree-remove.click"
                 recursiveRemoveSuggestionList(nodeToDelete)
-                noteToDelete_id=nodeToDelete.id
+                noteToDelete_id = nodeToDelete.id
                 if noteToDelete_id != 'tree-node-all'
                     jstreeEl.jstree("remove" , nodeToDelete)
-                    homeViewCbk.onRemove noteToDelete_id
-                # DO NOT CHANGE  :-)
-                e.preventDefault()
-                e.stopPropagation()
+                    homeViewCbk.onRemove noteToDelete_id                           
+                    modalYesBtn.focus() # TODO : doesn't work ?? but works in debug ...
+            # DO NOT CHANGE  :-)
+            e.preventDefault()
+            e.stopPropagation()
         
 
         searchField.blur ->
