@@ -1,5 +1,6 @@
 express = require 'express'
 RedisStore = require('connect-redis')(express)
+passport = require "passport"
 
 try
     require "../../cozy-home/settings"

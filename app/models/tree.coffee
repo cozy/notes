@@ -1,6 +1,15 @@
 async = require("async")
 DataTree = require('../../lib/data-tree').DataTree
+helpers = require "../../lib/helpers"
 
+## Requests
+
+allType = -> emit doc.type, doc
+Tree.defineRequest "all", allType, helpers.checkError
+
+
+Tree.all = (params, callback) ->
+    Tree.request "all", params, callback
 
 ###
 # Add a node corresponding to the note in the dataTree.
@@ -51,36 +60,12 @@ Tree.moveOrRenameNode = (noteId, newTitle, newParentId, cbk) ->
                 newPath = dataTree.getPath(noteId)
                 cbk(null)
 
-
-###
-# Destroy all tree corresponding at given condition.
-# This method doesn't update the tree. 
-# USE FOR INIT DATABASE ONLY
-###
-Tree.destroySome = (condition, callback) ->
-    
-    wait = 0
-    error = null
-    done = (err) ->
-        error = error || err
-        if --wait == 0
-            callback(error)
-
-    Tree.all condition, (err, data) ->
-        if err then return callback(err)
-        if data.length == 0 then return callback(null)
-
-        wait = data.length
-        data.forEach (obj) ->
-            obj.destroy done
-
-
 ###
 # Remove all tree from database.
 # USE FOR INIT DATABASE ONLY
 ###
 Tree.destroyAll = (callback) ->
-    Tree.destroySome {}, callback
+    Tree.requestDestroy "all", callback
 
 
 ###
@@ -90,10 +75,12 @@ Tree.destroyAll = (callback) ->
 # returns callback(err,tree)
 ###
 Tree.getOrCreate = (callback) ->
-    Tree.all where: type:"Note", (err, trees) ->
+    Tree.all key:"Note", (err, trees) ->
         if err
             send error: 'An error occured', 500
         else if trees.length == 0
+            console.log "create tree"
+            
             newDataTree =  new DataTree()
             Tree.create { struct: newDataTree.toJson(), type: "Note" }, (err,tree)->
                 Tree.dataTree = newDataTree

@@ -2,6 +2,11 @@
 # Authentication configuration
 #
 passport = require 'passport'
+helpers = require "../../lib/helpers"
+
+User.defineRequest "all", helpers.all, helpers.checkError
+User.all = (callback) ->
+    User.request "all", callback
 
 passport.serializeUser = (user, done) ->
     done null, user.email

@@ -1,5 +1,8 @@
 async = require("async")
-helpers = require('../../client/app/helpers') 
+helpers = require('../../lib/helpers')
+
+Note.defineRequest "all", helpers.all, helpers.checkError
+Note.all = (callback) -> Note.request "all", callback
 
 ###
 # Delete all notes.
