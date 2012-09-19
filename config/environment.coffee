@@ -1,17 +1,11 @@
 express = require 'express'
 RedisStore = require('connect-redis')(express)
 
-passport = require 'passport'
-
-passport.serializeUser = (user, done) ->
-    done null, user.email
-  
-passport.deserializeUser = (email, done) ->
-    User.all (err, users) ->
-        if users.length > 0
-            done err, users[0]
-        else
-            done err, null
+try
+    require "../../cozy-home/settings"
+catch error
+    global.secret_cookie_key = "secret"
+    global.secret_session_key = "secret"
 
 app.configure ->
     cwd = process.cwd()
