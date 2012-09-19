@@ -17,7 +17,7 @@ returnNotes = (err, notes) ->
     else
         # due to jugglingdb pb, arrays are stored as json
         notes.forEach (nt)->
-            nt.path = JSON.parse nt.path 
+            nt.path = JSON.parse nt.path
         send length: notes.length, rows: notes
 
 ###

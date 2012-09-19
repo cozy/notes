@@ -1,7 +1,7 @@
 async = require("async")
-helpers = require('../../lib/helpers')
+requests = require('../../common/requests')
 
-Note.defineRequest "all", helpers.all, helpers.checkError
+Note.defineRequest "all", requests.all, requests.checkError
 Note.all = (callback) -> Note.request "all", callback
 
 ###

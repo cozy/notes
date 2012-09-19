@@ -4,8 +4,8 @@
     cf /cozy-note/test/array-storage_test.coffee
 ###
 
-helpers = require "../../lib/helpers"
-TestArrayObj.defineRequest "all", helpers.all, helpers.checkError
+requests = require "../../common/requests"
+TestArrayObj.defineRequest "all", requests.all, requests.checkError
 
 # Destroy all obj corresponding at given condition.
 TestArrayObj.destroyAll = (callback) ->
