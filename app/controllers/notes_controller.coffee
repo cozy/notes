@@ -134,7 +134,8 @@ action 'update', ->
                 isToUpdate = true
             if isToUpdate
                 newData.id = params.id
-                Note.upsert(newData, cbk)
+                note = new Note newData
+                note.updateAttributes(newData, cbk)
             else
                 cbk(null)
     # neither title nor path is changed, the note can be updated immediately.
@@ -149,7 +150,8 @@ action 'update', ->
             isToUpdate = true
         if isToUpdate
             newData.id = params.id
-            Note.upsert(newData, cbk)
+            note = new Note newData
+            note.updateAttributes(newData, cbk)
         else
             cbk(null)
             

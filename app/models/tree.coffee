@@ -38,7 +38,8 @@ Tree.moveOrRenameNode = (noteId, newTitle, newParentId, cbk) ->
     # params : noteDataItem = {id:"note id", path: "[note path, an array]"}
     _updateNotePath = (noteDataItem, cbk) ->
         noteDataItem.path = JSON.stringify(noteDataItem.path)
-        Note.upsert noteDataItem, cbk
+        note = new Note noteDataItem
+        note.updateAttributes(noteDataItem, cbk)
 
     # update the dataTree
     dataTree = Tree.dataTree
@@ -65,6 +66,7 @@ Tree.moveOrRenameNode = (noteId, newTitle, newParentId, cbk) ->
 # USE FOR INIT DATABASE ONLY
 ###
 Tree.destroyAll = (callback) ->
+    console.log "test BJA"
     Tree.requestDestroy "all", callback
 
 
