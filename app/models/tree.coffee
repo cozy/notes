@@ -1,11 +1,11 @@
 async = require("async")
-DataTree = require('../../lib/data-tree').DataTree
-helpers = require "../../lib/helpers"
+DataTree = require('../../common/data-tree').DataTree
+requests = require "../../common/requests"
 
 ## Requests
 
 allType = -> emit doc.type, doc
-Tree.defineRequest "all", allType, helpers.checkError
+Tree.defineRequest "all", allType, requests.checkError
 
 
 Tree.all = (params, callback) ->

@@ -2,9 +2,9 @@
 # Authentication configuration
 #
 passport = require 'passport'
-helpers = require "../../lib/helpers"
+requests = require "../../common/requests"
 
-User.defineRequest "all", helpers.all, helpers.checkError
+User.defineRequest "all", requests.all, requests.checkError
 User.all = (callback) ->
     User.request "all", callback
 
