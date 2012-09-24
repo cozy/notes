@@ -1,30 +1,8 @@
 async = require("async")
-helpers = require('../../client/app/helpers') 
+requests = require('../../common/requests')
 
-###
-# DestroyNote corresponding to given condition
-# TODO optimise deletion : each deletion requires on request.
-# This method doesn't update the tree. 
-# USE FOR INIT DATABASE ONLY
-###
-Note.destroySome = (condition, callback) ->
-
-    # TODO FRU : Replace this with async lib call.
-    wait = 0
-    error = null
-    done = (err) ->
-        error = error || err
-        if --wait == 0
-            callback(error)
-
-    Note.all condition, (err, data) ->
-        if err then return callback(err)
-        if data.length == 0 then return callback(null)
-
-        wait = data.length
-        data.forEach (obj) ->
-            obj.destroy done
-
+Note.defineRequest "all", requests.all, requests.checkError
+Note.all = (callback) -> Note.request "all", callback
 
 ###
 # Delete all notes.
@@ -32,7 +10,7 @@ Note.destroySome = (condition, callback) ->
 # USE FOR INIT DATABASE ONLY
 ###
 Note.destroyAll = (callback) ->
-    Note.destroySome {}, callback
+    Note.requestDestroy "all", callback
 
 
 ###*

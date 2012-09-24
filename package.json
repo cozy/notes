@@ -22,9 +22,11 @@
   , "sinon":            ">= 0"
   , "mocha":            ">= 0"
   , "zombie":           "= 1.1.4"
+  , "jugglingdb-cozy-adapter":     "0.1.4"
   }
 , "devDependencies":
   { "request-json":     "= 0.2.5"
+  , "request-json":     ">= 0"
   }
 , "scripts":
   { "test": "nodeunit test/*/*"
