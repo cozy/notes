@@ -1,16 +1,13 @@
 
-table
-    tr
-        th
-            #editorBtnBar.btn-group
-                button#indentBtn.btn.btn-small.btn-primary
-                    i.icon-indent-left
-                button#unIndentBtn.btn.btn-small.btn-primary
-                    i.icon-indent-right
-                button#markerListBtn.btn.btn-small.btn-primary
-                    i.icon-th-list
-                button#titleBtn.btn.btn-small.btn-primary Title
-                button#save-editor-content.btn.active.btn-small.btn-info
-                    i.icon-download-alt
-        td
-            iframe#editorIframe
+#editor-button-bar.btn-group.clearfix
+    button#indentBtn.btn.btn-small
+        i.icon-indent-left
+    button#unIndentBtn.btn.btn-small
+        i.icon-indent-right
+    button#markerListBtn.btn.btn-small
+        i.icon-th-list
+    button#titleBtn.btn.btn-small Title
+    button#save-editor-content.btn.active.btn-small
+        i.icon-download-alt
+#editor-container
+    iframe#editorIframe
