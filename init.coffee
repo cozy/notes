@@ -1,15 +1,13 @@
 server = require './server'
 async = require "async"
 
-DataTree = require("./lib/tree").Tree
+DataTree = require("./common/data-tree").DataTree
 
 ## Small script to intialize finalNote of available applications.
 
 note = new Note
     title: "Tutorial"
-    path: "/all/tutorial"
-    humanPath: "All,Tutorial"
-    tags: "all,tutorial"
+    path: ["All", "Tutorial"]
     content: """
 # Nav Buttons
 + plus button will create a new note as children of currenlty selected note 
@@ -45,8 +43,8 @@ Note.create note, (err, finalNote) ->
             console.log err
             console.log "Initialization failed (cannot update tree)"
             process.exit(0)
-        dataTree = new DataTree JSON.parse(tree.struct)
-        dataTree.addNode "/all", finalNote.title, finalNote.id
+        dataTree = new DataTree tree.struct
+        dataTree.addNode finalNote
 
         tree.updateAttributes struct: dataTree.toJson(), (err) ->
             console.log "Initialization succeeds."
