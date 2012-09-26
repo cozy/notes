@@ -6,7 +6,7 @@ exports.routes = (map) ->
     # routes for notes interactions
     map.get  '/notes'     , 'notes#all'
     map.post '/notes'     , 'notes#create'
-    map.post '/notes/path', 'notes#allForPath'
+    map.post '/notes/search', 'notes#search'
     map.get  '/notes/:id' , 'notes#show'
     map.put  '/notes/:id' , 'notes#update'
     

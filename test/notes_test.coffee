@@ -64,10 +64,10 @@ describe "/notes", ->
 
         it "should create 3 notes", (done) ->
             async.series [
-                createNoteFunction "Note1 title", "tree-node-all", "\n+ 01\n",(err, resp, body)->
+                createNoteFunction "Note1 title", "tree-node-all", "\n+ 01\n", (err, resp, body)->
                         resp.statusCode.should.equal 201
                         note1=body
-                createNoteFunction "Note2 title", "tree-node-all", "\n+ 02\n", (err, resp, body)->
+                createNoteFunction "Note2 title", "tree-node-all", "\n+ 01\n", (err, resp, body)->
                     resp.statusCode.should.equal 201
                     note2=body
             ], ->
@@ -97,7 +97,7 @@ describe "/notes", ->
             should.exist Tree.dataTree.nodes
             
         it "should produce an internal tree with root->node1->node3 & root->node2 ", (done)->
-            root  = Tree.dataTree.root 
+            root  = Tree.dataTree.root
             node1 = Tree.dataTree.nodes[note1.id]
             node2 = Tree.dataTree.nodes[note2.id]
             node3 = Tree.dataTree.nodes[note3.id]
@@ -115,7 +115,7 @@ describe "/notes", ->
                 tree.data.should.equal "All"
                 tree.children[0].data.should.equal "Note1 title"
                 tree.children[1].data.should.equal "Note2 title"
-                tree.children[0].children[0].data.should.equal "Note3 title"                    
+                tree.children[0].children[0].data.should.equal "Note3 title"
                 tree.children[0].attr.id.should.equal note1.id
                 tree.children[1].attr.id.should.equal note2.id
                 tree.children[0].children[0].attr.id.should.equal note3.id
@@ -185,7 +185,7 @@ describe "/notes/:id", ->
     describe "PUT - update the title and content of one note", ->
 
         it "should success", (done) ->
-            updateData = 
+            updateData =
                 title   : "Note1 title - modified"
                 content : "\n+ 01 - modified\n"
             client.put "notes/#{note1.id}", updateData, (err, resp, data) ->
@@ -216,7 +216,7 @@ describe "/notes/:id", ->
                 tree.children[0].attr.id.should.equal note1.id
                 tree.children[1].data.should.equal "Note2 title"
                 tree.children[1].attr.id.should.equal note2.id
-                tree.children[0].children[0].data.should.equal "Note3 title"                    
+                tree.children[0].children[0].data.should.equal "Note3 title"
                 tree.children[0].children[0].attr.id.should.equal note3.id
                 done()
 
@@ -268,7 +268,7 @@ describe "/notes/:id", ->
                 done()
 
 
-describe "Test in many different cases", -> 
+describe "Test in many different cases", ->
 
     describe ": creation of a sinple note", ->
         it "should success", (done) ->
@@ -294,7 +294,8 @@ describe "Test in many different cases", ->
                     note5=body
                 createNoteFunction "Cassoulet", "tree-node-all", "\n+ 01\n", (err, resp, body)->
                     note6=body
-                createNoteFunction "Pizza - the true one !", "tree-node-all", "\n+ 01\n", (err, resp, body)->
+                content = "very special content for indexation testing"
+                createNoteFunction "Pizza - the true one !", "tree-node-all", content, (err, resp, body)->
                     note7=body
             ], ->
                 client.put "notes/#{note5.id}", {parent_id:note4.id}, ->
@@ -352,3 +353,22 @@ describe "DEL - notes/:id", ->
             done()
         
 
+describe "/notes/search", ->
+    describe "POST", ->
+
+        it "should returned the note with special content", (done) ->
+            data = query: "special"
+            client.post "notes/search", data, (err, resp, notes) ->
+                notes.length.should.not.equal 0
+                note = notes[0]
+                note.id.should.equal note7.id
+                done()
+
+        it "when you delete given note", (done) ->
+            client.del "notes/#{note7.id}", (err, resp, notes) ->
+                done()
+            
+        it "should returned no note", (done) ->
+            data = query: "special"
+            client.post "notes/search", data, (err, resp, notes) ->
+                notes.length.should.equal 0
