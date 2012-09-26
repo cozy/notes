@@ -172,20 +172,19 @@ class exports.NoteView extends Backbone.View
         #breadcrumb will contain the path of the selected note in a link format(<a>)
         # the code below generates the breadcrumb corresponding
         # to the current note path
-            paths      = noteModel.path
-            i          = -1+paths.length
-            path       = "/#note/"+noteModel.id
-            breadcrumb = "<a href='#{path}'> #{paths[i]}</a>"
-            i--
-            # TODO BJA : optimiser ce plat de nouilles : 
-            parent = this.homeView.tree.jstreeEl.jstree("get_selected")
-            while i >= 0
-                parent = data.inst._get_parent(parent)
-                path = "/#note/#{parent[0].id}"
-                breadcrumb = "<a href='#{path}'> #{paths[i]}</a> >#{breadcrumb}"
-                i--
-            breadcrumb = "<a href='/#note/all'> All</a> >#{breadcrumb}"
-            $("#note-full-breadcrumb").html breadcrumb
+        paths      = noteModel.path
+        noteName   = paths.pop()
+        breadcrumb = ""
+
+        parent = this.homeView.tree.jstreeEl.jstree("get_selected")
+        while paths.length > 0
+            parent = data.inst._get_parent parent
+            path = "/#note/#{parent[0].id}/"
+            noteName = paths.pop()
+            breadcrumb = "<a href='#{path}'> #{noteName}</a> >#{breadcrumb}"
+
+        breadcrumb = "<a href='/#note/all'> All</a> >#{breadcrumb}"
+        $("#note-full-breadcrumb").html breadcrumb
 
     ###*
     # in case of renaming a note this function update the breadcrumb in consequences
