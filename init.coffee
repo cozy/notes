@@ -7,7 +7,7 @@ DataTree = require("./common/data-tree").DataTree
 
 note = new Note
     title: "Tutorial"
-    path: ["All", "Tutorial"]
+    path: ["Tutorial"]
     content: """
 # Nav Buttons
 + plus button will create a new note as children of currenlty selected note 
