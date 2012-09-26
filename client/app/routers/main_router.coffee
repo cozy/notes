@@ -12,17 +12,18 @@ class exports.MainRouter extends Backbone.Router
 
     routes:
         '': 'home'
+        'note/all': "allNotes"
 
     # routes that need regexp.
     initialize: ->
-        @route(/^note\/(.*?)\/(.*?)$/, 'note')
+        @route /^note\/(.*?)\/(.*?)$/, 'note'
 
     # Entry point, render app and select last selected note.
     # used only at the initialisation of the app
     home: () ->
         console.log "event : router.home"
         @navigate "note/all", trigger: false
-        @_initializeTree("tree-node-all")
+        @_initializeTree "tree-node-all"
 
     # Select given note (represented by its path), if tree is already 
     # rendered, note is directly selected else it loads tree then it selects 
@@ -32,11 +33,16 @@ class exports.MainRouter extends Backbone.Router
         if $("#tree-create").length > 0
             app.homeView.selectNote note_uuid
         else
-            note_uuid = "tree-node-all" if note_uuid == "all"
-            @_initializeTree(note_uuid)
+            @allNotes()
 
-    _initializeTree : (initPath) ->
+    allNotes: ->
+        if $('#tree').length > 0
+            app.homeView.selectNote "tree-node-all"
+        else
+            @_initializeTree "tree-node-all"
+
+    _initializeTree: (initPath) ->
         console.log "routeur._initializeTree( #{initPath} )"
-        $('body').append(app.homeView.el)
-        app.homeView.initContent(initPath)
+        $('body').append app.homeView.el
+        app.homeView.initContent initPath
 

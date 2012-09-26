@@ -95,6 +95,12 @@ class exports.HomeView extends Backbone.View
                     onDrop  : @onNoteDropped
                 )
 
+        $("#note-style").height($(window).height() - 80)
+        $("#editor").height($(window).height() - 180)
+        $(window).resize =>
+            $("#note-style").height($(window).height() - 80)
+            $("#editor").height($(window).height() - 180)
+
     ###*
     Create a new folder of path : 
     Params :

@@ -46,42 +46,42 @@ class exports.NoteView extends Backbone.View
 
         # buttons for the editor
 
-        $("#indentBtn").tooltip(
+        $("#indentBtn").tooltip
             placement: "bottom"
             title: "Indent the selection"
-            )
+            
         $("#indentBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.tab()
 
-        $("#unIndentBtn").tooltip(
+        $("#unIndentBtn").tooltip
             placement: "bottom"
             title: "Unindent the selection"
-            )
+            
         $("#unIndentBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.shiftTab()
 
-        $("#markerListBtn").tooltip(
+        $("#markerListBtn").tooltip
             placement: "bottom"
             title: "Change selection from titles to marker list"
-            )
+            
         $("#markerListBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.markerList()
 
-        $("#titleBtn").tooltip(
+        $("#titleBtn").tooltip
             placement: "bottom"
             title: "Change selection from marker list to titles"
-            )
+            
         $("#titleBtn").on "click", () ->
             editorCtrl._addHistory()
             editorCtrl.titleList()
             
-        $("#save-editor-content").tooltip(
+        $("#save-editor-content").tooltip
             placement: "bottom"
             title: "Save the current content"
-            )       
+        
 
         ###*
         # every keyUp in the note's editor will trigger a countdown of 3s, after
@@ -89,13 +89,13 @@ class exports.NoteView extends Backbone.View
         ###
         $("iframe").on "onKeyUp", () =>
             clearTimeout(saveTimer)
-            if saveButton.hasClass("btn-info")
-                    saveButton.addClass("btn-primary").removeClass("active btn-info")
+            if saveButton.hasClass("active")
+                saveButton.removeClass("active")
             model     = @model
             saveTimer = setTimeout( ->
                     model.saveContent editorCtrl.getEditorContent()
-                    if saveButton.hasClass("btn-primary")
-                        saveButton.addClass("active btn-info").removeClass("btn-primary")
+                    if not saveButton.hasClass("active")
+                        saveButton.addClass("active")
                 , 3000)
 
         ###*
@@ -172,20 +172,19 @@ class exports.NoteView extends Backbone.View
         #breadcrumb will contain the path of the selected note in a link format(<a>)
         # the code below generates the breadcrumb corresponding
         # to the current note path
-            paths      = noteModel.path
-            i          = -1+paths.length
-            path       = "/#note/"+noteModel.id
-            breadcrumb = "<a href='#{path}'> #{paths[i]}</a>"
-            i--
-            # TODO BJA : optimiser ce plat de nouilles : 
-            parent = this.homeView.tree.jstreeEl.jstree("get_selected")
-            while i >= 0
-                parent = data.inst._get_parent(parent)
-                path = "/#note/#{parent[0].id}"
-                breadcrumb = "<a href='#{path}'> #{paths[i]}</a> >#{breadcrumb}"
-                i--
-            breadcrumb = "<a href='/#note/all'> All</a> >#{breadcrumb}"
-            $("#note-full-breadcrumb").html breadcrumb
+        paths      = noteModel.path
+        noteName   = paths.pop()
+        breadcrumb = ""
+
+        parent = this.homeView.tree.jstreeEl.jstree("get_selected")
+        while paths.length > 0
+            parent = data.inst._get_parent parent
+            path = "/#note/#{parent[0].id}/"
+            noteName = paths.pop()
+            breadcrumb = "<a href='#{path}'> #{noteName}</a> >#{breadcrumb}"
+
+        breadcrumb = "<a href='/#note/all'> All</a> >#{breadcrumb}"
+        $("#note-full-breadcrumb").html breadcrumb
 
     ###*
     # in case of renaming a note this function update the breadcrumb in consequences
