@@ -13,24 +13,32 @@ titleMixin(rank, type)
   margin-left unit(0, px)
   if type == 1
     margin-top unit(12, px)
-    border-radius 5px 5px 5px 5px
-    color blue
     width 100%
     box-sizing border-box
     -moz-box-sizing border-box
     -webkit-box-sizing border-box
     font-variant: small-caps
+    border-bottom 1px solid #DDD
     font-weight bold
+    font-size 1.5em
+    margin-bottom 10px
   else if type == 2
     margin-top unit(5, px)
-    color green
+    font-size 1.2em
+    font-variant: small-caps
     font-weight bold
+    margin-bottom 5px
+    margin-top 10px
   else if type == 3
     margin-top unit(5, px)
-    color blueDark
+    font-size 1.2em
+    font-variant: small-caps
+    margin-top 8px
+    margin-bottom 5px
   else
     margin-top unit(5, px)
-    color 586408
+    margin-bottom 5px
+    font-variant: small-caps
   if rank == 1
     counter-reset    : section4
     counter-reset    : section3
@@ -94,7 +102,8 @@ lineMixin(rank)
   overflow        : auto
   font            : normal 13px "Helvetica Neue", Arial, Helvetica, sans-serif
   color           : #222244
-  background-color: white 
+  background: #FDFDFD
+  color: #222
 
 p
   margin-top   : 0px
