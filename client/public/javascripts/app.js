@@ -301,7 +301,8 @@ window.require.define({"routers/main_router": function(exports, require, module)
 
 
     MainRouter.prototype.routes = {
-      '': 'home'
+      '': 'home',
+      'note/all': "allNotes"
     };
 
     MainRouter.prototype.initialize = function() {
@@ -321,10 +322,15 @@ window.require.define({"routers/main_router": function(exports, require, module)
       if ($("#tree-create").length > 0) {
         return app.homeView.selectNote(note_uuid);
       } else {
-        if (note_uuid === "all") {
-          note_uuid = "tree-node-all";
-        }
-        return this._initializeTree(note_uuid);
+        return this.allNotes();
+      }
+    };
+
+    MainRouter.prototype.allNotes = function() {
+      if ($('#tree').length > 0) {
+        return app.homeView.selectNote("tree-node-all");
+      } else {
+        return this._initializeTree("tree-node-all");
       }
     };
 
@@ -2566,7 +2572,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
       progressBarTopPosition = $(".ui-layout-center").height() / 2;
       this.progress.css("left", progressBarLeftPosition);
       this.progress.css("top", progressBarTopPosition);
-      return $.get("tree/", function(data) {
+      $.get("tree/", function(data) {
         console.log(data);
         window.tree = data;
         return _this.tree = new Tree(_this.$("#nav"), data, {
@@ -2577,6 +2583,12 @@ window.require.define({"views/home_view": function(exports, require, module) {
           onLoaded: onTreeLoaded,
           onDrop: _this.onNoteDropped
         });
+      });
+      $("#note-style").height($(window).height() - 80);
+      $("#editor").height($(window).height() - 180);
+      return $(window).resize(function() {
+        $("#note-style").height($(window).height() - 80);
+        return $("#editor").height($(window).height() - 180);
       });
     };
 
@@ -2842,14 +2854,14 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
       $("iframe").on("onKeyUp", function() {
         clearTimeout(saveTimer);
-        if (saveButton.hasClass("btn-info")) {
-          saveButton.addClass("btn-primary").removeClass("active btn-info");
+        if (saveButton.hasClass("active")) {
+          saveButton.removeClass("active");
         }
         model = _this.model;
         return saveTimer = setTimeout(function() {
           model.saveContent(editorCtrl.getEditorContent());
-          if (saveButton.hasClass("btn-primary")) {
-            return saveButton.addClass("active btn-info").removeClass("btn-primary");
+          if (!saveButton.hasClass("active")) {
+            return saveButton.addClass("active");
           }
         }, 3000);
       });
@@ -2938,18 +2950,16 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
 
     NoteView.prototype.createBreadcrumb = function(noteModel, data) {
-      var breadcrumb, i, parent, path, paths;
+      var breadcrumb, noteName, parent, path, paths;
       paths = noteModel.path;
-      i = -1 + paths.length;
-      path = "/#note/" + noteModel.id;
-      breadcrumb = "<a href='" + path + "'> " + paths[i] + "</a>";
-      i--;
+      noteName = paths.pop();
+      breadcrumb = "";
       parent = this.homeView.tree.jstreeEl.jstree("get_selected");
-      while (i >= 0) {
+      while (paths.length > 0) {
         parent = data.inst._get_parent(parent);
-        path = "/#note/" + parent[0].id;
-        breadcrumb = "<a href='" + path + "'> " + paths[i] + "</a> >" + breadcrumb;
-        i--;
+        path = "/#note/" + parent[0].id + "/";
+        noteName = paths.pop();
+        breadcrumb = "<a href='" + path + "'> " + noteName + "</a> >" + breadcrumb;
       }
       breadcrumb = "<a href='/#note/all'> All</a> >" + breadcrumb;
       return $("#note-full-breadcrumb").html(breadcrumb);
@@ -2988,7 +2998,7 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<table><tr><th><div id="editorBtnBar" class="btn-group"><button id="indentBtn" class="btn btn-small btn-primary"><i class="icon-indent-left"></i></button><button id="unIndentBtn" class="btn btn-small btn-primary"><i class="icon-indent-right"></i></button><button id="markerListBtn" class="btn btn-small btn-primary"><i class="icon-th-list"></i></button><button id="titleBtn" class="btn btn-small btn-primary">Title</button><button id="save-editor-content" class="btn active btn-small btn-info"><i class="icon-download-alt"></i></button></div></th><td><iframe id="editorIframe"></iframe></td></tr></table>');
+  buf.push('<div id="editor-button-bar" class="btn-group clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="markerListBtn" class="btn btn-small"><i class="icon-th-list"></i></button><button id="titleBtn" class="btn btn-small">Title</button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div id="editor-container"><iframe id="editorIframe"></iframe></div>');
   }
   return buf.join("");
   };
@@ -3000,7 +3010,7 @@ window.require.define({"views/templates/home": function(exports, require, module
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="nav1" class="ui-layout-west"><div id="nav" class="well"><div id="tree" tabIndex="2"></div></div></div><div id="note-area" class="ui-layout-center"><div id="note-full" class="note-full"><p id="note-full-breadcrumb">/</p><div id="input-field"><input id="note-full-title"/></div><div id="editor"></div><div id="drag"></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
+  buf.push('<div id="nav1" class="ui-layout-west"><div id="nav" class="well"><div id="tree" tabIndex="2"></div></div></div><div id="note-area" class="ui-layout-center"><div id="note-full" class="well note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><div><input id="note-full-title"/></div><div id="editor"></div></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
   }
   return buf.join("");
   };
