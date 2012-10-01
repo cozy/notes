@@ -2520,7 +2520,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
 
     HomeView.prototype.initContent = function(note_uuid) {
-      var drag, hv, iframeLoaded, onIFrameLoaded, onTreeLoaded, progressBar, progressBarLeftPosition, progressBarTopPosition, treeLoaded,
+      var drag, hv, iframeLoaded, onIFrameLoaded, onTreeLoaded, progressBar, progressBarLeftPosition, progressBarTopPosition, treeLoaded, windowHeight,
         _this = this;
       console.log("HomeView.initContent(" + note_uuid + ")");
       this.progressBar = $(".bar");
@@ -2584,11 +2584,15 @@ window.require.define({"views/home_view": function(exports, require, module) {
           onDrop: _this.onNoteDropped
         });
       });
-      $("#note-style").height($(window).height() - 80);
-      $("#editor").height($(window).height() - 180);
-      return $(window).resize(function() {
-        $("#note-style").height($(window).height() - 80);
-        return $("#editor").height($(window).height() - 180);
+      windowHeight = $(window).height();
+      $("#note-style").height(windowHeight - 80);
+      $("#editor").height(windowHeight - 180);
+      $(window).resize(function() {
+        $("#note-style").height(windowHeight - 80);
+        return $("#editor").height(windowHeight - 180);
+      });
+      return $(window).unload(function() {
+        return _this.noteView.saveEditorContent();
       });
     };
 
@@ -2674,6 +2678,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
     HomeView.prototype.onTreeSelectionChg = function(path, id, data) {
       var progressBar,
         _this = this;
+      this.noteView.saveEditorContent();
       progressBar = this.progressBar;
       console.log("HomeView.selectFolder( path:" + path + " - id:" + id + ")");
       if (id === void 0) {
@@ -2756,6 +2761,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
 window.require.define({"views/note_view": function(exports, require, module) {
   var CNEditor, Note, TreeInst, template,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -2787,6 +2793,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
 
     function NoteView(onIFrameLoaded) {
+      this.saveEditorContent = __bind(this.saveEditorContent, this);
       console.log("NoteWidget.constructor()");
       this.onIFrameLoaded = onIFrameLoaded;
       NoteView.__super__.constructor.call(this);
@@ -2805,6 +2812,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
       model = void 0;
       saveTimer = null;
       saveButton = $("#save-editor-content");
+      this.saveButton = saveButton;
       onIFrameLoaded = this.onIFrameLoaded;
       iframeEditorCallBack = function() {
         return onIFrameLoaded();
@@ -2853,13 +2861,16 @@ window.require.define({"views/note_view": function(exports, require, module) {
       */
 
       $("iframe").on("onKeyUp", function() {
-        clearTimeout(saveTimer);
+        var id;
+        clearTimeout(_this.saveTimer);
         if (saveButton.hasClass("active")) {
           saveButton.removeClass("active");
         }
-        model = _this.model;
-        return saveTimer = setTimeout(function() {
-          model.saveContent(editorCtrl.getEditorContent());
+        id = _this.model.id;
+        return _this.saveTimer = setTimeout(function() {
+          Note.updateNote(id, {
+            content: editorCtrl.getEditorContent()
+          });
           if (!saveButton.hasClass("active")) {
             return saveButton.addClass("active");
           }
@@ -2870,13 +2881,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
       # automatic save
       */
 
-      $("#save-editor-content").on("click", function() {
-        clearTimeout(saveTimer);
-        model.saveContent(editorCtrl.getEditorContent());
-        if (saveButton.hasClass("btn-primary")) {
-          return saveButton.addClass("active btn-info").removeClass("btn-primary");
-        }
-      });
+      saveButton.click(this.saveEditorContent());
       this.noteFullTitle = $("#note-full-title");
       noteFullTitle = this.noteFullTitle;
       /**
@@ -2903,6 +2908,24 @@ window.require.define({"views/note_view": function(exports, require, module) {
           return _this.updateBreadcrumbOnTitleChange(newName);
         }
       });
+    };
+
+    /**
+    # Stop saving timer if any and force saving of editor content.
+    */
+
+
+    NoteView.prototype.saveEditorContent = function() {
+      var id;
+      if ((this.model != null) && (this.editorCtrl != null) && (this.saveTimer != null)) {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = null;
+        id = this.model.id;
+        Note.updateNote(id, {
+          content: this.editorCtrl.getEditorContent()
+        });
+        return this.saveButton.addClass("active");
+      }
     };
 
     /**
@@ -2957,11 +2980,11 @@ window.require.define({"views/note_view": function(exports, require, module) {
       parent = this.homeView.tree.jstreeEl.jstree("get_selected");
       while (paths.length > 0) {
         parent = data.inst._get_parent(parent);
-        path = "/#note/" + parent[0].id + "/";
+        path = "#note/" + parent[0].id + "/";
         noteName = paths.pop();
         breadcrumb = "<a href='" + path + "'> " + noteName + "</a> >" + breadcrumb;
       }
-      breadcrumb = "<a href='/#note/all'> All</a> >" + breadcrumb;
+      breadcrumb = "<a href='#note/all'> All</a> >" + breadcrumb;
       return $("#note-full-breadcrumb").html(breadcrumb);
     };
 
