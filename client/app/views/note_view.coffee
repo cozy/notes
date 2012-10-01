@@ -33,6 +33,7 @@ class exports.NoteView extends Backbone.View
         model      = undefined
         saveTimer  = null
         saveButton = $("#save-editor-content")
+        @saveButton = saveButton
         
         # creation of the editor controler
         onIFrameLoaded=@onIFrameLoaded
@@ -85,25 +86,21 @@ class exports.NoteView extends Backbone.View
         # 3s and if the user didn't type anything, the content will be saved
         ###
         $("iframe").on "onKeyUp", () =>
-            clearTimeout(saveTimer)
-            if saveButton.hasClass("active")
-                saveButton.removeClass("active")
-            model     = @model
-            saveTimer = setTimeout( ->
-                    model.saveContent editorCtrl.getEditorContent()
+            clearTimeout(@saveTimer)
+            saveButton.removeClass("active") if saveButton.hasClass("active")
+            id = @model.id
+            @saveTimer = setTimeout( ->
+                    Note.updateNote id, content: editorCtrl.getEditorContent()
                     if not saveButton.hasClass("active")
                         saveButton.addClass("active")
                 , 3000)
+
 
         ###*
         # allow the user to save the content of a note before the 3s of the
         # automatic save
         ###
-        $("#save-editor-content").on "click", () ->
-            clearTimeout(saveTimer)
-            model.saveContent editorCtrl.getEditorContent()
-            if saveButton.hasClass("btn-primary")
-                saveButton.addClass("active btn-info").removeClass("btn-primary")
+        saveButton.click @saveEditorContent()
 
         @noteFullTitle = $("#note-full-title")
         noteFullTitle = @noteFullTitle
@@ -119,7 +116,7 @@ class exports.NoteView extends Backbone.View
         ###*
         # allow to rename a note by directly writing in the title
         ###
-        noteFullTitle.blur => 
+        noteFullTitle.blur =>
             console.log "event : note-full-title.blur"
             newName = noteFullTitle.val()
             oldName = @model.title
@@ -128,6 +125,16 @@ class exports.NoteView extends Backbone.View
                 this.homeView.tree._updateSuggestionList("rename", newName, oldName)
                 @updateBreadcrumbOnTitleChange(newName)
 
+    ###*
+    # Stop saving timer if any and force saving of editor content. 
+    ###
+    saveEditorContent: =>
+        if @model? and @editorCtrl? and @saveTimer?
+            clearTimeout @saveTimer
+            @saveTimer = null
+            id = @model.id
+            Note.updateNote id, content: @editorCtrl.getEditorContent()
+            @saveButton.addClass("active")
 
     ###*
     # 
