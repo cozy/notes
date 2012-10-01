@@ -20,9 +20,6 @@ class exports.NoteView extends Backbone.View
         @onIFrameLoaded = onIFrameLoaded
         super()
 
-    #     @id = @model.slug
-    #     @model.view = @
-
     remove: ->
         $(@el).remove()
 
@@ -179,11 +176,11 @@ class exports.NoteView extends Backbone.View
         parent = this.homeView.tree.jstreeEl.jstree("get_selected")
         while paths.length > 0
             parent = data.inst._get_parent parent
-            path = "/#note/#{parent[0].id}/"
+            path = "#note/#{parent[0].id}/"
             noteName = paths.pop()
             breadcrumb = "<a href='#{path}'> #{noteName}</a> >#{breadcrumb}"
 
-        breadcrumb = "<a href='/#note/all'> All</a> >#{breadcrumb}"
+        breadcrumb = "<a href='#note/all'> All</a> >#{breadcrumb}"
         $("#note-full-breadcrumb").html breadcrumb
 
     ###*
