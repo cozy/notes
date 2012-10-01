@@ -96,17 +96,19 @@ class exports.HomeView extends Backbone.View
                 )
 
         # Resize editor
-        windowHeight = $(window).height()
-        $("#note-style").height(windowHeight - 80)
-        $("#editor").height(windowHeight - 180)
-        $(window).resize =>
-            $("#note-style").height(windowHeight - 80)
-            $("#editor").height(windowHeight - 180)
+        @resizeNoteView()
+        $(window).resize @resizeNoteView
 
         # Save data when user leaves page.
         $(window).unload =>
             @noteView.saveEditorContent()
         
+    resizeNoteView: ->
+        windowHeight = $(window).height()
+        $("#note-style").height(windowHeight - 80)
+        $("#editor").height(windowHeight - 180)
+
+
     ###*
     Create a new folder of path : 
     Params :

@@ -2520,7 +2520,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
 
     HomeView.prototype.initContent = function(note_uuid) {
-      var drag, hv, iframeLoaded, onIFrameLoaded, onTreeLoaded, progressBar, progressBarLeftPosition, progressBarTopPosition, treeLoaded, windowHeight,
+      var drag, hv, iframeLoaded, onIFrameLoaded, onTreeLoaded, progressBar, progressBarLeftPosition, progressBarTopPosition, treeLoaded,
         _this = this;
       console.log("HomeView.initContent(" + note_uuid + ")");
       this.progressBar = $(".bar");
@@ -2584,16 +2584,18 @@ window.require.define({"views/home_view": function(exports, require, module) {
           onDrop: _this.onNoteDropped
         });
       });
-      windowHeight = $(window).height();
-      $("#note-style").height(windowHeight - 80);
-      $("#editor").height(windowHeight - 180);
-      $(window).resize(function() {
-        $("#note-style").height(windowHeight - 80);
-        return $("#editor").height(windowHeight - 180);
-      });
+      this.resizeNoteView();
+      $(window).resize(this.resizeNoteView);
       return $(window).unload(function() {
         return _this.noteView.saveEditorContent();
       });
+    };
+
+    HomeView.prototype.resizeNoteView = function() {
+      var windowHeight;
+      windowHeight = $(window).height();
+      $("#note-style").height(windowHeight - 80);
+      return $("#editor").height(windowHeight - 180);
     };
 
     /**
