@@ -2881,7 +2881,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
       # automatic save
       */
 
-      saveButton.click(this.saveEditorContent());
+      saveButton.click(this.saveEditorContent);
       this.noteFullTitle = $("#note-full-title");
       noteFullTitle = this.noteFullTitle;
       /**

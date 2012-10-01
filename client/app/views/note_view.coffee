@@ -100,7 +100,7 @@ class exports.NoteView extends Backbone.View
         # allow the user to save the content of a note before the 3s of the
         # automatic save
         ###
-        saveButton.click @saveEditorContent()
+        saveButton.click @saveEditorContent
 
         @noteFullTitle = $("#note-full-title")
         noteFullTitle = @noteFullTitle
