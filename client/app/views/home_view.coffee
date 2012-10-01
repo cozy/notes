@@ -95,12 +95,18 @@ class exports.HomeView extends Backbone.View
                     onDrop  : @onNoteDropped
                 )
 
-        $("#note-style").height($(window).height() - 80)
-        $("#editor").height($(window).height() - 180)
+        # Resize editor
+        windowHeight = $(window).height()
+        $("#note-style").height(windowHeight - 80)
+        $("#editor").height(windowHeight - 180)
         $(window).resize =>
-            $("#note-style").height($(window).height() - 80)
-            $("#editor").height($(window).height() - 180)
+            $("#note-style").height(windowHeight - 80)
+            $("#editor").height(windowHeight - 180)
 
+        # Save data when user leaves page.
+        $(window).unload =>
+            @noteView.saveEditorContent()
+        
     ###*
     Create a new folder of path : 
     Params :
@@ -165,6 +171,8 @@ class exports.HomeView extends Backbone.View
     # note data.
     ###
     onTreeSelectionChg: (path, id, data) =>
+        @noteView.saveEditorContent()
+
         progressBar = @progressBar
         console.log "HomeView.selectFolder( path:#{path} - id:#{id})"
         if id is undefined
