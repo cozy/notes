@@ -22,7 +22,7 @@
   , "sinon":            ">= 0"
   , "mocha":            ">= 0"
   , "form-data":            ">= 0"
-  , "jugglingdb-cozy-adapter":     "0.1.4"
+  , "jugglingdb-cozy-adapter":     "0.2.0"
   }
 , "devDependencies":
   { "request-json":     "= 0.2.9"
