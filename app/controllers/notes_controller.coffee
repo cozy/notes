@@ -105,16 +105,13 @@ action 'create', ->
 action 'update', ->
     # console.log "\nDEBUGGING UPDATE : " + body.title + '  ' + body.parent_id
     cbk = (err) ->
-            if err
-                send error: 'Note can not be updated', 500
-            else
-                send success: 'Note updated', 200
+            send success: 'Note updated', 200
 
     saveAttributes = (isToIndex, note, newData) ->
         if isToIndex
             note.updateAttributes newData, (err) ->
                 if err
-                    send error: 'Note can not be indexed', 500
+                    send error: true, msg: "Cannot update note", 500
                 else
                     note.index ["title", "content"], cbk
         else
@@ -204,7 +201,7 @@ action 'addFile', ->
             if err
                 send error: "error occured while saving file", 500
             else
-                send 200
+                send success: true, msg:"Upload succeeds", 200
     else
         send error: "no files", 400
 
@@ -238,5 +235,3 @@ action 'delFile', ->
             send 500
         else
             send succes: true, msg: 'File deleted', 200
-
-
