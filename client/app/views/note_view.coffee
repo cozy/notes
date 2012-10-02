@@ -36,7 +36,7 @@ class exports.NoteView extends Backbone.View
         saveTimer  = null
         saveButton = $("#save-editor-content")
         @saveButton = saveButton
-        
+        @uploadButton = $("#upload-btn")
         # creation of the editor controler
         onIFrameLoaded=@onIFrameLoaded
         iframeEditorCallBack = () ->
@@ -70,7 +70,7 @@ class exports.NoteView extends Backbone.View
             editorCtrl._addHistory()
             editorCtrl.markerList()
 
-        $("#upload-btn").tooltip
+        @uploadButton.tooltip
             placement: "bottom"
             title: "Add file to the note"
             
@@ -141,7 +141,12 @@ class exports.NoteView extends Backbone.View
             mutliple: false
             forceMultipart: true
             onComplete: (id, filename, response) =>
+                @uploadButton.spin()
+                $(".icon-arrow-up").css('visibility', 'visible')
                 @addFileLine filename
+            onSubmit: =>
+                $(".icon-arrow-up").css('visibility', 'hidden')
+                @uploadButton.spin 'small'
         @fileList = $('#note-file-list')
             
     ###*
@@ -205,10 +210,13 @@ class exports.NoteView extends Backbone.View
         delButton = $("#note-#{slug} button")
         line.hide()
         delButton.click (target) =>
+            delButton.html "&nbsp;&nbsp;&nbsp;"
+            delButton.spin 'tiny'
             $.ajax
                 url: path
                 type: "DELETE"
                 success: =>
+                    delButton.spin()
                     line.fadeOut ->
                         line.remove()
                 error: =>
