@@ -5979,6 +5979,38 @@ ol {
   right: 15px;
   top: 112px;
 }
+#note-file-list {
+  text-align: right;
+  position: absolute;
+  right: 3%;
+  top: 140px;
+}
+.note-file {
+  margin-top: 5px;
+  margin-right: 10px;
+  z-index: 10;
+  background-color: #ddd;
+  opacity: 0.5;
+  padding-left: 10px;
+}
+.note-file:hover {
+  opacity: 1;
+}
+.note-file a {
+  font-size: 0.6em;
+  color: #a9a9a9;
+}
+.note-file a:hover {
+  color: #a9a9a9;
+}
+.note-file button {
+  font-size: 0.6em;
+  background: transparent;
+  border: none;
+}
+.note-file button:hover {
+  text-decoration: underline;
+}
 #editor-container {
   padding-left: 2%;
   padding-right: 2%;
@@ -6830,6 +6862,38 @@ ol {
   position: absolute;
   right: 15px;
   top: 112px;
+}
+#note-file-list {
+  text-align: right;
+  position: absolute;
+  right: 3%;
+  top: 140px;
+}
+.note-file {
+  margin-top: 5px;
+  margin-right: 10px;
+  z-index: 10;
+  background-color: #ddd;
+  opacity: 0.5;
+  padding-left: 10px;
+}
+.note-file:hover {
+  opacity: 1;
+}
+.note-file a {
+  font-size: 0.6em;
+  color: #222;
+}
+.note-file a:hover {
+  color: #222;
+}
+.note-file button {
+  font-size: 0.6em;
+  background: transparent;
+  border: none;
+}
+.note-file button:hover {
+  text-decoration: underline;
 }
 #nav {
   position: absolute;

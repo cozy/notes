@@ -23714,6 +23714,1630 @@ exports.rethrow = function rethrow(err, filename, lineno){
 })({});
 ;
 
+/**
+ * http://github.com/Valums-File-Uploader/file-uploader
+ *
+ * Multiple file upload component with progress-bar, drag-and-drop.
+ *
+ * Have ideas for improving this JS for the general community?
+ * Submit your changes at: https://github.com/Valums-File-Uploader/file-uploader
+ * Readme at https://github.com/valums/file-uploader/blob/2.0/readme.md
+ *
+ * VERSION 2.1-SNAPSHOT
+ * Original version: 1.0 © 2010 Andrew Valums ( andrew(at)valums.com )
+ * Current Maintainer (2.0+): © 2012, Ray Nicholus ( fineuploader(at)garstasio.com )
+ *
+ * Licensed under MIT license, GNU GPL 2 or later, GNU LGPL 2 or later, see license.txt.
+ */
+
+//
+// Helper functions
+//
+
+var qq = qq || {};
+
+/**
+ * Adds all missing properties from second obj to first obj
+ */
+qq.extend = function(first, second){
+    for (var prop in second){
+        first[prop] = second[prop];
+    }
+};
+
+/**
+ * Searches for a given element in the array, returns -1 if it is not present.
+ * @param {Number} [from] The index at which to begin the search
+ */
+qq.indexOf = function(arr, elt, from){
+    if (arr.indexOf) return arr.indexOf(elt, from);
+
+    from = from || 0;
+    var len = arr.length;
+
+    if (from < 0) from += len;
+
+    for (; from < len; from++){
+        if (from in arr && arr[from] === elt){
+            return from;
+        }
+    }
+    return -1;
+};
+
+qq.getUniqueId = (function(){
+    var id = 0;
+    return function(){ return id++; };
+})();
+
+//
+// Browsers and platforms detection
+
+qq.ie       = function(){ return navigator.userAgent.indexOf('MSIE') != -1; }
+qq.safari   = function(){ return navigator.vendor != undefined && navigator.vendor.indexOf("Apple") != -1; }
+qq.chrome   = function(){ return navigator.vendor != undefined && navigator.vendor.indexOf('Google') != -1; }
+qq.firefox  = function(){ return (navigator.userAgent.indexOf('Mozilla') != -1 && navigator.vendor != undefined && navigator.vendor == ''); }
+qq.windows  = function(){ return navigator.platform == "Win32"; }
+
+//
+// Events
+
+/** Returns the function which detaches attached event */
+qq.attach = function(element, type, fn){
+    if (element.addEventListener){
+        element.addEventListener(type, fn, false);
+    } else if (element.attachEvent){
+        element.attachEvent('on' + type, fn);
+    }
+    return function() {
+        qq.detach(element, type, fn)
+    }
+};
+qq.detach = function(element, type, fn){
+    if (element.removeEventListener){
+        element.removeEventListener(type, fn, false);
+    } else if (element.attachEvent){
+        element.detachEvent('on' + type, fn);
+    }
+};
+
+qq.preventDefault = function(e){
+    if (e.preventDefault){
+        e.preventDefault();
+    } else{
+        e.returnValue = false;
+    }
+};
+
+//
+// Node manipulations
+
+/**
+ * Insert node a before node b.
+ */
+qq.insertBefore = function(a, b){
+    b.parentNode.insertBefore(a, b);
+};
+qq.remove = function(element){
+    element.parentNode.removeChild(element);
+};
+
+qq.contains = function(parent, descendant){
+    // compareposition returns false in this case
+    if (parent == descendant) return true;
+
+    if (parent.contains){
+        return parent.contains(descendant);
+    } else {
+        return !!(descendant.compareDocumentPosition(parent) & 8);
+    }
+};
+
+/**
+ * Creates and returns element from html string
+ * Uses innerHTML to create an element
+ */
+qq.toElement = (function(){
+    var div = document.createElement('div');
+    return function(html){
+        div.innerHTML = html;
+        var element = div.firstChild;
+        div.removeChild(element);
+        return element;
+    };
+})();
+
+//
+// Node properties and attributes
+
+/**
+ * Sets styles for an element.
+ * Fixes opacity in IE6-8.
+ */
+qq.css = function(element, styles){
+    if (styles.opacity != null){
+        if (typeof element.style.opacity != 'string' && typeof(element.filters) != 'undefined'){
+            styles.filter = 'alpha(opacity=' + Math.round(100 * styles.opacity) + ')';
+        }
+    }
+    qq.extend(element.style, styles);
+};
+qq.hasClass = function(element, name){
+    var re = new RegExp('(^| )' + name + '( |$)');
+    return re.test(element.className);
+};
+qq.addClass = function(element, name){
+    if (!qq.hasClass(element, name)){
+        element.className += ' ' + name;
+    }
+};
+qq.removeClass = function(element, name){
+    var re = new RegExp('(^| )' + name + '( |$)');
+    element.className = element.className.replace(re, ' ').replace(/^\s+|\s+$/g, "");
+};
+qq.setText = function(element, text){
+    element.innerText = text;
+    element.textContent = text;
+};
+
+//
+// Selecting elements
+
+qq.children = function(element){
+    var children = [],
+        child = element.firstChild;
+
+    while (child){
+        if (child.nodeType == 1){
+            children.push(child);
+        }
+        child = child.nextSibling;
+    }
+
+    return children;
+};
+
+qq.getByClass = function(element, className){
+    if (element.querySelectorAll){
+        return element.querySelectorAll('.' + className);
+    }
+
+    var result = [];
+    var candidates = element.getElementsByTagName("*");
+    var len = candidates.length;
+
+    for (var i = 0; i < len; i++){
+        if (qq.hasClass(candidates[i], className)){
+            result.push(candidates[i]);
+        }
+    }
+    return result;
+};
+
+/**
+ * obj2url() takes a json-object as argument and generates
+ * a querystring. pretty much like jQuery.param()
+ *
+ * how to use:
+ *
+ *    `qq.obj2url({a:'b',c:'d'},'http://any.url/upload?otherParam=value');`
+ *
+ * will result in:
+ *
+ *    `http://any.url/upload?otherParam=value&a=b&c=d`
+ *
+ * @param  Object JSON-Object
+ * @param  String current querystring-part
+ * @return String encoded querystring
+ */
+qq.obj2url = function(obj, temp, prefixDone){
+    var uristrings = [],
+        prefix = '&',
+        add = function(nextObj, i){
+            var nextTemp = temp
+                ? (/\[\]$/.test(temp)) // prevent double-encoding
+                ? temp
+                : temp+'['+i+']'
+                : i;
+            if ((nextTemp != 'undefined') && (i != 'undefined')) {
+                uristrings.push(
+                    (typeof nextObj === 'object')
+                        ? qq.obj2url(nextObj, nextTemp, true)
+                        : (Object.prototype.toString.call(nextObj) === '[object Function]')
+                        ? encodeURIComponent(nextTemp) + '=' + encodeURIComponent(nextObj())
+                        : encodeURIComponent(nextTemp) + '=' + encodeURIComponent(nextObj)
+                );
+            }
+        };
+
+    if (!prefixDone && temp) {
+        prefix = (/\?/.test(temp)) ? (/\?$/.test(temp)) ? '' : '&' : '?';
+        uristrings.push(temp);
+        uristrings.push(qq.obj2url(obj));
+    } else if ((Object.prototype.toString.call(obj) === '[object Array]') && (typeof obj != 'undefined') ) {
+        // we wont use a for-in-loop on an array (performance)
+        for (var i = 0, len = obj.length; i < len; ++i){
+            add(obj[i], i);
+        }
+    } else if ((typeof obj != 'undefined') && (obj !== null) && (typeof obj === "object")){
+        // for anything else but a scalar, we will use for-in-loop
+        for (var i in obj){
+            add(obj[i], i);
+        }
+    } else {
+        uristrings.push(encodeURIComponent(temp) + '=' + encodeURIComponent(obj));
+    }
+
+    return uristrings.join(prefix)
+        .replace(/^&/, '')
+        .replace(/%20/g, '+');
+};
+
+//
+//
+// Uploader Classes
+//
+//
+
+var qq = qq || {};
+
+/**
+ * Creates upload button, validates upload, but doesn't create file list or dd.
+ */
+qq.FileUploaderBasic = function(o){
+    var that = this;
+    this._options = {
+        // set to true to see the server response
+        debug: false,
+        action: '/server/upload',
+        params: {},
+        customHeaders: {},
+        button: null,
+        multiple: true,
+        maxConnections: 3,
+        disableCancelForFormUploads: false,
+        autoUpload: true,
+        forceMultipart: false,
+        // validation
+        allowedExtensions: [],
+        acceptFiles: null,		// comma separated string of mime-types for browser to display in browse dialog
+        sizeLimit: 0,
+        minSizeLimit: 0,
+        stopOnFirstInvalidFile: true,
+        // events
+        // return false to cancel submit
+        onSubmit: function(id, fileName){},
+        onComplete: function(id, fileName, responseJSON){},
+        onCancel: function(id, fileName){},
+        onUpload: function(id, fileName, xhr){},
+        onProgress: function(id, fileName, loaded, total){},
+        onError: function(id, fileName, reason) {},
+        // messages
+        messages: {
+            typeError: "{file} has an invalid extension. Valid extension(s): {extensions}.",
+            sizeError: "{file} is too large, maximum file size is {sizeLimit}.",
+            minSizeError: "{file} is too small, minimum file size is {minSizeLimit}.",
+            emptyError: "{file} is empty, please select files again without it.",
+            noFilesError: "No files to upload.",
+            onLeave: "The files are being uploaded, if you leave now the upload will be cancelled."
+        },
+        showMessage: function(message){
+            alert(message);
+        },
+        inputName: 'qqfile'
+    };
+    qq.extend(this._options, o);
+    this._wrapCallbacks();
+    qq.extend(this, qq.DisposeSupport);
+
+    // number of files being uploaded
+    this._filesInProgress = 0;
+
+    this._storedFileIds = [];
+
+    this._handler = this._createUploadHandler();
+
+    if (this._options.button){
+        this._button = this._createUploadButton(this._options.button);
+    }
+
+    this._preventLeaveInProgress();
+};
+
+qq.FileUploaderBasic.prototype = {
+    log: function(str){
+        if (this._options.debug && window.console) console.log('[uploader] ' + str);
+    },
+    setParams: function(params){
+        this._options.params = params;
+    },
+    getInProgress: function(){
+        return this._filesInProgress;
+    },
+    uploadStoredFiles: function(){
+        for (var i = 0; i < this._storedFileIds.length; i++) {
+            this._filesInProgress++;
+            this._handler.upload(this._storedFileIds[i], this._options.params);
+        }
+    },
+    clearStoredFiles: function(){
+        this._storedFileIds = [];
+    },
+    _createUploadButton: function(element){
+        var self = this;
+
+        var button = new qq.UploadButton({
+            element: element,
+            multiple: this._options.multiple && qq.UploadHandlerXhr.isSupported(),
+            acceptFiles: this._options.acceptFiles,
+            onChange: function(input){
+                self._onInputChange(input);
+            }
+        });
+
+        this.addDisposer(function() { button.dispose(); });
+        return button;
+    },
+    _createUploadHandler: function(){
+        var self = this,
+            handlerClass;
+
+        if(qq.UploadHandlerXhr.isSupported()){
+            handlerClass = 'UploadHandlerXhr';
+        } else {
+            handlerClass = 'UploadHandlerForm';
+        }
+
+        var handler = new qq[handlerClass]({
+            debug: this._options.debug,
+            action: this._options.action,
+            forceMultipart: this._options.forceMultipart,
+            maxConnections: this._options.maxConnections,
+            customHeaders: this._options.customHeaders,
+            inputName: this._options.inputName,
+            demoMode: this._options.demoMode,
+            onProgress: function(id, fileName, loaded, total){
+                self._onProgress(id, fileName, loaded, total);
+                self._options.onProgress(id, fileName, loaded, total);
+            },
+            onComplete: function(id, fileName, result){
+                self._onComplete(id, fileName, result);
+                self._options.onComplete(id, fileName, result);
+            },
+            onCancel: function(id, fileName){
+                var indexToRemove = qq.indexOf(self._storedFileIds, id);
+                if (indexToRemove >= 0) {
+                    self._storedFileIds.splice(indexToRemove, 1);
+                }
+
+                self._onCancel(id, fileName);
+                self._options.onCancel(id, fileName);
+            },
+            onError: self._options.onError,
+            onUpload: function(id, fileName, xhr){
+                self._onUpload(id, fileName, xhr);
+                self._options.onUpload(id, fileName, xhr);
+            }
+        });
+
+        return handler;
+    },
+    _preventLeaveInProgress: function(){
+        var self = this;
+
+        this._attach(window, 'beforeunload', function(e){
+            if (!self._filesInProgress){return;}
+
+            var e = e || window.event;
+            // for ie, ff
+            e.returnValue = self._options.messages.onLeave;
+            // for webkit
+            return self._options.messages.onLeave;
+        });
+    },
+    _onSubmit: function(id, fileName){
+        if (this._options.autoUpload) {
+            this._filesInProgress++;
+        }
+    },
+    _onProgress: function(id, fileName, loaded, total){
+    },
+    _onComplete: function(id, fileName, result){
+        var indexToRemove = qq.indexOf(this._storedFileIds, id);
+        if (indexToRemove >= 0) {
+            this._storedFileIds.splice(indexToRemove, 1);
+        }
+        this._filesInProgress--;
+    },
+    _onCancel: function(id, fileName){
+        if (this._options.autoUpload) {
+            this._filesInProgress--;
+        }
+    },
+    _onUpload: function(id, fileName, xhr){
+    },
+    _onInputChange: function(input){
+        if (this._handler instanceof qq.UploadHandlerXhr){
+            this._uploadFileList(input.files);
+        } else {
+            if (this._validateFile(input)){
+                this._uploadFile(input);
+            }
+        }
+        this._button.reset();
+    },
+    _uploadFileList: function(files){
+        if (files.length > 0) {
+            for (var i=0; i<files.length; i++){
+                if (this._validateFile(files[i])){
+                    this._uploadFile(files[i]);
+                } else {
+                    if (this._options.stopOnFirstInvalidFile){
+                        return;
+                    }
+                }
+            }
+        }
+        else {
+            this._error('noFilesError', "");
+        }
+    },
+    _uploadFile: function(fileContainer){
+        var id = this._handler.add(fileContainer);
+        var fileName = this._handler.getName(id);
+
+        if (this._options.onSubmit(id, fileName) !== false){
+            this._onSubmit(id, fileName);
+            if (this._options.autoUpload) {
+                this._handler.upload(id, this._options.params);
+            }
+            else {
+                this._storeFileForLater(id);
+            }
+        }
+    },
+    _storeFileForLater: function(id) {
+        this._storedFileIds.push(id);
+    },
+    _validateFile: function(file){
+        var name, size;
+
+        if (file.value){
+            // it is a file input
+            // get input value and remove path to normalize
+            name = file.value.replace(/.*(\/|\\)/, "");
+        } else {
+            // fix missing properties in Safari 4 and firefox 11.0a2
+            name = (file.fileName !== null && file.fileName !== undefined) ? file.fileName : file.name;
+            size = (file.fileSize !== null && file.fileSize !== undefined) ? file.fileSize : file.size;
+        }
+
+        if (! this._isAllowedExtension(name)){
+            this._error('typeError', name);
+            return false;
+
+        } else if (size === 0){
+            this._error('emptyError', name);
+            return false;
+
+        } else if (size && this._options.sizeLimit && size > this._options.sizeLimit){
+            this._error('sizeError', name);
+            return false;
+
+        } else if (size && size < this._options.minSizeLimit){
+            this._error('minSizeError', name);
+            return false;
+        }
+
+        return true;
+    },
+    _error: function(code, fileName){
+        var message = this._options.messages[code];
+        function r(name, replacement){ message = message.replace(name, replacement); }
+
+        var extensions = this._options.allowedExtensions.join(', ');
+
+        r('{file}', this._formatFileName(fileName));
+        r('{extensions}', extensions);
+        r('{sizeLimit}', this._formatSize(this._options.sizeLimit));
+        r('{minSizeLimit}', this._formatSize(this._options.minSizeLimit));
+
+        this._options.onError(null, fileName, message);
+        this._options.showMessage(message);
+    },
+    _formatFileName: function(name){
+        if (name.length > 33){
+            name = name.slice(0, 19) + '...' + name.slice(-13);
+        }
+        return name;
+    },
+    _isAllowedExtension: function(fileName){
+        var ext = (-1 !== fileName.indexOf('.'))
+            ? fileName.replace(/.*[.]/, '').toLowerCase()
+            : '';
+        var allowed = this._options.allowedExtensions;
+
+        if (!allowed.length){return true;}
+
+        for (var i=0; i<allowed.length; i++){
+            if (allowed[i].toLowerCase() == ext){ return true;}
+        }
+
+        return false;
+    },
+    _formatSize: function(bytes){
+        var i = -1;
+        do {
+            bytes = bytes / 1024;
+            i++;
+        } while (bytes > 99);
+
+        return Math.max(bytes, 0.1).toFixed(1) + ['kB', 'MB', 'GB', 'TB', 'PB', 'EB'][i];
+    },
+    _wrapCallbacks: function() {
+        var self, safeCallback;
+
+        self = this;
+
+        safeCallback = function(callback, args) {
+            try {
+                return callback.apply(this, args);
+            }
+            catch (exception) {
+                self.log("Caught " + exception + " in callback: " + callback);
+            }
+        }
+
+        for (var prop in this._options) {
+            if (/^on[A-Z]/.test(prop)) {
+                (function() {
+                    var oldCallback = self._options[prop];
+                    self._options[prop] = function() {
+                        return safeCallback(oldCallback, arguments);
+                    }
+                }());
+            }
+        }
+    }
+};
+
+
+/**
+ * Class that creates upload widget with drag-and-drop and file list
+ * @inherits qq.FileUploaderBasic
+ */
+qq.FileUploader = function(o){
+    // call parent constructor
+    qq.FileUploaderBasic.apply(this, arguments);
+
+    // additional options
+    qq.extend(this._options, {
+        element: null,
+        // if set, will be used instead of qq-upload-list in template
+        listElement: null,
+        dragText: 'Drop files here to upload',
+        extraDropzones : [],
+        uploadButtonText: 'Upload a file',
+        cancelButtonText: 'Cancel',
+        failUploadText: 'Upload failed',
+
+        template: '<div class="qq-uploader">' +
+            '<div class="qq-upload-drop-area"><span>{dragText}</span></div>' +
+            (!this._options.button ? '<div class="qq-upload-button">{uploadButtonText}</div>' : '') +
+            (!this._options.listElement ? '<ul class="qq-upload-list"></ul>' : '') +
+            '</div>',
+
+        // template for one item in file list
+        fileTemplate: '<li>' +
+            '<div class="qq-progress-bar"></div>' +
+            '<span class="qq-upload-spinner"></span>' +
+            '<span class="qq-upload-finished"></span>' +
+            '<span class="qq-upload-file"></span>' +
+            '<span class="qq-upload-size"></span>' +
+            '<a class="qq-upload-cancel" href="#">{cancelButtonText}</a>' +
+            '<span class="qq-upload-failed-text">{failUploadtext}</span>' +
+            '</li>',
+
+        classes: {
+            // used to get elements from templates
+            button: 'qq-upload-button',
+            drop: 'qq-upload-drop-area',
+            dropActive: 'qq-upload-drop-area-active',
+            dropDisabled: 'qq-upload-drop-area-disabled',
+            list: 'qq-upload-list',
+            progressBar: 'qq-progress-bar',
+            file: 'qq-upload-file',
+            spinner: 'qq-upload-spinner',
+            finished: 'qq-upload-finished',
+            size: 'qq-upload-size',
+            cancel: 'qq-upload-cancel',
+            failText: 'qq-upload-failed-text',
+
+            // added to list item <li> when upload completes
+            // used in css to hide progress spinner
+            success: 'qq-upload-success',
+            fail: 'qq-upload-fail',
+
+            successIcon: null,
+            failIcon: null
+        },
+        extraMessages: {
+            formatProgress: "{percent}% of {total_size}",
+            tooManyFilesError: "You may only drop one file"
+        },
+        failedUploadTextDisplay: {
+            mode: 'default', //default, custom, or none
+            maxChars: 50,
+            responseProperty: 'error',
+            enableTooltip: true
+        }
+    });
+    // overwrite options with user supplied
+    qq.extend(this._options, o);
+    this._wrapCallbacks();
+
+    qq.extend(this._options.messages, this._options.extraMessages);
+
+    // overwrite the upload button text if any
+    // same for the Cancel button and Fail message text
+    this._options.template     = this._options.template.replace(/\{dragText\}/g, this._options.dragText);
+    this._options.template     = this._options.template.replace(/\{uploadButtonText\}/g, this._options.uploadButtonText);
+    this._options.fileTemplate = this._options.fileTemplate.replace(/\{cancelButtonText\}/g, this._options.cancelButtonText);
+    this._options.fileTemplate = this._options.fileTemplate.replace(/\{failUploadtext\}/g, this._options.failUploadText);
+
+    this._element = this._options.element;
+    this._element.innerHTML = this._options.template;
+    this._listElement = this._options.listElement || this._find(this._element, 'list');
+
+    this._classes = this._options.classes;
+
+    if (!this._button) {
+        this._button = this._createUploadButton(this._find(this._element, 'button'));
+    }
+
+    this._bindCancelEvent();
+    this._setupDragDrop();
+};
+
+// inherit from Basic Uploader
+qq.extend(qq.FileUploader.prototype, qq.FileUploaderBasic.prototype);
+
+qq.extend(qq.FileUploader.prototype, {
+    clearStoredFiles: function() {
+        qq.FileUploaderBasic.prototype.clearStoredFiles.apply(this, arguments);
+        this._listElement.innerHTML = "";
+    },
+    addExtraDropzone: function(element){
+        this._setupExtraDropzone(element);
+    },
+    removeExtraDropzone: function(element){
+        var dzs = this._options.extraDropzones;
+        for(var i in dzs) if (dzs[i] === element) return this._options.extraDropzones.splice(i,1);
+    },
+    _leaving_document_out: function(e){
+        return ((qq.chrome() || (qq.safari() && qq.windows())) && e.clientX == 0 && e.clientY == 0) // null coords for Chrome and Safari Windows
+            || (qq.firefox() && !e.relatedTarget); // null e.relatedTarget for Firefox
+    },
+    _storeFileForLater: function(id) {
+        qq.FileUploaderBasic.prototype._storeFileForLater.apply(this, arguments);
+        var item = this._getItemByFileId(id);
+        this._find(item, 'spinner').style.display = "none";
+    },
+    /**
+     * Gets one of the elements listed in this._options.classes
+     **/
+    _find: function(parent, type){
+        var element = qq.getByClass(parent, this._options.classes[type])[0];
+        if (!element){
+            throw new Error('element not found ' + type);
+        }
+
+        return element;
+    },
+    _setupExtraDropzone: function(element){
+        this._options.extraDropzones.push(element);
+        this._setupDropzone(element);
+    },
+    _setupDropzone: function(dropArea){
+        var self = this;
+
+        var dz = new qq.UploadDropZone({
+            element: dropArea,
+            onEnter: function(e){
+                qq.addClass(dropArea, self._classes.dropActive);
+                e.stopPropagation();
+            },
+            onLeave: function(e){
+                //e.stopPropagation();
+            },
+            onLeaveNotDescendants: function(e){
+                qq.removeClass(dropArea, self._classes.dropActive);
+            },
+            onDrop: function(e){
+                dropArea.style.display = 'none';
+                qq.removeClass(dropArea, self._classes.dropActive);
+                if (e.dataTransfer.files.length > 1 && !self._options.multiple) {
+                    self._error('tooManyFilesError', "");
+                }
+                else {
+                    self._uploadFileList(e.dataTransfer.files);
+                }
+            }
+        });
+
+        this.addDisposer(function() { dz.dispose(); });
+
+        dropArea.style.display = 'none';
+    },
+    _setupDragDrop: function(){
+        var dropArea = this._find(this._element, 'drop');
+        var self = this;
+        this._options.extraDropzones.push(dropArea);
+
+        var dropzones = this._options.extraDropzones;
+        var i;
+        for (i=0; i < dropzones.length; i++){
+            this._setupDropzone(dropzones[i]);
+        }
+
+        // IE <= 9 does not support the File API used for drag+drop uploads
+        // Any volunteers to enable & test this for IE10?
+        if (!qq.ie()) {
+            this._attach(document, 'dragenter', function(e){
+                if (qq.hasClass(dropArea, self._classes.dropDisabled)) return;
+
+                dropArea.style.display = 'block';
+                for (i=0; i < dropzones.length; i++){ dropzones[i].style.display = 'block'; }
+
+            });
+        }
+        this._attach(document, 'dragleave', function(e){
+            var relatedTarget = document.elementFromPoint(e.clientX, e.clientY);
+            // only fire when leaving document out
+            if (qq.FileUploader.prototype._leaving_document_out(e)) {
+                for (i=0; i < dropzones.length; i++){ dropzones[i].style.display = 'none'; }
+            }
+        });
+        qq.attach(document, 'drop', function(e){
+            for (i=0; i < dropzones.length; i++){ dropzones[i].style.display = 'none'; }
+            e.preventDefault();
+        });
+    },
+    _onSubmit: function(id, fileName){
+        qq.FileUploaderBasic.prototype._onSubmit.apply(this, arguments);
+        this._addToList(id, fileName);
+    },
+    // Update the progress bar & percentage as the file is uploaded
+    _onProgress: function(id, fileName, loaded, total){
+        qq.FileUploaderBasic.prototype._onProgress.apply(this, arguments);
+
+        var item = this._getItemByFileId(id);
+
+        if (loaded === total) {
+            var cancelLink = this._find(item, 'cancel');
+            cancelLink.style.display = 'none';
+        }
+
+        var size = this._find(item, 'size');
+        size.style.display = 'inline';
+
+        var text;
+        var percent = Math.round(loaded / total * 100);
+
+        if (loaded != total) {
+            // If still uploading, display percentage
+            text = this._formatProgress(loaded, total);
+        } else {
+            // If complete, just display final size
+            text = this._formatSize(total);
+        }
+
+        // Update progress bar <span> tag
+        this._find(item, 'progressBar').style.width = percent + '%';
+
+        qq.setText(size, text);
+    },
+    _onComplete: function(id, fileName, result){
+        qq.FileUploaderBasic.prototype._onComplete.apply(this, arguments);
+
+        var item = this._getItemByFileId(id);
+
+        if (qq.UploadHandlerXhr.isSupported()) {
+            qq.remove(this._find(item, 'progressBar'));
+        }
+
+        if (!this._options.disableCancelForFormUploads || qq.UploadHandlerXhr.isSupported()) {
+            qq.remove(this._find(item, 'cancel'));
+        }
+        qq.remove(this._find(item, 'spinner'));
+
+        if (result.success){
+            qq.addClass(item, this._classes.success);
+            if (this._classes.successIcon) {
+                this._find(item, 'finished').style.display = "inline-block";
+                qq.addClass(item, this._classes.successIcon)
+            }
+        } else {
+            var errorReason = result.error ? result.error : this._options.failUploadText;
+            this._options.onError(id, fileName, errorReason);
+            qq.addClass(item, this._classes.fail);
+            if (this._classes.failIcon) {
+                this._find(item, 'finished').style.display = "inline-block";
+                qq.addClass(item, this._classes.failIcon)
+            }
+            this._controlFailureTextDisplay(item, result);
+        }
+    },
+    _onUpload: function(id, fileName, xhr){
+        qq.FileUploaderBasic.prototype._onUpload.apply(this, arguments);
+
+        var item = this._getItemByFileId(id);
+        var spinnerEl = this._find(item, 'spinner');
+        if (spinnerEl.style.display == "none") {
+            spinnerEl.style.display = "inline-block";
+        }
+    },
+    _addToList: function(id, fileName){
+        var item = qq.toElement(this._options.fileTemplate);
+        if (this._options.disableCancelForFormUploads && !qq.UploadHandlerXhr.isSupported()) {
+            var cancelLink = this._find(item, 'cancel');
+            qq.remove(cancelLink);
+        }
+
+        if (!qq.UploadHandlerXhr.isSupported()) {
+            qq.remove(this._find(item, 'progressBar'));
+        }
+
+        item.qqFileId = id;
+
+        var fileElement = this._find(item, 'file');
+        qq.setText(fileElement, this._formatFileName(fileName));
+        this._find(item, 'size').style.display = 'none';
+        if (!this._options.multiple) this._clearList();
+        this._listElement.appendChild(item);
+    },
+    _clearList: function(){
+        this._listElement.innerHTML = '';
+        this.clearStoredFiles();
+    },
+    _getItemByFileId: function(id){
+        var item = this._listElement.firstChild;
+
+        // there can't be txt nodes in dynamically created list
+        // and we can  use nextSibling
+        while (item){
+            if (item.qqFileId == id) return item;
+            item = item.nextSibling;
+        }
+    },
+    /**
+     * delegate click event for cancel link
+     **/
+    _bindCancelEvent: function(){
+        var self = this,
+            list = this._listElement;
+
+        this._attach(list, 'click', function(e){
+            e = e || window.event;
+            var target = e.target || e.srcElement;
+
+            if (qq.hasClass(target, self._classes.cancel)){
+                qq.preventDefault(e);
+
+                var item = target.parentNode;
+                self._handler.cancel(item.qqFileId);
+                qq.remove(item);
+            }
+        });
+    },
+    _formatProgress: function (uploadedSize, totalSize) {
+        var message = this._options.messages.formatProgress;
+        function r(name, replacement) { message = message.replace(name, replacement); }
+
+        r('{percent}', Math.round(uploadedSize / totalSize * 100));
+        r('{total_size}', this._formatSize(totalSize));
+        return message;
+    },
+    _controlFailureTextDisplay: function(item, response) {
+        var mode, maxChars, responseProperty, failureReason, shortFailureReason;
+
+        mode = this._options.failedUploadTextDisplay.mode;
+        maxChars = this._options.failedUploadTextDisplay.maxChars;
+        responseProperty = this._options.failedUploadTextDisplay.responseProperty;
+
+        if (mode === 'custom') {
+            var failureReason = response[responseProperty];
+            if (failureReason) {
+                if (failureReason.length > maxChars) {
+                    shortFailureReason = failureReason.substring(0, maxChars) + '...';
+                }
+                this._find(item, 'failText').innerText = shortFailureReason || failureReason;
+
+                if (this._options.failedUploadTextDisplay.enableTooltip) {
+                    this._showTooltip(item, failureReason);
+                }
+            }
+            else {
+                this.log("'" + responseProperty + "' is not a valid property on the server response.");
+            }
+        }
+        else if (mode === 'none') {
+            qq.remove(this._find(item, 'failText'));
+        }
+        else if (mode !== 'default') {
+            this.log("failedUploadTextDisplay.mode value of '" + mode + "' is not valid");
+        }
+    },
+    //TODO turn this into a real tooltip, with click trigger (so it is usable on mobile devices).  See case #355 for details.
+    _showTooltip: function(item, text) {
+        item.title = text;
+    }
+});
+
+qq.UploadDropZone = function(o){
+    this._options = {
+        element: null,
+        onEnter: function(e){},
+        onLeave: function(e){},
+        // is not fired when leaving element by hovering descendants
+        onLeaveNotDescendants: function(e){},
+        onDrop: function(e){}
+    };
+    qq.extend(this._options, o);
+    qq.extend(this, qq.DisposeSupport);
+
+    this._element = this._options.element;
+
+    this._disableDropOutside();
+    this._attachEvents();
+};
+
+qq.UploadDropZone.prototype = {
+    _dragover_should_be_canceled: function(){
+        return qq.safari() || (qq.firefox() && qq.windows());
+    },
+    _disableDropOutside: function(e){
+        // run only once for all instances
+        if (!qq.UploadDropZone.dropOutsideDisabled ){
+
+            // for these cases we need to catch onDrop to reset dropArea
+            if (this._dragover_should_be_canceled){
+                qq.attach(document, 'dragover', function(e){
+                    e.preventDefault();
+                });
+            } else {
+                qq.attach(document, 'dragover', function(e){
+                    if (e.dataTransfer){
+                        e.dataTransfer.dropEffect = 'none';
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            qq.UploadDropZone.dropOutsideDisabled = true;
+        }
+    },
+    _attachEvents: function(){
+        var self = this;
+
+        self._attach(self._element, 'dragover', function(e){
+            if (!self._isValidFileDrag(e)) return;
+
+            var effect = qq.ie() ? null : e.dataTransfer.effectAllowed;
+            if (effect == 'move' || effect == 'linkMove'){
+                e.dataTransfer.dropEffect = 'move'; // for FF (only move allowed)
+            } else {
+                e.dataTransfer.dropEffect = 'copy'; // for Chrome
+            }
+
+            e.stopPropagation();
+            e.preventDefault();
+        });
+
+        self._attach(self._element, 'dragenter', function(e){
+            if (!self._isValidFileDrag(e)) return;
+
+            self._options.onEnter(e);
+        });
+
+        self._attach(self._element, 'dragleave', function(e){
+            if (!self._isValidFileDrag(e)) return;
+
+            self._options.onLeave(e);
+
+            var relatedTarget = document.elementFromPoint(e.clientX, e.clientY);
+            // do not fire when moving a mouse over a descendant
+            if (qq.contains(this, relatedTarget)) return;
+
+            self._options.onLeaveNotDescendants(e);
+        });
+
+        self._attach(self._element, 'drop', function(e){
+            if (!self._isValidFileDrag(e)) return;
+
+            e.preventDefault();
+            self._options.onDrop(e);
+        });
+    },
+    _isValidFileDrag: function(e){
+        // e.dataTransfer currently causing IE errors
+        // IE9 does NOT support file API, so drag-and-drop is not possible
+        // IE10 should work, but currently has not been tested - any volunteers?
+        if (qq.ie()) return false;
+
+        var dt = e.dataTransfer,
+        // do not check dt.types.contains in webkit, because it crashes safari 4
+            isSafari = qq.safari();
+
+        // dt.effectAllowed is none in Safari 5
+        // dt.types.contains check is for firefox
+        return dt && dt.effectAllowed != 'none' &&
+            (dt.files || (!isSafari && dt.types.contains && dt.types.contains('Files')));
+
+    }
+};
+
+qq.UploadButton = function(o){
+    this._options = {
+        element: null,
+        // if set to true adds multiple attribute to file input
+        multiple: false,
+        acceptFiles: null,
+        // name attribute of file input
+        name: 'file',
+        onChange: function(input){},
+        hoverClass: 'qq-upload-button-hover',
+        focusClass: 'qq-upload-button-focus'
+    };
+
+    qq.extend(this._options, o);
+    qq.extend(this, qq.DisposeSupport);
+
+    this._element = this._options.element;
+
+    // make button suitable container for input
+    qq.css(this._element, {
+        position: 'relative',
+        overflow: 'hidden',
+        // Make sure browse button is in the right side
+        // in Internet Explorer
+        direction: 'ltr'
+    });
+
+    this._input = this._createInput();
+};
+
+qq.UploadButton.prototype = {
+    /* returns file input element */
+    getInput: function(){
+        return this._input;
+    },
+    /* cleans/recreates the file input */
+    reset: function(){
+        if (this._input.parentNode){
+            qq.remove(this._input);
+        }
+
+        qq.removeClass(this._element, this._options.focusClass);
+        this._input = this._createInput();
+    },
+    _createInput: function(){
+        var input = document.createElement("input");
+
+        if (this._options.multiple){
+            input.setAttribute("multiple", "multiple");
+        }
+
+        if (this._options.acceptFiles) input.setAttribute("accept", this._options.acceptFiles);
+
+        input.setAttribute("type", "file");
+        input.setAttribute("name", this._options.name);
+
+        qq.css(input, {
+            position: 'absolute',
+            // in Opera only 'browse' button
+            // is clickable and it is located at
+            // the right side of the input
+            right: 0,
+            top: 0,
+            fontFamily: 'Arial',
+            // 4 persons reported this, the max values that worked for them were 243, 236, 236, 118
+            fontSize: '118px',
+            margin: 0,
+            padding: 0,
+            cursor: 'pointer',
+            opacity: 0
+        });
+
+        this._element.appendChild(input);
+
+        var self = this;
+        this._attach(input, 'change', function(){
+            self._options.onChange(input);
+        });
+
+        this._attach(input, 'mouseover', function(){
+            qq.addClass(self._element, self._options.hoverClass);
+        });
+        this._attach(input, 'mouseout', function(){
+            qq.removeClass(self._element, self._options.hoverClass);
+        });
+        this._attach(input, 'focus', function(){
+            qq.addClass(self._element, self._options.focusClass);
+        });
+        this._attach(input, 'blur', function(){
+            qq.removeClass(self._element, self._options.focusClass);
+        });
+
+        // IE and Opera, unfortunately have 2 tab stops on file input
+        // which is unacceptable in our case, disable keyboard access
+        if (window.attachEvent){
+            // it is IE or Opera
+            input.setAttribute('tabIndex', "-1");
+        }
+
+        return input;
+    }
+};
+
+/**
+ * Class for uploading files, uploading itself is handled by child classes
+ */
+qq.UploadHandlerAbstract = function(o){
+    // Default options, can be overridden by the user
+    this._options = {
+        debug: false,
+        action: '/upload.php',
+        // maximum number of concurrent uploads
+        maxConnections: 999,
+        onProgress: function(id, fileName, loaded, total){},
+        onComplete: function(id, fileName, response){},
+        onCancel: function(id, fileName){},
+        onUpload: function(id, fileName, xhr){}
+    };
+    qq.extend(this._options, o);
+
+    this._queue = [];
+    // params for files in queue
+    this._params = [];
+};
+qq.UploadHandlerAbstract.prototype = {
+    log: function(str){
+        if (this._options.debug && window.console) console.log('[uploader] ' + str);
+    },
+    /**
+     * Adds file or file input to the queue
+     * @returns id
+     **/
+    add: function(file){},
+    /**
+     * Sends the file identified by id and additional query params to the server
+     */
+    upload: function(id, params){
+        var len = this._queue.push(id);
+
+        var copy = {};
+        qq.extend(copy, params);
+        this._params[id] = copy;
+
+        // if too many active uploads, wait...
+        if (len <= this._options.maxConnections){
+            this._upload(id, this._params[id]);
+        }
+    },
+    /**
+     * Cancels file upload by id
+     */
+    cancel: function(id){
+        this._cancel(id);
+        this._dequeue(id);
+    },
+    /**
+     * Cancells all uploads
+     */
+    cancelAll: function(){
+        for (var i=0; i<this._queue.length; i++){
+            this._cancel(this._queue[i]);
+        }
+        this._queue = [];
+    },
+    /**
+     * Returns name of the file identified by id
+     */
+    getName: function(id){},
+    /**
+     * Returns size of the file identified by id
+     */
+    getSize: function(id){},
+    /**
+     * Returns id of files being uploaded or
+     * waiting for their turn
+     */
+    getQueue: function(){
+        return this._queue;
+    },
+    /**
+     * Actual upload method
+     */
+    _upload: function(id){},
+    /**
+     * Actual cancel method
+     */
+    _cancel: function(id){},
+    /**
+     * Removes element from queue, starts upload of next
+     */
+    _dequeue: function(id){
+        var i = qq.indexOf(this._queue, id);
+        this._queue.splice(i, 1);
+
+        var max = this._options.maxConnections;
+
+        if (this._queue.length >= max && i < max){
+            var nextId = this._queue[max-1];
+            this._upload(nextId, this._params[nextId]);
+        }
+    }
+};
+
+/**
+ * Class for uploading files using form and iframe
+ * @inherits qq.UploadHandlerAbstract
+ */
+qq.UploadHandlerForm = function(o){
+    qq.UploadHandlerAbstract.apply(this, arguments);
+
+    this._inputs = {};
+    this._detach_load_events = {};
+};
+// @inherits qq.UploadHandlerAbstract
+qq.extend(qq.UploadHandlerForm.prototype, qq.UploadHandlerAbstract.prototype);
+
+qq.extend(qq.UploadHandlerForm.prototype, {
+    add: function(fileInput){
+        fileInput.setAttribute('name', this._options.inputName);
+        var id = 'qq-upload-handler-iframe' + qq.getUniqueId();
+
+        this._inputs[id] = fileInput;
+
+        // remove file input from DOM
+        if (fileInput.parentNode){
+            qq.remove(fileInput);
+        }
+
+        return id;
+    },
+    getName: function(id){
+        // get input value and remove path to normalize
+        return this._inputs[id].value.replace(/.*(\/|\\)/, "");
+    },
+    _cancel: function(id){
+        this._options.onCancel(id, this.getName(id));
+
+        delete this._inputs[id];
+        delete this._detach_load_events[id];
+
+        var iframe = document.getElementById(id);
+        if (iframe){
+            // to cancel request set src to something else
+            // we use src="javascript:false;" because it doesn't
+            // trigger ie6 prompt on https
+            iframe.setAttribute('src', 'javascript:false;');
+
+            qq.remove(iframe);
+        }
+    },
+    _upload: function(id, params){
+        this._options.onUpload(id, this.getName(id), false);
+        var input = this._inputs[id];
+
+        if (!input){
+            throw new Error('file with passed id was not added, or already uploaded or cancelled');
+        }
+
+        var fileName = this.getName(id);
+        params[this._options.inputName] = fileName;
+
+        var iframe = this._createIframe(id);
+        var form = this._createForm(iframe, params);
+        form.appendChild(input);
+
+        var self = this;
+        this._attachLoadEvent(iframe, function(){
+            self.log('iframe loaded');
+
+            var response = self._getIframeContentJSON(iframe);
+
+            self._options.onComplete(id, fileName, response);
+            self._dequeue(id);
+
+            delete self._inputs[id];
+            // timeout added to fix busy state in FF3.6
+            setTimeout(function(){
+                self._detach_load_events[id]();
+                delete self._detach_load_events[id];
+                qq.remove(iframe);
+            }, 1);
+        });
+
+        form.submit();
+        qq.remove(form);
+
+        return id;
+    },
+    _attachLoadEvent: function(iframe, callback){
+        this._detach_load_events[iframe.id] = qq.attach(iframe, 'load', function(){
+            // when we remove iframe from dom
+            // the request stops, but in IE load
+            // event fires
+            if (!iframe.parentNode){
+                return;
+            }
+
+            try {
+                // fixing Opera 10.53
+                if (iframe.contentDocument &&
+                    iframe.contentDocument.body &&
+                    iframe.contentDocument.body.innerHTML == "false"){
+                    // In Opera event is fired second time
+                    // when body.innerHTML changed from false
+                    // to server response approx. after 1 sec
+                    // when we upload file with iframe
+                    return;
+                }
+            }
+            catch (error) {
+                //IE may throw an "access is denied" error when attempting to access contentDocument on the iframe in some cases
+            }
+
+            callback();
+        });
+    },
+    /**
+     * Returns json object received by iframe from server.
+     */
+    _getIframeContentJSON: function(iframe){
+        //IE may throw an "access is denied" error when attempting to access contentDocument on the iframe in some cases
+        try {
+            // iframe.contentWindow.document - for IE<7
+            var doc = iframe.contentDocument ? iframe.contentDocument: iframe.contentWindow.document,
+                response;
+
+            var innerHTML = doc.body.innerHTML;
+            this.log("converting iframe's innerHTML to JSON");
+            this.log("innerHTML = " + innerHTML);
+            //plain text response may be wrapped in <pre> tag
+            if (innerHTML.slice(0, 5).toLowerCase() == '<pre>' && innerHTML.slice(-6).toLowerCase() == '</pre>') {
+                innerHTML = doc.body.firstChild.firstChild.nodeValue;
+            }
+            response = eval("(" + innerHTML + ")");
+        } catch(err){
+            response = {success: false};
+        }
+
+        return response;
+    },
+    /**
+     * Creates iframe with unique name
+     */
+    _createIframe: function(id){
+        // We can't use following code as the name attribute
+        // won't be properly registered in IE6, and new window
+        // on form submit will open
+        // var iframe = document.createElement('iframe');
+        // iframe.setAttribute('name', id);
+
+        var iframe = qq.toElement('<iframe src="javascript:false;" name="' + id + '" />');
+        // src="javascript:false;" removes ie6 prompt on https
+
+        iframe.setAttribute('id', id);
+
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+
+        return iframe;
+    },
+    /**
+     * Creates form, that will be submitted to iframe
+     */
+    _createForm: function(iframe, params){
+        // We can't use the following code in IE6
+        // var form = document.createElement('form');
+        // form.setAttribute('method', 'post');
+        // form.setAttribute('enctype', 'multipart/form-data');
+        // Because in this case file won't be attached to request
+        var protocol = this._options.demoMode ? "GET" : "POST"
+        var form = qq.toElement('<form method="' + protocol + '" enctype="multipart/form-data"></form>');
+
+        var queryString = qq.obj2url(params, this._options.action);
+
+        form.setAttribute('action', queryString);
+        form.setAttribute('target', iframe.name);
+        form.style.display = 'none';
+        document.body.appendChild(form);
+
+        return form;
+    }
+});
+
+/**
+ * Class for uploading files using xhr
+ * @inherits qq.UploadHandlerAbstract
+ */
+qq.UploadHandlerXhr = function(o){
+    qq.UploadHandlerAbstract.apply(this, arguments);
+
+    this._files = [];
+    this._xhrs = [];
+
+    // current loaded size in bytes for each file
+    this._loaded = [];
+};
+
+// static method
+qq.UploadHandlerXhr.isSupported = function(){
+    var input = document.createElement('input');
+    input.type = 'file';
+
+    return (
+        'multiple' in input &&
+            typeof File != "undefined" &&
+            typeof FormData != "undefined" &&
+            typeof (new XMLHttpRequest()).upload != "undefined" );
+};
+
+// @inherits qq.UploadHandlerAbstract
+qq.extend(qq.UploadHandlerXhr.prototype, qq.UploadHandlerAbstract.prototype)
+
+qq.extend(qq.UploadHandlerXhr.prototype, {
+    /**
+     * Adds file to the queue
+     * Returns id to use with upload, cancel
+     **/
+    add: function(file){
+        if (!(file instanceof File)){
+            throw new Error('Passed obj in not a File (in qq.UploadHandlerXhr)');
+        }
+
+        return this._files.push(file) - 1;
+    },
+    getName: function(id){
+        var file = this._files[id];
+        // fix missing name in Safari 4
+        //NOTE: fixed missing name firefox 11.0a2 file.fileName is actually undefined
+        return (file.fileName !== null && file.fileName !== undefined) ? file.fileName : file.name;
+    },
+    getSize: function(id){
+        var file = this._files[id];
+        return file.fileSize != null ? file.fileSize : file.size;
+    },
+    /**
+     * Returns uploaded bytes for file identified by id
+     */
+    getLoaded: function(id){
+        return this._loaded[id] || 0;
+    },
+    /**
+     * Sends the file identified by id and additional query params to the server
+     * @param {Object} params name-value string pairs
+     */
+    _upload: function(id, params){
+        this._options.onUpload(id, this.getName(id), true);
+
+        var file = this._files[id],
+            name = this.getName(id),
+            size = this.getSize(id);
+
+        this._loaded[id] = 0;
+
+        var xhr = this._xhrs[id] = new XMLHttpRequest();
+        var self = this;
+
+        xhr.upload.onprogress = function(e){
+            if (e.lengthComputable){
+                self._loaded[id] = e.loaded;
+                self._options.onProgress(id, name, e.loaded, e.total);
+            }
+        };
+
+        xhr.onreadystatechange = function(){
+            if (xhr.readyState == 4){
+                self._onComplete(id, xhr);
+            }
+        };
+
+        // build query string
+        params = params || {};
+        params[this._options.inputName] = name;
+        var queryString = qq.obj2url(params, this._options.action);
+
+        var protocol = this._options.demoMode ? "GET" : "POST";
+        xhr.open(protocol, queryString, true);
+        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+        xhr.setRequestHeader("X-File-Name", encodeURIComponent(name));
+        if (this._options.forceMultipart) {
+            var formData = new FormData();
+            formData.append(this._options.inputName, file);
+            file = formData;
+        } else {
+            xhr.setRequestHeader("Content-Type", "application/octet-stream");
+            //NOTE: return mime type in xhr works on chrome 16.0.9 firefox 11.0a2
+            xhr.setRequestHeader("X-Mime-Type",file.type );
+        }
+        for (key in this._options.customHeaders){
+            xhr.setRequestHeader(key, this._options.customHeaders[key]);
+        };
+        xhr.send(file);
+    },
+    _onComplete: function(id, xhr){
+        "use strict";
+        // the request was aborted/cancelled
+        if (!this._files[id]) { return; }
+
+        var name = this.getName(id);
+        var size = this.getSize(id);
+        var response; //the parsed JSON response from the server, or the empty object if parsing failed.
+
+        this._options.onProgress(id, name, size, size);
+
+        this.log("xhr - server response received");
+        this.log("responseText = " + xhr.responseText);
+
+        try {
+            if (typeof JSON.parse === "function") {
+                response = JSON.parse(xhr.responseText);
+            } else {
+                response = eval("(" + xhr.responseText + ")");
+            }
+        } catch(err){
+            response = {};
+        }
+        if (xhr.status !== 200){
+            this._options.onError(id, name, "XHR returned response code " + xhr.status);
+        }
+        this._options.onComplete(id, name, response);
+
+        this._xhrs[id] = null;
+        this._dequeue(id);
+    },
+    _cancel: function(id){
+        this._options.onCancel(id, this.getName(id));
+
+        this._files[id] = null;
+
+        if (this._xhrs[id]){
+            this._xhrs[id].abort();
+            this._xhrs[id] = null;
+        }
+    }
+});
+
+/**
+ * A generic module which supports object disposing in dispose() method.
+ * */
+qq.DisposeSupport = {
+    _disposers: [],
+
+    /** Run all registered disposers */
+    dispose: function() {
+        var disposer;
+        while (disposer = this._disposers.shift()) {
+            disposer();
+        }
+    },
+
+    /** Add disposer to the collection */
+    addDisposer: function(disposeFunction) {
+        this._disposers.push(disposeFunction);
+    },
+
+    /** Attach event handler and register de-attacher as a disposer */
+    _attach: function() {
+        this.addDisposer(qq.attach.apply(this, arguments));
+    }
+};
+;
+
 /*!
  * jQuery Cookie Plugin
  * https://github.com/carhartl/jquery-cookie
@@ -23917,6 +25541,314 @@ exports.rethrow = function rethrow(err, filename, lineno){
  * @license MIT License
  */
 ;(function(a,b){function c(){}function d(){}function e(){}function x(a,b){typeof b=="string"&&(b=b.split("."));var c=b.join(".").replace(/\.(\w)/g,function(a,b){return b.toUpperCase()}),d=b.shift(),e;return typeof (e=a[c])!=h?e=e:typeof (e=a[d])!=h&&b.length>0&&(e=x(e,b)),e}function y(){function e(a,d){c.bind(a,function(){return d.apply(b,arguments)})}var a=g.apply(arguments),b=this,c=a.length===1?b:a.shift(),d;a=a[0]||{};for(d in a)e(d,a[d])}function z(a,b){return{input:a,form:b}}var f=(JSON||{}).stringify,g=Array.prototype.slice,h="undefined",i="item.manager",j="plugins",k="ext",l="html.wrap",m="html.hidden",n="keys",o="preInvalidate",q="postInvalidate",r="getFormData",s="setFormData",t="setInputData",u="postInit",v="ready",w={itemManager:d,plugins:[],ext:{},html:{wrap:'<div class="text-core"><div class="text-wrap"/></div>',hidden:'<input type="hidden" />'},keys:{8:"backspace",9:"tab",13:"enter!",27:"escape!",37:"left",38:"up!",39:"right",40:"down!",46:"delete",108:"numpadEnter"}};if(!f)throw new Error("JSON.stringify() not found");p=d.prototype,p.init=function(a){},p.filter=function(a,b){var c=[],d,e;for(d=0;d<a.length;d++)e=a[d],this.itemContains(e,b)&&c.push(e);return c},p.itemContains=function(a,b){return this.itemToString(a).toLowerCase().indexOf(b.toLowerCase())==0},p.stringToItem=function(a){return a},p.itemToString=function(a){return a},p.compareItems=function(a,b){return a==b},p=c.prototype,p.init=function(b,c){var d=this,e,f,g;d._defaults=a.extend({},w),d._opts=c||{},d._plugins={},d._itemManager=f=new(d.opts(i)),b=a(b),g=a(d.opts(l)),e=a(d.opts(m)),b.wrap(g).keydown(function(a){return d.onKeyDown(a)}).keyup(function(a){return d.onKeyUp(a)}).data("textext",d),a(d).data({hiddenInput:e,wrapElement:b.parents(".text-wrap").first(),input:b}),e.attr("name",b.attr("name")),b.attr("name",null),e.insertAfter(b),a.extend(!0,f,d.opts(k+".item.manager")),a.extend(!0,d,d.opts(k+".*"),d.opts(k+".core")),d.originalWidth=b.outerWidth(),d.invalidateBounds(),f.init(d),d.initPatches(),d.initPlugins(d.opts(j),a.fn.textext.plugins),d.on({setFormData:d.onSetFormData,getFormData:d.onGetFormData,setInputData:d.onSetInputData,anyKeyUp:d.onAnyKeyUp}),d.trigger(u),d.trigger(v),d.getFormData(0)},p.initPatches=function(){var b=[],c=a.fn.textext.patches,d;for(d in c)b.push(d);this.initPlugins(b,c)},p.initPlugins=function(b,c){var d=this,e,f,g,h=[],i;typeof b=="string"&&(b=b.split(/\s*,\s*|\s+/g));for(i=0;i<b.length;i++)f=b[i],g=c[f],g&&(d._plugins[f]=g=new g,d[f]=function(a){return function(){return a}}(g),h.push(g),a.extend(!0,g,d.opts(k+".*"),d.opts(k+"."+f)));h.sort(function(a,b){return a=a.initPriority(),b=b.initPriority(),a===b?0:a<b?1:-1});for(i=0;i<h.length;i++)h[i].init(d)},p.hasPlugin=function(a){return!!this._plugins[a]},p.on=y,p.bind=function(a,b){this.input().bind(a,b)},p.trigger=function(){var a=arguments;this.input().trigger(a[0],g.call(a,1))},p.itemManager=function(){return this._itemManager},p.input=function(){return a(this).data("input")},p.opts=function(a){var b=x(this._opts,a);return typeof b=="undefined"?x(this._defaults,a):b},p.wrapElement=function(){return a(this).data("wrapElement")},p.invalidateBounds=function(){var a=this,b=a.input(),c=a.wrapElement(),d=c.parent(),e=a.originalWidth,f;a.trigger(o),f=b.outerHeight(),b.width(e),c.width(e).height(f),d.height(f),a.trigger(q)},p.focusInput=function(){this.input()[0].focus()},p.serializeData=f,p.hiddenInput=function(b){return a(this).data("hiddenInput")},p.getWeightedEventResponse=function(a,b){var c=this,d={},e=0;c.trigger(a,d,b);for(var f in d)e=Math.max(e,f);return d[e]},p.getFormData=function(a){var b=this,c=b.getWeightedEventResponse(r,a||0);b.trigger(s,c.form),b.trigger(t,c.input)},p.onAnyKeyUp=function(a,b){this.getFormData(b)},p.onSetInputData=function(a,b){this.input().val(b)},p.onSetFormData=function(a,b){var c=this;c.hiddenInput().val(c.serializeData(b))},p.onGetFormData=function(a,b){var c=this.input().val();b[0]=z(c,c)},a(["Down","Up"]).each(function(){var a=this.toString();p["onKey"+a]=function(b){var c=this,d=c.opts(n)[b.keyCode],e=!0;return d&&(e=d.substr(-1)!="!",d=d.replace("!",""),c.trigger(d+"Key"+a),a=="Up"&&c._lastKeyDown==b.keyCode&&(c._lastKeyDown=null,c.trigger(d+"KeyPress")),a=="Down"&&(c._lastKeyDown=b.keyCode)),c.trigger("anyKey"+a,b.keyCode),e}}),p=e.prototype,p.on=y,p.formDataObject=z,p.init=function(a){throw new Error("Not implemented")},p.baseInit=function(b,c){var d=this;b._defaults=a.extend(!0,b._defaults,c),d._core=b,d._timers={}},p.startTimer=function(a,b,c){var d=this;d.stopTimer(a),d._timers[a]=setTimeout(function(){delete d._timers[a],c.apply(d)},b*1e3)},p.stopTimer=function(a){clearTimeout(this._timers[a])},p.core=function(){return this._core},p.opts=function(a){return this.core().opts(a)},p.itemManager=function(){return this.core().itemManager()},p.input=function(){return this.core().input()},p.val=function(a){var b=this.input();if(typeof a===h)return b.val();b.val(a)},p.trigger=function(){var a=this.core();a.trigger.apply(a,arguments)},p.bind=function(a,b){this.core().bind(a,b)},p.initPriority=function(){return 0};var A=!1,B=a.fn.textext=function(b){var d;return!A&&(d=a.fn.textext.css)!=null&&(a("head").append("<style>"+d+"</style>"),A=!0),this.map(function(){var d=a(this);if(b==null)return d.data("textext");var e=new c;return e.init(d,b),d.data("textext",e),e.input()[0]})};B.addPlugin=function(a,b){B.plugins[a]=b,b.prototype=new B.TextExtPlugin},B.addPatch=function(a,b){B.patches[a]=b,b.prototype=new B.TextExtPlugin},B.TextExt=c,B.TextExtPlugin=e,B.ItemManager=d,B.plugins={},B.patches={}})(jQuery),function(a){function b(){}a.fn.textext.TextExtIE9Patches=b,a.fn.textext.addPatch("ie9",b);var c=b.prototype;c.init=function(a){if(navigator.userAgent.indexOf("MSIE 9")==-1)return;var b=this;a.on({postInvalidate:b.onPostInvalidate})},c.onPostInvalidate=function(){var a=this,b=a.input(),c=b.val();b.val(Math.random()),b.val(c)}}(jQuery);(function(a){function b(){}a.fn.textext.TextExtAjax=b,a.fn.textext.addPlugin("ajax",b);var c=b.prototype,d="ajax.data.callback",e="ajax.cache.results",f="ajax.loading.delay",g="ajax.loading.message",h="ajax.type.delay",i="setSuggestions",j="showDropdown",k="loading",l={ajax:{typeDelay:.5,loadingMessage:"Loading...",loadingDelay:.5,cacheResults:!1,dataCallback:null}};c.init=function(a){var b=this;b.baseInit(a,l),b.on({getSuggestions:b.onGetSuggestions}),b._suggestions=null},c.load=function(b){var c=this,e=c.opts(d)||function(a){return{q:a}},f;f=a.extend(!0,{data:e(b),success:function(a){c.onComplete(a,b)},error:function(a,c){console.error(c,b)}},c.opts("ajax")),a.ajax(f)},c.onComplete=function(a,b){var c=this,d=a;c.dontShowLoading(),c.opts(e)==1&&(c._suggestions=a,d=c.itemManager().filter(a,b)),c.trigger(i,{result:d})},c.dontShowLoading=function(){this.stopTimer(k)},c.showLoading=function(){var a=this;a.dontShowLoading(),a.startTimer(k,a.opts(f),function(){a.trigger(j,function(b){b.clearItems();var c=b.addDropdownItem(a.opts(g));c.addClass("text-loading")})})},c.onGetSuggestions=function(a,b){var c=this,d=c._suggestions,f=(b||{}).query||"";if(d&&c.opts(e)===!0)return c.onComplete(d,f);c.startTimer("ajax",c.opts(h),function(){c.showLoading(),c.load(f)})}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtArrow=b,a.fn.textext.addPlugin("arrow",b);var c=b.prototype,d="html.arrow",e={html:{arrow:'<div class="text-arrow"/>'}};c.init=function(b){var c=this,f;c.baseInit(b,e),c._arrow=f=a(c.opts(d)),c.core().wrapElement().append(f),f.bind("click",function(a){c.onArrowClick(a)})},c.onArrowClick=function(a){this.trigger("toggleDropdown"),this.core().focusInput()}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtAutocomplete=b,a.fn.textext.addPlugin("autocomplete",b);var c=b.prototype,d=".",e="text-selected",f=d+e,g="text-suggestion",h=d+g,i="text-label",j=d+i,k="autocomplete.enabled",l="autocomplete.dropdown.position",m="autocomplete.dropdown.maxHeight",n="autocomplete.render",o="html.dropdown",p="html.suggestion",q="hideDropdown",r="showDropdown",s="getSuggestions",t="getFormData",u="toggleDropdown",v="above",w="below",x="mousedownOnAutocomplete",y={autocomplete:{enabled:!0,dropdown:{position:w,maxHeight:"100px"}},html:{dropdown:'<div class="text-dropdown"><div class="text-list"/></div>',suggestion:'<div class="text-suggestion"><span class="text-label"/></div>'}};c.init=function(b){var c=this;c.baseInit(b,y);var d=c.input(),e;c.opts(k)===!0&&(c.on({blur:c.onBlur,anyKeyUp:c.onAnyKeyUp,deleteKeyUp:c.onAnyKeyUp,backspaceKeyPress:c.onBackspaceKeyPress,enterKeyPress:c.onEnterKeyPress,escapeKeyPress:c.onEscapeKeyPress,setSuggestions:c.onSetSuggestions,showDropdown:c.onShowDropdown,hideDropdown:c.onHideDropdown,toggleDropdown:c.onToggleDropdown,postInvalidate:c.positionDropdown,getFormData:c.onGetFormData,downKeyDown:c.onDownKeyDown,upKeyDown:c.onUpKeyDown}),e=a(c.opts(o)),e.insertAfter(d),c.on(e,{mouseover:c.onMouseOver,mousedown:c.onMouseDown,click:c.onClick}),e.css("maxHeight",c.opts(m)).addClass("text-position-"+c.opts(l)),a(c).data("container",e),a(document.body).click(function(a){c.isDropdownVisible()&&!c.withinWrapElement(a.target)&&c.trigger(q)}),c.positionDropdown())},c.containerElement=function(){return a(this).data("container")},c.onMouseOver=function(b){var c=this,d=a(b.target);d.is(h)&&(c.clearSelected(),d.addClass(e))},c.onMouseDown=function(a){this.containerElement().data(x,!0)},c.onClick=function(b){var c=this,d=a(b.target);(d.is(h)||d.is(j))&&c.trigger("enterKeyPress"),c.core().hasPlugin("tags")&&c.val("")},c.onBlur=function(a){var b=this,c=b.containerElement(),d=c.data(x)===!0;b.isDropdownVisible()&&(d?b.core().focusInput():b.trigger(q)),c.removeData(x)},c.onBackspaceKeyPress=function(a){var b=this,c=b.val().length>0;(c||b.isDropdownVisible())&&b.getSuggestions()},c.onAnyKeyUp=function(a,b){var c=this,d=c.opts("keys."+b)!=null;c.val().length>0&&!d&&c.getSuggestions()},c.onDownKeyDown=function(a){var b=this;b.isDropdownVisible()?b.toggleNextSuggestion():b.getSuggestions()},c.onUpKeyDown=function(a){this.togglePreviousSuggestion()},c.onEnterKeyPress=function(a){var b=this;b.isDropdownVisible()&&b.selectFromDropdown()},c.onEscapeKeyPress=function(a){var b=this;b.isDropdownVisible()&&b.trigger(q)},c.positionDropdown=function(){var a=this,b=a.containerElement(),c=a.opts(l),d=a.core().wrapElement().outerHeight(),e={};e[c===v?"bottom":"top"]=d+"px",b.css(e)},c.suggestionElements=function(){return this.containerElement().find(h)},c.setSelectedSuggestion=function(b){if(!b)return;var c=this,d=c.suggestionElements(),f=d.first(),h,i;c.clearSelected();for(i=0;i<d.length;i++){h=a(d[i]);if(c.itemManager().compareItems(h.data(g),b)){f=h.addClass(e);break}}f.addClass(e),c.scrollSuggestionIntoView(f)},c.selectedSuggestionElement=function(){return this.suggestionElements().filter(f).first()},c.isDropdownVisible=function(){return this.containerElement().is(":visible")===!0},c.onGetFormData=function(a,b,c){var d=this,e=d.val(),f=e,g=e;b[100]=d.formDataObject(f,g)},c.initPriority=function(){return 200},c.onHideDropdown=function(a){this.hideDropdown()},c.onToggleDropdown=function(a){var b=this;b.trigger(b.containerElement().is(":visible")?q:r)},c.onShowDropdown=function(b,c){var d=this,e=d.selectedSuggestionElement().data(g),f=d._suggestions;if(!f)return d.trigger(s);a.isFunction(c)?c(d):(d.renderSuggestions(d._suggestions),d.toggleNextSuggestion()),d.showDropdown(d.containerElement()),d.setSelectedSuggestion(e)},c.onSetSuggestions=function(a,b){var c=this,d=c._suggestions=b.result;b.showHideDropdown!==!1&&c.trigger(d===null||d.length===0?q:r)},c.getSuggestions=function(){var a=this,b=a.val();if(a._previousInputValue==b)return;b==""&&(current=null),a._previousInputValue=b,a.trigger(s,{query:b})},c.clearItems=function(){this.containerElement().find(".text-list").children().remove()},c.renderSuggestions=function(b){var c=this;c.clearItems(),a.each(b||[],function(a,b){c.addSuggestion(b)})},c.showDropdown=function(){this.containerElement().show()},c.hideDropdown=function(){var a=this,b=a.containerElement();a._previousInputValue=null,b.hide()},c.addSuggestion=function(a){var b=this,c=b.opts(n),d=b.addDropdownItem(c?c.call(b,a):b.itemManager().itemToString(a));d.data(g,a)},c.addDropdownItem=function(b){var c=this,d=c.containerElement().find(".text-list"),e=a(c.opts(p));return e.find(".text-label").html(b),d.append(e),e},c.clearSelected=function(){this.suggestionElements().removeClass(e)},c.toggleNextSuggestion=function(){var a=this,b=a.selectedSuggestionElement(),c;b.length>0?(c=b.next(),c.length>0&&b.removeClass(e)):c=a.suggestionElements().first(),c.addClass(e),a.scrollSuggestionIntoView(c)},c.togglePreviousSuggestion=function(){var a=this,b=a.selectedSuggestionElement(),c=b.prev();if(c.length==0)return;a.clearSelected(),c.addClass(e),a.scrollSuggestionIntoView(c)},c.scrollSuggestionIntoView=function(a){var b=a.outerHeight(),c=this.containerElement(),d=c.innerHeight(),e=c.scrollTop(),f=(a.position()||{}).top,g=null,h=parseInt(c.css("paddingTop"));if(f==null)return;f+b>d&&(g=f+e+b-d+h),f<0&&(g=f+e-h),g!=null&&c.scrollTop(g)},c.selectFromDropdown=function(){var a=this,b=a.selectedSuggestionElement().data(g);b&&(a.val(a.itemManager().itemToString(b)),a.core().getFormData()),a.trigger(q)},c.withinWrapElement=function(a){return this.core().wrapElement().find(a).size()>0}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtFilter=b,a.fn.textext.addPlugin("filter",b);var c=b.prototype,d="filter.enabled",e="filter.items",f={filter:{enabled:!0,items:null}};c.init=function(a){var b=this;b.baseInit(a,f),b.on({getFormData:b.onGetFormData,isTagAllowed:b.onIsTagAllowed,setSuggestions:b.onSetSuggestions}),b._suggestions=null},c.onGetFormData=function(a,b,c){var d=this,e=d.val(),f=e,g="";d.core().hasPlugin("tags")||(d.isValueAllowed(f)&&(g=e),b[300]=d.formDataObject(f,g))},c.isValueAllowed=function(a){var b=this,c=b.opts("filterItems")||b._suggestions||[],e=b.itemManager(),f=!b.opts(d),g;for(g=0;g<c.length&&!f;g++)e.compareItems(a,c[g])&&(f=!0);return f},c.onIsTagAllowed=function(a,b){b.result=this.isValueAllowed(b.tag)},c.onSetSuggestions=function(a,b){this._suggestions=b.result}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtFocus=b,a.fn.textext.addPlugin("focus",b);var c=b.prototype,d="html.focus",e={html:{focus:'<div class="text-focus"/>'}};c.init=function(a){var b=this;b.baseInit(a,e),b.core().wrapElement().append(b.opts(d)),b.on({blur:b.onBlur,focus:b.onFocus}),b._timeoutId=0},c.onBlur=function(a){var b=this;clearTimeout(b._timeoutId),b._timeoutId=setTimeout(function(){b.getFocus().hide()},100)},c.onFocus=function(a){var b=this;clearTimeout(b._timeoutId),b.getFocus().show()},c.getFocus=function(){return this.core().wrapElement().find(".text-focus")}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtPrompt=b,a.fn.textext.addPlugin("prompt",b);var c=b.prototype,d="text-hide-prompt",e="prompt",f="html.prompt",g={prompt:"Awaiting input...",html:{prompt:'<div class="text-prompt"/>'}};c.init=function(b){var c=this,d="placeholder",h,i;c.baseInit(b,g),h=a(c.opts(f)),a(c).data("container",h),c.core().wrapElement().append(h),c.setPrompt(c.opts(e)),i=b.input().attr(d),i||(i=c.opts(e)),b.input().attr(d,""),i&&c.setPrompt(i),a.trim(c.val()).length>0&&c.hidePrompt(),c.on({blur:c.onBlur,focus:c.onFocus,postInvalidate:c.onPostInvalidate,postInit:c.onPostInit})},c.onPostInit=function(a){this.invalidateBounds()},c.onPostInvalidate=function(a){this.invalidateBounds()},c.invalidateBounds=function(){var a=this,b=a.input();a.containerElement().css({paddingLeft:b.css("paddingLeft"),paddingTop:b.css("paddingTop")})},c.onBlur=function(a){var b=this;b.startTimer("prompt",.1,function(){b.showPrompt()})},c.showPrompt=function(){var b=this,c=b.input();a.trim(b.val()).length===0&&!c.is(":focus")&&b.containerElement().removeClass(d)},c.hidePrompt=function(){this.stopTimer("prompt"),this.containerElement().addClass(d)},c.onFocus=function(a){this.hidePrompt()},c.setPrompt=function(a){this.containerElement().text(a)},c.containerElement=function(){return a(this).data("container")}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtSuggestions=b,a.fn.textext.addPlugin("suggestions",b);var c=b.prototype,d="suggestions",e={suggestions:null};c.init=function(a){var b=this;b.baseInit(a,e),b.on({getSuggestions:b.onGetSuggestions,postInit:b.onPostInit})},c.setSuggestions=function(a,b){this.trigger("setSuggestions",{result:a,showHideDropdown:b!=0})},c.onPostInit=function(a){var b=this;b.setSuggestions(b.opts(d),!1)},c.onGetSuggestions=function(a,b){var c=this,e=c.opts(d);e.sort(),c.setSuggestions(c.itemManager().filter(e,b.query))}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtTags=b,a.fn.textext.addPlugin("tags",b);var c=b.prototype,d=".",e="text-tags-on-top",f=d+e,g="text-tag",h=d+g,i="text-tags",j=d+i,k="text-label",l=d+k,m="text-remove",n=d+m,o="tags.enabled",p="tags.items",q="html.tag",r="html.tags",s="isTagAllowed",t="tagClick",u={tags:{enabled:!0,items:null},html:{tags:'<div class="text-tags"/>',tag:'<div class="text-tag"><div class="text-button"><span class="text-label"/><a class="text-remove"/></div></div>'}};c.init=function(b){this.baseInit(b,u);var c=this,d=c.input(),e;c.opts(o)&&(e=a(c.opts(r)),d.after(e),a(c).data("container",e),c.on({enterKeyPress:c.onEnterKeyPress,backspaceKeyDown:c.onBackspaceKeyDown,preInvalidate:c.onPreInvalidate,postInit:c.onPostInit,getFormData:c.onGetFormData}),c.on(e,{click:c.onClick,mousemove:c.onContainerMouseMove}),c.on(d,{mousemove:c.onInputMouseMove})),c._originalPadding={left:parseInt(d.css("paddingLeft")||0),top:parseInt(d.css("paddingTop")||0)},c._paddingBox={left:0,top:0},c.updateFormCache()},c.containerElement=function(){return a(this).data("container")},c.onPostInit=function(a){var b=this;b.addTags(b.opts(p))},c.onGetFormData=function(a,b,c){var d=this,e=c===13?"":d.val(),f=d._formData;b[200]=d.formDataObject(e,f)},c.initPriority=function(){return 100},c.onInputMouseMove=function(a){this.toggleZIndex(a)},c.onContainerMouseMove=function(a){this.toggleZIndex(a)},c.onBackspaceKeyDown=function(a){var b=this,c=b.tagElements().last();b.val().length==0&&b.removeTag(c)},c.onPreInvalidate=function(a){var b=this,c=b.tagElements().last(),d=c.position();c.length>0?d.left+=c.innerWidth():d=b._originalPadding,b._paddingBox=d,b.input().css({paddingLeft:d.left,paddingTop:d.top})},c.onClick=function(b){function k(a,b){i.data(g,a),i.find(l).text(c.itemManager().itemToString(a)),c.updateFormCache(),d.getFormData(),d.invalidateBounds(),b&&d.focusInput()}var c=this,d=c.core(),e=a(b.target),f=0,i;e.is(j)?f=1:e.is(n)?(c.removeTag(e.parents(h+":first")),f=1):e.is(l)&&(i=e.parents(h+":first"),c.trigger(t,i,i.data(g),k)),f&&d.focusInput()},c.onEnterKeyPress=function(a){var b=this,c=b.val(),d=b.itemManager().stringToItem(c);b.isTagAllowed(d)&&(b.addTags([d]),b.core().focusInput())},c.updateFormCache=function(){var b=this,c=[];b.tagElements().each(function(){c.push(a(this).data(g))}),b._formData=c},c.toggleZIndex=function(a){var b=this,c=b.input().offset(),d=a.clientX-c.left,g=a.clientY-c.top,h=b._paddingBox,i=b.containerElement(),j=i.is(f),k=d>h.left&&g>h.top;(!j&&!k||j&&k)&&i[(j?"remove":"add")+"Class"](e)},c.tagElements=function(){return this.containerElement().find(h)},c.isTagAllowed=function(a){var b={tag:a,result:!0};return this.trigger(s,b),b.result===!0},c.addTags=function(a){if(!a||a.length==0)return;var b=this,c=b.core(),d=b.containerElement(),e,f;for(e=0;e<a.length;e++)f=a[e],f&&b.isTagAllowed(f)&&d.append(b.renderTag(f));b.updateFormCache(),c.getFormData(),c.invalidateBounds()},c.getTagElement=function(b){var c=this,d=c.tagElements(),e,f;for(e=0;e<d.length,f=a(d[e]);e++)if(c.itemManager().compareItems(f.data(g),b))return f},c.removeTag=function(b){var c=this,d=c.core(),e;b instanceof a?(e=b,b=b.data(g)):e=c.getTagElement(b),e.remove(),c.updateFormCache(),d.getFormData(),d.invalidateBounds()},c.renderTag=function(b){var c=this,d=a(c.opts(q));return d.find(".text-label").text(c.itemManager().itemToString(b)),d.data(g,b),d}})(jQuery);(function(a){var b=document,c="getElementsByTagName",d=b[c]("head")[0]||b[c]("body")[0],e=b.createElement("style");e.innerHTML=a,d.appendChild(e)})('\n.text-core{position:relative;}\n.text-core .text-wrap{background:#fff;position:absolute;}\n.text-core .text-wrap textarea,.text-core .text-wrap input{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;-webkit-border-radius:0px;-moz-border-radius:0px;border-radius:0px;border:1px solid #9daccc;outline:none;resize:none;position:absolute;z-index:1;background:none;overflow:hidden;margin:0;padding:3px 5px 4px 5px;white-space:nowrap;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;line-height:13px;height:auto;}\n\n.text-core .text-wrap .text-arrow{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:absolute;top:0;right:0;width:22px;height:22px;background:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAOAQMAAADHWqTrAAAAA3NCSVQICAjb4U/gAAAABlBMVEX///8yXJnt8Ns4AAAACXBIWXMAAAsSAAALEgHS3X78AAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1MzmNZGAwAAABpJREFUCJljYEAF/xsY6hkY7BgYZBgYOFBkADkdAmFDagYFAAAAAElFTkSuQmCC") 50% 50% no-repeat;cursor:pointer;z-index:2;}\n\n.text-core .text-wrap .text-dropdown{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;padding:0;position:absolute;z-index:3;background:#fff;border:1px solid #9daccc;width:100%;max-height:100px;padding:1px;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;display:none;overflow-x:hidden;overflow-y:auto;}\n.text-core .text-wrap .text-dropdown.text-position-below{margin-top:1px;}\n.text-core .text-wrap .text-dropdown.text-position-above{margin-bottom:1px;}\n.text-core .text-wrap .text-dropdown .text-list .text-suggestion{padding:3px 5px;cursor:pointer;}\n.text-core .text-wrap .text-dropdown .text-list .text-suggestion em{font-style:normal;text-decoration:underline;}\n.text-core .text-wrap .text-dropdown .text-list .text-suggestion.text-selected{color:#fff;background:#6d84b4;}\n\n.text-core .text-wrap .text-focus{-webkit-box-shadow:0px 0px 6px #6d84b4;-moz-box-shadow:0px 0px 6px #6d84b4;box-shadow:0px 0px 6px #6d84b4;position:absolute;width:100%;height:100%;display:none;}\n.text-core .text-wrap .text-focus.text-show-focus{display:block;}\n\n.text-core .text-wrap .text-prompt{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:absolute;width:100%;height:100%;margin:1px 0 0 2px;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;color:#c0c0c0;overflow:hidden;white-space:pre;}\n.text-core .text-wrap .text-prompt.text-hide-prompt{display:none;}\n\n.text-core .text-wrap .text-tags{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:absolute;width:100%;height:100%;padding:3px 35px 3px 3px;cursor:text;}\n.text-core .text-wrap .text-tags.text-tags-on-top{z-index:2;}\n.text-core .text-wrap .text-tags .text-tag{float:left;}\n.text-core .text-wrap .text-tags .text-tag .text-button{-webkit-border-radius:2px;-moz-border-radius:2px;border-radius:2px;-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:relative;float:left;border:1px solid #9daccc;background:#e2e6f0;color:#000;padding:0px 17px 0px 3px;margin:0 2px 2px 0;cursor:pointer;height:16px;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;}\n.text-core .text-wrap .text-tags .text-tag .text-button a.text-remove{position:absolute;right:3px;top:2px;display:block;width:11px;height:11px;background:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAhCAYAAAAPm1F2AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAAB50RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNS4xqx9I6wAAAQ5JREFUOI2dlD0WwiAQhCc8L6HHgAPoASwtSYvX8BrQxtIyveYA8RppLO1jE+LwE8lzms2yH8MCj1QoaBzH+VuUYNYMS213UlvDRamtUbXb5ZyPHuDoxwGgip3ipfvGuGzPz+vZ/coDONdzFuYCO6ramQQG0DJIE1oPBBvM6e9LqaS2FwD7FWwnVoIAsOc2Xn1jDlyd8pfPBRVOBHA8cc/3yCmQqt0jcY4LuTyAF3pOYS6wI48LAm4MUrx5JthgSQJAt5LtNgAUgEMBBIC3AL2xgo58dEPfhE9wygef89FtCeC49UwltR1pQrK2qr9vNr7uRTCBF3pOYS6wI4/zdQ8MUpxPI9hgSQL0Xyio/QBt54DzsHQx6gAAAABJRU5ErkJggg==") 0 0 no-repeat;}\n.text-core .text-wrap .text-tags .text-tag .text-button a.text-remove:hover{background-position:0 -11px;}\n.text-core .text-wrap .text-tags .text-tag .text-button a.text-remove:active{background-position:0 -22px;}\n');
+;
+
+//fgnass.github.com/spin.js#v1.2.5
+(function(window, document, undefined) {
+
+/**
+ * Copyright (c) 2011 Felix Gnass [fgnass at neteye dot de]
+ * Licensed under the MIT license
+ */
+
+  var prefixes = ['webkit', 'Moz', 'ms', 'O']; /* Vendor prefixes */
+  var animations = {}; /* Animation rules keyed by their name */
+  var useCssAnimations;
+
+  /**
+   * Utility function to create elements. If no tag name is given,
+   * a DIV is created. Optionally properties can be passed.
+   */
+  function createEl(tag, prop) {
+    var el = document.createElement(tag || 'div');
+    var n;
+
+    for(n in prop) {
+      el[n] = prop[n];
+    }
+    return el;
+  }
+
+  /**
+   * Appends children and returns the parent.
+   */
+  function ins(parent /* child1, child2, ...*/) {
+    for (var i=1, n=arguments.length; i<n; i++) {
+      parent.appendChild(arguments[i]);
+    }
+    return parent;
+  }
+
+  /**
+   * Insert a new stylesheet to hold the @keyframe or VML rules.
+   */
+  var sheet = function() {
+    var el = createEl('style');
+    ins(document.getElementsByTagName('head')[0], el);
+    return el.sheet || el.styleSheet;
+  }();
+
+  /**
+   * Creates an opacity keyframe animation rule and returns its name.
+   * Since most mobile Webkits have timing issues with animation-delay,
+   * we create separate rules for each line/segment.
+   */
+  function addAnimation(alpha, trail, i, lines) {
+    var name = ['opacity', trail, ~~(alpha*100), i, lines].join('-');
+    var start = 0.01 + i/lines*100;
+    var z = Math.max(1-(1-alpha)/trail*(100-start) , alpha);
+    var prefix = useCssAnimations.substring(0, useCssAnimations.indexOf('Animation')).toLowerCase();
+    var pre = prefix && '-'+prefix+'-' || '';
+
+    if (!animations[name]) {
+      sheet.insertRule(
+        '@' + pre + 'keyframes ' + name + '{' +
+        '0%{opacity:'+z+'}' +
+        start + '%{opacity:'+ alpha + '}' +
+        (start+0.01) + '%{opacity:1}' +
+        (start+trail)%100 + '%{opacity:'+ alpha + '}' +
+        '100%{opacity:'+ z + '}' +
+        '}', 0);
+      animations[name] = 1;
+    }
+    return name;
+  }
+
+  /**
+   * Tries various vendor prefixes and returns the first supported property.
+   **/
+  function vendor(el, prop) {
+    var s = el.style;
+    var pp;
+    var i;
+
+    if(s[prop] !== undefined) return prop;
+    prop = prop.charAt(0).toUpperCase() + prop.slice(1);
+    for(i=0; i<prefixes.length; i++) {
+      pp = prefixes[i]+prop;
+      if(s[pp] !== undefined) return pp;
+    }
+  }
+
+  /**
+   * Sets multiple style properties at once.
+   */
+  function css(el, prop) {
+    for (var n in prop) {
+      el.style[vendor(el, n)||n] = prop[n];
+    }
+    return el;
+  }
+
+  /**
+   * Fills in default values.
+   */
+  function merge(obj) {
+    for (var i=1; i < arguments.length; i++) {
+      var def = arguments[i];
+      for (var n in def) {
+        if (obj[n] === undefined) obj[n] = def[n];
+      }
+    }
+    return obj;
+  }
+
+  /**
+   * Returns the absolute page-offset of the given element.
+   */
+  function pos(el) {
+    var o = {x:el.offsetLeft, y:el.offsetTop};
+    while((el = el.offsetParent)) {
+      o.x+=el.offsetLeft;
+      o.y+=el.offsetTop;
+    }
+    return o;
+  }
+
+  var defaults = {
+    lines: 12,            // The number of lines to draw
+    length: 7,            // The length of each line
+    width: 5,             // The line thickness
+    radius: 10,           // The radius of the inner circle
+    rotate: 0,            // rotation offset
+    color: '#000',        // #rgb or #rrggbb
+    speed: 1,             // Rounds per second
+    trail: 100,           // Afterglow percentage
+    opacity: 1/4,         // Opacity of the lines
+    fps: 20,              // Frames per second when using setTimeout()
+    zIndex: 2e9,          // Use a high z-index by default
+    className: 'spinner', // CSS class to assign to the element
+    top: 'auto',          // center vertically
+    left: 'auto'          // center horizontally
+  };
+
+  /** The constructor */
+  var Spinner = function Spinner(o) {
+    if (!this.spin) return new Spinner(o);
+    this.opts = merge(o || {}, Spinner.defaults, defaults);
+  };
+
+  Spinner.defaults = {};
+  merge(Spinner.prototype, {
+    spin: function(target) {
+      this.stop();
+      var self = this;
+      var o = self.opts;
+      var el = self.el = css(createEl(0, {className: o.className}), {position: 'relative', zIndex: o.zIndex});
+      var mid = o.radius+o.length+o.width;
+      var ep; // element position
+      var tp; // target position
+
+      if (target) {
+        target.insertBefore(el, target.firstChild||null);
+        tp = pos(target);
+        ep = pos(el);
+        css(el, {
+          left: (o.left == 'auto' ? tp.x-ep.x + (target.offsetWidth >> 1) : o.left+mid) + 'px',
+          top: (o.top == 'auto' ? tp.y-ep.y + (target.offsetHeight >> 1) : o.top+mid)  + 'px'
+        });
+      }
+
+      el.setAttribute('aria-role', 'progressbar');
+      self.lines(el, self.opts);
+
+      if (!useCssAnimations) {
+        // No CSS animation support, use setTimeout() instead
+        var i = 0;
+        var fps = o.fps;
+        var f = fps/o.speed;
+        var ostep = (1-o.opacity)/(f*o.trail / 100);
+        var astep = f/o.lines;
+
+        !function anim() {
+          i++;
+          for (var s=o.lines; s; s--) {
+            var alpha = Math.max(1-(i+s*astep)%f * ostep, o.opacity);
+            self.opacity(el, o.lines-s, alpha, o);
+          }
+          self.timeout = self.el && setTimeout(anim, ~~(1000/fps));
+        }();
+      }
+      return self;
+    },
+    stop: function() {
+      var el = this.el;
+      if (el) {
+        clearTimeout(this.timeout);
+        if (el.parentNode) el.parentNode.removeChild(el);
+        this.el = undefined;
+      }
+      return this;
+    },
+    lines: function(el, o) {
+      var i = 0;
+      var seg;
+
+      function fill(color, shadow) {
+        return css(createEl(), {
+          position: 'absolute',
+          width: (o.length+o.width) + 'px',
+          height: o.width + 'px',
+          background: color,
+          boxShadow: shadow,
+          transformOrigin: 'left',
+          transform: 'rotate(' + ~~(360/o.lines*i+o.rotate) + 'deg) translate(' + o.radius+'px' +',0)',
+          borderRadius: (o.width>>1) + 'px'
+        });
+      }
+      for (; i < o.lines; i++) {
+        seg = css(createEl(), {
+          position: 'absolute',
+          top: 1+~(o.width/2) + 'px',
+          transform: o.hwaccel ? 'translate3d(0,0,0)' : '',
+          opacity: o.opacity,
+          animation: useCssAnimations && addAnimation(o.opacity, o.trail, i, o.lines) + ' ' + 1/o.speed + 's linear infinite'
+        });
+        if (o.shadow) ins(seg, css(fill('#000', '0 0 4px ' + '#000'), {top: 2+'px'}));
+        ins(el, ins(seg, fill(o.color, '0 0 1px rgba(0,0,0,.1)')));
+      }
+      return el;
+    },
+    opacity: function(el, i, val) {
+      if (i < el.childNodes.length) el.childNodes[i].style.opacity = val;
+    }
+  });
+
+  /////////////////////////////////////////////////////////////////////////
+  // VML rendering for IE
+  /////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Check and init VML support
+   */
+  !function() {
+
+    function vml(tag, attr) {
+      return createEl('<' + tag + ' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">', attr);
+    }
+
+    var s = css(createEl('group'), {behavior: 'url(#default#VML)'});
+
+    if (!vendor(s, 'transform') && s.adj) {
+
+      // VML support detected. Insert CSS rule ...
+      sheet.addRule('.spin-vml', 'behavior:url(#default#VML)');
+
+      Spinner.prototype.lines = function(el, o) {
+        var r = o.length+o.width;
+        var s = 2*r;
+
+        function grp() {
+          return css(vml('group', {coordsize: s +' '+s, coordorigin: -r +' '+-r}), {width: s, height: s});
+        }
+
+        var margin = -(o.width+o.length)*2+'px';
+        var g = css(grp(), {position: 'absolute', top: margin, left: margin});
+
+        var i;
+
+        function seg(i, dx, filter) {
+          ins(g,
+            ins(css(grp(), {rotation: 360 / o.lines * i + 'deg', left: ~~dx}),
+              ins(css(vml('roundrect', {arcsize: 1}), {
+                  width: r,
+                  height: o.width,
+                  left: o.radius,
+                  top: -o.width>>1,
+                  filter: filter
+                }),
+                vml('fill', {color: o.color, opacity: o.opacity}),
+                vml('stroke', {opacity: 0}) // transparent stroke to fix color bleeding upon opacity change
+              )
+            )
+          );
+        }
+
+        if (o.shadow) {
+          for (i = 1; i <= o.lines; i++) {
+            seg(i, -2, 'progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)');
+          }
+        }
+        for (i = 1; i <= o.lines; i++) seg(i);
+        return ins(el, g);
+      };
+      Spinner.prototype.opacity = function(el, i, val, o) {
+        var c = el.firstChild;
+        o = o.shadow && o.lines || 0;
+        if (c && i+o < c.childNodes.length) {
+          c = c.childNodes[i+o]; c = c && c.firstChild; c = c && c.firstChild;
+          if (c) c.opacity = val;
+        }
+      };
+    }
+    else {
+      useCssAnimations = vendor(s, 'animation');
+    }
+  }();
+
+  window.Spinner = Spinner;
+
+})(window, document);
 ;
 
 /*	SWFObject v2.2 <http://code.google.com/p/swfobject/> 

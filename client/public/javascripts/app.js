@@ -115,6 +115,62 @@ window.require.define({"helpers": function(exports, require, module) {
       });
     }
 
+    BrunchApplication.prototype.initializeJQueryExtensions = function() {
+      return $.fn.spin = function(opts, color) {
+        var presets;
+        presets = {
+          tiny: {
+            lines: 8,
+            length: 2,
+            width: 1,
+            radius: 3
+          },
+          small: {
+            lines: 10,
+            length: 2,
+            width: 3,
+            radius: 5
+          },
+          large: {
+            lines: 10,
+            length: 8,
+            width: 4,
+            radius: 8
+          }
+        };
+        if (Spinner) {
+          return this.each(function() {
+            var $this, spinner;
+            $this = $(this);
+            spinner = $this.data("spinner");
+            if (spinner != null) {
+              spinner.stop();
+              return $this.data("spinner", null);
+            } else if (opts !== false) {
+              if (typeof opts === "string") {
+                if (opts in presets) {
+                  opts = presets[opts];
+                } else {
+                  opts = {};
+                }
+                if (color) {
+                  opts.color = color;
+                }
+              }
+              spinner = new Spinner($.extend({
+                color: $this.css("color")
+              }, opts));
+              spinner.spin(this);
+              return $this.data("spinner", spinner);
+            }
+          });
+        } else {
+          throw "Spinner class not available.";
+          return null;
+        }
+      };
+    };
+
     BrunchApplication.prototype.initialize = function() {
       return null;
     };
@@ -156,14 +212,11 @@ window.require.define({"initialize": function(exports, require, module) {
     __extends(Application, _super);
 
     function Application() {
-      var _this = this;
-      $(function() {
-        _this.initialize();
-        return Backbone.history.start();
-      });
+      return Application.__super__.constructor.apply(this, arguments);
     }
 
     Application.prototype.initialize = function() {
+      this.initializeJQueryExtensions();
       this.homeView = new HomeView;
       this.homeView.render();
       return this.router = new MainRouter;
@@ -2762,7 +2815,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
 }});
 
 window.require.define({"views/note_view": function(exports, require, module) {
-  var CNEditor, Note, TreeInst, template,
+  var CNEditor, Note, TreeInst, helpers, template,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -2774,6 +2827,8 @@ window.require.define({"views/note_view": function(exports, require, module) {
   Note = require('../models/note').Note;
 
   TreeInst = require('./widgets/tree');
+
+  helpers = require('../helpers');
 
   /**
   model
@@ -2815,6 +2870,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
       saveTimer = null;
       saveButton = $("#save-editor-content");
       this.saveButton = saveButton;
+      this.uploadButton = $("#upload-btn");
       onIFrameLoaded = this.onIFrameLoaded;
       iframeEditorCallBack = function() {
         return onIFrameLoaded();
@@ -2844,6 +2900,10 @@ window.require.define({"views/note_view": function(exports, require, module) {
       $("#markerListBtn").on("click", function() {
         editorCtrl._addHistory();
         return editorCtrl.markerList();
+      });
+      this.uploadButton.tooltip({
+        placement: "bottom",
+        title: "Add file to the note"
       });
       $("#titleBtn").tooltip({
         placement: "bottom",
@@ -2899,7 +2959,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
       # allow to rename a note by directly writing in the title
       */
 
-      return noteFullTitle.blur(function() {
+      noteFullTitle.blur(function() {
         var newName, oldName;
         console.log("event : note-full-title.blur");
         newName = noteFullTitle.val();
@@ -2910,6 +2970,31 @@ window.require.define({"views/note_view": function(exports, require, module) {
           return _this.updateBreadcrumbOnTitleChange(newName);
         }
       });
+      return this.initFileWidget();
+    };
+
+    /**
+    # Configure file uploader
+    */
+
+
+    NoteView.prototype.initFileWidget = function() {
+      var _this = this;
+      this.uploader = new qq.FileUploaderBasic({
+        button: document.getElementById('upload-btn'),
+        mutliple: false,
+        forceMultipart: true,
+        onComplete: function(id, filename, response) {
+          _this.uploadButton.spin();
+          $(".icon-arrow-up").css('visibility', 'visible');
+          return _this.addFileLine(filename);
+        },
+        onSubmit: function() {
+          $(".icon-arrow-up").css('visibility', 'hidden');
+          return _this.uploadButton.spin('small');
+        }
+      });
+      return this.fileList = $('#note-file-list');
     };
 
     /**
@@ -2939,18 +3024,19 @@ window.require.define({"views/note_view": function(exports, require, module) {
       this.model = noteModel;
       this.setTitle(noteModel.title);
       this.setContent(noteModel.content);
-      return this.createBreadcrumb(noteModel, data);
+      this.createBreadcrumb(noteModel, data);
+      this.uploader._options.action = "notes/" + this.model.id + "/files/";
+      this.uploader._handler._options.action = "notes/" + this.model.id + "/files/";
+      return this.renderFileList();
     };
 
     /**
-    #
+    #  Display note title
     */
 
 
     NoteView.prototype.setTitle = function(nTitle) {
-      var noteFullTitle;
-      noteFullTitle = this.noteFullTitle;
-      return noteFullTitle.val(nTitle);
+      return this.noteFullTitle.val(nTitle);
     };
 
     /**
@@ -2964,6 +3050,53 @@ window.require.define({"views/note_view": function(exports, require, module) {
       } else {
         return this.editorCtrl.deleteContent();
       }
+    };
+
+    /**
+    # Display inside dedicated div list of files attached to the current note.
+    */
+
+
+    NoteView.prototype.renderFileList = function() {
+      var file, _results;
+      if (this.model != null) {
+        $('.note-file button').unbind();
+        this.fileList.html(null);
+        _results = [];
+        for (file in this.model._attachments) {
+          _results.push(this.addFileLine(file));
+        }
+        return _results;
+      }
+    };
+
+    NoteView.prototype.addFileLine = function(file) {
+      var delButton, line, path, slug,
+        _this = this;
+      path = "notes/" + this.model.id + "/files/" + file;
+      slug = helpers.slugify(file);
+      this.fileList.append("<div class=\"note-file spacer\" id=\"note-" + slug + "\">\n    <a href=\"" + path + "\" target=\"_blank\">" + file + "</a>\n    <button>(x)</button>\n</div>");
+      line = $("#note-" + slug);
+      delButton = $("#note-" + slug + " button");
+      line.hide();
+      delButton.click(function(target) {
+        delButton.html("&nbsp;&nbsp;&nbsp;");
+        delButton.spin('tiny');
+        return $.ajax({
+          url: path,
+          type: "DELETE",
+          success: function() {
+            delButton.spin();
+            return line.fadeOut(function() {
+              return line.remove();
+            });
+          },
+          error: function() {
+            return alert("Server error occured.");
+          }
+        });
+      });
+      return line.fadeIn();
     };
 
     /**
@@ -3023,7 +3156,7 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="editor-button-bar" class="btn-group clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="markerListBtn" class="btn btn-small"><i class="icon-th-list"></i></button><button id="titleBtn" class="btn btn-small">Title</button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div id="editor-container"><iframe id="editorIframe"></iframe></div>');
+  buf.push('<div id="editor-button-bar" class="btn-group clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="markerListBtn" class="btn btn-small"><i class="icon-th-list"></i></button><button id="titleBtn" class="btn btn-small"><i class="icon-text-height"></i></button><div id="upload-btn" class="btn btn-small"><i class="icon-arrow-up"></i></div><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"></div><div id="editor-container"><iframe id="editorIframe"></iframe></div>');
   }
   return buf.join("");
   };
