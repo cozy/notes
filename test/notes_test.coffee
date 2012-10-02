@@ -1,13 +1,14 @@
-should = require('should')
-async = require('async')
+should = require 'should'
+async = require 'async'
+fs = require 'fs'
 Client = require('request-json').JsonClient
 
-URL = require('url')
+URL = require 'url'
 
-app = require('../server')
-helpers = require("./helpers")
+app = require '../server'
+helpers = require "./helpers"
 
-client = new Client("http://localhost:8888/")
+client = new Client "http://localhost:8888/"
 
 
 ###
@@ -353,22 +354,55 @@ describe "DEL - notes/:id", ->
             done()
         
 
-describe "/notes/search", ->
-    describe "POST", ->
+#describe "/notes/search", ->
+    #describe "POST", ->
 
-        it "should returned the note with special content", (done) ->
-            data = query: "special"
-            client.post "notes/search", data, (err, resp, notes) ->
-                notes.length.should.not.equal 0
-                note = notes[0]
-                note.id.should.equal note7.id
+        #it "should returned the note with special content", (done) ->
+            #data = query: "special"
+            #client.post "notes/search", data, (err, resp, notes) ->
+                #notes.length.should.not.equal 0
+                #note = notes[0]
+                #note.id.should.equal note7.id
+                #done()
+
+        #it "when you delete given note", (done) ->
+            #client.del "notes/#{note7.id}", (err, resp, notes) ->
+                #done()
+            
+        #it "should returned no note", (done) ->
+            #data = query: "special"
+            #client.post "notes/search", data, (err, resp, notes) ->
+                #notes.length.should.equal 0
+                #done()
+
+describe "/notes/:id/attachments", ->
+    describe "POST/GET", ->
+
+        it "When you post a file for a given note", (done) ->
+            client.sendFile "notes/#{note6.id}/files/", "./test/test.png", (err, res, body) =>
+                should.not.exist err
+                res.statusCode.should.equal 200
                 done()
 
-        it "when you delete given note", (done) ->
-            client.del "notes/#{note7.id}", (err, resp, notes) ->
+        it "Then you can download it", (done) ->
+            client.saveFile "notes/#{note6.id}/files/test.png", \
+                             './test/test-get.png', ->
+                fileStats = fs.statSync('./test/test.png')
+                resultStats = fs.statSync('./test/test-get.png')
+            
+                resultStats.size.should.equal fileStats.size
                 done()
             
-        it "should returned no note", (done) ->
-            data = query: "special"
-            client.post "notes/search", data, (err, resp, notes) ->
-                notes.length.should.equal 0
+    describe "DELETE/GET", ->
+        it "When you delete a file", (done) ->
+            client.del "notes/#{note6.id}/files/test.png", (err, res, body) =>
+                should.not.exist err
+                res.statusCode.should.equal 200
+                done()
+
+        it "Then you can't download it", (done) ->
+            client.saveFile "notes/#{note6.id}/files/test.png", \
+                             './test/test-get.png', (err, res) =>
+                should.exist err
+                
+                done()

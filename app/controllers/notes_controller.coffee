@@ -136,7 +136,7 @@ action 'update', ->
                 isToUpdate = true
                 isToIndex = true
             if isNewTitle
-                ewData.title = body.title
+                newData.title = body.title
                 isToUpdate = true
                 isToIndex = true
             if body.tags
@@ -194,9 +194,9 @@ action 'search', ->
 ## Attach a file to given note.
 ###
 action 'addFile', ->
-    if req.files["qqfile"]?
-        file = req.files["qqfile"]
-        
+    file = req.files["qqfile"]
+    file = req.files["file"] unless file?
+    if file?
         @note.attachFile file.path, {name: file.name}, (err) ->
             if err
                 send error: "error occured while saving file", 500
@@ -213,7 +213,7 @@ action 'getFile', ->
     name = params.name
 
     @note.getFile name, (err, res, body) ->
-        if err
+        if err or not res?
             send 500
         else if res.statusCode is 404
             send 'File not found', 404
