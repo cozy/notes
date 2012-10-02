@@ -3,6 +3,8 @@ CNEditor = require('./editor').CNEditor
 Note = require('../models/note').Note
 TreeInst = require('./widgets/tree')
 
+helpers = require '../helpers'
+
 ###*
 model
 homeView
@@ -68,6 +70,10 @@ class exports.NoteView extends Backbone.View
             editorCtrl._addHistory()
             editorCtrl.markerList()
 
+        $("#upload-btn").tooltip
+            placement: "bottom"
+            title: "Add file to the note"
+            
         $("#titleBtn").tooltip
             placement: "bottom"
             title: "Change selection from marker list to titles"
@@ -90,11 +96,10 @@ class exports.NoteView extends Backbone.View
             saveButton.removeClass("active") if saveButton.hasClass("active")
             id = @model.id
             @saveTimer = setTimeout( ->
-                    Note.updateNote id, content: editorCtrl.getEditorContent()
-                    if not saveButton.hasClass("active")
-                        saveButton.addClass("active")
-                , 3000)
-
+                Note.updateNote id, content: editorCtrl.getEditorContent()
+                unless saveButton.hasClass("active")
+                    saveButton.addClass("active")
+            , 3000)
 
         ###*
         # allow the user to save the content of a note before the 3s of the
@@ -122,9 +127,23 @@ class exports.NoteView extends Backbone.View
             oldName = @model.title
             if newName isnt "" and oldName != newName
                 @homeView.onNoteTitleChange(@model.id, newName)
-                this.homeView.tree._updateSuggestionList("rename", newName, oldName)
+                @homeView.tree._updateSuggestionList("rename", newName, oldName)
                 @updateBreadcrumbOnTitleChange(newName)
 
+        @initFileWidget()
+
+    ###*
+    # Configure file uploader
+    ###
+    initFileWidget: ->
+        @uploader = new qq.FileUploaderBasic
+            button: document.getElementById('upload-btn')
+            mutliple: false
+            forceMultipart: true
+            onComplete: (id, filename, response) =>
+                @addFileLine filename
+        @fileList = $('#note-file-list')
+            
     ###*
     # Stop saving timer if any and force saving of editor content. 
     ###
@@ -144,16 +163,15 @@ class exports.NoteView extends Backbone.View
         @setTitle(noteModel.title)
         @setContent(noteModel.content)
         @createBreadcrumb(noteModel, data)
-
-
+        @uploader._options.action = "notes/#{@model.id}/files/"
+        @uploader._handler._options.action = "notes/#{@model.id}/files/"
+        @renderFileList()
+        
     ###*
-    # 
+    #  Display note title
     ###
     setTitle : (nTitle) ->
-        noteFullTitle = @noteFullTitle
-        #give a title to the note
-        noteFullTitle.val nTitle
-
+        @noteFullTitle.val nTitle
 
     ###*
     # 
@@ -165,6 +183,37 @@ class exports.NoteView extends Backbone.View
         else
             @editorCtrl.deleteContent()
 
+    ###*
+    # Display inside dedicated div list of files attached to the current note.
+    ###
+    renderFileList: ->
+        if @model?
+            $('.note-file button').unbind()
+            @fileList.html null
+            for file of @model._attachments
+                @addFileLine file
+
+    addFileLine: (file) ->
+        path = "notes/#{@model.id}/files/#{file}"
+        slug = helpers.slugify file
+        @fileList.append """
+            <div class="note-file spacer" id="note-#{slug}">
+                <a href="#{path}" target="_blank">#{file}</a>
+                <button>(x)</button>
+            </div>"""
+        line = $("#note-#{slug}")
+        delButton = $("#note-#{slug} button")
+        line.hide()
+        delButton.click (target) =>
+            $.ajax
+                url: path
+                type: "DELETE"
+                success: =>
+                    line.fadeOut ->
+                        line.remove()
+                error: =>
+                    alert "Server error occured."
+        line.fadeIn()
 
     ###*
     # create a breadcrumb showing a clickable way from the root to the current note
@@ -176,8 +225,8 @@ class exports.NoteView extends Backbone.View
         #breadcrumb will contain the path of the selected note in a link format(<a>)
         # the code below generates the breadcrumb corresponding
         # to the current note path
-        paths      = noteModel.path
-        noteName   = paths.pop()
+        paths = noteModel.path
+        noteName = paths.pop()
         breadcrumb = ""
 
         parent = this.homeView.tree.jstreeEl.jstree("get_selected")
