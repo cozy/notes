@@ -354,26 +354,26 @@ describe "DEL - notes/:id", ->
             done()
         
 
-#describe "/notes/search", ->
-    #describe "POST", ->
+describe "/notes/search", ->
+    describe "POST", ->
 
-        #it "should returned the note with special content", (done) ->
-            #data = query: "special"
-            #client.post "notes/search", data, (err, resp, notes) ->
-                #notes.length.should.not.equal 0
-                #note = notes[0]
-                #note.id.should.equal note7.id
-                #done()
+        it "should returned the note with special content", (done) ->
+            data = query: "special"
+            client.post "notes/search", data, (err, resp, notes) ->
+                notes.length.should.not.equal 0
+                note = notes[0]
+                note.id.should.equal note7.id
+                done()
 
-        #it "when you delete given note", (done) ->
-            #client.del "notes/#{note7.id}", (err, resp, notes) ->
-                #done()
+        it "when you delete given note", (done) ->
+            client.del "notes/#{note7.id}", (err, resp, notes) ->
+                done()
             
-        #it "should returned no note", (done) ->
-            #data = query: "special"
-            #client.post "notes/search", data, (err, resp, notes) ->
-                #notes.length.should.equal 0
-                #done()
+        it "should returned no note", (done) ->
+            data = query: "special"
+            client.post "notes/search", data, (err, resp, notes) ->
+                notes.length.should.equal 0
+                done()
 
 describe "/notes/:id/attachments", ->
     describe "POST/GET", ->
