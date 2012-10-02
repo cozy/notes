@@ -7,6 +7,7 @@ Note = define 'Note', ->
     property 'parent_id'            , String
     property 'path'                 , String  #  should be [String], but doesn't work. For the moment the array is jsonified before storage...
     property 'humanPath'            , [String]
+    property '_attachments'          , Object
 
 Tree = define 'Tree', ->
     property 'type'                 , String  , default: "Note"
