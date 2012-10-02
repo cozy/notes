@@ -4,8 +4,6 @@ requests = require "../../common/requests"
 
 ## Requests
 
-allType = -> emit doc.type, doc
-Tree.defineRequest "all", allType, requests.checkError
 
 
 Tree.all = (params, callback) ->

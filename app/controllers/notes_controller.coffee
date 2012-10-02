@@ -34,7 +34,7 @@ before 'load note', ->
             note.path = JSON.parse note.path # due to jugglingdb pb, arrays are stored as json
             @note = note
             next()
-, only: ['destroy', 'show']
+, only: ['destroy', 'show', 'addFile', 'getFile', 'delFile']
 
 
 ###*
@@ -95,6 +95,7 @@ action 'create', ->
                     note.index ["title", "content"], (err) ->
                         note.path = JSON.parse(note.path) # due to jugglingdb pb, arrays are stored as json
                         send note, 201
+
 ###
 # Update the note and tree in case of :
 #   change of the title
@@ -104,16 +105,13 @@ action 'create', ->
 action 'update', ->
     # console.log "\nDEBUGGING UPDATE : " + body.title + '  ' + body.parent_id
     cbk = (err) ->
-            if err
-                send error: 'Note can not be updated', 500
-            else
-                send success: 'Note updated', 200
+            send success: 'Note updated', 200
 
     saveAttributes = (isToIndex, note, newData) ->
         if isToIndex
             note.updateAttributes newData, (err) ->
                 if err
-                    send error: 'Note can not be indexed', 500
+                    send error: true, msg: "Cannot update note", 500
                 else
                     note.index ["title", "content"], cbk
         else
@@ -171,13 +169,18 @@ action 'update', ->
             saveAttributes isToIndex, note, newData
         else
             cbk(null)
-            
+           
+###
+## Remove given note from db.
+###
 action 'destroy', ->
     Note.destroy params.id, ->
         send success: 'Note succesfuly deleted', 200
 
+###
+## Perform a search for given query inside Cozy search engine.
+###
 action 'search', ->
-    console.log body
     if not body.query?
         send error: "wrong request format", 400
     else
@@ -186,3 +189,49 @@ action 'search', ->
                 send error: "search failed", 500
             else
                 send notes
+
+###
+## Attach a file to given note.
+###
+action 'addFile', ->
+    file = req.files["qqfile"]
+    file = req.files["file"] unless file?
+    if file?
+        @note.attachFile file.path, {name: file.name}, (err) ->
+            if err
+                send error: "error occured while saving file", 500
+            else
+                send success: true, msg:"Upload succeeds", 200
+    else
+        send error: "no files", 400
+
+
+###
+## Send corresponding to given name for given note.
+###
+action 'getFile', ->
+    name = params.name
+
+    @note.getFile name, (err, res, body) ->
+        if err or not res?
+            send 500
+        else if res.statusCode is 404
+            send 'File not found', 404
+        else if res.statusCode != 200
+            send 500
+        else
+            send 200
+    .pipe(response)
+
+
+###
+## Send corresponding to given name for given note.
+###
+action 'delFile', ->
+    name = params.name
+
+    @note.removeFile name, (err, body) ->
+        if err
+            send 500
+        else
+            send succes: true, msg: 'File deleted', 200
