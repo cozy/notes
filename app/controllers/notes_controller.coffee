@@ -34,7 +34,7 @@ before 'load note', ->
             note.path = JSON.parse note.path # due to jugglingdb pb, arrays are stored as json
             @note = note
             next()
-, only: ['destroy', 'show']
+, only: ['destroy', 'show', 'addFile', 'getFile', 'delFile']
 
 
 ###*
@@ -95,6 +95,7 @@ action 'create', ->
                     note.index ["title", "content"], (err) ->
                         note.path = JSON.parse(note.path) # due to jugglingdb pb, arrays are stored as json
                         send note, 201
+
 ###
 # Update the note and tree in case of :
 #   change of the title
@@ -138,7 +139,7 @@ action 'update', ->
                 isToUpdate = true
                 isToIndex = true
             if isNewTitle
-                newData.title = body.title
+                ewData.title = body.title
                 isToUpdate = true
                 isToIndex = true
             if body.tags
@@ -171,13 +172,18 @@ action 'update', ->
             saveAttributes isToIndex, note, newData
         else
             cbk(null)
-            
+           
+###
+## Remove given note from db.
+###
 action 'destroy', ->
     Note.destroy params.id, ->
         send success: 'Note succesfuly deleted', 200
 
+###
+## Perform a search for given query inside Cozy search engine.
+###
 action 'search', ->
-    console.log body
     if not body.query?
         send error: "wrong request format", 400
     else
@@ -186,3 +192,51 @@ action 'search', ->
                 send error: "search failed", 500
             else
                 send notes
+
+###
+## Attach a file to given note.
+###
+action 'addFile', ->
+    if req.files["qqfile"]?
+        file = req.files["qqfile"]
+        
+        @note.attachFile file.path, {name: file.name}, (err) ->
+            if err
+                send error: "error occured while saving file", 500
+            else
+                send 200
+    else
+        send error: "no files", 400
+
+
+###
+## Send corresponding to given name for given note.
+###
+action 'getFile', ->
+    name = params.name
+
+    @note.getFile name, (err, res, body) ->
+        if err
+            send 500
+        else if res.statusCode is 404
+            send 'File not found', 404
+        else if res.statusCode != 200
+            send 500
+        else
+            send 200
+    .pipe(response)
+
+
+###
+## Send corresponding to given name for given note.
+###
+action 'delFile', ->
+    name = params.name
+
+    @note.removeFile name, (err, body) ->
+        if err
+            send 500
+        else
+            send succes: true, msg: 'File deleted', 200
+
+
