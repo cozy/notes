@@ -133,7 +133,8 @@ class exports.NoteView extends Backbone.View
         @initFileWidget()
 
     ###*
-    # Configure file uploader
+    # Configure file uploader, display loading indicator when file is
+    # uploading.
     ###
     initFileWidget: ->
         @uploader = new qq.FileUploaderBasic
@@ -142,11 +143,15 @@ class exports.NoteView extends Backbone.View
             forceMultipart: true
             onComplete: (id, filename, response) =>
                 @uploadButton.spin()
-                $(".icon-arrow-up").css('visibility', 'visible')
+                @uploadButton.find("i").css('visibility', 'visible')
                 @addFileLine filename
             onSubmit: =>
-                $(".icon-arrow-up").css('visibility', 'hidden')
+                @uploadButton.find("i").css('visibility', 'hidden')
                 @uploadButton.spin 'small'
+        #@uploadButton.find("input").css("cursor", "pointer")
+        #@uploadButton.find("input").css("right", "-250px")
+        #@uploadButton.click =>
+            #@uploadButton.find("input").trigger "click"
         @fileList = $('#note-file-list')
             
     ###*

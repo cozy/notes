@@ -363,7 +363,6 @@ window.require.define({"routers/main_router": function(exports, require, module)
     };
 
     MainRouter.prototype.home = function() {
-      console.log("event : router.home");
       this.navigate("note/all", {
         trigger: false
       });
@@ -371,11 +370,10 @@ window.require.define({"routers/main_router": function(exports, require, module)
     };
 
     MainRouter.prototype.note = function(note_uuid, path) {
-      console.log("event : routeur.note path=" + path);
       if ($("#tree-create").length > 0) {
         return app.homeView.selectNote(note_uuid);
       } else {
-        return this.allNotes();
+        return this._initializeTree(note_uuid);
       }
     };
 
@@ -387,10 +385,9 @@ window.require.define({"routers/main_router": function(exports, require, module)
       }
     };
 
-    MainRouter.prototype._initializeTree = function(initPath) {
-      console.log("routeur._initializeTree( " + initPath + " )");
+    MainRouter.prototype._initializeTree = function(noteToSelectId) {
       $('body').append(app.homeView.el);
-      return app.homeView.initContent(initPath);
+      return app.homeView.initContent(noteToSelectId);
     };
 
     return MainRouter;
@@ -2974,7 +2971,8 @@ window.require.define({"views/note_view": function(exports, require, module) {
     };
 
     /**
-    # Configure file uploader
+    # Configure file uploader, display loading indicator when file is
+    # uploading.
     */
 
 
@@ -2986,11 +2984,11 @@ window.require.define({"views/note_view": function(exports, require, module) {
         forceMultipart: true,
         onComplete: function(id, filename, response) {
           _this.uploadButton.spin();
-          $(".icon-arrow-up").css('visibility', 'visible');
+          _this.uploadButton.find("i").css('visibility', 'visible');
           return _this.addFileLine(filename);
         },
         onSubmit: function() {
-          $(".icon-arrow-up").css('visibility', 'hidden');
+          _this.uploadButton.find("i").css('visibility', 'hidden');
           return _this.uploadButton.spin('small');
         }
       });

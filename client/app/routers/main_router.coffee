@@ -21,7 +21,6 @@ class exports.MainRouter extends Backbone.Router
     # Entry point, render app and select last selected note.
     # used only at the initialisation of the app
     home: () ->
-        console.log "event : router.home"
         @navigate "note/all", trigger: false
         @_initializeTree "tree-node-all"
 
@@ -29,11 +28,10 @@ class exports.MainRouter extends Backbone.Router
     # rendered, note is directly selected else it loads tree then it selects 
     # given note.
     note: (note_uuid, path) ->
-        console.log "event : routeur.note path=#{path}"
         if $("#tree-create").length > 0
             app.homeView.selectNote note_uuid
         else
-            @allNotes()
+            @_initializeTree note_uuid
 
     allNotes: ->
         if $('#tree').length > 0
@@ -41,8 +39,7 @@ class exports.MainRouter extends Backbone.Router
         else
             @_initializeTree "tree-node-all"
 
-    _initializeTree: (initPath) ->
-        console.log "routeur._initializeTree( #{initPath} )"
+    _initializeTree: (noteToSelectId) ->
         $('body').append app.homeView.el
-        app.homeView.initContent initPath
+        app.homeView.initContent noteToSelectId
 
