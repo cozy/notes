@@ -42,4 +42,3 @@ class exports.MainRouter extends Backbone.Router
     _initializeTree: (noteToSelectId) ->
         $('body').append app.homeView.el
         app.homeView.initContent noteToSelectId
-

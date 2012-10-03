@@ -3265,14 +3265,14 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         return suggestionList.sort(_sortFunction);
       } else if (action === "rename") {
         i = 0;
-        while (suggestionList[i].name !== oldName) {
+        while (i < suggestionList.length && suggestionList[i].name !== nodeName) {
           i++;
         }
         suggestionList[i].name = nodeName;
         return suggestionList.sort(_sortFunction);
       } else if (action === "remove") {
         i = 0;
-        while (suggestionList[i].name !== nodeName) {
+        while (i < suggestionList.length && suggestionList[i].name !== nodeName) {
           i++;
         }
         return suggestionList.splice(i, 1);
@@ -3674,15 +3674,12 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         $(this).tooltip('hide');
         nodeToDelete = this.parentElement.parentElement.parentElement;
         modalAlert.modal('show');
-        modalYesBtn.on("click", function(e) {
-          var noteToDelete_id;
-          console.log("event : tree-remove.click");
+        modalYesBtn.unbind("click");
+        modalYesBtn.on("click", function() {
           recursiveRemoveSuggestionList(nodeToDelete);
-          noteToDelete_id = nodeToDelete.id;
-          if (noteToDelete_id !== 'tree-node-all') {
+          if (nodeToDelete.id !== 'tree-node-all') {
             jstreeEl.jstree("remove", nodeToDelete);
-            homeViewCbk.onRemove(noteToDelete_id);
-            return modalYesBtn.focus();
+            return homeViewCbk.onRemove(nodeToDelete.id);
           }
         });
         e.preventDefault();

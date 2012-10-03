@@ -50,18 +50,20 @@ class exports.Tree
             #add nodeName to the autocomplete list
             object = {type: "folder", name: nodeName}
             suggestionList.push object
-            suggestionList.sort(_sortFunction)   
+            suggestionList.sort(_sortFunction)
         else if action is "rename"
         # if action is "rename"
             i = 0
-            while suggestionList[i].name isnt oldName
+            while i < suggestionList.length \
+                  and suggestionList[i].name isnt nodeName
                 i++
             suggestionList[i].name = nodeName
             suggestionList.sort(_sortFunction)
         else if action is "remove"
             #searching the element to remove
             i = 0
-            while suggestionList[i].name isnt nodeName
+            while i < suggestionList.length \
+                  and suggestionList[i].name isnt nodeName
                 i++
             #delete the element of index i in the array of suggestions
             suggestionList.splice(i,1)
@@ -239,7 +241,7 @@ class exports.Tree
                     
                     prompt : 'Search...'
                     
-                    autocomplete : 
+                    autocomplete :
                         dropdownMaxHeight : '200px',
                         #change the render in the suggestion list (add the icons)
                         render : (suggestion) ->
@@ -247,8 +249,8 @@ class exports.Tree
                         
                     ###*
                     # ext allows to rewrite a textext functionality
-                    ###                                                
-                    ext : 
+                    ###
+                    ext :
                         core:
                             ###*
                             # event that trigger when the content of the input is changing
@@ -436,18 +438,20 @@ class exports.Tree
 
         $("#tree-remove").on "click", (e) ->
             console.log "event : tree-remove.click"
+
             $(this).tooltip('hide')
-            nodeToDelete = this.parentElement.parentElement.parentElement
+
+            nodeToDelete = @parentElement.parentElement.parentElement
+
             modalAlert.modal('show')
-            modalYesBtn.on "click", (e) ->
-                console.log "event : tree-remove.click"
+            modalYesBtn.unbind "click"
+            modalYesBtn.on "click", ->
                 recursiveRemoveSuggestionList(nodeToDelete)
-                noteToDelete_id = nodeToDelete.id
-                if noteToDelete_id != 'tree-node-all'
+                if nodeToDelete.id != 'tree-node-all'
                     jstreeEl.jstree("remove" , nodeToDelete)
-                    homeViewCbk.onRemove noteToDelete_id                           
-                    modalYesBtn.focus() # TODO : doesn't work ?? but works in debug ...
-            # DO NOT CHANGE  :-)
+                    homeViewCbk.onRemove nodeToDelete.id
+
+            ## DO NOT CHANGE  :-)
             e.preventDefault()
             e.stopPropagation()
         
