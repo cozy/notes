@@ -148,8 +148,7 @@ class exports.NoteView extends Backbone.View
             onSubmit: =>
                 @uploadButton.find("i").css('visibility', 'hidden')
                 @uploadButton.spin 'small'
-        #@uploadButton.find("input").css("cursor", "pointer")
-        #@uploadButton.find("input").css("right", "-250px")
+        @uploadButton.find("input").css("cursor", "pointer !important")
         #@uploadButton.click =>
             #@uploadButton.find("input").trigger "click"
         @fileList = $('#note-file-list')

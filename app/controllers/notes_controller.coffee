@@ -85,12 +85,12 @@ action 'create', ->
     Note.create body, (err, note) ->
         if err
             # TODO : roll back the creation of the note.
-            send error: 'Note can not be created'
+            send error: 'Note error: Note can not be created'
         else
             Tree.addNode note, parent_id, (err)->
                 if err
                     # TODO : roll back the creation of the note.
-                    send error: 'Note can not be created'
+                    send error: 'Tree error: Note can not be created'
                 else
                     note.index ["title", "content"], (err) ->
                         note.path = JSON.parse(note.path) # due to jugglingdb pb, arrays are stored as json
