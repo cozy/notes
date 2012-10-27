@@ -3155,7 +3155,7 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="editor-button-bar" class="btn-group clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="markerListBtn" class="btn btn-small"><i class="icon-th-list"></i></button><button id="titleBtn" class="btn btn-small"><i class="icon-text-height"></i></button><div id="upload-btn" class="btn btn-small">&nbsp;</div><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"></div><div id="editor-container"><iframe id="editorIframe"></iframe></div>');
+  buf.push('<div id="editor-button-bar" class="btn-group clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="markerListBtn" class="btn btn-small"><i class="icon-th-list"></i></button><button id="titleBtn" class="btn btn-small"><i class="icon-text-height"></i></button><div id="upload-btn" class="btn btn-small"><i class="icon-arrow-up"></i></div><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"></div><div id="editor-container"><iframe id="editorIframe"></iframe></div>');
   }
   return buf.join("");
   };
