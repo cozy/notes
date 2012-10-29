@@ -44,26 +44,27 @@ class exports.Tree
     #oldName : only for rename : the name that will be replaced in the note
     #output : suggestionList updated
     ###
-    _updateSuggestionList: (action, nodeName, oldName) ->
-        # console.log "_updateSuggestionList " + action+' '+nodeName+' '+oldName
+    _updateSuggestionList: (action, newName, oldName) =>
+        # console.log "_updateSuggestionList " + action+' '+newName+' '+oldName
         if action is "create"
-            #add nodeName to the autocomplete list
-            object = {type: "folder", name: nodeName}
+            #add newName to the autocomplete list
+            object = {type: "folder", name: newName}
             suggestionList.push object
             suggestionList.sort(_sortFunction)
         else if action is "rename"
         # if action is "rename"
             i = 0
             while i < suggestionList.length \
-                  and suggestionList[i].name isnt nodeName
+                  and suggestionList[i].name isnt newName
                 i++
-            suggestionList[i].name = nodeName
-            suggestionList.sort(_sortFunction)
+            if suggestionList.length > i
+                suggestionList[i].name = newName
+                suggestionList.sort(_sortFunction)
         else if action is "remove"
             #searching the element to remove
             i = 0
             while i < suggestionList.length \
-                  and suggestionList[i].name isnt nodeName
+                  and suggestionList[i].name isnt newName
                 i++
             #delete the element of index i in the array of suggestions
             suggestionList.splice(i,1)
@@ -149,7 +150,7 @@ class exports.Tree
                 show_only_matches: true
         )
     
-        @setListeners( homeViewCbk )
+        @setListeners(homeViewCbk)
 
 
         ###*

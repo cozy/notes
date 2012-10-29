@@ -3255,25 +3255,27 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
     */
 
 
-    Tree.prototype._updateSuggestionList = function(action, nodeName, oldName) {
+    Tree.prototype._updateSuggestionList = function(action, newName, oldName) {
       var i, object;
       if (action === "create") {
         object = {
           type: "folder",
-          name: nodeName
+          name: newName
         };
         suggestionList.push(object);
         return suggestionList.sort(_sortFunction);
       } else if (action === "rename") {
         i = 0;
-        while (i < suggestionList.length && suggestionList[i].name !== nodeName) {
+        while (i < suggestionList.length && suggestionList[i].name !== newName) {
           i++;
         }
-        suggestionList[i].name = nodeName;
-        return suggestionList.sort(_sortFunction);
+        if (suggestionList.length > i) {
+          suggestionList[i].name = newName;
+          return suggestionList.sort(_sortFunction);
+        }
       } else if (action === "remove") {
         i = 0;
-        while (i < suggestionList.length && suggestionList[i].name !== nodeName) {
+        while (i < suggestionList.length && suggestionList[i].name !== newName) {
           i++;
         }
         return suggestionList.splice(i, 1);
@@ -3292,6 +3294,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
 
     function Tree(navEl, data, homeViewCbk) {
       this._getSlugPath = __bind(this._getSlugPath, this);
+
+      this._updateSuggestionList = __bind(this._updateSuggestionList, this);
 
       var jstreeEl, searchField, searchFunction, supprButton, __initSuggestionList, _filterAutocomplete, _selectIcon;
       jstreeEl = $("#tree");
