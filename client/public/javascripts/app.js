@@ -3107,7 +3107,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
 
     NoteView.prototype.createBreadcrumb = function(noteModel, data) {
-      var breadcrumb, noteName, parent, path, paths;
+      var breadcrumb, currentPath, noteName, parent, path, paths;
       paths = noteModel.path;
       noteName = paths.pop();
       breadcrumb = "";
@@ -3115,11 +3115,21 @@ window.require.define({"views/note_view": function(exports, require, module) {
       while (paths.length > 0) {
         parent = data.inst._get_parent(parent);
         path = "#note/" + parent[0].id + "/";
+        currentPath = paths.join("/");
         noteName = paths.pop();
-        breadcrumb = "<a href='" + path + "'> " + noteName + "</a> >" + breadcrumb;
+        breadcrumb = "<a href='" + path + currentPath + "'> " + noteName + "</a> >" + breadcrumb;
       }
       breadcrumb = "<a href='#note/all'> All</a> >" + breadcrumb;
-      return $("#note-full-breadcrumb").html(breadcrumb);
+      $("#note-full-breadcrumb a").unbind();
+      $("#note-full-breadcrumb").html(breadcrumb);
+      return $("#note-full-breadcrumb a").click(function(event) {
+        var hash, id;
+        event.preventDefault();
+        hash = event.target.hash.substring(1);
+        path = hash.split("/");
+        id = path[1];
+        return app.homeView.selectNote(id);
+      });
     };
 
     /**

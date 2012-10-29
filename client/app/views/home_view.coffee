@@ -181,7 +181,7 @@ class exports.HomeView extends Backbone.View
             #removing progress bar
             @progress.remove()
         else
-            progressBar.css("width","70%")
+            progressBar.css("width", "70%")
         path = "/#{path}" if path.indexOf("/")
         app.router.navigate "note#{path}", trigger: false
         if id?
