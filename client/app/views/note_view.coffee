@@ -245,11 +245,20 @@ class exports.NoteView extends Backbone.View
         while paths.length > 0
             parent = data.inst._get_parent parent
             path = "#note/#{parent[0].id}/"
+            currentPath = paths.join("/")
             noteName = paths.pop()
-            breadcrumb = "<a href='#{path}'> #{noteName}</a> >#{breadcrumb}"
+            breadcrumb = "<a href='#{path}#{currentPath}'> #{noteName}</a> >#{breadcrumb}"
 
         breadcrumb = "<a href='#note/all'> All</a> >#{breadcrumb}"
+        $("#note-full-breadcrumb a").unbind()
         $("#note-full-breadcrumb").html breadcrumb
+        $("#note-full-breadcrumb a").click (event) ->
+            event.preventDefault()
+            hash = event.target.hash.substring(1)
+            path = hash.split("/")
+            id = path[1]
+            app.homeView.selectNote id
+            
 
     ###*
     # in case of renaming a note this function update the breadcrumb in consequences
