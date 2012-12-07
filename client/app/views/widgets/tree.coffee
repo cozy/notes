@@ -81,7 +81,7 @@ class exports.Tree
     constructor: (navEl, data, homeViewCbk) ->
         
         # Vars
-        jstreeEl  = $("#tree") 
+        jstreeEl  = $("#tree")
         @jstreeEl = jstreeEl
         supprButton  = $("#suppr-button")
         @supprButton = supprButton
@@ -283,7 +283,7 @@ class exports.Tree
                                 if (self.core().hasPlugin('tags'))
                                     self.val('')
                             
-                        itemManager: 
+                        itemManager:
                             ###*
                             #create an array with the "name" field of a suggestion list
                             ###
@@ -561,17 +561,14 @@ class exports.Tree
         console.log "Tree.selectNode( #{note_uuid} )"
         progressBar.css("width","50%")
         node = $("##{note_uuid}")
-        if node[0] 
+        if node[0]
             tree = jstreeEl.jstree("deselect_all", null)
             tree = jstreeEl.jstree("select_node", node)
         else if !this.widget.jstree("get_selected")[0]
             tree = jstreeEl.jstree("select_node", "#tree-node-all")
 
-
-    
     #Returns path to a node for a given node.
     #data.inst is the jstree instance
-    
     _getPath: (parent, nodeName) ->
         nodes = [slugify nodeName] if nodeName?
 
@@ -582,9 +579,7 @@ class exports.Tree
             parent = parent.parent().parent()
         nodes
     
-    
     #Return path for a node at string format.
     
     _getSlugPath: (parent, nodeName) =>
         @_getPath(parent, nodeName).join("/")
-       

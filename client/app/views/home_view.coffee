@@ -20,10 +20,7 @@ class exports.HomeView extends Backbone.View
     # Load the home view and the tree
     # Called once by the main_router
     ###
-    initContent: (note_uuid) -> 
-        
-        console.log "HomeView.initContent(#{note_uuid})"
-
+    initContent: (note_uuid) ->
         # vars
         @progressBar = $(".bar")
         progressBar = @progressBar
@@ -86,8 +83,8 @@ class exports.HomeView extends Backbone.View
         $.get "tree/", (data) =>
             console.log data
             window.tree = data
-            @tree = new Tree( @.$("#nav"), data, 
-                    onCreate: @createFolder
+            @tree = new Tree( @.$("#nav"), data,
+                    onCreate: @onCreateFolder
                     onRename: @onTreeRename
                     onRemove: @onTreeRemove
                     onSelect: @onTreeSelectionChg
@@ -103,30 +100,30 @@ class exports.HomeView extends Backbone.View
         $(window).unload =>
             @noteView.saveEditorContent()
         
+    # Small trick to adapt editor size when window is resized.
     resizeNoteView: ->
         windowHeight = $(window).height()
         $("#note-style").height(windowHeight - 80)
         $("#editor").height(windowHeight - 180)
 
-
     ###*
-    Create a new folder of path : 
+    Create a new folder.
     Params :
         fullPath : path of the folder
         newName : name of the folder
     ###
-    createFolder: (parentId, newName, data) ->
-        console.log "HomeView.createFolder()"
-        # if parentId == null
-        #     parentId = "tree-node-all"
+    onCreateFolder: (parentId, newName, data) ->
         Note.createNote
             title: newName
             parent_id:parentId
-            , (note) ->
-                data.rslt.obj.data("id", note.id) # TODO BJA : use case ?
-                data.rslt.obj.prop("id", note.id)
-                data.inst.deselect_all()
-                data.inst.select_node data.rslt.obj
+            , (err, note) ->
+                if err
+                    alert "Server error occured."
+                else
+                    data.rslt.obj.data("id", note.id) # TODO BJA : use case ?
+                    data.rslt.obj.prop("id", note.id)
+                    data.inst.deselect_all()
+                    data.inst.select_node data.rslt.obj
 
     ###*
     # Only called by jsTree event "rename.jstree" trigered when a node
@@ -134,38 +131,33 @@ class exports.HomeView extends Backbone.View
     # May be called by another note than the currently selected node.
     ###
     onTreeRename: (uuid, newName) =>
-        console.log "HomeView.onTreeRename()"
         if newName?
             if @tree.currentNote_uuid == uuid
                 @noteView.setTitle(newName)
                 @noteView.updateBreadcrumbOnTitleChange(newName)
-            Note.updateNote uuid,
-                title: newName
-            , () =>
-    
+            Note.updateNote uuid, title: newName, (err) ->
+                alert "Server error occured" if err
 
+    ###*
+    # When note title is changed, the changement is send to backend for
+    # persistence. 
+    ###
     onNoteTitleChange:(uuid, newName) =>
-        console.log "HomeView.onNoteTitleChange()"
         if newName?
-            @tree.jstreeEl.jstree("rename_node", "##{uuid}", newName)
-            Note.updateNote uuid,
-                title: newName
-            , () =>
+            @tree.jstreeEl.jstree "rename_node", "##{uuid}", newName
+            Note.updateNote uuid, title: newName, (err) ->
+                alert "Server error occured" if err
 
     ###*
     # Only called by jsTree event "select_node.jstree"
     # Delete currently selected node.
     ###
     onTreeRemove: (note_uuid) =>
-        console.log "HomeView.onTreeRemove(#{note_uuid})"
         if @currentNote and @currentNote.id == note_uuid
-            console.log "indirect deletion"
             @currentNote.destroy()
         else
-            console.log "direct request for deletion on server"
-            Note.deleteNote(note_uuid , ->
-                console.log arguments
-            )
+            Note.deleteNote note_uuid, (err) ->
+                alert "Server error occured" if err
 
     ###*
     # Only called by jsTree event "select_node"
@@ -175,14 +167,12 @@ class exports.HomeView extends Backbone.View
     onTreeSelectionChg: (path, id, data) =>
         @noteView.saveEditorContent()
 
-        progressBar = @progressBar
-        console.log "HomeView.selectFolder( path:#{path} - id:#{id})"
         if id is undefined
-            #removing progress bar
             @progress.remove()
         else
-            progressBar.css("width", "70%")
-        path = "/#{path}" if path.indexOf("/")
+            @progressBar.css "width", "70%"
+            
+        path = "/#{path}" if path.indexOf "/"
         app.router.navigate "note#{path}", trigger: false
         if id?
             if id == "tree-node-all"
@@ -200,26 +190,18 @@ class exports.HomeView extends Backbone.View
     # Force selection inside tree of note of a given uuid.
     ###
     selectNote: (note_uuid) =>
-        progressBar = @progressBar
-        console.log "HomeView.selectNote(#{note_uuid})"
-        progressBar.css("width","40%")
-        if note_uuid=="all"
-           note_uuid = 'tree-node-all'
+        @progressBar.css("width","40%")
+        note_uuid = 'tree-node-all' if note_uuid=="all"
         @tree.selectNode note_uuid
 
     ###*
     # Fill note widget with note data.
     ###
     renderNote: (note, data) ->
-        progressBar = @progressBar
-        console.log "HomeView.renderNote()"
-        progressBar.css("width","90%")
+        @progressBar.css("width","90%")
         note.url = "notes/#{note.id}"
         @currentNote = note
-        # noteWidget = new NoteWidget note
-        # noteWidget.render()
         @noteView.setModel(note, data)
-        #removing progress bar
         @progress.remove()
 
 
@@ -227,12 +209,5 @@ class exports.HomeView extends Backbone.View
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
     ###
-    # onNoteDropped: (newPath, oldPath, noteTitle, data) =>
     onNoteDropped: (nodeId, targetNodeId) ->
-        console.log "HomeView.onNoteDropped() id=" + nodeId + " targetNodeId=" + targetNodeId
         Note.updateNote nodeId, {parent_id:targetNodeId} , () ->
-                # @tree.deselect_all()
-                # @tree.select_node "##{targetNodeId}"
-
-
-

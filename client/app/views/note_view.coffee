@@ -1,5 +1,4 @@
 template = require('./templates/note')
-CNEditor = require('./editor').CNEditor
 Note = require('../models/note').Note
 TreeInst = require('./widgets/tree')
 
@@ -18,15 +17,14 @@ class exports.NoteView extends Backbone.View
     ### Constructor ####
 
     constructor: (onIFrameLoaded) ->
-        console.log "NoteWidget.constructor()"
         @onIFrameLoaded = onIFrameLoaded
+
         super()
 
     remove: ->
         $(@el).remove()
 
     initialize:->
-        console.log "NoteWidget.initialize()"
         # load the base's content into the editor
         $("#editor").html require('./templates/editor')
         # Callback to execute when the editor is ready
@@ -41,7 +39,7 @@ class exports.NoteView extends Backbone.View
         onIFrameLoaded=@onIFrameLoaded
         iframeEditorCallBack = () ->
             onIFrameLoaded()
-        editorCtrl = new CNEditor($('#editorIframe')[0], iframeEditorCallBack)
+        editorCtrl = new CNeditor($('#editorIframe')[0], iframeEditorCallBack)
         @editorCtrl=editorCtrl
 
         # buttons for the editor
