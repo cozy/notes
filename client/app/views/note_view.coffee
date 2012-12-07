@@ -16,8 +16,7 @@ class exports.NoteView extends Backbone.View
    
     ### Constructor ####
 
-    constructor: (onIFrameLoaded) ->
-        @onIFrameLoaded = onIFrameLoaded
+    constructor: (@homeView, @onIFrameLoaded) ->
 
         super()
 

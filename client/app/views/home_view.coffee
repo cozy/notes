@@ -21,37 +21,27 @@ class exports.HomeView extends Backbone.View
     # Called once by the main_router
     ###
     initContent: (note_uuid) ->
-        # vars
+        @note_uuid = note_uuid
         @progressBar = $(".bar")
-        progressBar = @progressBar
+        @iframeLoaded = false
+        @treeLoaded = false
 
-        # when the tree and iframe of the editor are loaded : select the note
-        hv = this
-        iframeLoaded = false
-        treeLoaded = false
-        onTreeLoaded = ->
-            console.log "event HomeView.onTreeLoaded #{iframeLoaded}"
-            progressBar.css("width","30%")
-            treeLoaded = true
-            if iframeLoaded
-                app.homeView.selectNote note_uuid
-        onIFrameLoaded = ->
-            console.log "event HomeView.onIFrameLoaded #{iframeLoaded}"
-            progressBar.css("width","10%")
-            iframeLoaded = true
-            if treeLoaded
-                hv.selectNote note_uuid
+        @buildViews()
+        @configureLayoutDrag()
+        @setProgressBar()
+        @loadTree()
+        @configureResize()
+        @configureSaving()
 
-        # add the html in the element of the view
-        $(@el).html require('./templates/home')
-        @noteView = new NoteView(onIFrameLoaded)
-        @noteView.homeView = this
-        @noteFull = $("#note-full")
+    # Build main view and layout, create note view and integrate it inside home
+    # view.
+    buildViews: ->
+        @$el.html require('./templates/home')
+        @noteView = new NoteView @, @onIFrameLoaded
+        @noteFull = @$ "#note-full"
         @noteFull.hide()
-        drag = $("#drag")
 
-        # Use jquery layout to set main layout of current window.
-        $('#home-view').layout
+        @$el.layout
             size: "250"
             minSize: "250"
             resizable: true
@@ -59,49 +49,68 @@ class exports.HomeView extends Backbone.View
             spacing_closed: 10
             togglerLength_closed: "100%"
             onresize_end: ->
-                console.log "resize end"
-                drag.css("z-index","-1")
+                drag.css "z-index","-1"
 
-        # we detect the start of resize with the on mousedown instead of 
-        # the onresize_start because this one happens a bit latter what may be a pb.
-        $(".ui-layout-resizer").bind 'mousedown', (e)->
-            console.log "resize start"
-            drag.css("z-index","1")
-        
-        #Progress bar
-        $(".ui-layout-center").append(
-            "<div class='progress progress-striped active'>
-                <div class='bar' style='width: 0%;'></div>
-            </div>")
-        @progress = $(".progress")
-        progressBarLeftPosition = $(".ui-layout-center").width()/3-77
-        progressBarTopPosition = $(".ui-layout-center").height()/2
-        @progress.css("left", progressBarLeftPosition)
-        @progress.css("top", progressBarTopPosition)
-        
-        # creation of the tree
+    # Load data for tree and render it.
+    loadTree: ->
         $.get "tree/", (data) =>
-            console.log data
             window.tree = data
-            @tree = new Tree( @.$("#nav"), data,
+            @tree = new Tree @$("#nav"), data,
                     onCreate: @onCreateFolder
                     onRename: @onTreeRename
                     onRemove: @onTreeRemove
                     onSelect: @onTreeSelectionChg
-                    onLoaded: onTreeLoaded
+                    onLoaded: @onTreeLoaded
                     onDrop  : @onNoteDropped
-                )
 
-        # Resize editor
-        @resizeNoteView()
-        $(window).resize @resizeNoteView
+    # Detect the start of resize with the on mousedown instead of 
+    # the onresize_start because this one happens a bit latter what may be a pb.
+    configureLayoutDrag: ->
+        drag = $("#drag")
+        $(".ui-layout-resizer").bind 'mousedown', (e)->
+            drag.css("z-index","1")
 
-        # Save data when user leaves page.
+    # Resize editor and register resize listener.
+    configureResize: ->
+        @onWindowResized()
+        $(window).resize @onWindowResized
+
+    # Save data when user leaves page.
+    configureSaving: ->
         $(window).unload =>
             @noteView.saveEditorContent()
+
+    # Build and configure presse bar.
+    setProgressBar: ->
+        @$(".ui-layout-center").append(
+            "<div class='progress progress-striped active'>
+                <div class='bar' style='width: 0%;'></div>
+            </div>")
+        @progress = @$el.find ".progress"
+        progressBarLeftPosition = @$(".ui-layout-center").width()/3-77
+        progressBarTopPosition = @$(".ui-layout-center").height()/2
+        @progress.css "left", progressBarLeftPosition
+        @progress.css "top", progressBarTopPosition
+
+
+    ### Listeners ###
+    
+    # If editor iframe is loaded after tree, it displays the note that should be 
+    # loaded first.
+    onIFrameLoaded: =>
+        @progressBar.css "width","10%"
+        @iframeLoaded = true
+        @selectNote note_uuid if @treeLoaded
+
+    # If tree is loaded after iframe, it displays the note that should be
+    # loaded first.
+    onTreeLoaded: =>
+        @progressBar.css "width","30%"
+        @treeLoaded = true
+        app.homeView.selectNote(@note_uuid) if @iframeLoaded
         
     # Small trick to adapt editor size when window is resized.
-    resizeNoteView: ->
+    onWindowResized: ->
         windowHeight = $(window).height()
         $("#note-style").height(windowHeight - 80)
         $("#editor").height(windowHeight - 180)
@@ -190,15 +199,15 @@ class exports.HomeView extends Backbone.View
     # Force selection inside tree of note of a given uuid.
     ###
     selectNote: (note_uuid) =>
-        @progressBar.css("width","40%")
+        @progressBar.css "width","40%"
         note_uuid = 'tree-node-all' if note_uuid=="all"
         @tree.selectNode note_uuid
 
     ###*
     # Fill note widget with note data.
     ###
-    renderNote: (note, data) ->
-        @progressBar.css("width","90%")
+    renderNote: (note, data) =>
+        @progressBar.css "width","90%"
         note.url = "notes/#{note.id}"
         @currentNote = note
         @noteView.setModel(note, data)
