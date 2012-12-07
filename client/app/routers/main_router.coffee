@@ -2,9 +2,9 @@ slugify = require("helpers").slugify
 
 class exports.MainRouter extends Backbone.Router
     ###*
-    Routes : 2 types : 
+    Routes:
 
-      * '' : home : only for the initialization of the app
+      * '': home: initialize the app
       * '#note/{note_uuid : 25 char}/slugyPath' : unique url corresponding 
         to a note where note_uuid is the note id and slugyPath the slugified 
         path of a note constituted with the name of its parents.
@@ -12,7 +12,7 @@ class exports.MainRouter extends Backbone.Router
 
     routes:
         '': 'home'
-        'note/all': "allNotes"
+        'note/all': 'allNotes'
 
     # routes that need regexp.
     initialize: ->
@@ -28,7 +28,7 @@ class exports.MainRouter extends Backbone.Router
     # rendered, note is directly selected else it loads tree then it selects 
     # given note.
     note: (note_uuid, path) ->
-        if $("#tree-create").length > 0
+        if $("#tree").length > 0
             app.homeView.selectNote note_uuid
         else
             @_initializeTree note_uuid
