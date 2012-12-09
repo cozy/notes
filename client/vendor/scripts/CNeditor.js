@@ -57,7 +57,6 @@ CNeditor = (function() {
         _this.editorBody$.attr("id", "__ed-iframe-body");
         _this.document = _this.editorBody$[0].ownerDocument;
         editor_head$ = editor_html$.find("head");
-        editor_head$.html('<link id="editorCSS" href="stylesheets/CNeditor.css" rel="stylesheet">');
         _this._lines = {};
         _this.newPosition = true;
         _this._highestId = 0;
@@ -323,8 +322,10 @@ CNeditor = (function() {
     if (startDiv.nodeName !== "DIV") {
       startDiv = $(startDiv).parents("div")[0];
     }
-    if (endDiv.nodeName !== "DIV") {
+    if ((endDiv != null ? endDiv.nodeName : void 0) !== "DIV") {
       endDiv = $(endDiv).parents("div")[0];
+    } else {
+      endDiv = startDiv;
     }
     if (startDiv === endDiv && startDiv.innerHTML === '<span></span><br>') {
       this.isEmptyLine = true;
