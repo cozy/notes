@@ -556,16 +556,13 @@ class exports.Tree
     #otherwise if there is no seleted node, we select the root
     ###
     selectNode: (note_uuid) ->
-        progressBar = @progressBar
-        jstreeEl = @jstreeEl
-        console.log "Tree.selectNode( #{note_uuid} )"
-        progressBar.css("width","50%")
+        @progressBar.css("width","50%")
         node = $("##{note_uuid}")
         if node[0]
-            tree = jstreeEl.jstree("deselect_all", null)
-            tree = jstreeEl.jstree("select_node", node)
+            tree = @jstreeEl.jstree("deselect_all", null)
+            tree = @jstreeEl.jstree("select_node", node)
         else if !this.widget.jstree("get_selected")[0]
-            tree = jstreeEl.jstree("select_node", "#tree-node-all")
+            tree = @jstreeEl.jstree("select_node", "#tree-node-all")
 
     #Returns path to a node for a given node.
     #data.inst is the jstree instance

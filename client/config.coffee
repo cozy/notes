@@ -1,6 +1,8 @@
 exports.config =
   # Edit the next line to change default build path.
-  buildPath: 'public'
+  config:
+      paths:
+          public: 'public'
 
 
   files:

@@ -74,65 +74,6 @@ lineMixin(rank)
   padding-left unit(max(22, 20 * rank), px)
 
 
-#editor-container
-  padding-left 2%
-  padding-right 2%
-  height 100%
-
-#editor-button-bar
-  margin-right: 2%
-  border-spacing: 0
-  margin-bottom: 3px
-  float: right
-
-#note-style
-  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8)
-  background: white
-  margin-left: 2%
-  margin-right: 2%
-  height: 100%
-
-
-#__ed-iframe-html
-  padding         : 0px 0px 5px 0px
-  box-shadow      : 4px 4px 6px rgba(0, 0, 0, 0.8)
-  border-radius   : 5px 5px 5px 5px
-
-#__ed-iframe-body
-  overflow        : auto
-  font            : normal 13px "Helvetica Neue", Arial, Helvetica, sans-serif
-  color           : #222244
-  background: #FDFDFD
-  color: #222
-
-p
-  margin-top   : 0px
-  margin-bottom: 0px
-  margin-left  : 0px
-  margin-right : 0px
-  color        : #222244
-
-dl
-  margin       : 0
-  padding      : 0
-
-dt
-  margin       : 0
-  padding      : 0
-
-ul, ol
-  margin       : 3px 0 0 0
-  padding      : 0
-  list-style-type: none
-
-li
-  margin       : 0
-  padding      : 0
-  list-style-type: disc
-  
-dd
-  margin-left  : 32px
-
 num = (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
 for n in num
   .Th-{n}
@@ -176,31 +117,93 @@ else
     content: counter(section1) "." counter(section2) "." counter(section3) "." counter(section4) " "
 
 
-.vline_02
-  margin-left  : 30px
-  border       : 1px solid #DDDDDD
-  width        : 10px
-  height       : 100%
-  position     : relative
-  top          : 0
 
-h1
-  font-size    : 2em
 
-h2
-  font-size    : 1.5em
+#editor-container
+  padding-left 2%
+  padding-right 2%
+  height 100%
 
-h3
-  font-size    : 1.17em
+#editor-button-bar
+  margin-right: 2%
+  border-spacing: 0
+  margin-bottom: 3px
+  float: right
 
-h4
-  font-size    : 1em
+#note-style
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8)
+  background: white
+  margin-left: 2%
+  margin-right: 2%
+  height: 100%
 
-h5
-  font-size    : .83em
 
-h6
-  font-size    : .75em
+#editorIframe
+    #__ed-iframe-html
+      padding         : 0px 0px 5px 0px
+      box-shadow      : 4px 4px 6px rgba(0, 0, 0, 0.8)
+      border-radius   : 5px 5px 5px 5px
 
-img
-  border       : 0
+    #__ed-iframe-body
+      overflow        : auto
+      font            : normal 13px "Helvetica Neue", Arial, Helvetica, sans-serif
+      color           : #222244
+      background: #FDFDFD
+      color: #222
+
+    p
+      margin-top   : 0px
+      margin-bottom: 0px
+      margin-left  : 0px
+      margin-right : 0px
+      color        : #222244
+
+    dl
+      margin       : 0
+      padding      : 0
+
+    dt
+      margin       : 0
+      padding      : 0
+
+    ul, ol
+      margin       : 3px 0 0 0
+      padding      : 0
+      list-style-type: none
+
+    li
+      margin       : 0
+      padding      : 0
+      list-style-type: disc
+      
+    dd
+      margin-left  : 32px
+
+    .vline_02
+      margin-left  : 30px
+      border       : 1px solid #DDDDDD
+      width        : 10px
+      height       : 100%
+      position     : relative
+      top          : 0
+
+    h1
+      font-size    : 2em
+
+    h2
+      font-size    : 1.5em
+
+    h3
+      font-size    : 1.17em
+
+    h4
+      font-size    : 1em
+
+    h5
+      font-size    : .83em
+
+    h6
+      font-size    : .75em
+
+    img
+      border       : 0
