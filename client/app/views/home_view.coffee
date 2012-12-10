@@ -108,7 +108,7 @@ class exports.HomeView extends Backbone.View
         cssLink .type = "text/css"
         console.log @iframe.get()
         
-        @iframe.get().document.head.appendChild cssLink
+        #@iframe.get().document.head.appendChild cssLink
 
     # If tree is loaded after iframe, it displays the note that should be
     # loaded first.

@@ -565,8 +565,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
       cssLink.href = "stylesheets/app.css";
       cssLink.rel = "stylesheet";
       cssLink.type = "text/css";
-      console.log(this.iframe.get());
-      return this.iframe.get().document.head.appendChild(cssLink);
+      return console.log(this.iframe.get());
     };
 
     HomeView.prototype.onTreeLoaded = function() {
@@ -1140,7 +1139,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
 
   /* Widget to easily manipulate data tree (navigation for cozy apps)
   Properties :
-      currentPath      = ex : /all/coutries/great_britain  ("great_britain" is the uglified name of the note)
+      currentPath      = ex : /all/coutries/great_britain 
+                         ("great_britain" is the uglified name of the note)
       currentData      = data : jstree data obj sent by the select
       currentNote_uuid : uuid of the currently selected note
       widget           = @jstreeEl.jstree
@@ -1153,68 +1153,15 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
 
   exports.Tree = (function() {
     /**
-    #suggestionList is a global array containing all the suggestions for the
-    #autocompletion plugin
-    #this array contains objects with the nature of the suggestion
-    #(folder, tag, search string...) and the string corresponding to the suggestion
+    # suggestionList is a global array containing all the suggestions for the
+    # autocompletion plugin
+    # this array contains objects with the nature of the suggestion
+    # (folder, tag, search string...) and the string corresponding to the suggestion
     */
 
-    var suggestionList, _sortFunction;
+    var suggestionList;
 
     suggestionList = [];
-
-    /**
-    #used by the .sort() method to be efficient with our structure
-    */
-
-
-    _sortFunction = function(a, b) {
-      if (a.name > b.name) {
-        return 1;
-      } else if (a.name === b.name) {
-        return 0;
-      } else if (a.name < b.name) {
-        return -1;
-      }
-    };
-
-    /**
-    #this method update the array suggestionList when the user add, rename or remove
-    #a node
-    #input: action : neither create, rename or remove,
-    #nodeName : in case of create and remove : the name of the new note or the note to remove
-    # in case of rename : the new name of the note
-    #oldName : only for rename : the name that will be replaced in the note
-    #output : suggestionList updated
-    */
-
-
-    Tree.prototype._updateSuggestionList = function(action, newName, oldName) {
-      var i, object;
-      if (action === "create") {
-        object = {
-          type: "folder",
-          name: newName
-        };
-        suggestionList.push(object);
-        return suggestionList.sort(_sortFunction);
-      } else if (action === "rename") {
-        i = 0;
-        while (i < suggestionList.length && suggestionList[i].name !== newName) {
-          i++;
-        }
-        if (suggestionList.length > i) {
-          suggestionList[i].name = newName;
-          return suggestionList.sort(_sortFunction);
-        }
-      } else if (action === "remove") {
-        i = 0;
-        while (i < suggestionList.length && suggestionList[i].name !== newName) {
-          i++;
-        }
-        return suggestionList.splice(i, 1);
-      }
-    };
 
     /**
     # Initialize jsTree tree with options : sorting, create/rename/delete,
@@ -1231,17 +1178,17 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
 
       this._updateSuggestionList = __bind(this._updateSuggestionList, this);
 
-      var jstreeEl, searchField, searchFunction, supprButton, __initSuggestionList, _filterAutocomplete, _selectIcon;
+      this._recursiveRemoveSuggestionList = __bind(this._recursiveRemoveSuggestionList, this);
+
+      var jstreeEl, supprButton, __initSuggestionList;
       jstreeEl = $("#tree");
       this.jstreeEl = jstreeEl;
-      supprButton = $("#suppr-button");
-      this.supprButton = supprButton;
-      navEl.prepend(require('../templates/tree_buttons'));
+      this.supprButton = $("#suppr-button");
+      supprButton = this.supprButton;
       this.searchField = $("#tree-search-field");
-      searchField = this.searchField;
+      navEl.prepend(require('../templates/tree_buttons'));
       /**
       # Creation of the jstree
-      # jstree is a plugin to implement the node tree
       # Please visit http://www.jstree.com/ for more information
       */
 
@@ -1298,16 +1245,191 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         }
       });
       this.setListeners(homeViewCbk);
+      this.setSearchField();
+      __initSuggestionList = function(node) {
+        var child, object, _i, _len, _ref, _results;
+        _ref = node.children;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          child = _ref[_i];
+          object = {
+            type: "folder",
+            name: child.data
+          };
+          suggestionList.push(object);
+          _results.push(__initSuggestionList(child));
+        }
+        return _results;
+      };
+      __initSuggestionList(data);
+      suggestionList.sort(this._sortFunction);
+    }
+
+    /**
+    # Bind listeners given in parameters with comment events (creation,
+    # update, deletion, selection). Called by the constructor once.
+    */
+
+
+    Tree.prototype.setListeners = function(homeViewCbk) {
+      var jstreeEl, modalAlert, modalYesBtn, supprButton, tree_buttons, tree_buttons_root, tree_buttons_target,
+        _this = this;
+      jstreeEl = this.jstreeEl;
+      supprButton = this.supprButton;
+      tree_buttons = $("#tree-buttons");
+      modalAlert = $('#myModal');
+      modalYesBtn = $("#modal-yes");
+      tree_buttons_root = $("#tree-buttons-root");
+      $("#tree-create").tooltip({
+        placement: "bottom",
+        title: "Add a note"
+      });
+      $("#tree-create").on("click", function(event) {
+        var parent;
+        parent = this.parentElement.parentElement;
+        jstreeEl.jstree("create", parent, 0, "New note");
+        $(this).tooltip('hide');
+        event.stopPropagation();
+        return eevent.preventDefault();
+      });
+      $("#tree-create-root").tooltip({
+        placement: "bottom",
+        title: "Add a note"
+      });
+      $("#tree-create-root").on("click", function(event) {
+        var parent;
+        parent = this.parentElement.parentElement;
+        jstreeEl.jstree("create", parent, 0, "New note");
+        $(this).tooltip('hide');
+        event.stopPropagation();
+        return event.preventDefault();
+      });
+      $("#tree-rename").tooltip({
+        placement: "bottom",
+        title: "Rename a note"
+      });
+      $("#tree-rename").on("click", function(event) {
+        jstreeEl.jstree('rename', this.parentElement.parentElement);
+        $(this).tooltip('hide');
+        event.preventDefault();
+        return event.stopPropagation();
+      });
+      $("#tree-remove").tooltip({
+        placement: "bottom",
+        title: "Remove a note"
+      });
+      $("#tree-remove").on("click", function(event) {
+        var nodeToDelete;
+        nodeToDelete = event.target.parentElement.parentElement.parentElement.parentElement;
+        $(event.target.parentElement).tooltip('hide');
+        modalAlert.modal('show');
+        modalYesBtn.unbind("click");
+        modalYesBtn.on("click", function() {
+          _this._recursiveRemoveSuggestionList(nodeToDelete);
+          if (nodeToDelete.id !== 'tree-node-all') {
+            jstreeEl.jstree("remove", nodeToDelete);
+            return homeViewCbk.onRemove(nodeToDelete.id);
+          }
+        });
+        event.preventDefault();
+        return event.stopPropagation();
+      });
+      tree_buttons_target = $("#nav");
+      this.widget.on("hover_node.jstree", function(event, data) {
+        if (data.rslt.obj[0].id === "tree-node-all") {
+          tree_buttons_root.appendTo(data.args[0]);
+          return tree_buttons_root.css("display", "block");
+        } else {
+          tree_buttons.appendTo(data.args[0]);
+          return tree_buttons.css("display", "block");
+        }
+      });
+      this.widget.on("dehover_node.jstree", function(event, data) {
+        if (data.rslt.obj[0].id === "tree-node-all") {
+          tree_buttons_root.css("display", "none");
+          return tree_buttons_root.appendTo(tree_buttons_target);
+        } else {
+          tree_buttons.css("display", "none");
+          return tree_buttons.appendTo(tree_buttons_target);
+        }
+      });
+      this.widget.on("create.jstree", function(e, data) {
+        var nodeName, parentId;
+        nodeName = data.inst.get_text(data.rslt.obj);
+        parentId = data.rslt.parent[0].id;
+        _this._updateSuggestionList("create", nodeName, null);
+        return homeViewCbk.onCreate(parentId, data.rslt.name, data);
+      });
+      this.widget.on("rename.jstree", function(e, data) {
+        var newNodeName, oldNodeName;
+        newNodeName = data.rslt.new_name;
+        oldNodeName = data.rslt.old_name;
+        _this._updateSuggestionList("rename", newNodeName, oldNodeName);
+        if (oldNodeName !== newNodeName) {
+          return homeViewCbk.onRename(data.rslt.obj[0].id, newNodeName);
+        }
+      });
+      this.widget.on("select_node.jstree", function(e, data) {
+        var nodeName, note_uuid, parent, path;
+        note_uuid = data.rslt.obj[0].id;
+        if (note_uuid === "tree-node-all") {
+          path = "/all";
+        } else {
+          nodeName = data.inst.get_text(data.rslt.obj);
+          parent = data.inst._get_parent();
+          path = "/" + data.rslt.obj[0].id + _this._getSlugPath(parent, nodeName);
+        }
+        _this.currentPath = path;
+        _this.currentData = data;
+        _this.currentNote_uuid = note_uuid;
+        _this.jstreeEl[0].focus();
+        return homeViewCbk.onSelect(path, note_uuid, data);
+      });
+      this.widget.on("move_node.jstree", function(e, data) {
+        var nodeId, targetNodeId;
+        nodeId = data.rslt.o[0].id;
+        targetNodeId = data.rslt.o[0].parentElement.parentElement.id;
+        return homeViewCbk.onDrop(nodeId, targetNodeId);
+      });
+      return this.widget.on("loaded.jstree", function(e, data) {
+        return homeViewCbk.onLoaded();
+      });
+    };
+
+    Tree.prototype.setSearchField = function() {
       /**
       #Autocompletion
       */
 
+      var jstreeEl, searchField, searchFunction, supprButton, textextWidget, _filterAutocomplete, _selectIcon,
+        _this = this;
+      this.searchField = $("#tree-search-field");
+      searchField = this.searchField;
+      supprButton = this.supprButton;
+      jstreeEl = this.jstreeEl;
+      this.searchField.blur(function() {
+        return jstreeEl.css("margin-top", 10);
+      });
+      supprButton.click(function() {
+        var textPrompt;
+        textPrompt = $(".text-prompt");
+        $(".text-tags").empty();
+        searchField.css("padding-left", "5px");
+        searchField.css("padding-top", "3px");
+        textPrompt.css("padding-left", "5px");
+        textPrompt.css("padding-top", "3px");
+        $(".text-wrap").css("height", "22px");
+        $(".text-core").css("height", "22px");
+        $(".text-dropdown").css("top", "22px");
+        supprButton.css("display", "none");
+        return jstreeEl.jstree("search", "");
+      });
       /*
-              #this function allow to select what appears in the suggestion list while
-              #the user type something in the search input
-              #input : array of suggestions, current string in the search input
-              #outputs : an array containing strings corresponding to suggestions 
-              #depending on the searchstring
+              # this function allow to select what appears in the suggestion list
+              # while the user type something in the search input
+              # input : array of suggestions, current string in the search input
+              # outputs : an array containing strings corresponding to suggestions 
+              # depending on the searchstring
       */
 
       _filterAutocomplete = function(array, searchString) {
@@ -1318,24 +1440,24 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         for (_i = 0, _len = searchString.length; _i < _len; _i++) {
           char = searchString[_i];
           regSentence += ".*(" + char + ")";
-        }
-        expFirst = new RegExp("^" + searchString, "i");
-        expBold = new RegExp("([" + searchString + "])", "gi");
-        exp = new RegExp(regSentence, "i");
-        for (_j = 0, _len1 = array.length; _j < _len1; _j++) {
-          name = array[_j];
-          if (expFirst.test(name)) {
-            nameBold = name.replace(expBold, function(match, p1) {
-              return "<span class='bold-name'>" + p1 + "</span>";
-            });
-            filteredFirst.push(nameBold);
-          }
-          if (exp.test(name)) {
-            nameBold = name.replace(expBold, function(match, p1) {
-              return "<span class='bold-name'>" + p1 + "</span>";
-            });
-            if (!(__indexOf.call(filteredFirst, nameBold) >= 0)) {
-              filtered.push(nameBold);
+          expFirst = new RegExp("^" + searchString, "i");
+          expBold = new RegExp("([" + searchString + "])", "gi");
+          exp = new RegExp(regSentence, "i");
+          for (_j = 0, _len1 = array.length; _j < _len1; _j++) {
+            name = array[_j];
+            if (expFirst.test(name)) {
+              nameBold = name.replace(expBold, function(match, pattern) {
+                "<span class='bold-name'>" + pattern + "</span>";
+                return filteredFirst.push(nameBold);
+              });
+            }
+            if (exp.test(name)) {
+              nameBold = name.replace(expBold, function(match, pattern) {
+                return "<span class='bold-name'>" + pattern + "</span>";
+              });
+              if (!(__indexOf.call(filteredFirst, nameBold) >= 0) && !(__indexOf.call(filtered, nameBold) >= 0)) {
+                filtered.push(nameBold);
+              }
             }
           }
         }
@@ -1359,16 +1481,13 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           while (suggestion2 !== array[i].name) {
             i++;
           }
-          switch (array[i].type) {
-            case "folder":
-              return "<i class='icon-folder-open icon-suggestion'></i>";
-            default:
-              return "";
+          if (array[i].type === "folder") {
+            return "<i class='icon-folder-open icon-suggestion'></i>";
           }
         }
       };
       /**
-      #treat the content of the input and launch the jstree search function
+      # treat the content of the input and launch the jstree search function
       */
 
       searchFunction = function(searchString) {
@@ -1378,14 +1497,14 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           string = _ref[_i];
           searchString += "_" + string.innerHTML;
         }
-        return jstreeEl.jstree("search", searchString);
+        return _this.jstreeEl.jstree("search", searchString);
       };
       /**
-      #Textext plugin is used to implement the autocomplete plugin
-      #Please visit http://textextjs.com/ for more information about this plugin
+      # Textext plugin is used to implement the autocomplete plugin Please
+      # visit http://textextjs.com/ for more information about this plugin
       */
 
-      searchField.textext({
+      textextWidget = searchField.textext({
         /**
         #tags: add tags to the input
         #prompt: print Search... in the input
@@ -1408,7 +1527,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         ext: {
           core: {
             /**
-            # event that trigger when the content of the input is changing
+            # event that trigger when the content of the input is
+            # changing
             */
 
             onGetFormData: function(e, data, keyCode) {
@@ -1418,12 +1538,6 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
                 'input': textInput,
                 'form': textInput
               };
-              /**
-              # if a tag is deleted the search function is call
-              # and if there is no tag anymore, the suppression
-              # button is hide
-              */
-
               if (textInput === "") {
                 searchFunction("");
                 if ($(".text-tag .text-label")[0] === void 0) {
@@ -1434,8 +1548,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           },
           autocomplete: {
             /**
-            # when the user click on a suggestion (text, bold, icon or blank spot)
-            # it add a tag in the input
+            # when the user click on a suggestion (text, bold, icon or
+            # blank spot) it adds a tag in the input
             */
 
             onClick: function(e) {
@@ -1465,8 +1579,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
               return retArray;
             },
             /**
-            #changing the content of a tag to avoid the view of 
-            #balises in it
+            # changing the content of a tag to avoid the view of 
+            # balises in it
             */
 
             itemToString: function(item) {
@@ -1481,15 +1595,14 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           },
           tags: {
             /**
-            #change the render of a tag in case the tag is referring
-            #to what the user is typing
+            # change the render of a tag in case the tag is referring
+            # to what the user is typing
             */
 
             renderTag: function(tag) {
-              var node, self;
-              self = this;
-              node = $(self.opts('html.tag'));
-              node.find('.text-label').text(self.itemManager().itemToString(tag));
+              var node;
+              node = $(this.opts('html.tag'));
+              node.find('.text-label').text(this.itemManager().itemToString(tag));
               if (/icon-search/.test($(".text-selected")[0].innerHTML)) {
                 node.find('.text-button').addClass("tag-special");
                 node.find('.text-button').removeClass("text-button");
@@ -1501,7 +1614,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
             }
           }
         }
-      }).bind('getSuggestions', function(e, data) {
+      });
+      textextWidget.bind('getSuggestions', function(e, data) {
         var list, query, textext, treeHeight;
         textext = $(e.target).textext()[0];
         query = (data ? data.query : "") || "";
@@ -1513,201 +1627,11 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         return $(this).trigger("setSuggestions", {
           result: list
         });
-      }).bind('isTagAllowed', function(e, data) {
+      });
+      return textextWidget.bind('isTagAllowed', function(e, data) {
         jstreeEl.css("margin-top", 10);
         supprButton.css("display", "block");
         return searchFunction(data.tag);
-      });
-      __initSuggestionList = function(node) {
-        var c, object, _i, _len, _ref, _results;
-        _ref = node.children;
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          c = _ref[_i];
-          object = {
-            type: "folder",
-            name: c.data
-          };
-          suggestionList.push(object);
-          _results.push(__initSuggestionList(c));
-        }
-        return _results;
-      };
-      __initSuggestionList(data);
-      suggestionList.sort(_sortFunction);
-    }
-
-    /**
-    # Bind listeners given in parameters with comment events (creation,
-    # update, deletion, selection). Called by the constructor once.
-    */
-
-
-    Tree.prototype.setListeners = function(homeViewCbk) {
-      var Tree, jstreeEl, modalAlert, modalYesBtn, progressBar, recursiveRemoveSuggestionList, searchField, supprButton, textPrompt, tree_buttons, tree_buttons_root, tree_buttons_target,
-        _this = this;
-      Tree = this;
-      jstreeEl = this.jstreeEl;
-      searchField = this.searchField;
-      supprButton = this.supprButton;
-      this.progressBar = $(".bar");
-      progressBar = this.progressBar;
-      tree_buttons = $("#tree-buttons");
-      modalAlert = $('#myModal');
-      modalYesBtn = $("#modal-yes");
-      tree_buttons_root = $("#tree-buttons-root");
-      $("#tree-create").tooltip({
-        placement: "bottom",
-        title: "Add a note"
-      });
-      $("#tree-create").on("click", function(e) {
-        jstreeEl.jstree("create", this.parentElement.parentElement, 0, "New note");
-        $(this).tooltip('hide');
-        e.stopPropagation();
-        return e.preventDefault();
-      });
-      $("#tree-create-root").tooltip({
-        placement: "bottom",
-        title: "Add a note"
-      });
-      $("#tree-create-root").on("click", function(e) {
-        jstreeEl.jstree("create", this.parentElement.parentElement, 0, "New note");
-        $(this).tooltip('hide');
-        e.stopPropagation();
-        return e.preventDefault();
-      });
-      $("#tree-rename").tooltip({
-        placement: "bottom",
-        title: "Rename a note"
-      });
-      $("#tree-rename").on("click", function(e) {
-        jstreeEl.jstree("rename", this.parentElement.parentElement);
-        $(this).tooltip('hide');
-        e.preventDefault();
-        return e.stopPropagation();
-      });
-      /**
-      # this function remove the sons of a removed node in the suggestion list
-      */
-
-      recursiveRemoveSuggestionList = function(nodeToDelete) {
-        var node, _i, _len, _ref;
-        if (nodeToDelete.children[2] === void 0) {
-          return Tree._updateSuggestionList("remove", nodeToDelete.children[1].text.replace(/\s/, ""), null);
-        } else {
-          _ref = nodeToDelete.children[2].children;
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            node = _ref[_i];
-            recursiveRemoveSuggestionList(node);
-          }
-          return Tree._updateSuggestionList("remove", nodeToDelete.children[1].text.replace(/\s/, ""), null);
-        }
-      };
-      $("#tree-remove").tooltip({
-        placement: "bottom",
-        title: "Remove a note"
-      });
-      $("#tree-remove").on("click", function(e) {
-        var nodeToDelete;
-        console.log("event : tree-remove.click");
-        $(this).tooltip('hide');
-        nodeToDelete = this.parentElement.parentElement.parentElement;
-        modalAlert.modal('show');
-        modalYesBtn.unbind("click");
-        modalYesBtn.on("click", function() {
-          recursiveRemoveSuggestionList(nodeToDelete);
-          if (nodeToDelete.id !== 'tree-node-all') {
-            jstreeEl.jstree("remove", nodeToDelete);
-            return homeViewCbk.onRemove(nodeToDelete.id);
-          }
-        });
-        e.preventDefault();
-        return e.stopPropagation();
-      });
-      searchField.blur(function() {
-        return jstreeEl.css("margin-top", 10);
-      });
-      tree_buttons_target = $("#nav");
-      this.widget.on("hover_node.jstree", function(event, data) {
-        if (data.rslt.obj[0].id === "tree-node-all") {
-          tree_buttons_root.appendTo(data.args[0]);
-          return tree_buttons_root.css("display", "block");
-        } else {
-          tree_buttons.appendTo(data.args[0]);
-          return tree_buttons.css("display", "block");
-        }
-      });
-      this.widget.on("dehover_node.jstree", function(event, data) {
-        if (data.rslt.obj[0].id === "tree-node-all") {
-          tree_buttons_root.css("display", "none");
-          return tree_buttons_root.appendTo(tree_buttons_target);
-        } else {
-          tree_buttons.css("display", "none");
-          return tree_buttons.appendTo(tree_buttons_target);
-        }
-      });
-      textPrompt = $(".text-prompt");
-      supprButton.click(function() {
-        $(".text-tags").empty();
-        searchField.css("padding-left", "5px");
-        searchField.css("padding-top", "3px");
-        textPrompt.css("padding-left", "5px");
-        textPrompt.css("padding-top", "3px");
-        $(".text-wrap").css("height", "22px");
-        $(".text-core").css("height", "22px");
-        $(".text-dropdown").css("top", "22px");
-        supprButton.css("display", "none");
-        return jstreeEl.jstree("search", "");
-      });
-      this.widget.on("create.jstree", function(e, data) {
-        var nodeName, parentId;
-        console.log("event : create.jstree");
-        nodeName = data.inst.get_text(data.rslt.obj);
-        _this._updateSuggestionList("create", nodeName, null);
-        parentId = data.rslt.parent[0].id;
-        return homeViewCbk.onCreate(parentId, data.rslt.name, data);
-      });
-      this.widget.on("rename.jstree", function(e, data) {
-        var newNodeName, oldNodeName;
-        console.log("event : rename.jstree");
-        newNodeName = data.rslt.new_name;
-        oldNodeName = data.rslt.old_name;
-        _this._updateSuggestionList("rename", newNodeName, oldNodeName);
-        if (oldNodeName !== newNodeName) {
-          return homeViewCbk.onRename(data.rslt.obj[0].id, newNodeName);
-        }
-      });
-      this.widget.on("select_node.jstree", function(e, data) {
-        var nodeName, note_uuid, parent, path;
-        console.log("event : select_node.jstree");
-        progressBar.css("width", "60%");
-        note_uuid = data.rslt.obj[0].id;
-        console.log("note_uuid");
-        console.log(note_uuid);
-        if (note_uuid === "tree-node-all") {
-          path = "/all";
-        } else {
-          nodeName = data.inst.get_text(data.rslt.obj);
-          parent = data.inst._get_parent();
-          path = "/" + data.rslt.obj[0].id + _this._getSlugPath(parent, nodeName);
-        }
-        _this.currentPath = path;
-        _this.currentData = data;
-        _this.currentNote_uuid = note_uuid;
-        _this.jstreeEl[0].focus();
-        return homeViewCbk.onSelect(path, note_uuid, data);
-      });
-      this.widget.on("move_node.jstree", function(e, data) {
-        var nodeId, targetNodeId;
-        console.log("event : move_node.jstree");
-        nodeId = data.rslt.o[0].id;
-        targetNodeId = data.rslt.o[0].parentElement.parentElement.id;
-        return homeViewCbk.onDrop(nodeId, targetNodeId);
-      });
-      return this.widget.on("loaded.jstree", function(e, data) {
-        console.log("event : loaded.jstree");
-        progressBar.css("width", "20%");
-        return homeViewCbk.onLoaded();
       });
     };
 
@@ -1720,13 +1644,86 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
 
     Tree.prototype.selectNode = function(note_uuid) {
       var node, tree;
-      this.progressBar.css("width", "50%");
       node = $("#" + note_uuid);
       if (node[0]) {
         tree = this.jstreeEl.jstree("deselect_all", null);
         return tree = this.jstreeEl.jstree("select_node", node);
       } else if (!this.widget.jstree("get_selected")[0]) {
         return tree = this.jstreeEl.jstree("select_node", "#tree-node-all");
+      }
+    };
+
+    /**
+    # used by the .sort() method to be efficient with our structure
+    */
+
+
+    Tree.prototype._sortFunction = function(a, b) {
+      if (a.name > b.name) {
+        return 1;
+      } else if (a.name === b.name) {
+        return 0;
+      } else if (a.name < b.name) {
+        return -1;
+      }
+    };
+
+    /**
+    # this function remove the sons of a removed node in the suggestion list
+    */
+
+
+    Tree.prototype._recursiveRemoveSuggestionList = function(nodeToDelete) {
+      var node, _i, _len, _ref;
+      if (nodeToDelete.children[2] === void 0) {
+        console.log(nodeToDelete.children);
+      } else {
+        _ref = nodeToDelete.children[2].children;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          node = _ref[_i];
+          this._recursiveRemoveSuggestionList(node);
+        }
+      }
+      return this._updateSuggestionList("remove", nodeToDelete.children[1].text.replace(/\s/, ""), null);
+    };
+
+    /**
+    # this method update the array suggestionList when the user add, rename or remove
+    # a node
+    # input: action : neither create, rename or remove,
+    # nodeName : in case of create and remove : the name of the new note or the note to remove
+    # in case of rename : the new name of the note
+    # oldName : only for rename : the name that will be replaced in the note
+    # output : suggestionList updated
+    */
+
+
+    Tree.prototype._updateSuggestionList = function(action, newName, oldName) {
+      var i, object;
+      if (action === "create") {
+        object = {
+          type: "folder",
+          name: newName
+        };
+        suggestionList.push(object);
+        return suggestionList.sort(this._sortFunction);
+      } else if (action === "rename") {
+        i = 0;
+        while (i < suggestionList.length && suggestionList[i].name !== newName) {
+          i++;
+        }
+        if (suggestionList.length > i) {
+          suggestionList[i].name = newName;
+          return suggestionList.sort(this._sortFunction);
+        }
+      } else if (action === "remove") {
+        i = 0;
+        while (i < suggestionList.length && suggestionList[i].name !== newName) {
+          i++;
+        }
+        if (suggestionList.length > i) {
+          return suggestionList.splice(i, 1);
+        }
       }
     };
 
