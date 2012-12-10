@@ -554,11 +554,19 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
 
     HomeView.prototype.onIFrameLoaded = function() {
+      var cssLink;
       this.progressBar.css("width", "10%");
       this.iframeLoaded = true;
       if (this.treeLoaded) {
-        return this.selectNote(note_uuid);
+        this.selectNote(note_uuid);
       }
+      this.iframe = $("iframe");
+      cssLink = document.createElement("link");
+      cssLink.href = "stylesheets/app.css";
+      cssLink.rel = "stylesheet";
+      cssLink.type = "text/css";
+      console.log(this.iframe.get());
+      return this.iframe.get().document.head.appendChild(cssLink);
     };
 
     HomeView.prototype.onTreeLoaded = function() {
