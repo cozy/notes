@@ -169,7 +169,7 @@ class exports.Tree
             event.preventDefault()
             event.stopPropagation()
            
-        # add listeners for the tree-buttons appear & disappear when mouse is
+    # add listeners for the tree-buttons appear & disappear when mouse is
         # over/out
         tree_buttons_target = $("#nav")
         @widget.on "hover_node.jstree", (event, data) ->

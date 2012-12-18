@@ -32,6 +32,7 @@ exports.config =
           'vendor/scripts/ckeditor.js'
           'vendor/scripts/rangy-core.js'
           'vendor/scripts/rangy-selectionsaverestore-uncompressed.js'
+          'vendor/scripts/validator.js'
         ]
 
     stylesheets:

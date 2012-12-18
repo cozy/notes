@@ -5304,6 +5304,543 @@ p {
 
 
 
+@font-face {
+  font-family: main;
+  src: url("../fonts/signika-regular.ttf");
+}
+#__ed-iframe-html {
+  background-color: #fafafa;
+}
+#__ed-iframe-body {
+  font-family: main;
+  overflow: auto;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  position: relative;
+  left: 0px;
+  top: 0px;
+  color: #525252;
+  background-color: #fafafa;
+  line-height: 18px;
+  font: normal 13px/18px main, "Helvetica Neue", Arial, Helvetica, sans-serif;
+  font-family: main;
+}
+p {
+  margin-top: 0px;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: 0px;
+  color: #333055;
+}
+dl {
+  margin: 0;
+  padding: 0;
+}
+dt {
+  margin: 0;
+  padding: 0;
+}
+ul,
+ol {
+  margin: 3px 0 0 0;
+  padding: 0;
+  list-style-type: none;
+}
+li {
+  margin: 0;
+  padding: 0;
+  list-style-type: circle;
+}
+dd {
+  margin-left: 32px;
+}
+.Th-1 {
+  padding-left: 5px;
+  margin-left: 0px;
+  width: 100%;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  font-weight: bold;
+  font-variant: small-caps;
+  font-size: 16px;
+  color: #329ef7;
+  border-bottom: 1px solid #dadada;
+  margin-top: 30px;
+  margin-bottom: 5px;
+  padding-bottom: 8px;
+  counter-reset: section4;
+  counter-reset: section3;
+  counter-reset: section2;
+  counter-increment: section1;
+}
+.To-1 {
+  margin-left: 20px;
+  counter-increment: list1;
+}
+.Tu-1 {
+  margin-left: 20px;
+  margin-top: 2px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-1,
+.Lo-1 {
+  padding-left: 22px;
+}
+.Lh-1 {
+  padding-left: 5px;
+}
+.Th-2 {
+  padding-left: 20px;
+  margin-left: 0px;
+  margin-top: 20px;
+  font-weight: bold;
+  font-size: 15px;
+  color: #3a3a3a;
+  padding-bottom: 6px;
+  counter-reset: section4;
+  counter-reset: section3;
+  counter-increment: section2;
+}
+.To-2 {
+  margin-left: 40px;
+  counter-increment: list1;
+}
+.Tu-2 {
+  margin-left: 40px;
+  margin-top: 2px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-2,
+.Lo-2 {
+  padding-left: 40px;
+}
+.Lh-2 {
+  padding-left: 20px;
+}
+.Th-3 {
+  padding-left: 40px;
+  margin-left: 0px;
+  margin-top: 10px;
+  font-weight: bold;
+  font-size: 13px;
+  padding-bottom: 4px;
+  counter-reset: section4;
+  counter-increment: section3;
+}
+.To-3 {
+  margin-left: 60px;
+  counter-increment: list1;
+}
+.Tu-3 {
+  margin-left: 60px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-3,
+.Lo-3 {
+  padding-left: 60px;
+}
+.Lh-3 {
+  padding-left: 40px;
+}
+.Th-4 {
+  padding-left: 60px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+  counter-increment: section4;
+}
+.To-4 {
+  margin-left: 80px;
+  counter-increment: list1;
+}
+.Tu-4 {
+  margin-left: 80px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-4,
+.Lo-4 {
+  padding-left: 80px;
+}
+.Lh-4 {
+  padding-left: 60px;
+}
+.Th-5 {
+  padding-left: 80px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-5 {
+  margin-left: 100px;
+  counter-increment: list1;
+}
+.Tu-5 {
+  margin-left: 100px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-5,
+.Lo-5 {
+  padding-left: 100px;
+}
+.Lh-5 {
+  padding-left: 80px;
+}
+.Th-6 {
+  padding-left: 100px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-6 {
+  margin-left: 120px;
+  counter-increment: list1;
+}
+.Tu-6 {
+  margin-left: 120px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-6,
+.Lo-6 {
+  padding-left: 120px;
+}
+.Lh-6 {
+  padding-left: 100px;
+}
+.Th-7 {
+  padding-left: 120px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-7 {
+  margin-left: 140px;
+  counter-increment: list1;
+}
+.Tu-7 {
+  margin-left: 140px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-7,
+.Lo-7 {
+  padding-left: 140px;
+}
+.Lh-7 {
+  padding-left: 120px;
+}
+.Th-8 {
+  padding-left: 140px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-8 {
+  margin-left: 160px;
+  counter-increment: list1;
+}
+.Tu-8 {
+  margin-left: 160px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-8,
+.Lo-8 {
+  padding-left: 160px;
+}
+.Lh-8 {
+  padding-left: 140px;
+}
+.Th-9 {
+  padding-left: 160px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-9 {
+  margin-left: 180px;
+  counter-increment: list1;
+}
+.Tu-9 {
+  margin-left: 180px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-9,
+.Lo-9 {
+  padding-left: 180px;
+}
+.Lh-9 {
+  padding-left: 160px;
+}
+.Th-10 {
+  padding-left: 180px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-10 {
+  margin-left: 200px;
+  counter-increment: list1;
+}
+.Tu-10 {
+  margin-left: 200px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-10,
+.Lo-10 {
+  padding-left: 200px;
+}
+.Lh-10 {
+  padding-left: 180px;
+}
+.Th-11 {
+  padding-left: 200px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-11 {
+  margin-left: 220px;
+  counter-increment: list1;
+}
+.Tu-11 {
+  margin-left: 220px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-11,
+.Lo-11 {
+  padding-left: 220px;
+}
+.Lh-11 {
+  padding-left: 200px;
+}
+.Th-12 {
+  padding-left: 220px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-12 {
+  margin-left: 240px;
+  counter-increment: list1;
+}
+.Tu-12 {
+  margin-left: 240px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-12,
+.Lo-12 {
+  padding-left: 240px;
+}
+.Lh-12 {
+  padding-left: 220px;
+}
+.Th-13 {
+  padding-left: 240px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-13 {
+  margin-left: 260px;
+  counter-increment: list1;
+}
+.Tu-13 {
+  margin-left: 260px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-13,
+.Lo-13 {
+  padding-left: 260px;
+}
+.Lh-13 {
+  padding-left: 240px;
+}
+.Th-14 {
+  padding-left: 260px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-14 {
+  margin-left: 280px;
+  counter-increment: list1;
+}
+.Tu-14 {
+  margin-left: 280px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-14,
+.Lo-14 {
+  padding-left: 280px;
+}
+.Lh-14 {
+  padding-left: 260px;
+}
+.Th-15 {
+  padding-left: 280px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-15 {
+  margin-left: 300px;
+  counter-increment: list1;
+}
+.Tu-15 {
+  margin-left: 300px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-15,
+.Lo-15 {
+  padding-left: 300px;
+}
+.Lh-15 {
+  padding-left: 280px;
+}
+.Th-16 {
+  padding-left: 300px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-16 {
+  margin-left: 320px;
+  counter-increment: list1;
+}
+.Tu-16 {
+  margin-left: 320px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-16,
+.Lo-16 {
+  padding-left: 320px;
+}
+.Lh-16 {
+  padding-left: 300px;
+}
+.Th-17 {
+  padding-left: 320px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-17 {
+  margin-left: 340px;
+  counter-increment: list1;
+}
+.Tu-17 {
+  margin-left: 340px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-17,
+.Lo-17 {
+  padding-left: 340px;
+}
+.Lh-17 {
+  padding-left: 320px;
+}
+.Th-18 {
+  padding-left: 340px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-18 {
+  margin-left: 360px;
+  counter-increment: list1;
+}
+.Tu-18 {
+  margin-left: 360px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-18,
+.Lo-18 {
+  padding-left: 360px;
+}
+.Lh-18 {
+  padding-left: 340px;
+}
+.Th-19 {
+  padding-left: 360px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-19 {
+  margin-left: 380px;
+  counter-increment: list1;
+}
+.Tu-19 {
+  margin-left: 380px;
+  display: list-item;
+  list-style-type: disc;
+}
+.Lu-19,
+.Lo-19 {
+  padding-left: 380px;
+}
+.Lh-19 {
+  padding-left: 360px;
+}
+.Th-20 {
+  padding-left: 380px;
+  margin-left: 0px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+.To-20 {
+  margin-left: 400px;
+  counter-increment: list1;
+}
+.Tu-20 {
+  margin-left: 400px;
+  display: list-item;
+  list-style-type: square;
+}
+.Lu-20,
+.Lo-20 {
+  padding-left: 400px;
+}
+.Lh-20 {
+  padding-left: 380px;
+}
+/*
+if Debug == 1
+    .Th-1:before
+        content: counter(section1) " " attr(toDisplay)
+    .Th-2:before
+        content: counter(section1) "." counter(section2) " " attr(toDisplay)
+    .Th-3:before
+        content: counter(section1) "." counter(section2) "." counter(section3) " " attr(toDisplay)
+    .Th-4:before
+        content: counter(section1) "." counter(section2) "." counter(section3) "." counter(section4) " " attr(toDisplay)
+else
+    .Th-1:before
+        content: counter(section1) " "
+    .Th-2:before
+        content: counter(section1) "." counter(section2) " "
+    .Th-3:before
+        content: counter(section1) "." counter(section2) "." counter(section3) " "
+    .Th-4:before
+        content: counter(section1) "." counter(section2) "." counter(section3) "." counter(section4) " "
+*/
 /*!
  * jQuery UI CSS Framework 1.8.21
  *
@@ -5875,6 +6412,9 @@ body,
   padding: 0;
   margin: 0;
   overflow: hidden;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
 }
 body {
   color: #444;
@@ -5922,12 +6462,12 @@ iframe {
   height: 70%;
   padding: 0;
   margin: 0;
-  background: #fdfdfd;
 }
 #note-area {
   height: 100%;
   padding: 0;
   margin: 0;
+  background: #f5f5f5;
 }
 #note-full-breadcrumb {
   margin-left: 3px;
@@ -5940,11 +6480,25 @@ iframe {
 }
 #note-style {
   background: #fdfdfd;
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  margin-left: 2%;
+  margin-right: 2%;
 }
 #note-full-breadcrumb a {
   color: #49a1f6;
 }
+#editor-container {
+  margin-left: 2%;
+  margin-right: 2%;
+  height: 100%;
+  width: 100%;
+}
+#editorIframe {
+  width: 96%;
+  height: 100%;
+}
 .note-full {
+  background: #f5f5f5;
   border-radius: 3px;
   height: 100%;
   margin: 0;
@@ -5961,7 +6515,7 @@ iframe {
   margin-right: 2%;
   width: 92%;
   background: none repeat scroll 0 0 transparent;
-  margin-top: 10px;
+  margin-top: 20px;
   font-weight: bold;
   margin-bottom: 20px;
 }
@@ -5991,8 +6545,8 @@ iframe {
 }
 #editor-button-bar {
   position: absolute;
-  right: 2%;
-  top: 75px;
+  right: 4%;
+  top: 85px;
 }
 .note-file {
   margin-top: 5px;
@@ -6019,740 +6573,6 @@ iframe {
 }
 .note-file button:hover {
   text-decoration: underline;
-}
-.Th-1 {
-  padding-left: 5px;
-  margin-left: 0px;
-  margin-top: 12px;
-  width: 100%;
-  box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  -webkit-box-sizing: border-box;
-  font-variant: small-caps;
-  border-bottom: 1px solid #ddd;
-  font-weight: bold;
-  font-size: 1.5em;
-  margin-bottom: 10px;
-  counter-reset: section4;
-  counter-reset: section3;
-  counter-reset: section2;
-  counter-increment: section1;
-}
-.To-1 {
-  margin-left: 20px;
-  counter-increment: list1;
-}
-.Tu-1 {
-  margin-left: 20px;
-  margin-top: 2px;
-  display: list-item;
-}
-.Lu-1,
-.Lo-1 {
-  padding-left: 22px;
-}
-.Lh-1 {
-  padding-left: 5px;
-}
-.Lu-1:before,
-.Tu-1:before,
-.Lo-1:before,
-.To-1:before,
-.Lh-1:before,
-.Th-1:before {
-  content: attr(toDisplay);
-}
-.Th-2 {
-  padding-left: 20px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-size: 1.2em;
-  font-variant: small-caps;
-  font-weight: bold;
-  margin-bottom: 5px;
-  margin-top: 10px;
-  counter-reset: section4;
-  counter-reset: section3;
-  counter-increment: section2;
-}
-.To-2 {
-  margin-left: 40px;
-  counter-increment: list1;
-}
-.Tu-2 {
-  margin-left: 40px;
-  margin-top: 2px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-2,
-.Lo-2 {
-  padding-left: 40px;
-}
-.Lh-2 {
-  padding-left: 20px;
-}
-.Lu-2:before,
-.Tu-2:before,
-.Lo-2:before,
-.To-2:before,
-.Lh-2:before,
-.Th-2:before {
-  content: attr(toDisplay);
-}
-.Th-3 {
-  padding-left: 40px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-size: 1.2em;
-  font-variant: small-caps;
-  margin-top: 8px;
-  margin-bottom: 5px;
-  counter-reset: section4;
-  counter-increment: section3;
-}
-.To-3 {
-  margin-left: 60px;
-  counter-increment: list1;
-}
-.Tu-3 {
-  margin-left: 60px;
-  display: list-item;
-}
-.Lu-3,
-.Lo-3 {
-  padding-left: 60px;
-}
-.Lh-3 {
-  padding-left: 40px;
-}
-.Lu-3:before,
-.Tu-3:before,
-.Lo-3:before,
-.To-3:before,
-.Lh-3:before,
-.Th-3:before {
-  content: attr(toDisplay);
-}
-.Th-4 {
-  padding-left: 60px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-  counter-increment: section4;
-}
-.To-4 {
-  margin-left: 80px;
-  counter-increment: list1;
-}
-.Tu-4 {
-  margin-left: 80px;
-  display: list-item;
-  list-style-type: circle;
-}
-.Lu-4,
-.Lo-4 {
-  padding-left: 80px;
-}
-.Lh-4 {
-  padding-left: 60px;
-}
-.Lu-4:before,
-.Tu-4:before,
-.Lo-4:before,
-.To-4:before,
-.Lh-4:before,
-.Th-4:before {
-  content: attr(toDisplay);
-}
-.Th-5 {
-  padding-left: 80px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-5 {
-  margin-left: 100px;
-  counter-increment: list1;
-}
-.Tu-5 {
-  margin-left: 100px;
-  display: list-item;
-}
-.Lu-5,
-.Lo-5 {
-  padding-left: 100px;
-}
-.Lh-5 {
-  padding-left: 80px;
-}
-.Lu-5:before,
-.Tu-5:before,
-.Lo-5:before,
-.To-5:before,
-.Lh-5:before,
-.Th-5:before {
-  content: attr(toDisplay);
-}
-.Th-6 {
-  padding-left: 100px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-6 {
-  margin-left: 120px;
-  counter-increment: list1;
-}
-.Tu-6 {
-  margin-left: 120px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-6,
-.Lo-6 {
-  padding-left: 120px;
-}
-.Lh-6 {
-  padding-left: 100px;
-}
-.Lu-6:before,
-.Tu-6:before,
-.Lo-6:before,
-.To-6:before,
-.Lh-6:before,
-.Th-6:before {
-  content: attr(toDisplay);
-}
-.Th-7 {
-  padding-left: 120px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-7 {
-  margin-left: 140px;
-  counter-increment: list1;
-}
-.Tu-7 {
-  margin-left: 140px;
-  display: list-item;
-}
-.Lu-7,
-.Lo-7 {
-  padding-left: 140px;
-}
-.Lh-7 {
-  padding-left: 120px;
-}
-.Lu-7:before,
-.Tu-7:before,
-.Lo-7:before,
-.To-7:before,
-.Lh-7:before,
-.Th-7:before {
-  content: attr(toDisplay);
-}
-.Th-8 {
-  padding-left: 140px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-8 {
-  margin-left: 160px;
-  counter-increment: list1;
-}
-.Tu-8 {
-  margin-left: 160px;
-  display: list-item;
-  list-style-type: circle;
-}
-.Lu-8,
-.Lo-8 {
-  padding-left: 160px;
-}
-.Lh-8 {
-  padding-left: 140px;
-}
-.Lu-8:before,
-.Tu-8:before,
-.Lo-8:before,
-.To-8:before,
-.Lh-8:before,
-.Th-8:before {
-  content: attr(toDisplay);
-}
-.Th-9 {
-  padding-left: 160px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-9 {
-  margin-left: 180px;
-  counter-increment: list1;
-}
-.Tu-9 {
-  margin-left: 180px;
-  display: list-item;
-}
-.Lu-9,
-.Lo-9 {
-  padding-left: 180px;
-}
-.Lh-9 {
-  padding-left: 160px;
-}
-.Lu-9:before,
-.Tu-9:before,
-.Lo-9:before,
-.To-9:before,
-.Lh-9:before,
-.Th-9:before {
-  content: attr(toDisplay);
-}
-.Th-10 {
-  padding-left: 180px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-10 {
-  margin-left: 200px;
-  counter-increment: list1;
-}
-.Tu-10 {
-  margin-left: 200px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-10,
-.Lo-10 {
-  padding-left: 200px;
-}
-.Lh-10 {
-  padding-left: 180px;
-}
-.Lu-10:before,
-.Tu-10:before,
-.Lo-10:before,
-.To-10:before,
-.Lh-10:before,
-.Th-10:before {
-  content: attr(toDisplay);
-}
-.Th-11 {
-  padding-left: 200px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-11 {
-  margin-left: 220px;
-  counter-increment: list1;
-}
-.Tu-11 {
-  margin-left: 220px;
-  display: list-item;
-}
-.Lu-11,
-.Lo-11 {
-  padding-left: 220px;
-}
-.Lh-11 {
-  padding-left: 200px;
-}
-.Lu-11:before,
-.Tu-11:before,
-.Lo-11:before,
-.To-11:before,
-.Lh-11:before,
-.Th-11:before {
-  content: attr(toDisplay);
-}
-.Th-12 {
-  padding-left: 220px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-12 {
-  margin-left: 240px;
-  counter-increment: list1;
-}
-.Tu-12 {
-  margin-left: 240px;
-  display: list-item;
-  list-style-type: circle;
-}
-.Lu-12,
-.Lo-12 {
-  padding-left: 240px;
-}
-.Lh-12 {
-  padding-left: 220px;
-}
-.Lu-12:before,
-.Tu-12:before,
-.Lo-12:before,
-.To-12:before,
-.Lh-12:before,
-.Th-12:before {
-  content: attr(toDisplay);
-}
-.Th-13 {
-  padding-left: 240px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-13 {
-  margin-left: 260px;
-  counter-increment: list1;
-}
-.Tu-13 {
-  margin-left: 260px;
-  display: list-item;
-}
-.Lu-13,
-.Lo-13 {
-  padding-left: 260px;
-}
-.Lh-13 {
-  padding-left: 240px;
-}
-.Lu-13:before,
-.Tu-13:before,
-.Lo-13:before,
-.To-13:before,
-.Lh-13:before,
-.Th-13:before {
-  content: attr(toDisplay);
-}
-.Th-14 {
-  padding-left: 260px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-14 {
-  margin-left: 280px;
-  counter-increment: list1;
-}
-.Tu-14 {
-  margin-left: 280px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-14,
-.Lo-14 {
-  padding-left: 280px;
-}
-.Lh-14 {
-  padding-left: 260px;
-}
-.Lu-14:before,
-.Tu-14:before,
-.Lo-14:before,
-.To-14:before,
-.Lh-14:before,
-.Th-14:before {
-  content: attr(toDisplay);
-}
-.Th-15 {
-  padding-left: 280px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-15 {
-  margin-left: 300px;
-  counter-increment: list1;
-}
-.Tu-15 {
-  margin-left: 300px;
-  display: list-item;
-}
-.Lu-15,
-.Lo-15 {
-  padding-left: 300px;
-}
-.Lh-15 {
-  padding-left: 280px;
-}
-.Lu-15:before,
-.Tu-15:before,
-.Lo-15:before,
-.To-15:before,
-.Lh-15:before,
-.Th-15:before {
-  content: attr(toDisplay);
-}
-.Th-16 {
-  padding-left: 300px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-16 {
-  margin-left: 320px;
-  counter-increment: list1;
-}
-.Tu-16 {
-  margin-left: 320px;
-  display: list-item;
-  list-style-type: circle;
-}
-.Lu-16,
-.Lo-16 {
-  padding-left: 320px;
-}
-.Lh-16 {
-  padding-left: 300px;
-}
-.Lu-16:before,
-.Tu-16:before,
-.Lo-16:before,
-.To-16:before,
-.Lh-16:before,
-.Th-16:before {
-  content: attr(toDisplay);
-}
-.Th-17 {
-  padding-left: 320px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-17 {
-  margin-left: 340px;
-  counter-increment: list1;
-}
-.Tu-17 {
-  margin-left: 340px;
-  display: list-item;
-}
-.Lu-17,
-.Lo-17 {
-  padding-left: 340px;
-}
-.Lh-17 {
-  padding-left: 320px;
-}
-.Lu-17:before,
-.Tu-17:before,
-.Lo-17:before,
-.To-17:before,
-.Lh-17:before,
-.Th-17:before {
-  content: attr(toDisplay);
-}
-.Th-18 {
-  padding-left: 340px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-18 {
-  margin-left: 360px;
-  counter-increment: list1;
-}
-.Tu-18 {
-  margin-left: 360px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-18,
-.Lo-18 {
-  padding-left: 360px;
-}
-.Lh-18 {
-  padding-left: 340px;
-}
-.Lu-18:before,
-.Tu-18:before,
-.Lo-18:before,
-.To-18:before,
-.Lh-18:before,
-.Th-18:before {
-  content: attr(toDisplay);
-}
-.Th-19 {
-  padding-left: 360px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-19 {
-  margin-left: 380px;
-  counter-increment: list1;
-}
-.Tu-19 {
-  margin-left: 380px;
-  display: list-item;
-}
-.Lu-19,
-.Lo-19 {
-  padding-left: 380px;
-}
-.Lh-19 {
-  padding-left: 360px;
-}
-.Lu-19:before,
-.Tu-19:before,
-.Lo-19:before,
-.To-19:before,
-.Lh-19:before,
-.Th-19:before {
-  content: attr(toDisplay);
-}
-.Th-20 {
-  padding-left: 380px;
-  margin-left: 0px;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-variant: small-caps;
-}
-.To-20 {
-  margin-left: 400px;
-  counter-increment: list1;
-}
-.Tu-20 {
-  margin-left: 400px;
-  display: list-item;
-  list-style-type: circle;
-}
-.Lu-20,
-.Lo-20 {
-  padding-left: 400px;
-}
-.Lh-20 {
-  padding-left: 380px;
-}
-.Lu-20:before,
-.Tu-20:before,
-.Lo-20:before,
-.To-20:before,
-.Lh-20:before,
-.Th-20:before {
-  content: attr(toDisplay);
-}
-.Th-1:before {
-  content: counter(section1) " " attr(toDisplay);
-}
-.Th-2:before {
-  content: counter(section1) "." counter(section2) " " attr(toDisplay);
-}
-.Th-3:before {
-  content: counter(section1) "." counter(section2) "." counter(section3) " " attr(toDisplay);
-}
-.Th-4:before {
-  content: counter(section1) "." counter(section2) "." counter(section3) "." counter(section4) " " attr(toDisplay);
-}
-#editor-container {
-  padding-left: 2%;
-  padding-right: 2%;
-  height: 100%;
-}
-#editor-button-bar {
-  margin-right: 2%;
-  border-spacing: 0;
-  margin-bottom: 3px;
-  float: right;
-}
-#note-style {
-  box-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-  background: #fff;
-  margin-left: 2%;
-  margin-right: 2%;
-  height: 100%;
-}
-#editorIframe #__ed-iframe-html {
-  padding: 0px 0px 5px 0px;
-  box-shadow: 4px 4px 6px rgba(0,0,0,0.8);
-  border-radius: 5px 5px 5px 5px;
-}
-#editorIframe #__ed-iframe-body {
-  overflow: auto;
-  font: normal 13px "Helvetica Neue", Arial, Helvetica, sans-serif;
-  color: #224;
-  background: #fdfdfd;
-  color: #222;
-}
-#editorIframe p {
-  margin-top: 0px;
-  margin-bottom: 0px;
-  margin-left: 0px;
-  margin-right: 0px;
-  color: #224;
-}
-#editorIframe dl {
-  margin: 0;
-  padding: 0;
-}
-#editorIframe dt {
-  margin: 0;
-  padding: 0;
-}
-#editorIframe ul,
-#editorIframe ol {
-  margin: 3px 0 0 0;
-  padding: 0;
-  list-style-type: none;
-}
-#editorIframe li {
-  margin: 0;
-  padding: 0;
-  list-style-type: disc;
-}
-#editorIframe dd {
-  margin-left: 32px;
-}
-#editorIframe .vline_02 {
-  margin-left: 30px;
-  border: 1px solid #ddd;
-  width: 10px;
-  height: 100%;
-  position: relative;
-  top: 0;
-}
-#editorIframe h1 {
-  font-size: 2em;
-}
-#editorIframe h2 {
-  font-size: 1.5em;
-}
-#editorIframe h3 {
-  font-size: 1.17em;
-}
-#editorIframe h4 {
-  font-size: 1em;
-}
-#editorIframe h5 {
-  font-size: 0.83em;
-}
-#editorIframe h6 {
-  font-size: 0.75em;
-}
-#editorIframe img {
-  border: 0;
 }
 #nav {
   background: #f5f5f5;

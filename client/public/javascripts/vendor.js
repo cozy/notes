@@ -19768,6 +19768,523 @@ rangy.createModule("SaveRestore", function(api, module) {
 });
 ;
 
+/*!
+ * Copyright (c) 2010 Chris O'Hara <cohara87@gmail.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);;
+
+exports = {};/* ------------------------------------------------------------------------
+#  MARKUP LANGUAGE CONVERTERS
+# _cozy2md (Read a string of editor html code format and turns it into a
+#           string in markdown format)
+# _md2cozy (Read a string of html code given by showdown and turns it into
+#           a string of editor html code)
+*/
+
+var md2cozy;
+
+md2cozy = {};
+
+/* ------------------------------------------------------------------------
+#  _cozy2md
+# Read a string of editor html code format and turns it into a string in
+#  markdown format
+*/
+
+
+md2cozy.cozy2md = function(text) {
+  var children, classType, converter, currDepth, htmlCode, i, j, l, lineCode, lineElt, markCode, markup, space, _i, _ref;
+  htmlCode = $(document.createElement('div')).html(text);
+  markCode = '';
+  currDepth = 0;
+  converter = {
+    'A': function(obj) {
+      var href, title;
+      title = obj.attr('title') != null ? obj.attr('title') : "";
+      href = obj.attr('href') != null ? obj.attr('href') : "";
+      return '[' + obj.html() + '](' + href + ' "' + title + '")';
+    },
+    'IMG': function(obj) {
+      var alt, src, title;
+      title = obj.attr('title') != null ? obj.attr('title') : "";
+      alt = obj.attr('alt') != null ? obj.attr('alt') : "";
+      src = obj.attr('src') != null ? obj.attr('src') : "";
+      return '![' + alt + '](' + src + ' "' + title + '")';
+    },
+    'SPAN': function(obj) {
+      return obj.text();
+    }
+  };
+  markup = {
+    'Th': function(blanks, depth) {
+      var dieses, i;
+      currDepth = depth;
+      dieses = '';
+      i = 0;
+      while (i < depth) {
+        dieses += '#';
+        i++;
+      }
+      return "\n" + dieses + ' ';
+    },
+    'Lh': function(blanks, depth) {
+      return "\n";
+    },
+    'Tu': function(blanks, depth) {
+      return "\n" + blanks + "+   ";
+    },
+    'Lu': function(blanks, depth) {
+      return "\n" + blanks + "    ";
+    },
+    'To': function(blanks, depth) {
+      return "\n" + blanks + "1.   ";
+    },
+    'Lo': function(blanks, depth) {
+      return "\n" + blanks + "    ";
+    }
+  };
+  classType = function(className) {
+    var blanks, depth, i, tab, type;
+    tab = className.split("-");
+    type = tab[0];
+    depth = parseInt(tab[1], 10);
+    blanks = '';
+    i = 1;
+    while (i < depth - currDepth) {
+      blanks += '    ';
+      i++;
+    }
+    return markup[type](blanks, depth);
+  };
+  children = htmlCode.children();
+  for (i = _i = 0, _ref = children.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+    lineCode = $(children.get(i));
+    if (lineCode.attr('class') != null) {
+      markCode += classType(lineCode.attr('class'));
+    }
+    l = lineCode.children().length;
+    j = 0;
+    space = ' ';
+    while (j < l) {
+      lineElt = lineCode.children().get(j);
+      if (j + 2 === l) {
+        space = '';
+      }
+      if (lineElt.nodeType === 1 && (converter[lineElt.nodeName] != null)) {
+        markCode += converter[lineElt.nodeName]($(lineElt)) + space;
+      } else {
+        markCode += $(lineElt).text() + space;
+      }
+      j++;
+    }
+    markCode += "\n";
+  }
+  return markCode;
+};
+
+/* ------------------------------------------------------------------------
+# Read a string of html code given by showdown and turns it into a string
+# of editor html code
+*/
+
+
+md2cozy.md2cozy = function(text) {
+  var conv, cozyCode, cozyTurn, depth, htmlCode, id, readHtml, recRead;
+  conv = new Showdown.converter();
+  text = conv.makeHtml(text);
+  htmlCode = $(document.createElement('ul')).html(text);
+  cozyCode = '';
+  id = 0;
+  cozyTurn = function(type, depth, p) {
+    var code;
+    id++;
+    code = '';
+    if (p != null) {
+      p.contents().each(function() {
+        var name;
+        name = this.nodeName;
+        if (name === "#text") {
+          return code += "<span>" + ($(this).text()) + "</span>";
+        } else if (this.tagName != null) {
+          $(this).wrap('<div></div>');
+          code += "" + ($(this).parent().html());
+          return $(this).unwrap();
+        }
+      });
+    } else {
+      code = "<span></span>";
+    }
+    return ("<div id=CNID_" + id + " class=" + type + "-" + depth + ">") + code + "<br></div>";
+  };
+  depth = 0;
+  readHtml = function(obj) {
+    var tag;
+    tag = obj[0].tagName;
+    if (tag[0] === "H") {
+      depth = parseInt(tag[1], 10);
+      return cozyCode += cozyTurn("Th", depth, obj);
+    } else if (tag === "P") {
+      return cozyCode += cozyTurn("Lh", depth, obj);
+    } else {
+      return recRead(obj, "u");
+    }
+  };
+  recRead = function(obj, status) {
+    var child, i, tag, _i, _ref, _results;
+    tag = obj[0].tagName;
+    if (tag === "UL") {
+      depth++;
+      obj.children().each(function() {
+        return recRead($(this), "u");
+      });
+      return depth--;
+    } else if (tag === "OL") {
+      depth++;
+      obj.children().each(function() {
+        return recRead($(this), "o");
+      });
+      return depth--;
+    } else if (tag === "LI" && (obj.contents().get(0) != null)) {
+      if (obj.contents().get(0).nodeName === "#text") {
+        obj = obj.clone().wrap('<p></p>').parent();
+      }
+      _results = [];
+      for (i = _i = 0, _ref = obj.children().length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+        child = $(obj.children().get(i));
+        if (i === 0) {
+          _results.push(cozyCode += cozyTurn("T" + status, depth, child));
+        } else {
+          _results.push(recRead(child, status));
+        }
+      }
+      return _results;
+    } else if (tag === "P") {
+      return cozyCode += cozyTurn("L" + status, depth, obj);
+    }
+  };
+  htmlCode.children().each(function() {
+    return readHtml($(this));
+  });
+  if (cozyCode.length === 0) {
+    cozyCode = cozyTurn("Tu", 1, null);
+  }
+  return cozyCode;
+};
+
+exports.md2cozy = md2cozy;
+var selection,
+  _this = this;
+
+selection = {};
+
+/* ------------------------------------------------------------------------
+# UTILITY FUNCTIONS
+# used to set ranges and help normalize selection
+# 
+# parameters: elt  :  a dom object with only textNode children
+#
+# note: with google chrome, it seems that non visible elements
+#       cannot be selected with rangy (that's where 'blank' comes in)
+*/
+
+
+selection.cleanSelection = function(startLine, endLine, range) {
+  var endNode, startNode;
+  if (startLine === null) {
+    startLine = endLine;
+    endLine = endLine.lineNext;
+    selection.putStartOnStart(range, startLine.line$[0].firstElementChild);
+    endLine.line$.prepend('<span></span>');
+    return selection.putEndOnStart(range, endLine.line$[0].firstElementChild);
+  } else {
+    startNode = startLine.line$[0].lastElementChild.previousElementSibling;
+    endNode = endLine.line$[0].lastElementChild.previousElementSibling;
+    range.setStartAfter(startNode, 0);
+    return range.setEndAfter(endNode, 0);
+  }
+};
+
+selection.cloneEndFragment = function(range, endLine) {
+  var range4fragment;
+  range4fragment = rangy.createRangyRange();
+  range4fragment.setStart(range.endContainer, range.endOffset);
+  range4fragment.setEndAfter(endLine.line$[0].lastChild);
+  return range4fragment.cloneContents();
+};
+
+/* ------------------------------------------------------------------------
+#  _normalize(range)
+# 
+#  Modify 'range' containers and offsets so it represent a clean selection
+#  that it starts inside a textNode and ends inside a textNode.
+#
+#  Set the flag isEmptyLine to true if an empty line is being normalized
+#  so further suppr ~ backspace work properly.
+#
+*/
+
+
+selection.normalize = function(range) {
+  var endContainer, endDiv, isEmptyLine, startContainer, startDiv, _ref, _ref1;
+  startDiv = selection.getStartDiv(range);
+  endDiv = selection.getEndDiv(range, startDiv);
+  isEmptyLine = startDiv === endDiv && startDiv.innerHTML === '<span></span><br>';
+  startContainer = range.startContainer;
+  if (startContainer.nodeName === "BODY") {
+    selection.handleBodyStart(range, startContainer, isEmptyLine);
+  } else if (startContainer.nodeName === "DIV") {
+    selection.handleDivStart(range, startContainer);
+  } else if ((_ref = startContainer.nodeName) === "SPAN" || _ref === "IMG" || _ref === "A") {
+    selection.handleTextEltStart(range, startContainer);
+  }
+  endContainer = range.endContainer;
+  if (endContainer.nodeName === "BODY") {
+    selection.handleBodyEnd(range, endContainer);
+  }
+  if (endContainer.nodeName === "DIV") {
+    selection.handleDivEnd(range, endContainer);
+  } else if ((_ref1 = endContainer.nodeName) === "SPAN" || _ref1 === "IMG" || _ref1 === "A") {
+    selection.handleTextEltEnd(range, endContainer);
+  }
+  return range;
+};
+
+selection.handleBodyStart = function(range, startContainer) {
+  var elt;
+  elt = selection.getFirstLineFromBody(startContainer);
+  return selection.putStartOnStart(range, elt);
+};
+
+selection.handleBodyEnd = function(range, endContainer) {
+  var elt;
+  elt = selection.getLastLineFromBody(endContainer);
+  return selection.putEndAtEndOfLine(range, elt);
+};
+
+selection.handleDivStart = function(range, startContainer, isEmptyLine) {
+  if (isEmptyLine) {
+    return selection.putStartOnFirstChild(range, startContainer);
+  } else if (range.startOffset < startContainer.childNodes.length - 1) {
+    return selection.putStartOnOffset(range, startContainer, range.startOffset);
+  } else {
+    return selection.putStartAtEndOfLine(range, startContainer);
+  }
+};
+
+selection.handleDivEnd = function(range, endContainer) {
+  if (range.endOffset < endContainer.childNodes.length - 1) {
+    return selection.putEndOnOffset(range, endContainer, range.endOffset);
+  } else {
+    return selection.putEndAtEndOfLine(range, endContainer);
+  }
+};
+
+selection.handleTextEltStart = function(range, startContainer) {
+  if (startContainer.firstChild === null || startContainer.textContent.length === 0) {
+    return selection.putStartOnEnd(range, startContainer);
+  } else if (range.startOffset < startContainer.childNodes.length) {
+    return selection.putStartOnNextChild(range, startContainer);
+  } else {
+    return selection.putStartOnLastChildEnd(range, startContainer);
+  }
+};
+
+selection.handleTextEltEnd = function(range, startContainer) {
+  if (endContainer.firstChild === null || endContainer.textContent.length === 0) {
+    selection.putEndOnEnd(range, endContainer);
+  }
+  if (range.endOffset < endContainer.childNodes.length) {
+    return selection.putEndOnNextChild(range, endContainer);
+  } else {
+    return selection.putEndOnLastChildEnd(range, startContainer);
+  }
+};
+
+selection.getLineDiv = function(elt) {
+  var parent;
+  parent = elt;
+  while (parent.nodeName !== 'DIV' && (((parent.id != null) && parent.id.substr(0, 5) !== 'CNID_') || !(parent.id != null)) && parent.parentNode !== null) {
+    parent = parent.parentNode;
+  }
+  return parent;
+};
+
+selection.getFirstLineFromBody = function(body) {
+  return body.children[1].firstChild;
+};
+
+selection.getLastLineFromBody = function(body) {
+  return body.children[1].lastChild;
+};
+
+selection.putStartOnFirstChild = function(range, container) {
+  var elt;
+  elt = container.firstChild;
+  return selection.putStartOnStart(range, elt);
+};
+
+selection.putStartOnOffset = function(range, container, offset) {
+  var elt;
+  elt = container.childNodes[offset];
+  return selection.putStartOnStart(range, elt);
+};
+
+selection.putEndOnOffset = function(range, container, offset) {
+  var elt;
+  elt = endContainer.childNodes[offset];
+  return selection.putEndOnStart(range, elt);
+};
+
+selection.putStartOnNextChild = function(range, container) {
+  var elt;
+  elt = container.childNodes[range.startOffset];
+  return range.setStart(elt, 0);
+};
+
+selection.putEndOnNextChild = function(range, container) {
+  var elt;
+  elt = container.childNodes[range.endOffset];
+  return range.setEnd(elt, 0);
+};
+
+selection.putStartOnLastChildEnd = function(range, container) {
+  var elt, offset;
+  elt = container.lastChild;
+  offset = elt.data.length;
+  return range.setStart(elt, offset);
+};
+
+selection.putEndOnLastChildEnd = function(range, container) {
+  var elt, offset;
+  elt = container.lastChild;
+  offset = elt.data.length;
+  return range.setEnd(elt, offset);
+};
+
+selection.putStartAtEndOfLine = function(range, container) {
+  var elt;
+  elt = container.lastChild.previousElementSibling;
+  if (elt != null) {
+    return selection.putStartOnEnd(range, elt);
+  } else if (container.lastChild != null) {
+    return selection.putStartOnEnd(container.lastChild);
+  } else {
+    return console.log("Normalize: no where to put selection start.");
+  }
+};
+
+selection.putEndAtEndOfLine = function(range, container) {
+  var elt;
+  elt = container.lastChild.previousElementSibling;
+  if (elt != null) {
+    return selection.putEndOnEnd(range, elt);
+  } else if (container.lastChild != null) {
+    return selection.putEndOnEnd(container.lastChild);
+  } else {
+    return console.log("Normalize: no where to put selection start.");
+  }
+};
+
+selection.putStartOnStart = function(range, elt) {
+  var blank, offset;
+  if ((elt != null ? elt.firstChild : void 0) != null) {
+    offset = elt.firstChild.textContent.length;
+    if (offset === 0) {
+      elt.firstChild.data = " ";
+    }
+    return range.setStart(elt.firstChild, 0);
+  } else if (elt != null) {
+    blank = document.createTextNode(" ");
+    elt.appendChild(blank);
+    return range.setStart(blank, 0);
+  }
+};
+
+selection.putStartOnEnd = function(range, elt) {
+  var blank, offset;
+  if ((elt != null ? elt.lastChild : void 0) != null) {
+    offset = elt.lastChild.textContent.length;
+    if (offset === 0) {
+      elt.lastChild.data = " ";
+      offset = 1;
+    }
+    return range.setStart(elt.lastChild, offset);
+  } else if (elt != null) {
+    blank = document.createTextNode(" ");
+    elt.appendChild(blank);
+    return range.setStart(blank, 0);
+  }
+};
+
+selection.putEndOnStart = function(range, elt) {
+  var blank, offset;
+  if ((elt != null ? elt.firstChild : void 0) != null) {
+    offset = elt.firstChild.textContent.length;
+    if (offset === 0) {
+      elt.firstChild.data = " ";
+    }
+    return range.setEnd(elt.firstChild, 0);
+  } else if (elt != null) {
+    blank = document.createTextNode(" ");
+    elt.appendChild(blank);
+    return range.setEnd(blank, 0);
+  }
+};
+
+selection.putEndOnEnd = function(range, elt) {
+  if (elt != null) {
+    range.setEnd(elt.nextSibling, 0);
+  }
+  return range;
+};
+
+selection.getStartDiv = function(range) {
+  var startDiv;
+  if (range.startContainer.nodeName === 'BODY') {
+    startDiv = range.startContainer.children[range.startOffset];
+  } else {
+    startDiv = range.startContainer;
+  }
+  if (startDiv.nodeName !== "DIV") {
+    startDiv = selection.getLineDiv(startDiv);
+  }
+  return startDiv;
+};
+
+selection.getEndDiv = function(range, startDiv) {
+  var endDiv;
+  if (range.endContainer.nodeName === "BODY") {
+    endDiv = range.endContainer.children[range.endOffset - 1];
+  } else {
+    endDiv = range.endContainer;
+  }
+  if ((endDiv != null ? endDiv.nodeName : void 0) !== "DIV") {
+    endDiv = selection.getLineDiv(endDiv);
+  } else {
+    endDiv = startDiv;
+  }
+  return endDiv;
+};
+
+exports.selection = selection;
 /* ------------------------------------------------------------------------
 # CLASS FOR THE COZY NOTE EDITOR
 #
@@ -19787,12 +20304,22 @@ rangy.createModule("SaveRestore", function(api, module) {
 #   editorBody$       : the jquery pointer on the body of the iframe
 #   _lines            : {} an objet, each property refers a line
 #   _highestId        : 
-#   _firstLine        : pointes the first line : TODO : not taken into account
+#   _firstLine        : points the first line : TODO : not taken into account
 */
 
-var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+var CNeditor, md2cozy, selection,
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-CNeditor = (function() {
+if (typeof require !== "undefined" && require !== null) {
+  if (!(typeof md2cozy !== "undefined" && md2cozy !== null)) {
+    md2cozy = require('./md2cozy').md2cozy;
+  }
+  if (!(typeof selection !== "undefined" && selection !== null)) {
+    selection = require('./selection').selection;
+  }
+}
+
+exports.CNeditor = (function() {
   /*
       #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
       #       iframeTarget = iframe where the editor will be nested
@@ -19801,7 +20328,7 @@ CNeditor = (function() {
   */
 
   function CNeditor(editorTarget, callBack) {
-    var iframe$, node$,
+    var iframe$,
       _this = this;
     this.editorTarget = editorTarget;
     this._processPaste = __bind(this._processPaste, this);
@@ -19819,7 +20346,7 @@ CNeditor = (function() {
       };
       iframe$ = $(this.editorTarget);
       iframe$.on('load', function() {
-        var editor_head$, editor_html$;
+        var cssLink, editor_head$, editor_html$;
         editor_html$ = iframe$.contents().find("html");
         _this.editorBody$ = editor_html$.find("body");
         _this.editorBody$.parent().attr('id', '__ed-iframe-html');
@@ -19827,6 +20354,9 @@ CNeditor = (function() {
         _this.editorBody$.attr("id", "__ed-iframe-body");
         _this.document = _this.editorBody$[0].ownerDocument;
         editor_head$ = editor_html$.find("head");
+        cssLink = '<link id="editorCSS" ';
+        cssLink += 'href="stylesheets/CNeditor.css" rel="stylesheet">';
+        editor_head$.html(cssLink);
         _this._lines = {};
         _this.newPosition = true;
         _this._highestId = 0;
@@ -19841,10 +20371,10 @@ CNeditor = (function() {
         };
         _this._lastKey = null;
         _this.editorBody$.prop('__editorCtl', _this);
+        _this.editorBody$.on('keydown', _this._keyPressListener);
         _this.editorBody$.on('mouseup', function() {
           return _this.newPosition = true;
         });
-        _this.editorBody$.on('keydown', _this._keyPressListener);
         _this.editorBody$.on('keyup', function() {
           return iframe$.trigger(jQuery.Event("onKeyUp"));
         });
@@ -19852,52 +20382,15 @@ CNeditor = (function() {
           return _this._lastKey = null;
         });
         _this.editorBody$.on('paste', function(event) {
-          return _this.paste(e);
+          return _this.paste(event);
         });
+        _this.linesDiv = document.createElement('div');
+        _this.editorBody$.append(_this.linesDiv);
         _this._initClipBoard();
-        return callBack.call(_this);
+        callBack.call(_this);
+        return _this;
       });
       this.editorTarget.src = '';
-    } else {
-      this.getEditorSelection = function() {
-        return rangy.getSelection();
-      };
-      this.saveEditorSelection = function() {
-        return rangy.saveSelection();
-      };
-      node$ = $(this.editorTarget);
-      this.editorBody$ = node$;
-      this.editorBody$.attr("contenteditable", "true");
-      this.editorBody$.attr("id", "__ed-iframe-body");
-      this._lines = {};
-      this.newPosition = true;
-      this._highestId = 0;
-      this._deepest = 1;
-      this._firstLine = null;
-      this._history = {
-        index: 0,
-        history: [null],
-        historySelect: [null],
-        historyScroll: [null],
-        historyPos: [null]
-      };
-      this._lastKey = null;
-      this.editorBody$.prop('__editorCtl', this);
-      this.editorBody$.on('keydown', this._keyPressListener);
-      this.editorBody$.on('mouseup', function() {
-        return _this.newPosition = true;
-      });
-      this.editorBody$.on('keyup', function() {
-        return node$.trigger(jQuery.Event("onKeyUp"));
-      });
-      this.editorBody$.on('click', function(event) {
-        return _this._lastKey = null;
-      });
-      this.editorBody$.on('paste', function(event) {
-        return _this.paste(event);
-      });
-      this._initClipBoard();
-      callBack.call(this);
     }
   }
 
@@ -19938,9 +20431,8 @@ CNeditor = (function() {
 
 
   CNeditor.prototype.replaceContent = function(htmlContent) {
-    this.editorBody$.html(htmlContent);
-    this._readHtml();
-    return this._initClipBoard();
+    this.linesDiv.innerHTML = htmlContent;
+    return this._readHtml();
   };
 
   /* ------------------------------------------------------------------------
@@ -19949,9 +20441,10 @@ CNeditor = (function() {
 
 
   CNeditor.prototype.deleteContent = function() {
-    this.editorBody$.html('<div id="CNID_1" class="Tu-1"><span></span><br></div>');
-    this._readHtml();
-    return this._initClipBoard();
+    var emptyLine;
+    emptyLine = '<div id="CNID_1" class="Tu-1"><span></span><br></div>';
+    this.linesDiv.innerHTML = emptyLine;
+    return this._readHtml();
   };
 
   /* ------------------------------------------------------------------------
@@ -19961,8 +20454,8 @@ CNeditor = (function() {
 
   CNeditor.prototype.getEditorContent = function() {
     var cozyContent;
-    cozyContent = this.editorBody$.html();
-    return this._cozy2md(cozyContent);
+    cozyContent = this.linesDiv.innerHTML;
+    return md2cozy.cozy2md(cozyContent);
   };
 
   /* ------------------------------------------------------------------------
@@ -19972,10 +20465,9 @@ CNeditor = (function() {
 
   CNeditor.prototype.setEditorContent = function(mdContent) {
     var cozyContent;
-    cozyContent = this._md2cozy(mdContent);
-    this.editorBody$.html(cozyContent);
-    this._readHtml();
-    return this._initClipBoard();
+    cozyContent = md2cozy.md2cozy(mdContent);
+    this.linesDiv.innerHTML = cozyContent;
+    return this._readHtml();
   };
 
   /*
@@ -19989,171 +20481,6 @@ CNeditor = (function() {
     linkElm = document.querySelector('#editorCSS');
     linkElm.setAttribute('href', path);
     return document.head.appendChild(linkElm);
-  };
-
-  /* ------------------------------------------------------------------------
-  # UTILITY FUNCTIONS
-  # used to set ranges and help normalize selection
-  # 
-  # parameters: elt  :  a dom object with only textNode children
-  #
-  # note: with google chrome, it seems that non visible elements
-  #       cannot be selected with rangy (that's where 'blank' comes in)
-  */
-
-
-  CNeditor.prototype._putEndOnEnd = function(range, elt) {
-    var blank, offset;
-    if (elt.lastChild != null) {
-      offset = elt.lastChild.textContent.length;
-      if (offset === 0) {
-        elt.lastChild.data = " ";
-        offset = 1;
-      }
-      return range.setEnd(elt.lastChild, offset);
-    } else {
-      blank = document.createTextNode(" ");
-      elt.appendChild(blank);
-      return range.setEnd(blank, 1);
-    }
-  };
-
-  CNeditor.prototype._putStartOnEnd = function(range, elt) {
-    var blank, offset;
-    if (elt.lastChild != null) {
-      offset = elt.lastChild.textContent.length;
-      if (offset === 0) {
-        elt.lastChild.data = " ";
-        offset = 1;
-      }
-      return range.setStart(elt.lastChild, offset);
-    } else {
-      blank = document.createTextNode(" ");
-      elt.appendChild(blank);
-      return range.setStart(blank, 0);
-    }
-  };
-
-  CNeditor.prototype._putEndOnStart = function(range, elt) {
-    var blank, offset;
-    if (elt.firstChild != null) {
-      offset = elt.firstChild.textContent.length;
-      if (offset === 0) {
-        elt.firstChild.data = " ";
-      }
-      return range.setEnd(elt.firstChild, 0);
-    } else {
-      blank = document.createTextNode(" ");
-      elt.appendChild(blank);
-      return range.setEnd(blank, 0);
-    }
-  };
-
-  CNeditor.prototype._putStartOnStart = function(range, elt) {
-    var blank, offset;
-    if (elt.firstChild != null) {
-      offset = elt.firstChild.textContent.length;
-      if (offset === 0) {
-        elt.firstChild.data = " ";
-      }
-      return range.setStart(elt.firstChild, 0);
-    } else {
-      blank = document.createTextNode(" ");
-      elt.appendChild(blank);
-      return range.setStart(blank, 0);
-    }
-  };
-
-  /* ------------------------------------------------------------------------
-  #  _normalize(range)
-  # 
-  #  Modify 'range' containers and offsets so it represent a clean selection
-  #  that it starts inside a textNode and ends inside a textNode.
-  #
-  #  Set the flag isEmptyLine to true if an empty line is being normalized
-  #  so further suppr ~ backspace work properly.
-  #
-  #
-  */
-
-
-  CNeditor.prototype._normalize = function(range) {
-    var elt, endContainer, endDiv, offset, startContainer, startDiv, targetChild, _ref, _ref1;
-    if (range.startContainer.nodeName === 'BODY') {
-      startDiv = range.startContainer.children[range.startOffset];
-    } else {
-      startDiv = range.startContainer;
-    }
-    if (range.endContainer.nodeName === "BODY") {
-      endDiv = range.endContainer.children[range.endOffset - 1];
-    } else {
-      endDiv = range.endContainer;
-    }
-    if (startDiv.nodeName !== "DIV") {
-      startDiv = $(startDiv).parents("div")[0];
-    }
-    if ((endDiv != null ? endDiv.nodeName : void 0) !== "DIV") {
-      endDiv = $(endDiv).parents("div")[0];
-    } else {
-      endDiv = startDiv;
-    }
-    if (startDiv === endDiv && startDiv.innerHTML === '<span></span><br>') {
-      this.isEmptyLine = true;
-    }
-    startContainer = range.startContainer;
-    if (startContainer.nodeName === "BODY") {
-      elt = startContainer.children[range.startOffset].firstChild;
-      this._putStartOnStart(range, elt);
-    } else if (startContainer.nodeName === "DIV") {
-      if (this.isEmptyLine) {
-        elt = startContainer.childNodes[0];
-        this._putStartOnStart(range, elt);
-      } else if (range.startOffset < startContainer.childNodes.length - 1) {
-        elt = startContainer.childNodes[range.startOffset];
-        this._putStartOnStart(range, elt);
-      } else {
-        elt = startContainer.lastChild.previousElementSibling;
-        this._putStartOnEnd(range, elt);
-      }
-    } else if ((_ref = startContainer.nodeName) === "SPAN" || _ref === "IMG" || _ref === "A") {
-      if (startContainer.firstChild === null || startContainer.textContent.length === 0) {
-        this._putStartOnEnd(range, startContainer);
-      } else if (range.startOffset < startContainer.childNodes.length) {
-        targetChild = startContainer.childNodes[range.startOffset];
-        range.setStart(targetChild, 0);
-      } else {
-        targetChild = startContainer.lastChild;
-        offset = targetChild.data.length;
-        range.setStart(targetChild, offset);
-      }
-    }
-    endContainer = range.endContainer;
-    if (endContainer.nodeName === "BODY") {
-      elt = endContainer.children[range.endOffset - 1].lastChild;
-      this._putEndOnEnd(range, elt.previousElementSibling);
-    }
-    if (endContainer.nodeName === "DIV") {
-      if (range.endOffset < endContainer.childNodes.length - 1) {
-        elt = endContainer.childNodes[range.endOffset];
-        this._putEndOnStart(range, elt);
-      } else {
-        elt = endContainer.lastChild.previousElementSibling;
-        this._putEndOnEnd(range, elt);
-      }
-    } else if ((_ref1 = endContainer.nodeName) === "SPAN" || _ref1 === "IMG" || _ref1 === "A") {
-      if (endContainer.firstChild === null || endContainer.textContent.length === 0) {
-        this._putEndOnEnd(range, endContainer);
-      }
-      if (range.endOffset < endContainer.childNodes.length) {
-        targetChild = startContainer.childNodes[range.endOffset];
-        range.setEnd(targetChild, 0);
-      } else {
-        targetChild = endContainer.lastChild;
-        offset = targetChild.data.length;
-        range.setEnd(targetChild, offset);
-      }
-    }
-    return range;
   };
 
   /* ------------------------------------------------------------------------
@@ -20180,7 +20507,7 @@ CNeditor = (function() {
 
 
   CNeditor.prototype._keyPressListener = function(e) {
-    var keyStrokesCode, metaKeyStrokesCode, normalizedRange, normalizedSel, range, sel, shortcut;
+    var keyStrokesCode, metaKeyStrokesCode, normalizedRange, range, sel, shortcut;
     metaKeyStrokesCode = (e.altKey ? "Alt" : "") + 
                               (e.ctrlKey ? "Ctrl" : "") + 
                               (e.shiftKey ? "Shift" : "");
@@ -20267,18 +20594,13 @@ CNeditor = (function() {
     if (shortcut === "-A" || shortcut === "-S" || shortcut === "-V" || shortcut === "-Y" || shortcut === "-Z") {
       shortcut = "-other";
     }
-    if (this._lastKey !== shortcut && (shortcut === "-tab" || shortcut === "-return" || shortcut === "-backspace" || shortcut === "-suppr" || shortcut === "CtrlShift-down" || shortcut === "CtrlShift-up" || shortcut === "CtrlShift-left" || shortcut === "CtrlShift-right" || shortcut === "Ctrl-V" || shortcut === "Shift-tab" || shortcut === "-space" || shortcut === "-other")) {
-      this._addHistory();
-    }
     this._lastKey = shortcut;
     if (this.newPosition && (shortcut === '-other' || shortcut === '-space' || shortcut === '-suppr' || shortcut === '-backspace' || shortcut === '-return')) {
       this.newPosition = false;
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
-      normalizedRange = rangy.createRange();
-      normalizedRange = this._normalize(range);
-      normalizedSel = this.getEditorSelection();
-      normalizedSel.setSingleRange(normalizedRange);
+      normalizedRange = selection.normalize(range);
+      sel.setSingleRange(normalizedRange);
     }
     if ((keyStrokesCode === "left" || keyStrokesCode === "up" || keyStrokesCode === "right" || keyStrokesCode === "down" || keyStrokesCode === "pgUp" || keyStrokesCode === "pgDwn" || keyStrokesCode === "end" || keyStrokesCode === "home" || keyStrokesCode === "return" || keyStrokesCode === "suppr" || keyStrokesCode === "backspace") && (shortcut !== "CtrlShift-down" && shortcut !== "CtrlShift-up" && shortcut !== "CtrlShift-right" && shortcut !== "CtrlShift-left")) {
       this.newPosition = true;
@@ -20339,25 +20661,26 @@ CNeditor = (function() {
     this._findLinesAndIsStartIsEnd();
     startLine = this.currentSel.startLine;
     if (this.currentSel.range.collapsed) {
-      console.log("carret alone");
-    }
-    if (this.currentSel.rangeIsEndLine) {
-      if (startLine.lineNext !== null) {
-        console.log("there is a next line");
-        this.currentSel.range.setEndBefore(startLine.lineNext.line$[0].firstChild);
-        this.currentSel.endLine = startLine.lineNext;
-        this._deleteMultiLinesSelections();
-        return event.preventDefault();
-      } else {
-        console.log("no next line");
-        return event.preventDefault();
+      if (this.currentSel.rangeIsEndLine) {
+        if (startLine.lineNext !== null) {
+          this.currentSel.range.setEndBefore(startLine.lineNext.line$[0].firstChild);
+          this.currentSel.endLine = startLine.lineNext;
+          this._deleteMultiLinesSelections();
+          event.preventDefault();
+          event.cancelBubble = true;
+          return false;
+        } else {
+          event.preventDefault();
+          event.cancelBubble = true;
+          return false;
+        }
       }
     } else if (this.currentSel.endLine === startLine) {
-      return console.log("same line");
+
     } else {
-      console.log("multi line");
       this._deleteMultiLinesSelections();
-      return event.preventDefault();
+      event.preventDefault();
+      return false;
     }
   };
 
@@ -20369,7 +20692,7 @@ CNeditor = (function() {
 
 
   CNeditor.prototype._backspace = function(e) {
-    var sel, startLine;
+    var offset, prevLine, range, sel, startLine, startOffset, text, textNode, txt;
     this._findLinesAndIsStartIsEnd();
     sel = this.currentSel;
     if (this.isEmptyLine) {
@@ -20382,19 +20705,37 @@ CNeditor = (function() {
         if (startLine.linePrev !== null) {
           sel.range.setStartBefore(startLine.linePrev.line$[0].lastChild);
           sel.startLine = startLine.linePrev;
+          prevLine = startLine.linePrev.line$[0];
+          text = prevLine.lastChild.previousSibling.firstChild;
+          offset = text.length;
           this._deleteMultiLinesSelections();
-          return e.preventDefault();
-        } else {
-          return e.preventDefault();
+          range = rangy.createRange();
+          text = prevLine.lastChild.previousSibling.firstChild;
+          range.collapseToPoint(text, offset);
+          this.currentSel.sel.setSingleRange(range);
+          e.preventDefault();
         }
+      } else {
+        textNode = sel.range.startContainer;
+        startOffset = sel.range.startOffset;
+        txt = textNode.textContent;
+        textNode.textContent = txt.substr(0, startOffset - 1) + txt.substr(startOffset);
+        range = rangy.createRange();
+        range.collapseToPoint(textNode, startOffset - 1);
+        this.currentSel.sel.setSingleRange(range);
+        this.currentSel = null;
       }
     } else if (sel.endLine === startLine) {
-      sel.range.deleteContents();
-      return e.preventDefault();
+      text = startLine.line$[0].lastChild.previousSibling.firstChild;
+      range = rangy.createRange();
+      range.collapseToPoint(text, text.length);
+      this.currentSel.sel.setSingleRange(range);
+      return true;
     } else {
       this._deleteMultiLinesSelections();
-      return e.preventDefault();
+      e.preventDefault();
     }
+    return false;
   };
 
   /* ------------------------------------------------------------------------
@@ -20405,32 +20746,16 @@ CNeditor = (function() {
 
 
   CNeditor.prototype.titleList = function() {
-    var endDiv, endDivID, endLineID, line, range, sel, startDiv, _results;
+    var endDiv, line, range, sel, startDiv, _results;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
-    if (range.startContainer.nodeName === 'BODY') {
-      startDiv = range.startContainer.children[range.startOffset];
-    } else {
-      startDiv = range.startContainer;
-    }
-    if (range.endContainer.nodeName === "BODY") {
-      endDiv = range.endContainer.children[range.endOffset - 1];
-    } else {
-      endDiv = range.endContainer;
-    }
-    if (startDiv.nodeName !== "DIV") {
-      startDiv = $(startDiv).parents("div")[0];
-    }
-    if (endDiv.nodeName !== "DIV") {
-      endDiv = $(endDiv).parents("div")[0];
-    }
-    endLineID = endDiv.id;
+    startDiv = selection.getStartDiv(range);
+    endDiv = selection.getEndDiv(range, startDiv);
     line = this._lines[startDiv.id];
-    endDivID = endDiv.id;
     _results = [];
     while (true) {
       this._line2titleList(line);
-      if (line.lineID === endDivID) {
+      if (line.lineID === endDiv.id) {
         break;
       } else {
         _results.push(line = line.lineNext);
@@ -20466,7 +20791,7 @@ CNeditor = (function() {
 
   /* ------------------------------------------------------------------------
   # turn in Th or Lh of the siblings of line (and line itself of course)
-  # the children are note modified
+  # the children are not modified
   */
 
 
@@ -20528,23 +20853,9 @@ CNeditor = (function() {
       endLineID = startDivID;
     } else {
       range = this.getEditorSelection().getRangeAt(0);
-      if (range.startContainer.nodeName === 'BODY') {
-        startDiv = range.startContainer.children[range.startOffset];
-      } else {
-        startDiv = range.startContainer;
-      }
-      if (range.endContainer.nodeName === "BODY") {
-        endDiv = range.endContainer.children[range.endOffset - 1];
-      } else {
-        endDiv = range.endContainer;
-      }
-      if (startDiv.nodeName !== "DIV") {
-        startDiv = $(startDiv).parents("div")[0];
-      }
+      startDiv = selection.getStartDiv(range);
+      endDiv = selection.getEndDiv(range, startDiv);
       startDivID = startDiv.id;
-      if (endDiv.nodeName !== "DIV") {
-        endDiv = $(endDiv).parents("div")[0];
-      }
       endLineID = endDiv.id;
     }
     line = this._lines[startDivID];
@@ -20650,22 +20961,8 @@ CNeditor = (function() {
     var endDiv, endLineID, l, line, lineTypeTarget, range, sel, startDiv, _results;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
-    if (range.startContainer.nodeName === 'BODY') {
-      startDiv = range.startContainer.children[range.startOffset];
-    } else {
-      startDiv = range.startContainer;
-    }
-    if (range.endContainer.nodeName === "BODY") {
-      endDiv = range.endContainer.children[range.endOffset - 1];
-    } else {
-      endDiv = range.endContainer;
-    }
-    if (startDiv.nodeName !== "DIV") {
-      startDiv = $(startDiv).parents("div")[0];
-    }
-    if (endDiv.nodeName !== "DIV") {
-      endDiv = $(endDiv).parents("div")[0];
-    }
+    startDiv = selection.getStartDiv(range);
+    endDiv = selection.getEndDiv(range, startDiv);
     endLineID = endDiv.id;
     line = this._lines[startDiv.id];
     _results = [];
@@ -20761,16 +21058,8 @@ CNeditor = (function() {
     } else {
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
-      if (range.startContainer.nodeName === 'BODY') {
-        startDiv = range.startContainer.children[range.startOffset];
-      } else {
-        startDiv = range.startContainer;
-      }
-      if (range.endContainer.nodeName === "BODY") {
-        endDiv = range.endContainer.children[range.endOffset - 1];
-      } else {
-        endDiv = range.endContainer;
-      }
+      startDiv = selection.getStartDiv(range);
+      endDiv = selection.getEndDiv(range, startDiv);
     }
     if (startDiv.nodeName !== "DIV") {
       startDiv = $(startDiv).parents("div")[0];
@@ -20883,30 +21172,14 @@ CNeditor = (function() {
   */
 
 
-  CNeditor.prototype.shiftTab = function(myRange) {
-    var endDiv, endLineID, isTabAllowed, line, lineTypeTarget, nextL, parent, range, sel, startDiv, _results;
-    if (myRange != null) {
-      range = myRange;
-    } else {
+  CNeditor.prototype.shiftTab = function(range) {
+    var endDiv, endLineID, isTabAllowed, line, lineTypeTarget, nextL, parent, sel, startDiv, _results;
+    if (range == null) {
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
     }
-    if (range.startContainer.nodeName === 'BODY') {
-      startDiv = range.startContainer.children[range.startOffset];
-    } else {
-      startDiv = range.startContainer;
-    }
-    if (range.endContainer.nodeName === "BODY") {
-      endDiv = range.endContainer.children[range.endOffset - 1];
-    } else {
-      endDiv = range.endContainer;
-    }
-    if (startDiv.nodeName !== "DIV") {
-      startDiv = $(startDiv).parents("div")[0];
-    }
-    if (endDiv.nodeName !== "DIV") {
-      endDiv = $(endDiv).parents("div")[0];
-    }
+    startDiv = selection.getStartDiv(range);
+    endDiv = selection.getEndDiv(range, startDiv);
     endLineID = endDiv.id;
     line = this._lines[startDiv.id];
     _results = [];
@@ -21083,86 +21356,64 @@ CNeditor = (function() {
     }
   };
 
-  /* ------------------------------------------------------------------------
-  #  _deleteMultiLinesSelections
-  # 
+  /**
   # Delete the user multi line selection
-  #
-  # prerequisite : at least 2 different lines must be selected
-  # parameters   : startLine = first line to be deleted
-  #                endLine   = last line to be deleted
+  # Prerequisite : at least 2 different lines must be selected
+  # If startLine and endLine are specified, lines included between these two
+  # are deleted (including startLine & endLine.
+  # @param  {[line]} startLine [optional] if exists, the whole line will be taken
+  # @param  {[line]} endLine   [optional] if exists, the whole line will be taken
+  # @return {[none]}           [nothing]
   */
 
 
   CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
-    var deltaDepth, deltaDepth1stLine, depthSibling, endLineDepthAbs, endNode, endOfLineFragment, firstLineAfterSiblingsOfDeleted, l, line, myEndLine, newDepth, newText, prevSiblingType, range, range4caret, range4fragment, replaceCaret, startContainer, startFrag, startLineDepthAbs, startNode, startOffset, _ref;
-    replaceCaret = true;
-    if (startLine !== void 0) {
-      replaceCaret = false;
+    var curSel, deltaDepth, endLineDepth, endOfLineFragment, nextEndLine, prevStartLine, range, replaceCaret, startContainer, startLineDepth, startOffset;
+    if (this.currentSel == null) {
+      console.log("no selection, can't delete multi lines");
+      return null;
+    }
+    if (startLine != null) {
       range = rangy.createRange();
-      if (startLine === null) {
-        startLine = endLine;
-        endLine = endLine.lineNext;
-        this._putStartOnStart(range, startLine.line$[0].firstElementChild);
-        endLine.line$.prepend('<span></span>');
-        this._putEndOnStart(range, endLine.line$[0].firstElementChild);
-      } else {
-        startNode = startLine.line$[0].lastElementChild.previousElementSibling;
-        endNode = endLine.line$[0].lastElementChild.previousElementSibling;
-        range.setStartAfter(startNode, 0);
-        range.setEndAfter(endNode, 0);
-      }
+      selection.cleanSelection(startLine, endLine, range);
+      replaceCaret = false;
     } else {
-      this._findLines();
-      range = this.currentSel.range;
+      curSel = this._findLines();
+      range = curSel.range;
       startContainer = range.startContainer;
       startOffset = range.startOffset;
-      startLine = this.currentSel.startLine;
-      endLine = this.currentSel.endLine;
-    }
-    endLineDepthAbs = endLine.lineDepthAbs;
-    startLineDepthAbs = startLine.lineDepthAbs;
-    deltaDepth = endLineDepthAbs - startLineDepthAbs;
-    range4fragment = rangy.createRangyRange();
-    range4fragment.setStart(range.endContainer, range.endOffset);
-    range4fragment.setEndAfter(endLine.line$[0].lastChild);
-    endOfLineFragment = range4fragment.cloneContents();
-    if (endLine.lineType[1] === 'h' && startLine.lineType[1] !== 'h') {
-      if (endLine.lineType[0] === 'L') {
-        endLine.lineType = 'T' + endLine.lineType[1];
-        endLine.line$.prop("class", "" + endLine.lineType + "-" + endLine.lineDepthAbs);
+      startLine = curSel.startLine;
+      endLine = curSel.endLine;
+      if (startLine != null) {
+        prevStartLine = startLine.linePrev;
       }
-      this.markerList(endLine);
-    }
-    range.deleteContents();
-    if (startLine.line$[0].lastChild.nodeName === 'BR') {
-      startLine.line$[0].removeChild(startLine.line$[0].lastChild);
-    }
-    startFrag = endOfLineFragment.childNodes[0];
-    myEndLine = startLine.line$[0].lastElementChild;
-    if ((startFrag.tagName === (_ref = myEndLine.tagName) && _ref === 'SPAN') && startFrag.className === myEndLine.className) {
-      startOffset = myEndLine.textContent.length;
-      newText = myEndLine.textContent + startFrag.textContent;
-      myEndLine.innerHTML = newText;
-      startContainer = myEndLine.firstChild;
-      l = 1;
-      while (l < endOfLineFragment.childNodes.length) {
-        $(endOfLineFragment.childNodes[l]).appendTo(startLine.line$);
-        l++;
+      if (endLine != null) {
+        nextEndLine = endLine.lineNext;
       }
-    } else {
-      startLine.line$.append(endOfLineFragment);
+      replaceCaret = true;
     }
-    startLine.lineNext = endLine.lineNext;
-    if (endLine.lineNext !== null) {
-      endLine.lineNext.linePrev = startLine;
+    startLineDepth = startLine.lineDepthAbs;
+    endLineDepth = endLine.lineDepthAbs;
+    deltaDepth = endLineDepth - startLineDepth;
+    endOfLineFragment = selection.cloneEndFragment(range, endLine);
+    this._adaptEndLineType(startLine, endLine);
+    this._deleteSelectedLines(range);
+    this._addMissingFragment(startLine, endOfLineFragment);
+    this._removeEndLine(startLine, endLine);
+    this._adaptDepth(startLine, startLineDepth, endLineDepth, deltaDepth);
+    if (replaceCaret) {
+      return this._setCaret(startContainer, startOffset, startLine, nextEndLine);
     }
-    endLine.line$.remove();
-    delete this._lines[endLine.lineID];
+  };
+
+  CNeditor.prototype._trimLine = function(startLine) {};
+
+  CNeditor.prototype._adaptDepth = function(startLine, startLineDepthAbs, endLineDepthAbs, deltaDepth) {
+    var deltaDepth1stLine, depthSibling, firstLineAfterSiblingsOfDeleted, line, newDepth, prevSiblingType;
     line = startLine.lineNext;
     if (line !== null) {
       deltaDepth1stLine = line.lineDepthAbs - startLineDepthAbs;
-      if (deltaDepth1stLine >= 1) {
+      if (deltaDepth1stLine > 1) {
         while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
           newDepth = line.lineDepthAbs - deltaDepth;
           line.lineDepthAbs = newDepth;
@@ -21178,27 +21429,96 @@ CNeditor = (function() {
       }
       firstLineAfterSiblingsOfDeleted = line;
       depthSibling = line.lineDepthAbs;
-      line = line.linePrev;
       while (line !== null && line.lineDepthAbs > depthSibling) {
         line = line.linePrev;
       }
-      if (line !== null) {
+      if (line !== null && line !== firstLineAfterSiblingsOfDeleted) {
         prevSiblingType = line.lineType;
         if (firstLineAfterSiblingsOfDeleted.lineType !== prevSiblingType) {
           if (prevSiblingType[1] === 'h') {
-            this._line2titleList(firstLineAfterSiblingsOfDeleted);
+            return this._line2titleList(firstLineAfterSiblingsOfDeleted);
           } else {
-            this.markerList(firstLineAfterSiblingsOfDeleted);
+            return this.markerList(firstLineAfterSiblingsOfDeleted);
           }
         }
       }
     }
-    if (replaceCaret) {
-      range4caret = rangy.createRange();
-      range4caret.collapseToPoint(startContainer, startOffset);
-      this.currentSel.sel.setSingleRange(range4caret);
-      return this.currentSel = null;
+  };
+
+  CNeditor.prototype._deleteSelectedLines = function(range) {
+    return range.deleteContents();
+  };
+
+  CNeditor.prototype._addMissingFragment = function(startLine, endOfLineFragment) {
+    var endLine, l, newText, startContainer, startFrag, startOffset, _ref;
+    startFrag = endOfLineFragment.childNodes[0];
+    if (startLine.line$[0].lastChild === null) {
+      startLine.line$.prepend('<span></span>');
     }
+    if (startLine.line$[0].lastChild.nodeName === 'BR') {
+      startLine.line$[0].removeChild(startLine.line$[0].lastChild);
+    }
+    endLine = startLine.line$[0].lastChild;
+    if ((startFrag.tagName === (_ref = endLine.tagName) && _ref === 'SPAN') && startFrag.className === endLine.className) {
+      startOffset = endLine.textContent.length;
+      newText = endLine.textContent + startFrag.textContent;
+      endLine.innerHTML = newText;
+      startContainer = endLine.firstChild;
+      l = 1;
+      while (l < endOfLineFragment.childNodes.length) {
+        $(endOfLineFragment.childNodes[l]).appendTo(startLine.line$);
+        l++;
+      }
+      if ((startContainer != null ? startContainer.nodeName : void 0) === '#text') {
+        startContainer = endLine.nextLine;
+      }
+      return startContainer;
+    } else {
+      startLine.line$.append(endOfLineFragment);
+      return null;
+    }
+  };
+
+  CNeditor.prototype._removeEndLine = function(startLine, endLine) {
+    startLine.lineNext = endLine.lineNext;
+    if (endLine.lineNext !== null) {
+      endLine.lineNext.linePrev = startLine;
+    }
+    endLine.line$.remove();
+    return delete this._lines[endLine.lineID];
+  };
+
+  CNeditor.prototype._adaptEndLineType = function(startLine, endLine) {
+    var endLineType, startLineType;
+    endLineType = endLine.lineType;
+    startLineType = startLine.lineType;
+    if (endLineType[1] === 'h' && startLineType[1] === !'h') {
+      if (endLineType[0] === 'L') {
+        endLineType = 'T' + endLineType[1];
+        endLine.line$.prop("class", "" + endLineType + "-" + endLineDepth);
+      }
+      return this.markerList(endLine);
+    }
+  };
+
+  CNeditor.prototype._setCaret = function(startContainer, startOffset, startLine, nextEndLine, prevStartLine) {
+    var range;
+    if (startOffset === 0) {
+      if ((prevStartLine != null) || (nextEndLine != null)) {
+        if (startLine != null) {
+          startContainer = startLine.line$[0].firstChild.firstChild;
+        } else {
+          startContainer = nextEndLine.line$[0];
+        }
+      } else {
+        startContainer = startLine.line$[0].lastChild;
+      }
+    } else {
+      startContainer = startLine.line$[0].firstChild.firstChild;
+    }
+    range = rangy.createRange();
+    range.collapseToPoint(startContainer, startOffset);
+    return this.currentSel.sel.setSingleRange(range);
   };
 
   /* ------------------------------------------------------------------------
@@ -21219,7 +21539,7 @@ CNeditor = (function() {
 
 
   CNeditor.prototype._insertLineAfter = function(p) {
-    var lineID, newLine, newLine$, sourceLine;
+    var lineID, newLine, newLine$, nextSibling, sourceLine;
     this._highestId += 1;
     lineID = 'CNID_' + this._highestId;
     if (p.fragment != null) {
@@ -21238,7 +21558,12 @@ CNeditor = (function() {
       newLine$.append($('<span></span><br>'));
     }
     sourceLine = p.sourceLine;
-    newLine$ = newLine$.insertAfter(sourceLine.line$);
+    nextSibling = sourceLine.line$[0].nextSibling;
+    if (nextSibling === null) {
+      sourceLine.line$[0].parentNode.appendChild(newLine$[0]);
+    } else {
+      newLine$ = $(sourceLine.line$[0].parentNode.insertBefore(newLine$[0], nextSibling));
+    }
     newLine = {
       line$: newLine$,
       lineID: lineID,
@@ -21299,8 +21624,27 @@ CNeditor = (function() {
     return newLine;
   };
 
+  CNeditor.prototype._findStartLine = function(startContainer) {
+    var startLine;
+    if (startContainer.nodeName === 'DIV') {
+      return startLine = this._lines[startContainer.id];
+    } else {
+      return startLine = this._lines[selection.getLineDiv(startContainer).id];
+    }
+  };
+
+  CNeditor.prototype._findEndLine = function(endContainer) {
+    var endLine;
+    if ((endContainer.id != null) && endContainer.id.substr(0, 5) === 'CNID_') {
+      endLine = this._lines[endContainer.id];
+    } else {
+      endLine = this._lines[selection.getLineDiv(endContainer).id];
+    }
+    return endLine;
+  };
+
   /* ------------------------------------------------------------------------
-  #  _findLines
+  #  _endDiv
   #  
   # Finds :
   #   First and last line of selection. 
@@ -21315,25 +21659,13 @@ CNeditor = (function() {
 
 
   CNeditor.prototype._findLines = function() {
-    var endContainer, endLine, initialEndOffset, initialStartOffset, range, sel, startContainer, startLine;
+    var endLine, range, sel, startLine;
     if (this.currentSel === null) {
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
-      startContainer = range.startContainer;
-      endContainer = range.endContainer;
-      initialStartOffset = range.startOffset;
-      initialEndOffset = range.endOffset;
-      if ((endContainer.id != null) && endContainer.id.substr(0, 5) === 'CNID_') {
-        endLine = this._lines[endContainer.id];
-      } else {
-        endLine = this._lines[$(endContainer).parents("div")[0].id];
-      }
-      if (startContainer.nodeName === 'DIV') {
-        startLine = this._lines[startContainer.id];
-      } else {
-        startLine = this._lines[$(startContainer).parents("div")[0].id];
-      }
-      return this.currentSel = {
+      endLine = this._findEndLine(range.endContainer);
+      startLine = this._findStartLine(range.startContainer);
+      this.currentSel = {
         sel: sel,
         range: range,
         startLine: startLine,
@@ -21342,6 +21674,7 @@ CNeditor = (function() {
         rangeIsEndLine: null
       };
     }
+    return this.currentSel;
   };
 
   /* ------------------------------------------------------------------------
@@ -21366,68 +21699,67 @@ CNeditor = (function() {
 
 
   CNeditor.prototype._findLinesAndIsStartIsEnd = function() {
-    var endContainer, endLine, initialEndOffset, initialStartOffset, nextSibling, parentEndContainer, parentStartContainer, range, rangeIsEndLine, rangeIsStartLine, sel, startContainer, startLine;
-    if (this.currentSel === null) {
-      sel = this.getEditorSelection();
-      range = sel.getRangeAt(0);
-      startContainer = range.startContainer;
-      endContainer = range.endContainer;
-      initialStartOffset = range.startOffset;
-      initialEndOffset = range.endOffset;
-      if ((endContainer.id != null) && endContainer.id.substr(0, 5) === 'CNID_') {
-        endLine = this._lines[endContainer.id];
-        rangeIsEndLine = endContainer.children.length < initialEndOffset || endContainer.children[initialEndOffset].nodeName === "BR";
-      } else if ($(endContainer).parents("div").length > 0) {
-        endLine = this._lines[$(endContainer).parents("div")[0].id];
-        rangeIsEndLine = false;
-        if (endContainer.nodeType === Node.TEXT_NODE) {
-          rangeIsEndLine = endContainer.nextSibling === null && initialEndOffset === endContainer.textContent.length;
-        } else {
-          rangeIsEndLine = endContainer.nodeName === 'BR' || (endContainer.nextSibling.nodeName === 'BR' && endContainer.childNodes.length === initialEndOffset);
-        }
-        parentEndContainer = endContainer.parentNode;
-        while (rangeIsEndLine && parentEndContainer.nodeName !== "DIV") {
-          nextSibling = parentEndContainer.nextSibling;
-          rangeIsEndLine = nextSibling === null || nextSibling.nodeName === 'BR';
-          parentEndContainer = parentEndContainer.parentNode;
-        }
+    var endContainer, endLine, endLineDiv, initialEndOffset, initialStartOffset, nextSibling, parentEndContainer, parentStartContainer, range, rangeIsEndLine, rangeIsStartLine, sel, startContainer, startLine;
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    startContainer = range.startContainer;
+    endContainer = range.endContainer;
+    initialStartOffset = range.startOffset;
+    initialEndOffset = range.endOffset;
+    if ((endContainer.id != null) && endContainer.id.substr(0, 5) === 'CNID_') {
+      endLine = this._lines[endContainer.id];
+      rangeIsEndLine = endContainer.children.length < initialEndOffset || endContainer.children[initialEndOffset].nodeName === "BR";
+    } else if ($(endContainer).parents("div").length > 0) {
+      endLineDiv = selection.getLineDiv(endContainer);
+      endLine = this._lines[endLineDiv.id];
+      rangeIsEndLine = false;
+      if (endContainer.nodeType === Node.TEXT_NODE) {
+        rangeIsEndLine = endContainer.nextSibling === null && initialEndOffset === endContainer.textContent.length;
       } else {
-        endLine = this._lines["CNID_1"];
+        rangeIsEndLine = endContainer.nodeName === 'BR' || (endContainer.nextSibling.nodeName === 'BR' && endContainer.childNodes.length === initialEndOffset);
       }
-      if (startContainer.nodeName === 'DIV') {
-        startLine = this._lines[startContainer.id];
-        rangeIsStartLine = initialStartOffset === 0;
-      } else if ($(startContainer).parents("div").length > 0) {
-        startLine = this._lines[$(startContainer).parents("div")[0].id];
-        if (startContainer.nodeType === Node.TEXT_NODE) {
-          rangeIsStartLine = endContainer.previousSibling === null && initialStartOffset === 0;
-        } else {
-          rangeIsStartLine = initialStartOffset === 0;
-        }
-        parentStartContainer = startContainer.parentNode;
-        while (rangeIsStartLine && parentStartContainer.nodeName !== "DIV") {
-          rangeIsStartLine = parentStartContainer.previousSibling === null;
-          parentStartContainer = parentStartContainer.parentNode;
-        }
-      } else {
-        startLine = this._lines["CNID_1"];
+      parentEndContainer = endContainer.parentNode;
+      while (rangeIsEndLine && parentEndContainer.nodeName !== "DIV") {
+        nextSibling = parentEndContainer.nextSibling;
+        rangeIsEndLine = nextSibling === null || nextSibling.nodeName === 'BR';
+        parentEndContainer = parentEndContainer.parentNode;
       }
-      if ((endLine != null ? endLine.line$[0].innerHTML : void 0) === "<span></span><br>") {
-        rangeIsEndLine = true;
-      }
-      if ((startLine != null ? startLine.line$[0].innerHTML : void 0) === "<span></span><br>") {
-        rangeIsStartLine = true;
-      }
-      this.currentSel = {
-        sel: sel,
-        range: range,
-        startLine: startLine,
-        endLine: endLine,
-        rangeIsStartLine: rangeIsStartLine,
-        rangeIsEndLine: rangeIsEndLine
-      };
-      return this.currrentSel;
+    } else {
+      endLine = this._lines["CNID_1"];
     }
+    if (startContainer.nodeName === 'DIV') {
+      startLine = this._lines[startContainer.id];
+      rangeIsStartLine = initialStartOffset === 0;
+    } else if ($(startContainer).parents("div").length > 0) {
+      startLine = this._lines[selection.getLineDiv(startContainer).id];
+      if (startContainer.nodeType === Node.TEXT_NODE) {
+        rangeIsStartLine = endContainer.previousSibling === null && initialStartOffset === 0;
+      } else {
+        rangeIsStartLine = initialStartOffset === 0;
+      }
+      parentStartContainer = startContainer.parentNode;
+      while (rangeIsStartLine && parentStartContainer.nodeName !== "DIV") {
+        rangeIsStartLine = parentStartContainer.previousSibling === null;
+        parentStartContainer = parentStartContainer.parentNode;
+      }
+    } else {
+      startLine = this._lines["CNID_1"];
+    }
+    if ((endLine != null ? endLine.line$[0].innerHTML : void 0) === "<span></span><br>") {
+      rangeIsEndLine = true;
+    }
+    if ((startLine != null ? startLine.line$[0].innerHTML : void 0) === "<span></span><br>") {
+      rangeIsStartLine = true;
+    }
+    this.currentSel = {
+      sel: sel,
+      range: range,
+      startLine: startLine,
+      endLine: endLine,
+      rangeIsStartLine: rangeIsStartLine,
+      rangeIsEndLine: rangeIsEndLine
+    };
+    return this.currrentSel;
   };
 
   /*  -----------------------------------------------------------------------
@@ -21439,7 +21771,7 @@ CNeditor = (function() {
 
   CNeditor.prototype._readHtml = function() {
     var deltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, _i, _len, _ref;
-    linesDiv$ = this.editorBody$.children();
+    linesDiv$ = $(this.linesDiv).children();
     lineDepthAbs = 0;
     lineDepthRel = 0;
     lineID = 0;
@@ -21522,23 +21854,9 @@ CNeditor = (function() {
     var cloneLine, endDiv, endLineID, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
-    if (range.startContainer.nodeName === 'BODY') {
-      startDiv = range.startContainer.children[range.startOffset];
-    } else {
-      startDiv = range.startContainer;
-    }
-    if (range.endContainer.nodeName === "BODY") {
-      endDiv = range.endContainer.children[range.endOffset - 1];
-    } else {
-      endDiv = range.endContainer;
-    }
-    if (startDiv.nodeName !== "DIV") {
-      startDiv = $(startDiv).parents("div")[0];
-    }
+    startDiv = selection.getStartDiv(range);
+    endDiv = selection.getEndDiv(range, startDiv);
     startLineID = startDiv.id;
-    if (endDiv.nodeName !== "DIV") {
-      endDiv = $(endDiv).parents("div")[0];
-    }
     endLineID = endDiv.id;
     lineStart = this._lines[startLineID];
     lineEnd = this._lines[endLineID];
@@ -21644,23 +21962,9 @@ CNeditor = (function() {
     var cloneLine, endDiv, endLineID, isSecondLine, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
-    if (range.startContainer.nodeName === 'BODY') {
-      startDiv = range.startContainer.children[range.startOffset];
-    } else {
-      startDiv = range.startContainer;
-    }
-    if (range.endContainer.nodeName === "BODY") {
-      endDiv = range.endContainer.children[range.endOffset - 1];
-    } else {
-      endDiv = range.endContainer;
-    }
-    if (startDiv.nodeName !== "DIV") {
-      startDiv = $(startDiv).parents("div")[0];
-    }
+    startDiv = selection.getStartDiv(range);
+    endDiv = selection.getEndDiv(range, startDiv);
     startLineID = startDiv.id;
-    if (endDiv.nodeName !== "DIV") {
-      endDiv = $(endDiv).parents("div")[0];
-    }
     endLineID = endDiv.id;
     lineStart = this._lines[startLineID];
     lineEnd = this._lines[endLineID];
@@ -21813,11 +22117,10 @@ CNeditor = (function() {
     var savedSel, xcoord, ycoord;
     if (this.undoPossible()) {
       if (this._history.index === this._history.history.length - 1) {
-        this._addHistory();
         this._history.index -= 1;
       }
       this.newPosition = this._history.historyPos[this._history.index];
-      this.editorBody$.html(this._history.history[this._history.index]);
+      this.linesDiv.innerHTML = this._history.history[this._history.index];
       savedSel = this._history.historySelect[this._history.index];
       savedSel.restored = false;
       rangy.restoreSelection(savedSel);
@@ -21841,7 +22144,7 @@ CNeditor = (function() {
     if (this.redoPossible()) {
       this.newPosition = this._history.historyPos[this._history.index + 1];
       this._history.index += 1;
-      this.editorBody$.html(this._history.history[this._history.index + 1]);
+      this.linesDiv.innerHTML = this._history.history[this._history.index + 1];
       savedSel = this._history.historySelect[this._history.index + 1];
       savedSel.restored = false;
       rangy.restoreSelection(savedSel);
@@ -21938,24 +22241,25 @@ CNeditor = (function() {
   };
 
   /**
-   * init the div where the browser will actualy paste.
-   * this method is called after each refresh of the content of the editor (
-   * replaceContent, deleteContent, setEditorContent)
-   * TODO : should be called just once at editor init : for this the editable
-   * content shouldn't be directly in the body of the iframe but in a div.
-   * @return {obj} a ref to the clipboard div
+  # * init the div where the browser will actualy paste.
+  # * this method is called after each refresh of the content of the editor (
+  # * replaceContent, deleteContent, setEditorContent)
+  # * TODO : should be called just once at editor init : for this the editable
+  # * content shouldn't be directly in the body of the iframe but in a div.
+  # * @return {obj} a ref to the clipboard div
   */
 
 
   CNeditor.prototype._initClipBoard = function() {
-    var clipboard$, getOffTheScreen;
-    clipboard$ = $(document.createElement('div'));
+    var getOffTheScreen;
+    this.clipboard$ = $(document.createElement('div'));
+    this.clipboard$.attr('id', 'editor-clipboard');
     getOffTheScreen = {
       left: -300
     };
-    clipboard$.offset(getOffTheScreen);
-    clipboard$.prependTo(this.editorBody$);
-    this.clipboard = clipboard$[0];
+    this.clipboard$.offset(getOffTheScreen);
+    this.clipboard$.prependTo(this.editorBody$);
+    this.clipboard = this.clipboard$[0];
     this.clipboard.style.setProperty('width', '280px');
     this.clipboard.style.setProperty('position', 'fixed');
     this.clipboard.style.setProperty('overflow', 'hidden');
@@ -21988,7 +22292,6 @@ CNeditor = (function() {
 
   CNeditor.prototype._processPaste = function() {
     var absDepth, caretOffset, caretTextNodeTarget, currSel, currentLineFrag, domWalkContext, dummyLine, elToInsert, endLine, endOffset, endTargetLineFrag, firstAddedLine, frag, htmlStr, i, line, lineElements, lineNextStartLine, nbElements, newText, parendDiv, range, sandbox, secondAddedLine, startLine, startOffset, targetNode, targetText, txt;
-    console.log("process paste");
     sandbox = this.clipboard;
     currSel = this.currentSel;
     sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
@@ -22017,7 +22320,6 @@ CNeditor = (function() {
     htmlStr = this._domWalk(sandbox, domWalkContext);
     sandbox.innerHTML = "";
     frag.removeChild(frag.firstChild);
-    console.log(frag);
     /*
             # TODO : the following steps removes all the styles of the lines in frag
             # Later this will be removed in order to take into account styles.
@@ -22043,18 +22345,31 @@ CNeditor = (function() {
       currSel.range.deleteContents();
     } else {
       this._deleteMultiLinesSelections();
-      currSel = this._findLinesAndIsStartIsEnd();
+      this._findLinesAndIsStartIsEnd();
+      currSel = this.currentSel;
       startLine = currSel.startLine;
     }
     targetNode = currSel.range.startContainer;
     startOffset = currSel.range.startOffset;
-    if (targetNode.length) {
+    if (targetNode.nodeName === 'DIV' && targetNode.id.substr(0, 5) === 'CNID_') {
+      targetNode = targetNode.firstChild.firstChild;
+      if (startOffset > 0) {
+        startOffset = targetNode.length;
+      } else {
+        startOffset = 0;
+      }
       endOffset = targetNode.length - startOffset;
+    }
+    if (targetNode.nodeName === 'SPAN') {
+      targetNode = targetNode.firstChild;
+      endOffset = targetNode.length - startOffset;
+    }
+    if (frag.childNodes.length > 0) {
+      lineElements = frag.firstChild.childNodes;
     } else {
-      endOffset = targetNode.childNodes.length - startOffset;
+      lineElements = [frag];
     }
     i = 0;
-    lineElements = frag.firstChild.childNodes;
     nbElements = lineElements.length;
     while (i < nbElements - 1) {
       elToInsert = lineElements[i];
@@ -22085,22 +22400,26 @@ CNeditor = (function() {
       }
     }
     firstAddedLine = dummyLine.lineNext;
-    secondAddedLine = firstAddedLine.lineNext;
-    frag.removeChild(frag.firstChild);
-    delete this._lines[firstAddedLine.lineID];
-    if (secondAddedLine !== null) {
+    secondAddedLine = firstAddedLine != null ? firstAddedLine.lineNext : void 0;
+    if (frag.firstChild != null) {
+      frag.removeChild(frag.firstChild);
+    }
+    if (firstAddedLine != null) {
+      delete this._lines[firstAddedLine.lineID];
+    }
+    if (secondAddedLine != null) {
       lineNextStartLine = currSel.startLine.lineNext;
       currSel.startLine.lineNext = secondAddedLine;
       secondAddedLine.linePrev = currSel.startLine;
       if (lineNextStartLine === null) {
-        this.editorBody$[0].appendChild(frag);
+        this.linesDiv.appendChild(frag);
       } else {
         domWalkContext.lastAddedLine.lineNext = lineNextStartLine;
         lineNextStartLine.linePrev = domWalkContext.lastAddedLine;
-        this.editorBody$[0].insertBefore(frag, lineNextStartLine.line$[0]);
+        this.linesDiv.insertBefore(frag, lineNextStartLine.line$[0]);
       }
     }
-    if (secondAddedLine !== null) {
+    if (secondAddedLine != null) {
       caretTextNodeTarget = lineNextStartLine.linePrev.line$[0].childNodes[0].firstChild;
       caretOffset = caretTextNodeTarget.length - endOffset;
       return currSel.sel.collapse(caretTextNodeTarget, caretOffset);
@@ -22176,10 +22495,9 @@ CNeditor = (function() {
 
 
   CNeditor.prototype.__domWalk = function(nodeToParse, context) {
-    var absDepth, child, deltaHxLevel, lastInsertedEl, prevHxLevel, spanNode, spaneEl, txtNode, _i, _len, _ref, _ref1;
+    var absDepth, child, deltaHxLevel, lastInsertedEl, prevHxLevel, spanEl, spanNode, txtNode, _i, _len, _ref, _ref1;
     absDepth = context.absDepth;
     prevHxLevel = context.prevHxLevel;
-    console.log("node to parse");
     _ref = nodeToParse.childNodes;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       child = _ref[_i];
@@ -22189,14 +22507,10 @@ CNeditor = (function() {
           if ((_ref1 = context.currentLineEl.nodeName) === 'SPAN' || _ref1 === 'A') {
             context.currentLineEl.appendChild(txtNode);
           } else {
-            spaneEl = document.createElement('span');
-            spaneEl.appendChild(txtNode);
-            context.currentLineEl.appendChild(spaneEl);
+            spanEl = document.createElement('span');
+            spanEl.appendChild(txtNode);
+            context.currentLineEl.appendChild(spanEl);
           }
-          console.log("lineEl");
-          console.log(context.currentLineEl);
-          console.log(txtNode);
-          this._appendCurrentLineFrag(context, absDepth, absDepth);
           context.isCurrentLineBeingPopulated = true;
           break;
         case 'P':
@@ -22237,8 +22551,9 @@ CNeditor = (function() {
           if (lastInsertedEl !== null && lastInsertedEl.nodeName === 'SPAN') {
             lastInsertedEl.textContent += '[[' + child.textContent + '|' + child.href + ']]';
           } else {
-            spanNode = document.createElement('span');
-            spanNode.textContent = child.textContent + ' [[' + child.href + ']] ';
+            spanNode = document.createElement('a');
+            spanNode.href = child.href;
+            spanNode.textContent = child.textContent;
             context.currentLineEl.appendChild(spanNode);
           }
           context.isCurrentLineBeingPopulated = true;
@@ -22284,12 +22599,9 @@ CNeditor = (function() {
       fragment: context.currentLineFrag,
       targetLineType: "Tu",
       targetLineDepthAbs: absDepth,
-      targetLineDepthRel: absDepth
+      targetLineDepthRel: relDepth
     };
     context.lastAddedLine = this._insertLineAfter(p);
-    console.log(context.currentLineEl);
-    console.log(context.frag);
-    context.frag.appendChild(context.currentLineEl);
     context.currentLineFrag = document.createDocumentFragment();
     context.currentLineEl = context.currentLineFrag;
     return context.isCurrentLineBeingPopulated = false;
@@ -22327,202 +22639,6 @@ CNeditor = (function() {
   };
 
   /* ------------------------------------------------------------------------
-  #  MARKUP LANGUAGE CONVERTERS
-  # _cozy2md (Read a string of editor html code format and turns it into a
-  #           string in markdown format)
-  # _md2cozy (Read a string of html code given by showdown and turns it into
-  #           a string of editor html code)
-  */
-
-
-  /* ------------------------------------------------------------------------
-  #  _cozy2md
-  # Read a string of editor html code format and turns it into a string in
-  #  markdown format
-  */
-
-
-  CNeditor.prototype._cozy2md = function(text) {
-    var children, classType, converter, currDepth, htmlCode, i, j, l, lineCode, lineElt, markCode, markup, space, _i, _ref;
-    htmlCode = $(document.createElement('div')).html(text);
-    markCode = '';
-    currDepth = 0;
-    converter = {
-      'A': function(obj) {
-        var href, title;
-        title = obj.attr('title') != null ? obj.attr('title') : "";
-        href = obj.attr('href') != null ? obj.attr('href') : "";
-        return '[' + obj.html() + '](' + href + ' "' + title + '")';
-      },
-      'IMG': function(obj) {
-        var alt, src, title;
-        title = obj.attr('title') != null ? obj.attr('title') : "";
-        alt = obj.attr('alt') != null ? obj.attr('alt') : "";
-        src = obj.attr('src') != null ? obj.attr('src') : "";
-        return '![' + alt + '](' + src + ' "' + title + '")';
-      },
-      'SPAN': function(obj) {
-        return obj.text();
-      }
-    };
-    markup = {
-      'Th': function(blanks, depth) {
-        var dieses, i;
-        currDepth = depth;
-        dieses = '';
-        i = 0;
-        while (i < depth) {
-          dieses += '#';
-          i++;
-        }
-        return "\n" + dieses + ' ';
-      },
-      'Lh': function(blanks, depth) {
-        return "\n";
-      },
-      'Tu': function(blanks, depth) {
-        return "\n" + blanks + "+   ";
-      },
-      'Lu': function(blanks, depth) {
-        return "\n" + blanks + "    ";
-      },
-      'To': function(blanks, depth) {
-        return "\n" + blanks + "1.   ";
-      },
-      'Lo': function(blanks, depth) {
-        return "\n" + blanks + "    ";
-      }
-    };
-    classType = function(className) {
-      var blanks, depth, i, tab, type;
-      tab = className.split("-");
-      type = tab[0];
-      depth = parseInt(tab[1], 10);
-      blanks = '';
-      i = 1;
-      while (i < depth - currDepth) {
-        blanks += '    ';
-        i++;
-      }
-      return markup[type](blanks, depth);
-    };
-    children = htmlCode.children();
-    for (i = _i = 0, _ref = children.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-      lineCode = $(children.get(i));
-      if (lineCode.attr('class') != null) {
-        markCode += classType(lineCode.attr('class'));
-      }
-      l = lineCode.children().length;
-      j = 0;
-      space = ' ';
-      while (j < l) {
-        lineElt = lineCode.children().get(j);
-        if (j + 2 === l) {
-          space = '';
-        }
-        if (lineElt.nodeType === 1 && (converter[lineElt.nodeName] != null)) {
-          markCode += converter[lineElt.nodeName]($(lineElt)) + space;
-        } else {
-          markCode += $(lineElt).text() + space;
-        }
-        j++;
-      }
-      markCode += "\n";
-    }
-    return markCode;
-  };
-
-  /* ------------------------------------------------------------------------
-  # Read a string of html code given by showdown and turns it into a string
-  # of editor html code
-  */
-
-
-  CNeditor.prototype._md2cozy = function(text) {
-    var conv, cozyCode, cozyTurn, depth, htmlCode, id, readHtml, recRead;
-    console.log(text);
-    conv = new Showdown.converter();
-    text = conv.makeHtml(text);
-    htmlCode = $(document.createElement('ul')).html(text);
-    cozyCode = '';
-    id = 0;
-    cozyTurn = function(type, depth, p) {
-      var code;
-      id++;
-      code = '';
-      if (p != null) {
-        p.contents().each(function() {
-          var name;
-          name = this.nodeName;
-          if (name === "#text") {
-            return code += "<span>" + ($(this).text()) + "</span>";
-          } else if (this.tagName != null) {
-            $(this).wrap('<div></div>');
-            code += "" + ($(this).parent().html());
-            return $(this).unwrap();
-          }
-        });
-      } else {
-        code = "<span></span>";
-      }
-      return ("<div id=CNID_" + id + " class=" + type + "-" + depth + ">") + code + "<br></div>";
-    };
-    depth = 0;
-    readHtml = function(obj) {
-      var tag;
-      tag = obj[0].tagName;
-      if (tag[0] === "H") {
-        depth = parseInt(tag[1], 10);
-        return cozyCode += cozyTurn("Th", depth, obj);
-      } else if (tag === "P") {
-        return cozyCode += cozyTurn("Lh", depth, obj);
-      } else {
-        return recRead(obj, "u");
-      }
-    };
-    recRead = function(obj, status) {
-      var child, i, tag, _i, _ref, _results;
-      tag = obj[0].tagName;
-      if (tag === "UL") {
-        depth++;
-        obj.children().each(function() {
-          return recRead($(this), "u");
-        });
-        return depth--;
-      } else if (tag === "OL") {
-        depth++;
-        obj.children().each(function() {
-          return recRead($(this), "o");
-        });
-        return depth--;
-      } else if (tag === "LI" && (obj.contents().get(0) != null)) {
-        if (obj.contents().get(0).nodeName === "#text") {
-          obj = obj.clone().wrap('<p></p>').parent();
-        }
-        _results = [];
-        for (i = _i = 0, _ref = obj.children().length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-          child = $(obj.children().get(i));
-          if (i === 0) {
-            _results.push(cozyCode += cozyTurn("T" + status, depth, child));
-          } else {
-            _results.push(recRead(child, status));
-          }
-        }
-        return _results;
-      } else if (tag === "P") {
-        return cozyCode += cozyTurn("L" + status, depth, obj);
-      }
-    };
-    htmlCode.children().each(function() {
-      return readHtml($(this));
-    });
-    if (cozyCode.length === 0) {
-      cozyCode = cozyTurn("Tu", 1, null);
-    }
-    return cozyCode;
-  };
-
-  /* ------------------------------------------------------------------------
   # EXTENSION  :  cleaned up HTML parsing
   #
   #  (TODO)
@@ -22556,32 +22672,15 @@ CNeditor = (function() {
   */
 
 
+  CNeditor.prototype.logKeyPress = function(e) {
+    return console.clear();
+  };
+
   return CNeditor;
 
 })();
-/* ------------------------------------------------------------------------
-# CLASS FOR THE COZY NOTE EDITOR
-#
-# usage : 
-#
-# newEditor = new CNEditor( iframeTarget,callBack )
-#   iframeTarget = iframe where the editor will be nested
-#   callBack     = launched when editor ready, the context 
-#                  is set to the editorCtrl (callBack.call(this))
-# properties & methods :
-#   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
-#   _keyPressListener : (e) =>
-#   _insertLineAfter  : (param) ->
-#   _insertLineBefore : (param) ->
-#   
-#   editorIframe      : the iframe element where is nested the editor
-#   editorBody$       : the jquery pointer on the body of the iframe
-#   _lines            : {} an objet, each property refers a line
-#   _highestId        : 
-#   _firstLine        : pointes the first line : TODO : not taken into account
-*/
 
-var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+CNeditor = exports.CNeditor;
 ;
 
 /*
