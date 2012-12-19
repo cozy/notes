@@ -6629,6 +6629,10 @@ iframe {
 #tree #tree-node-all > li {
   padding: 0;
 }
+#tree #tree-node-all > ul > li > .jstree-rename-input {
+  margin-left: 8px;
+  margin-top: 10px;
+}
 #tree li {
   padding: 10px 0;
   position: relative;

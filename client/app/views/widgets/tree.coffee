@@ -90,7 +90,7 @@ class exports.Tree
                 icons: false
             core:
                 animation: 0
-                #initially_open: [ "tree-node-all" ]
+                initially_open: [ "tree-node-all" ]
             search:
                 search_method: "jstree_contains_multi"
                 show_only_matches: true

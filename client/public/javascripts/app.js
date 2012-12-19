@@ -1254,7 +1254,8 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           icons: false
         },
         core: {
-          animation: 0
+          animation: 0,
+          initially_open: ["tree-node-all"]
         },
         search: {
           search_method: "jstree_contains_multi",
