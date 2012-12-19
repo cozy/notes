@@ -6652,7 +6652,7 @@ iframe {
   margin-left: 20px;
 }
 #tree a {
-  padding: 0;
+  padding: 1px 0 0 3px;
   margin: 0;
   border: 0;
   color: treelinkcolor;
@@ -6684,7 +6684,7 @@ iframe {
   display: none;
   position: absolute;
   right: 5px;
-  top: 0px;
+  top: 2px;
 }
 #tree-buttons div {
   display: inline;
