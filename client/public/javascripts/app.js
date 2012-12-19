@@ -491,6 +491,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
       this.noteView = new NoteView(this, this.onIFrameLoaded);
       this.noteFull = this.$("#note-full");
       this.noteFull.hide();
+      this.$("#help-info").hide();
       return this.$el.layout({
         size: "250",
         minSize: "250",
@@ -508,13 +509,16 @@ window.require.define({"views/home_view": function(exports, require, module) {
       var _this = this;
       return $.get("tree/", function(data) {
         window.tree = data;
-        return _this.tree = new Tree(_this.$("#nav"), data, {
+        _this.tree = new Tree(_this.$("#nav"), data, {
           onCreate: _this.onCreateFolder,
           onRename: _this.onTreeRename,
           onRemove: _this.onTreeRemove,
           onSelect: _this.onTreeSelectionChg,
           onLoaded: _this.onTreeLoaded,
           onDrop: _this.onNoteDropped
+        });
+        return $("#create-note").click(function() {
+          return _this.tree.widget.jstree("create", "#tree-node-all", "first", "A New Note");
         });
       });
     };
@@ -691,8 +695,10 @@ window.require.define({"views/home_view": function(exports, require, module) {
       if (id != null) {
         if (id === "tree-node-all") {
           this.progress.remove();
-          return this.noteFull.hide();
+          this.noteFull.hide();
+          return this.$("#help-info").show();
         } else {
+          this.$("#help-info").hide();
           return Note.getNote(id, function(note) {
             _this.renderNote(note, data);
             return _this.noteFull.show();
@@ -700,6 +706,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
         }
       } else {
         this.progress.remove();
+        this.$("#help-info").show();
         return this.noteFull.hide();
       }
     };
@@ -710,11 +717,14 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
 
     HomeView.prototype.selectNote = function(note_uuid) {
+      var _ref;
       this.progressBar.css("width", "40%");
-      if (note_uuid === "all") {
-        note_uuid = 'tree-node-all';
+      if ((_ref = !note_uuid) === "all" || _ref === 'tree-node-all') {
+        return this.tree.selectNode(note_uuid);
+      } else {
+        this.$("#help-info").show();
+        return this.noteFull.hide();
       }
-      return this.tree.selectNode(note_uuid);
     };
 
     /**
@@ -1100,7 +1110,7 @@ window.require.define({"views/templates/home": function(exports, require, module
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="nav1" class="ui-layout-west"><div id="nav" class="well"><div id="tree" tabIndex="2"></div></div></div><div id="note-area" class="ui-layout-center"><div id="note-full" class="well note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><div><input id="note-full-title"/></div><div id="editor"></div></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
+  buf.push('<div id="nav" class="ui-layout-west"><div id="tree"></div></div><div id="note-area" class="ui-layout-center"><div id="help-info">You don\'t have any note selected yet. To select a note use the tree\non your left.</div><div id="note-full" class="well note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><div><input id="note-full-title"/></div><div id="editor"></div></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
   }
   return buf.join("");
   };
@@ -1124,7 +1134,7 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="tree-buttons-root"><div id="tree-create-root" class="button"><i class="icon-plus"></i></div></div><div id="tree-buttons"><div id="tree-create" class="button"><i class="icon-plus"></i></div><div id="tree-remove" class="button"><i class="icon-remove"></i></div><div id="tree-rename" class="button"><i class="icon-pencil"></i></div></div><div id="tree-top-buttons"><input id="tree-search-field" type="text" class="span2"/><i id="suppr-button" style="display: none" class="icon-remove-circle"></i></div>');
+  buf.push('<div id="tree-buttons"><div id="tree-create" class="button"><i class="icon-plus"></i></div><div id="tree-remove" class="button"><i class="icon-remove"></i></div><div id="tree-rename" class="button"><i class="icon-pencil"></i></div></div><div id="tree-top-buttons"><input id="tree-search-field" type="text" class="span2"/><i id="suppr-button" style="display: none" class="icon-remove-circle"></i></div><div id="my-notes"><img id="my-notes-pic" src="img/my-notes.png"/><div id="create-note"></div></div>');
   }
   return buf.join("");
   };
@@ -1164,7 +1174,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
     suggestionList = [];
 
     /**
-    # Initialize jsTree tree with options : sorting, create/rename/delete,
+    # Initialize jsTree tree with options : sorting, create/rename/deldarkgrey
     # unique children and json data for loading.
     # params :
     #   navEl : 
@@ -1200,7 +1210,15 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         },
         types: {
           "default": {
-            valid_children: "default"
+            valid_children: "default",
+            icon: {
+              image: "test.png"
+            }
+          },
+          folder: {
+            icon: {
+              image: "test.png"
+            }
           },
           root: {
             valid_children: null,
@@ -1236,8 +1254,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
           icons: false
         },
         core: {
-          animation: 0,
-          initially_open: ["tree-node-all"]
+          animation: 0
         },
         search: {
           search_method: "jstree_contains_multi",
@@ -1290,7 +1307,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         jstreeEl.jstree("create", parent, 0, "New note");
         $(this).tooltip('hide');
         event.stopPropagation();
-        return eevent.preventDefault();
+        return event.preventDefault();
       });
       $("#tree-create-root").tooltip({
         placement: "bottom",

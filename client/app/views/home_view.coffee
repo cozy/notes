@@ -40,6 +40,7 @@ class exports.HomeView extends Backbone.View
         @noteView = new NoteView @, @onIFrameLoaded
         @noteFull = @$ "#note-full"
         @noteFull.hide()
+        @$("#help-info").hide()
 
         @$el.layout
             size: "250"
@@ -56,12 +57,15 @@ class exports.HomeView extends Backbone.View
         $.get "tree/", (data) =>
             window.tree = data
             @tree = new Tree @$("#nav"), data,
-                    onCreate: @onCreateFolder
-                    onRename: @onTreeRename
-                    onRemove: @onTreeRemove
-                    onSelect: @onTreeSelectionChg
-                    onLoaded: @onTreeLoaded
-                    onDrop  : @onNoteDropped
+                onCreate: @onCreateFolder
+                onRename: @onTreeRename
+                onRemove: @onTreeRemove
+                onSelect: @onTreeSelectionChg
+                onLoaded: @onTreeLoaded
+                onDrop  : @onNoteDropped
+
+            $("#create-note").click =>
+                @tree.widget.jstree("create","#tree-node-all","first","A New Note")
 
     # Detect the start of resize with the on mousedown instead of 
     # the onresize_start because this one happens a bit latter what may be a pb.
@@ -192,15 +196,18 @@ class exports.HomeView extends Backbone.View
         path = "/#{path}" if path.indexOf "/"
         app.router.navigate "note#{path}", trigger: false
         if id?
-            if id == "tree-node-all"
+            if id is "tree-node-all"
                 @progress.remove()
                 @noteFull.hide()
+                @$("#help-info").show()
             else
+                @$("#help-info").hide()
                 Note.getNote id, (note) =>
                     @renderNote note, data
                     @noteFull.show()
         else
             @progress.remove()
+            @$("#help-info").show()
             @noteFull.hide()
 
     ###*
@@ -208,8 +215,12 @@ class exports.HomeView extends Backbone.View
     ###
     selectNote: (note_uuid) =>
         @progressBar.css "width","40%"
-        note_uuid = 'tree-node-all' if note_uuid=="all"
-        @tree.selectNode note_uuid
+
+        if not note_uuid in ["all", 'tree-node-all']
+            @tree.selectNode note_uuid
+        else
+            @$("#help-info").show()
+            @noteFull.hide()
 
     ###*
     # Fill note widget with note data.

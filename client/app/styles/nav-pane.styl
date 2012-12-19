@@ -1,90 +1,138 @@
-lightgrey = #F5F5F5
+lightgrey = #F4F4F4
+whitegrey = #FCFCFC
+darkgrey = #333
+grey = #E8E8E8
 blue = #0596DF
+
+@font-face
+  font-family: main
+    src: url('../fonts/signika-light.ttf');
+
+// Nav container styles
 
 #nav
     background: lightgrey
-    color: blue
-    border: 0
-    position absolute
-    bottom 10px
-    top 10px
-    right 0px
-    left 10px
-    margin-bottom 0
-    bottom: 0
-    left: 0
-    top: 0
-    padding-right: 0
-
-.well
-    border-radius: 0
-
-.ui-layout-pane
+    color: darkgrey
+    font-family: main, helvetica
     padding: 0
 
-// Tree
+#my-notes
+    padding-left: 18px
+    border-top: 1px solid whitegrey
+
+    #my-notes-pic
+        margin-top: 15px
+
+    #create-note
+        float: right
+        cursor: pointer
+        width: 31px
+        height: 31px
+        background-image: url('../img/add-corner.png')
+
+    #create-note:hover
+        background-image: url('../img/add-corner-over.png')
+
+// Tree styles
 
 #tree
-    font-size 14px
-    background-color transparent
-    margin-top 10px
-    outline none // => focus on the tree is invisible
+    outline: none
+    margin-top: 10px
+    border-top: 1px solid grey
+    border-bottom: 1px solid whitegrey
+    font-size: 14px
+    background-color: transparent
 
-#tree li
-    padding 0 // padding arround the content of a list item (leaf of the tree)
-    position relative
+    #tree-node-all > ins:first-child
+        display: none
+    #tree-node-all > a
+        display: none
+    #tree-node-all
+        padding: 0
+    #tree-node-all > ul
+        padding: 0
+        margin: 0
+    #tree-node-all > li
+        padding: 0
 
-#tree ins
-    width 14px  // width of the inset of each level of the tree
+    li
+        padding 10px 0
+        position relative
 
-#tree a
-    padding 0px 0px 0px 0px
-    margin  0px 0px 0px 0px
-    border  0px 0px 0px 0px solid transparent
-    color treelinkcolor
-    left 15px
-    right 0px
-    position absolute
-    color: blue
+    ul > li > ul > li
+        border-top: 1px solid whitegrey
+        border-bottom: 1px solid grey
+        margin-left: 0px
 
-#tree a.jstree-clicked
-    background #c5ebf9 
-    border 0
+    ul > li > ul > li > ul > li
+        border: 0px
+        padding: 3px
+        margin-left: 10px
 
-#tree a.jstree-hovered
-    border 0
+    ins
+        width 14px 
+        margin-left: 20px
 
-.jstree-rename-input
-    margin-left: -18px
+    a
+        padding: 0
+        margin:  0
+        border:  0
+        color: treelinkcolor
+        left: 43px
+        right: 0px
+        position: absolute
+        color: darkgrey
+
+    .jstree-clicked
+        background #c5ebf9 
+        border 0
+
+    .jstree-leaf ins.jstree-icon
+        background-image: url('../img/icon-note.png')
+        background-repeat: no-repeat
+
+    .jstree-hovered
+        border 0
+
+    .jstree-rename-input
+        margin-left: 8px
+        margin-top: 2px
     
-#tree-buttons-root
-    display none
-    top 0
-    position absolute
-    right 10px
-    top    0px
-    
-#tree-buttons-root div
-    display inline
-    cursor pointer
-    padding-left 3px
-    
+
+// Search field styles
+#tree-top-buttons
+    padding-bottom: 0px
+    border-bottom: 1px solid grey
+
 #tree-buttons
-    display none
-    top 0
-    position absolute
-    right 10px
-    top    0px
+    display: none
+    position: absolute
+    right: 5px 
+    top: 0px
 
-#tree-buttons div
-    display inline
-    cursor pointer
-    padding-left 3px
+    div
+        display: inline
 
-// class for auto suggestion list : the characters 
-// corresponding to the user search are higlighted
+.text-core
+    margin: 20px 0
+    margin-left: 6%
+    margin-right: 6%
+
+#tree-search-field
+    border: 1px solid #DDD
+    width: 100%
+    
+#suppr-button
+    position: absolute
+    top: 23px
+    left: 202px
+    z-index: 2
+    
+#suppr-button:hover
+    cursor: pointer
+
 .bold-name
-  font-weight: bold
+    font-weight: bold
 
 .text-dropdown i
     padding-right: 5px
@@ -100,24 +148,14 @@ blue = #0596DF
     color: #000000
     font: 11px "lucida grande",tahoma,verdana,arial,sans-serif
 
-.text-wrap, .text-core
-    width: 96%
+.text-core
+    width: 88%
 
-#tree-search-field
-    width: 100%
-    
-    
-#suppr-button
-    position: absolute
-    top: 23px
-    left: 202px
-    z-index: 2
-    
-#suppr-button:hover
-    cursor: pointer
+    .text-wrap
+        width: 100%
 
+// Separator style (between nav and content)
 
-// separator between nav-pane and content-pane
 .ui-layout-west
   border: 0px  
 

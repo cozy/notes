@@ -6457,6 +6457,11 @@ ol {
 iframe {
   border: 0;
 }
+#help-info {
+  text-align: center;
+  margin-top: 3%;
+  color: #999;
+}
 #editor {
   width: 100%;
   height: 70%;
@@ -6574,83 +6579,129 @@ iframe {
 .note-file button:hover {
   text-decoration: underline;
 }
+@font-facefont-family: main {
+  src: url("../fonts/signika-light.ttf");
+}
 #nav {
-  background: #f5f5f5;
-  color: #0596df;
-  border: 0;
-  position: absolute;
-  bottom: 10px;
-  top: 10px;
-  right: 0px;
-  left: 10px;
-  margin-bottom: 0;
-  bottom: 0;
-  left: 0;
-  top: 0;
-  padding-right: 0;
-}
-.well {
-  border-radius: 0;
-}
-.ui-layout-pane {
+  background: #f4f4f4;
+  color: #333;
+  font-family: main, helvetica;
   padding: 0;
+}
+#my-notes {
+  padding-left: 18px;
+  border-top: 1px solid #fcfcfc;
+}
+#my-notes #my-notes-pic {
+  margin-top: 15px;
+}
+#my-notes #create-note {
+  float: right;
+  cursor: pointer;
+  width: 31px;
+  height: 31px;
+  background-image: url("../img/add-corner.png");
+}
+#my-notes #create-note:hover {
+  background-image: url("../img/add-corner-over.png");
 }
 #tree {
+  outline: none;
+  margin-top: 10px;
+  border-top: 1px solid #e8e8e8;
+  border-bottom: 1px solid #fcfcfc;
   font-size: 14px;
   background-color: transparent;
-  margin-top: 10px;
-  outline: none;
+}
+#tree #tree-node-all > ins:first-child {
+  display: none;
+}
+#tree #tree-node-all > a {
+  display: none;
+}
+#tree #tree-node-all {
+  padding: 0;
+}
+#tree #tree-node-all > ul {
+  padding: 0;
+  margin: 0;
+}
+#tree #tree-node-all > li {
+  padding: 0;
 }
 #tree li {
-  padding: 0;
+  padding: 10px 0;
   position: relative;
+}
+#tree ul > li > ul > li {
+  border-top: 1px solid #fcfcfc;
+  border-bottom: 1px solid #e8e8e8;
+  margin-left: 0px;
+}
+#tree ul > li > ul > li > ul > li {
+  border: 0px;
+  padding: 3px;
+  margin-left: 10px;
 }
 #tree ins {
   width: 14px;
+  margin-left: 20px;
 }
 #tree a {
-  padding: 0px 0px 0px 0px;
-  margin: 0px 0px 0px 0px;
-  border: 0px 0px 0px 0px solid transparent;
+  padding: 0;
+  margin: 0;
+  border: 0;
   color: treelinkcolor;
-  left: 15px;
+  left: 43px;
   right: 0px;
   position: absolute;
-  color: #0596df;
+  color: #333;
 }
-#tree a.jstree-clicked {
+#tree .jstree-clicked {
   background: #c5ebf9;
   border: 0;
 }
-#tree a.jstree-hovered {
+#tree .jstree-leaf ins.jstree-icon {
+  background-image: url("../img/icon-note.png");
+  background-repeat: no-repeat;
+}
+#tree .jstree-hovered {
   border: 0;
 }
-.jstree-rename-input {
-  margin-left: -18px;
+#tree .jstree-rename-input {
+  margin-left: 8px;
+  margin-top: 2px;
 }
-#tree-buttons-root {
-  display: none;
-  top: 0;
-  position: absolute;
-  right: 10px;
-  top: 0px;
-}
-#tree-buttons-root div {
-  display: inline;
-  cursor: pointer;
-  padding-left: 3px;
+#tree-top-buttons {
+  padding-bottom: 0px;
+  border-bottom: 1px solid #e8e8e8;
 }
 #tree-buttons {
   display: none;
-  top: 0;
   position: absolute;
-  right: 10px;
+  right: 5px;
   top: 0px;
 }
 #tree-buttons div {
   display: inline;
+}
+.text-core {
+  margin: 20px 0;
+  margin-left: 6%;
+  margin-right: 6%;
+}
+#tree-search-field {
+  border: 1px solid #ddd;
+  width: 100%;
+}
+#suppr-button {
+  position: absolute;
+  top: 23px;
+  left: 202px;
+  z-index: 2;
+}
+#suppr-button:hover {
   cursor: pointer;
-  padding-left: 3px;
 }
 .bold-name {
   font-weight: bold;
@@ -6669,21 +6720,11 @@ iframe {
   color: #000;
   font: 11px "lucida grande", tahoma, verdana, arial, sans-serif;
 }
-.text-wrap,
 .text-core {
-  width: 96%;
+  width: 88%;
 }
-#tree-search-field {
+.text-core .text-wrap {
   width: 100%;
-}
-#suppr-button {
-  position: absolute;
-  top: 23px;
-  left: 202px;
-  z-index: 2;
-}
-#suppr-button:hover {
-  cursor: pointer;
 }
 .ui-layout-west {
   border: 0px;

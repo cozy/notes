@@ -26,7 +26,7 @@ class exports.Tree
 
        
     ###*
-    # Initialize jsTree tree with options : sorting, create/rename/delete,
+    # Initialize jsTree tree with options : sorting, create/rename/deldarkgrey
     # unique children and json data for loading.
     # params :
     #   navEl : 
@@ -60,6 +60,11 @@ class exports.Tree
             types:
                 default:
                     valid_children: "default"
+                    icon:
+                        image: "test.png"
+                folder:
+                    icon:
+                        image: "test.png"
                 root:
                     valid_children: null
                     delete_node: false
@@ -85,7 +90,7 @@ class exports.Tree
                 icons: false
             core:
                 animation: 0
-                initially_open: [ "tree-node-all" ]
+                #initially_open: [ "tree-node-all" ]
             search:
                 search_method: "jstree_contains_multi"
                 show_only_matches: true
@@ -127,7 +132,7 @@ class exports.Tree
             jstreeEl.jstree "create", parent, 0 , "New note"
             $(this).tooltip 'hide'
             event.stopPropagation()
-            eevent.preventDefault()
+            event.preventDefault()
 
         $("#tree-create-root").tooltip
             placement: "bottom"
