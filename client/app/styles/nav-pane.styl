@@ -1,17 +1,14 @@
-lightgrey = #F4F4F4
+lightgrey = #FAFAFA
+bggrey = #F4F4F4
 whitegrey = #FCFCFC
 darkgrey = #333
 grey = #E8E8E8
 blue = #0596DF
 
-@font-face
-  font-family: main
-    src: url('../fonts/signika-light.ttf');
-
 // Nav container styles
 
 #nav
-    background: lightgrey
+    background: bggrey
     color: darkgrey
     font-family: main, helvetica
     padding: 0
@@ -112,10 +109,34 @@ blue = #0596DF
     display: none
     position: absolute
     right: 5px 
-    top: 2px
+    top: 1px
 
     div
         display: inline
+
+    .icon-plus
+        background-image: url('../img/add.png')
+        background-position: 0 0
+
+    .icon-plus:hover
+        background-image: url('../img/add-over.png')
+        background-position: 0 0
+
+    .icon-remove
+        background-image: url('../img/remove.png')
+        background-position: 0 0
+
+    .icon-remove:hover
+        background-image: url('../img/remove-over.png')
+        background-position: 0 0
+
+    .icon-pencil
+        background-image: url('../img/rename.png')
+        background-position: 0 0
+
+    .icon-pencil:hover
+        background-image: url('../img/rename-over.png')
+        background-position: 0 0
 
 .text-core
     margin: 20px 0

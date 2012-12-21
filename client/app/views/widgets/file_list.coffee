@@ -1,0 +1,88 @@
+helpers = require '../../helpers'
+
+class exports.FileList
+
+    constructor: (@model, @id) ->
+        @$el = $ @id
+
+        @uploadButton = $("#file-pic")
+        @uploader = new qq.FileUploaderBasic
+            button: document.getElementById('file-pic')
+            mutliple: false
+            forceMultipart: true
+            onComplete: (id, filename, response) =>
+                @uploadButton.spin()
+                @uploadButton.find("i").css('visibility', 'visible')
+                @$el.slideDown()
+                @addFileLine filename
+                @model._attachments.filename = {}
+                @setFileNumber()
+            onSubmit: =>
+                @uploadButton.find("i").css('visibility', 'hidden')
+                @uploadButton.spin 'small'
+        @uploadButton.find("input").css("cursor", "pointer !important")
+
+        @widget = $("#note-file-list")
+        @widget.mouseenter =>
+            @$el.slideDown()
+        @widget.mouseleave =>
+            @$el.slideUp()
+
+
+    configure: (model) ->
+        @model = model
+        @uploader._options.action = "notes/#{@model.id}/files/"
+        @uploader._handler._options.action = "notes/#{@model.id}/files/"
+        @setFileNumber()
+
+    ###*
+    # Display inside dedicated div list of files attached to the current note.
+    ###
+    render: ->
+        if @model?
+            $('.note-file button').unbind()
+            @$el.html null
+            for file of @model._attachments
+                @addFileLine file
+            @setFileNumber()
+
+    # Render lien corresponding to given file : label + delete button.
+    # Set listener on delete button.
+    addFileLine: (file) ->
+        path = "notes/#{@model.id}/files/#{file}"
+        slug = helpers.slugify file
+        lineId = "note-#{slug}"
+        @$el.append """
+            <div class="note-file spacer" id="#{lineId}">
+                <a href="#{path}" target="_blank">#{file}</a>
+                <button>(x)</button>
+            </div>"""
+        line = @$el.find("##{lineId}")
+        delButton = line.find("button")
+        line.hide()
+        delButton.click (target) =>
+            delButton.html "&nbsp;&nbsp;&nbsp;"
+            delButton.spin 'tiny'
+            $.ajax
+                url: path
+                type: "DELETE"
+                success: =>
+                    delButton.spin()
+                    delete @model._attachments[file]
+                    @setFileNumber()
+                    line.fadeOut ->
+                        line.remove()
+                error: =>
+                    alert "Server error occured."
+        line.fadeIn()
+
+    setFileNumber: ->
+        fileNumber = 0
+        for file of @model._attachments
+            fileNumber++
+
+        if fileNumber > 0
+            @widget.find('#file-number').html "#{fileNumber} files"
+        else
+            @widget.find('#file-number').html "no file"
+

@@ -6,37 +6,47 @@ iframe
     margin-top: 3%
     color: #999
 
+#note-full-breadcrumb
+    font-family: main
+    font-size: 14px
+    border: 0
+    margin-top: 20px
+    margin-bottom: 20px
+    margin-left: 2%
+    margin-right: 2%
+    color: darkgrey
+
+    a
+        color: darkgrey
+
+#note-full
+    border: 0
+    box-shadow: 0
+    padding: 8px 2% 0px 2% 
+
 // Notes 
 
 #editor
-    width 100%
-    height 70%
-    padding 0
-    margin 0
+    width: 100%
+    height: 70%
+    padding: 0
+    margin: 0
 
 #note-area
-    height 100%
-    padding 0
-    margin 0
+    height: 100%
+    margin: 0
     background: #F5F5F5
     
-#note-full-breadcrumb
-    margin-left 3px
-    color #006ED8
-    text-transform: lowercase
-    padding-left 2%
-    padding-right 2%
-    padding-top 20px
-    padding-bottom 20px
-
 #note-style
     background: #FDFDFD
-    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8)
+    background-image: url('../img/note-corner.png')
+    background-position: right top
+    background-repeat: no-repeat
+    border: 1px solid lightgrey + 30%
+    //box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8)
     margin-left: 2%
     margin-right: 2%
-
-#note-full-breadcrumb a
-    color #49A1F6
+    padding: 20px 50px
 
 #editor-container
     margin-left: 2%
@@ -57,17 +67,17 @@ iframe
     border 0
     
 #note-full-title
+    font-family: main
     color #222
     height 35px
     border 0px
     font-size 30px
-    font-variant: small-caps
     margin-left: 2% 
+    letter-spacing: -2px
     margin-right: 2% 
     width: 92%
     background: none repeat scroll 0 0 transparent
     margin-top: 20px
-    font-weight: bold
     margin-bottom: 20px
     
 #note-full-title:focus
@@ -89,40 +99,109 @@ iframe
     right: 15px;
     top: 112px;
 
-#note-file-list
-    text-align: right
-    position: absolute;
-    right: 3%;
-    top: 140px;
-
 #editor-button-bar
     position: absolute
-    right: 4%;
-    top: 85px;
 
-.note-file
-    margin-top: 5px
-    margin-right: 10px
-    z-index: 10
-    background-color: #DDD
-    opacity: 0.5
-    padding-left: 10px
+    left: 3.5%;
+    top: 200px;
 
-.note-file:hover
-    opacity: 1
+    .btn
+        background-color: #FCFCFC
+        background-image: none
+        box-shadow: inset -4px 0px 3px #F5F5F5
+        padding: 8px 8px 8px 8px
 
-.note-file
-    a
-        font-size: 0.6em
-        color: darkgrey
+    .btn:active
+    .active
+        background-color: #EAEAEA
+        box-shadow: inset 4px 0px 3px #EAEAEA - 10%
 
-    a:hover
-        color: darkgrey
+    .btn
+        i
+            background-position: 0 0
 
-    button
-        font-size: 0.6em
-        background: transparent
-        border: none
+        i.icon-indent-left
+            background-image: url('../img/menu-indent-left.png')
 
-    button:hover
-        text-decoration: underline
+        i.icon-indent-right
+            background-image: url('../img/menu-indent-right.png')
+
+        i.icon-th-list
+            background-image: url('../img/menu-bullet-point.png')
+
+        i.icon-text-height
+            background-image: url('../img/menu-title.png')
+
+        i.icon-download-alt
+            background-image: url('../img/menu-save.png')
+
+    .btn:hover
+        i.icon-indent-left
+            background-image: url('../img/menu-indent-left-over.png')
+        i.icon-indent-right
+            background-image: url('../img/menu-indent-right-over.png')
+        i.icon-th-list
+            background-image: url('../img/menu-bullet-point-over.png')
+        i.icon-text-height
+            background-image: url('../img/menu-title-over.png')
+        i.icon-download-alt
+            background-image: url('../img/menu-save-over.png')
+
+
+// File list
+#note-file-list .note-file:first-child
+    border: 0
+
+#note-file-list #file-list
+    display: none
+
+#file-number
+    float: left
+    padding: 6px
+
+#file-pic
+    position: absolute
+    left: 60%
+    top: -16px
+    height: 40px
+    width: 27px
+    background-image: url('../img/attachment.png')
+
+#note-file-list
+    min-width: 200px
+    position: absolute
+    right: 14%
+    top: 75px
+    background: white
+    border: 1px solid lightgrey
+    text-align: center
+    padding: 0 0 10px 0
+    margin: 0
+    font-family: main, helvetica
+    color: lightgrey
+
+    .note-file
+        display: none
+        margin-top: 5px
+        padding-left: 10px
+        padding-bottom: 3px
+        z-index: 10
+        border-top: 1px solid lightgrey
+
+        a
+            font-size: 0.9em
+            color: lightgrey - 20%
+
+
+        a:hover
+            color: lightgrey - 50%
+
+        button
+            font-size: 0.6em
+            border: none
+            background: white
+            color: lightgrey
+
+        button:hover
+            text-decoration: underline
+            color: lightgrey - 20%

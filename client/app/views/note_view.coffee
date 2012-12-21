@@ -1,6 +1,7 @@
 template = require('./templates/note')
 Note = require('../models/note').Note
 TreeInst = require('./widgets/tree')
+FileList = require('./widgets/file_list').FileList
 
 helpers = require '../helpers'
 
@@ -32,7 +33,7 @@ class exports.NoteView extends Backbone.View
         @configureButtons()
         @configureTitle()
         @configureIFrame()
-        @initFileWidget()
+        @fileList = new FileList @model, '#file-list'
         
     ###*
     # every keyUp in the note's editor will trigger a countdown of 3s, after
@@ -55,7 +56,7 @@ class exports.NoteView extends Backbone.View
             noteFullTitle.trigger "blur" if e.keyCode is 13
 
         @noteFullTitle.blur =>
-            newName = noteFullTitle.val()
+            newName = @noteFullTitle.val()
             oldName = @model.title
             if newName isnt "" and oldName != newName
                 @homeView.onNoteTitleChange(@model.id, newName)
@@ -64,46 +65,41 @@ class exports.NoteView extends Backbone.View
         
     configureButtons: ->
         @indentBtn = @$("#indentBtn")
-        @uploadButton = @$("#upload-btn")
         @unIndentBtn = @$("#unIndentBtn")
         @markerListBtn = @$("#markerListBtn")
         @saveEditorBtn = @$("#save-editor-content")
         @titleBtn = @$("#titleBtn")
 
         @indentBtn.tooltip
-            placement: "bottom"
+            placement: "right"
             title: "Indent the selection"
         @indentBtn.on "click", () =>
             @editor._addHistory()
             @editor.tab()
 
         @unIndentBtn.tooltip
-            placement: "bottom"
+            placement: "right"
             title: "Unindent the selection"
         @unIndentBtn.on "click", () =>
             @editor._addHistory()
             @editor.shiftTab()
 
         @markerListBtn.tooltip
-            placement: "bottom"
+            placement: "right"
             title: "Change selection from titles to marker list"
         @markerListBtn.on "click", () =>
             @editor._addHistory()
             @editor.markerList()
 
-        @uploadButton.tooltip
-            placement: "bottom"
-            title: "Add file to the note"
-            
         @titleBtn.tooltip
-            placement: "bottom"
+            placement: "right"
             title: "Change selection from marker list to titles"
         @titleBtn.on "click", () =>
             @editor._addHistory()
             @editor.titleList()
             
         @saveEditorBtn.tooltip
-            placement: "bottom"
+            placement: "right"
             title: "Save the current content"
         
     ###*
@@ -114,9 +110,8 @@ class exports.NoteView extends Backbone.View
         @setTitle(note.title)
         @setContent(note.content)
         @createBreadcrumb(note, data)
-        @uploader._options.action = "notes/#{@model.id}/files/"
-        @uploader._handler._options.action = "notes/#{@model.id}/files/"
-        @renderFileList()
+        @fileList.configure @model
+        @fileList.render()
         
     ###*
     #  Display note title
@@ -179,61 +174,4 @@ class exports.NoteView extends Backbone.View
     ###
     updateBreadcrumbOnTitleChange : (newName) ->
         @breadcrumb.find(" a:last").text newName
-
-    ###*
-    # Configure file uploader, display loading indicator when file is
-    # uploading.
-    ###
-    initFileWidget: ->
-        @uploader = new qq.FileUploaderBasic
-            button: document.getElementById('upload-btn')
-            mutliple: false
-            forceMultipart: true
-            onComplete: (id, filename, response) =>
-                @uploadButton.spin()
-                @uploadButton.find("i").css('visibility', 'visible')
-                @addFileLine filename
-            onSubmit: =>
-                @uploadButton.find("i").css('visibility', 'hidden')
-                @uploadButton.spin 'small'
-        @uploadButton.find("input").css("cursor", "pointer !important")
-        @fileList = $('#note-file-list')
-
-    ###*
-    # Display inside dedicated div list of files attached to the current note.
-    ###
-    renderFileList: ->
-        if @model?
-            $('.note-file button').unbind()
-            @fileList.html null
-            for file of @model._attachments
-                @addFileLine file
-
-    # Render lien corresponding to given file : label + delete button.
-    # Set listener on delete button.
-    addFileLine: (file) ->
-        path = "notes/#{@model.id}/files/#{file}"
-        slug = helpers.slugify file
-        @fileList.append """
-            <div class="note-file spacer" id="note-#{slug}">
-                <a href="#{path}" target="_blank">#{file}</a>
-                <button>(x)</button>
-            </div>"""
-        line = @$("#note-#{slug}")
-        delButton = @$("#note-#{slug}").find("button")
-        line.hide()
-        delButton.click (target) =>
-            delButton.html "&nbsp;&nbsp;&nbsp;"
-            delButton.spin 'tiny'
-            $.ajax
-                url: path
-                type: "DELETE"
-                success: =>
-                    delButton.spin()
-                    line.fadeOut ->
-                        line.remove()
-                error: =>
-                    alert "Server error occured."
-        line.fadeIn()
-
 

@@ -111,7 +111,6 @@ class exports.HomeView extends Backbone.View
         cssLink .rel = "stylesheet"
         cssLink .type = "text/css"
         console.log @iframe.get()
-        
         #@iframe.get().document.head.appendChild cssLink
 
     # If tree is loaded after iframe, it displays the note that should be
@@ -119,13 +118,13 @@ class exports.HomeView extends Backbone.View
     onTreeLoaded: =>
         @progressBar.css "width","30%"
         @treeLoaded = true
-        app.homeView.selectNote(@note_uuid) if @iframeLoaded
+        @selectNote(@note_uuid) if @iframeLoaded
         
     # Small trick to adapt editor size when window is resized.
     onWindowResized: ->
         windowHeight = $(window).height()
-        $("#note-style").height(windowHeight - 80)
-        $("#editor").height(windowHeight - 180)
+        $("#note-style").height(windowHeight - 160)
+        $("#editor").height(windowHeight - 260)
 
     ###*
     Create a new folder.
@@ -216,7 +215,7 @@ class exports.HomeView extends Backbone.View
     selectNote: (note_uuid) =>
         @progressBar.css "width","40%"
 
-        if not note_uuid in ["all", 'tree-node-all']
+        if not (note_uuid in ["all", 'tree-node-all'])
             @tree.selectNode note_uuid
         else
             @$("#help-info").show()

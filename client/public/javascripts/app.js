@@ -407,9 +407,9 @@ window.require.define({"routers/main_router": function(exports, require, module)
       }
     };
 
-    MainRouter.prototype._initializeTree = function(noteToSelectId) {
+    MainRouter.prototype._initializeTree = function(note_uuid) {
       $('body').append(app.homeView.el);
-      return app.homeView.initContent(noteToSelectId);
+      return app.homeView.initContent(note_uuid);
     };
 
     return MainRouter;
@@ -576,15 +576,15 @@ window.require.define({"views/home_view": function(exports, require, module) {
       this.progressBar.css("width", "30%");
       this.treeLoaded = true;
       if (this.iframeLoaded) {
-        return app.homeView.selectNote(this.note_uuid);
+        return this.selectNote(this.note_uuid);
       }
     };
 
     HomeView.prototype.onWindowResized = function() {
       var windowHeight;
       windowHeight = $(window).height();
-      $("#note-style").height(windowHeight - 80);
-      return $("#editor").height(windowHeight - 180);
+      $("#note-style").height(windowHeight - 160);
+      return $("#editor").height(windowHeight - 260);
     };
 
     /**
@@ -717,9 +717,8 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
 
     HomeView.prototype.selectNote = function(note_uuid) {
-      var _ref;
       this.progressBar.css("width", "40%");
-      if ((_ref = !note_uuid) === "all" || _ref === 'tree-node-all') {
+      if (!(note_uuid === "all" || note_uuid === 'tree-node-all')) {
         return this.tree.selectNode(note_uuid);
       } else {
         this.$("#help-info").show();
@@ -759,7 +758,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
 }});
 
 window.require.define({"views/note_view": function(exports, require, module) {
-  var Note, TreeInst, helpers, template,
+  var FileList, Note, TreeInst, helpers, template,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -769,6 +768,8 @@ window.require.define({"views/note_view": function(exports, require, module) {
   Note = require('../models/note').Note;
 
   TreeInst = require('./widgets/tree');
+
+  FileList = require('./widgets/file_list').FileList;
 
   helpers = require('../helpers');
 
@@ -806,7 +807,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
       this.configureButtons();
       this.configureTitle();
       this.configureIFrame();
-      this.initFileWidget();
+      this.fileList = new FileList(this.model, '#file-list');
     }
 
     /**
@@ -845,7 +846,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
       });
       return this.noteFullTitle.blur(function() {
         var newName, oldName;
-        newName = noteFullTitle.val();
+        newName = _this.noteFullTitle.val();
         oldName = _this.model.title;
         if (newName !== "" && oldName !== newName) {
           _this.homeView.onNoteTitleChange(_this.model.id, newName);
@@ -858,13 +859,12 @@ window.require.define({"views/note_view": function(exports, require, module) {
     NoteView.prototype.configureButtons = function() {
       var _this = this;
       this.indentBtn = this.$("#indentBtn");
-      this.uploadButton = this.$("#upload-btn");
       this.unIndentBtn = this.$("#unIndentBtn");
       this.markerListBtn = this.$("#markerListBtn");
       this.saveEditorBtn = this.$("#save-editor-content");
       this.titleBtn = this.$("#titleBtn");
       this.indentBtn.tooltip({
-        placement: "bottom",
+        placement: "right",
         title: "Indent the selection"
       });
       this.indentBtn.on("click", function() {
@@ -872,7 +872,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         return _this.editor.tab();
       });
       this.unIndentBtn.tooltip({
-        placement: "bottom",
+        placement: "right",
         title: "Unindent the selection"
       });
       this.unIndentBtn.on("click", function() {
@@ -880,19 +880,15 @@ window.require.define({"views/note_view": function(exports, require, module) {
         return _this.editor.shiftTab();
       });
       this.markerListBtn.tooltip({
-        placement: "bottom",
+        placement: "right",
         title: "Change selection from titles to marker list"
       });
       this.markerListBtn.on("click", function() {
         _this.editor._addHistory();
         return _this.editor.markerList();
       });
-      this.uploadButton.tooltip({
-        placement: "bottom",
-        title: "Add file to the note"
-      });
       this.titleBtn.tooltip({
-        placement: "bottom",
+        placement: "right",
         title: "Change selection from marker list to titles"
       });
       this.titleBtn.on("click", function() {
@@ -900,7 +896,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         return _this.editor.titleList();
       });
       return this.saveEditorBtn.tooltip({
-        placement: "bottom",
+        placement: "right",
         title: "Save the current content"
       });
     };
@@ -915,9 +911,8 @@ window.require.define({"views/note_view": function(exports, require, module) {
       this.setTitle(note.title);
       this.setContent(note.content);
       this.createBreadcrumb(note, data);
-      this.uploader._options.action = "notes/" + this.model.id + "/files/";
-      this.uploader._handler._options.action = "notes/" + this.model.id + "/files/";
-      return this.renderFileList();
+      this.fileList.configure(this.model);
+      return this.fileList.render();
     };
 
     /**
@@ -1001,79 +996,6 @@ window.require.define({"views/note_view": function(exports, require, module) {
       return this.breadcrumb.find(" a:last").text(newName);
     };
 
-    /**
-    # Configure file uploader, display loading indicator when file is
-    # uploading.
-    */
-
-
-    NoteView.prototype.initFileWidget = function() {
-      var _this = this;
-      this.uploader = new qq.FileUploaderBasic({
-        button: document.getElementById('upload-btn'),
-        mutliple: false,
-        forceMultipart: true,
-        onComplete: function(id, filename, response) {
-          _this.uploadButton.spin();
-          _this.uploadButton.find("i").css('visibility', 'visible');
-          return _this.addFileLine(filename);
-        },
-        onSubmit: function() {
-          _this.uploadButton.find("i").css('visibility', 'hidden');
-          return _this.uploadButton.spin('small');
-        }
-      });
-      this.uploadButton.find("input").css("cursor", "pointer !important");
-      return this.fileList = $('#note-file-list');
-    };
-
-    /**
-    # Display inside dedicated div list of files attached to the current note.
-    */
-
-
-    NoteView.prototype.renderFileList = function() {
-      var file, _results;
-      if (this.model != null) {
-        $('.note-file button').unbind();
-        this.fileList.html(null);
-        _results = [];
-        for (file in this.model._attachments) {
-          _results.push(this.addFileLine(file));
-        }
-        return _results;
-      }
-    };
-
-    NoteView.prototype.addFileLine = function(file) {
-      var delButton, line, path, slug,
-        _this = this;
-      path = "notes/" + this.model.id + "/files/" + file;
-      slug = helpers.slugify(file);
-      this.fileList.append("<div class=\"note-file spacer\" id=\"note-" + slug + "\">\n    <a href=\"" + path + "\" target=\"_blank\">" + file + "</a>\n    <button>(x)</button>\n</div>");
-      line = this.$("#note-" + slug);
-      delButton = this.$("#note-" + slug).find("button");
-      line.hide();
-      delButton.click(function(target) {
-        delButton.html("&nbsp;&nbsp;&nbsp;");
-        delButton.spin('tiny');
-        return $.ajax({
-          url: path,
-          type: "DELETE",
-          success: function() {
-            delButton.spin();
-            return line.fadeOut(function() {
-              return line.remove();
-            });
-          },
-          error: function() {
-            return alert("Server error occured.");
-          }
-        });
-      });
-      return line.fadeIn();
-    };
-
     return NoteView;
 
   })(Backbone.View);
@@ -1098,7 +1020,7 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="editor-button-bar" class="btn-group clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="markerListBtn" class="btn btn-small"><i class="icon-th-list"></i></button><button id="titleBtn" class="btn btn-small"><i class="icon-text-height"></i></button><div id="upload-btn" class="btn btn-small"><i class="icon-arrow-up"></i></div><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"></div><div id="editor-container"><iframe id="editorIframe"></iframe></div>');
+  buf.push('<div id="editor-button-bar" class="btn-group btn-group-vertical clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="markerListBtn" class="btn btn-small"><i class="icon-th-list"></i></button><button id="titleBtn" class="btn btn-small"><i class="icon-text-height"></i></button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"><div id="file-number">0 files</div><div id="file-pic"></div><div id="file-list"></div></div><div id="editor-container"><iframe id="editorIframe"></iframe></div>');
   }
   return buf.join("");
   };
@@ -1110,7 +1032,7 @@ window.require.define({"views/templates/home": function(exports, require, module
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="nav" class="ui-layout-west"><div id="tree"></div></div><div id="note-area" class="ui-layout-center"><div id="help-info">You don\'t have any note selected yet. To select a note use the tree\non your left.</div><div id="note-full" class="well note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><div><input id="note-full-title"/></div><div id="editor"></div></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
+  buf.push('<div id="nav" class="ui-layout-west"><div id="tree"></div></div><div id="note-area" class="ui-layout-center"><div id="help-info">You don\'t have any note selected yet. To select a note use the tree\non your left.</div><div id="note-full" class="note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><div><input id="note-full-title"/></div><div id="editor"></div></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
   }
   return buf.join("");
   };
@@ -1138,6 +1060,121 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   }
   return buf.join("");
   };
+}});
+
+window.require.define({"views/widgets/file_list": function(exports, require, module) {
+  var helpers;
+
+  helpers = require('../../helpers');
+
+  exports.FileList = (function() {
+
+    function FileList(model, id) {
+      var _this = this;
+      this.model = model;
+      this.id = id;
+      this.$el = $(this.id);
+      this.uploadButton = $("#file-pic");
+      this.uploader = new qq.FileUploaderBasic({
+        button: document.getElementById('file-pic'),
+        mutliple: false,
+        forceMultipart: true,
+        onComplete: function(id, filename, response) {
+          _this.uploadButton.spin();
+          _this.uploadButton.find("i").css('visibility', 'visible');
+          _this.$el.slideDown();
+          _this.addFileLine(filename);
+          _this.model._attachments.filename = {};
+          return _this.setFileNumber();
+        },
+        onSubmit: function() {
+          _this.uploadButton.find("i").css('visibility', 'hidden');
+          return _this.uploadButton.spin('small');
+        }
+      });
+      this.uploadButton.find("input").css("cursor", "pointer !important");
+      this.widget = $("#note-file-list");
+      this.widget.mouseenter(function() {
+        return _this.$el.slideDown();
+      });
+      this.widget.mouseleave(function() {
+        return _this.$el.slideUp();
+      });
+    }
+
+    FileList.prototype.configure = function(model) {
+      this.model = model;
+      this.uploader._options.action = "notes/" + this.model.id + "/files/";
+      this.uploader._handler._options.action = "notes/" + this.model.id + "/files/";
+      return this.setFileNumber();
+    };
+
+    /**
+    # Display inside dedicated div list of files attached to the current note.
+    */
+
+
+    FileList.prototype.render = function() {
+      var file;
+      if (this.model != null) {
+        $('.note-file button').unbind();
+        this.$el.html(null);
+        for (file in this.model._attachments) {
+          this.addFileLine(file);
+        }
+        return this.setFileNumber();
+      }
+    };
+
+    FileList.prototype.addFileLine = function(file) {
+      var delButton, line, lineId, path, slug,
+        _this = this;
+      path = "notes/" + this.model.id + "/files/" + file;
+      slug = helpers.slugify(file);
+      lineId = "note-" + slug;
+      this.$el.append("<div class=\"note-file spacer\" id=\"" + lineId + "\">\n    <a href=\"" + path + "\" target=\"_blank\">" + file + "</a>\n    <button>(x)</button>\n</div>");
+      line = this.$el.find("#" + lineId);
+      delButton = line.find("button");
+      line.hide();
+      delButton.click(function(target) {
+        delButton.html("&nbsp;&nbsp;&nbsp;");
+        delButton.spin('tiny');
+        return $.ajax({
+          url: path,
+          type: "DELETE",
+          success: function() {
+            delButton.spin();
+            delete _this.model._attachments[file];
+            _this.setFileNumber();
+            return line.fadeOut(function() {
+              return line.remove();
+            });
+          },
+          error: function() {
+            return alert("Server error occured.");
+          }
+        });
+      });
+      return line.fadeIn();
+    };
+
+    FileList.prototype.setFileNumber = function() {
+      var file, fileNumber;
+      fileNumber = 0;
+      for (file in this.model._attachments) {
+        fileNumber++;
+      }
+      if (fileNumber > 0) {
+        return this.widget.find('#file-number').html("" + fileNumber + " files");
+      } else {
+        return this.widget.find('#file-number').html("no file");
+      }
+    };
+
+    return FileList;
+
+  })();
+  
 }});
 
 window.require.define({"views/widgets/tree": function(exports, require, module) {
