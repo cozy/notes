@@ -25,13 +25,14 @@ class exports.NoteView extends Backbone.View
         @$("#editor").html require('./templates/editor')
 
         @saveTimer = null
-        @saveButton = @$('#save-editor-content')
-        @noteFullTitle = @$('#note-full-title')
-        @breadcrumb = @$('#note-full-breadcrumb')
+        @saveButton = @$ '#save-editor-content'
+        @noteFullTitle = @$ '#note-full-title'
+        @breadcrumb = @$ '#note-full-breadcrumb'
 
         @editor = new CNeditor(@$('#editorIframe')[0], @onIFrameLoaded)
         @$('#editorIframe').niceScroll
             cursorcolor: "#CCC"
+            enablekeyboard: false
         @configureButtons()
         @configureTitle()
         @configureIFrame()

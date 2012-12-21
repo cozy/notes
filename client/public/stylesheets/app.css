@@ -7510,6 +7510,9 @@ ol {
 .spacer {
   clear: both;
 }
+.no-padding {
+  padding: 0;
+}
 iframe {
   border: 0;
 }
@@ -7559,8 +7562,8 @@ iframe {
   padding: 20px 50px;
 }
 #editor-container {
-  margin-left: 2%;
-  margin-right: 2%;
+  margin-left: 0;
+  margin-right: 0;
   height: 100%;
   width: 100%;
 }
@@ -7582,13 +7585,13 @@ iframe {
   height: 35px;
   border: 0px;
   font-size: 30px;
-  margin-left: 30px;
   letter-spacing: -2px;
-  margin-right: 2%;
   width: 92%;
   background: none repeat scroll 0 0 transparent;
-  margin-top: 20px;
-  margin-bottom: 20px;
+  margin-top: 40px;
+  margin-bottom: 5px;
+  margin-right: 0;
+  margin-left: 10px;
 }
 #note-full-title:focus {
   box-shadow: inset 0 1px 1px rgba(0,0,0,0.075), 0 0 8px rgba(82,168,236,0.6);
@@ -7608,8 +7611,12 @@ iframe {
   right: 15px;
   top: 112px;
 }
+#editor-button-bar:hover {
+  opacity: 1;
+}
 #editor-button-bar {
   position: absolute;
+  opacity: 0.3;
   left: 3.5%;
   top: 200px;
 }
@@ -7745,6 +7752,10 @@ iframe {
   font-size: 14px;
   background-color: transparent;
 /*
+    #tree-node-all > ul > li > .jstree-rename-input
+        margin-left: 8px
+        margin-top: 10px
+
     li
         padding 10px 0
         position relative
@@ -7775,10 +7786,6 @@ iframe {
 }
 #tree #tree-node-all > li {
   padding: 0;
-}
-#tree #tree-node-all > ul > li > .jstree-rename-input {
-  margin-left: 8px;
-  margin-top: 10px;
 }
 #tree li {
   position: relative;
@@ -7816,27 +7823,21 @@ iframe {
   border: 0;
 }
 #tree .jstree-rename-input {
-  margin-left: 8px;
-  margin-top: 2px;
+  margin-left: -6px;
+  margin-top: 0px;
 }
 #tree-top-buttons {
   padding-bottom: 0px;
   border-bottom: 1px solid #e8e8e8;
-}
-#tree-buttons:hover {
-  opacity: 1;
 }
 #tree-buttons {
   display: none;
   position: absolute;
   right: 5px;
   top: 1px;
-  opacity: 0.5;
 }
 #tree-buttons div {
   display: inline;
-}
-#tree-buttons button {
   opacity: 0.5;
 }
 #tree-buttons .icon-plus {

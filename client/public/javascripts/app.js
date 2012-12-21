@@ -805,7 +805,8 @@ window.require.define({"views/note_view": function(exports, require, module) {
       this.breadcrumb = this.$('#note-full-breadcrumb');
       this.editor = new CNeditor(this.$('#editorIframe')[0], this.onIFrameLoaded);
       this.$('#editorIframe').niceScroll({
-        cursorcolor: "#CCC"
+        cursorcolor: "#CCC",
+        enablekeyboard: false
       });
       this.configureButtons();
       this.configureTitle();
@@ -1035,7 +1036,7 @@ window.require.define({"views/templates/home": function(exports, require, module
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="nav" class="ui-layout-west"><div id="tree"></div></div><div id="note-area" class="ui-layout-center"><div id="help-info">You don\'t have any note selected yet. To select a note use the tree\non your left.</div><div id="note-full" class="note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><div><input id="note-full-title"/></div><div id="editor"></div></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
+  buf.push('<div id="nav" class="ui-layout-west"><div id="tree"></div></div><div id="note-area" class="ui-layout-center"><div id="help-info">You don\'t have any note selected yet. To select a note use the tree\non your left.</div><div id="note-full" class="note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><div class="no-padding"><input id="note-full-title"/></div><div id="editor"></div></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
   }
   return buf.join("");
   };
@@ -1066,48 +1067,68 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
 }});
 
 window.require.define({"views/widgets/file_list": function(exports, require, module) {
-  var helpers;
+  var helpers,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   helpers = require('../../helpers');
 
   exports.FileList = (function() {
 
     function FileList(model, id) {
-      var _this = this;
       this.model = model;
       this.id = id;
+      this.onMouseLeave = __bind(this.onMouseLeave, this);
+
+      this.onMouseEnter = __bind(this.onMouseEnter, this);
+
+      this.onUploadComplete = __bind(this.onUploadComplete, this);
+
+      this.onSubmit = __bind(this.onSubmit, this);
+
       this.$el = $(this.id);
       this.uploadButton = $("#file-pic");
       this.uploader = new qq.FileUploaderBasic({
         button: document.getElementById('file-pic'),
         mutliple: false,
         forceMultipart: true,
-        onComplete: function(id, filename, response) {
-          _this.uploadButton.spin();
-          _this.uploadButton.find("i").css('visibility', 'visible');
-          _this.$el.slideDown();
-          if (!(_this.model._attachments != null)) {
-            _this.model._attachments = {};
-          }
-          _this.model._attachments[filename] = {};
-          _this.addFileLine(filename);
-          _this.setFileNumber();
-          return _this.fileList.slideDown();
-        },
-        onSubmit: function() {
-          _this.uploadButton.find("i").css('visibility', 'hidden');
-          return _this.uploadButton.spin('small');
-        }
+        onComplete: this.onUploadComplete,
+        onSubmit: this.submitComplete
       });
       this.uploadButton.find("input").css("cursor", "pointer !important");
       this.widget = $("#note-file-list");
-      this.widget.mouseenter(function() {
-        return _this.$el.slideDown();
-      });
-      this.widget.mouseleave(function() {
-        return _this.$el.slideUp();
-      });
+      this.widget.mouseenter(this.onMouseEnter);
+      this.widget.mouseleave(this.onMouseLeave);
     }
+
+    FileList.prototype.onSubmit = function() {
+      this.uploadButton.find("i").css('visibility', 'hidden');
+      return this.uploadButton.spin('small');
+    };
+
+    FileList.prototype.onUploadComplete = function(id, filename, response) {
+      this.uploadButton.spin();
+      this.uploadButton.find("i").css('visibility', 'visible');
+      this.$el.slideDown();
+      if (!(this.model._attachments != null)) {
+        this.model._attachments = {};
+      }
+      this.model._attachments[filename] = {};
+      this.addFileLine(filename);
+      this.setFileNumber();
+      return this.fileList.slideDown();
+    };
+
+    FileList.prototype.onMouseEnter = function() {
+      var _this = this;
+      this.widget.unbind('mouseleave');
+      return this.$el.slideDown(function() {
+        return _this.widget.mouseleave(_this.onMouseLeave);
+      });
+    };
+
+    FileList.prototype.onMouseLeave = function() {
+      return this.$el.slideUp();
+    };
 
     FileList.prototype.configure = function(model) {
       this.model = model;

@@ -10,26 +10,35 @@ class exports.FileList
             button: document.getElementById('file-pic')
             mutliple: false
             forceMultipart: true
-            onComplete: (id, filename, response) =>
-                @uploadButton.spin()
-                @uploadButton.find("i").css('visibility', 'visible')
-                @$el.slideDown()
-                @model._attachments = {} if not @model._attachments?
-                @model._attachments[filename] = {}
-                @addFileLine filename
-                @setFileNumber()
-                @fileList.slideDown()
-            onSubmit: =>
-                @uploadButton.find("i").css('visibility', 'hidden')
-                @uploadButton.spin 'small'
+            onComplete: @onUploadComplete
+            onSubmit: @submitComplete
         @uploadButton.find("input").css("cursor", "pointer !important")
 
         @widget = $("#note-file-list")
-        @widget.mouseenter =>
-            @$el.slideDown()
-        @widget.mouseleave =>
-            @$el.slideUp()
+        @widget.mouseenter @onMouseEnter
+        @widget.mouseleave @onMouseLeave
 
+    onSubmit: =>
+        @uploadButton.find("i").css('visibility', 'hidden')
+        @uploadButton.spin 'small'
+
+    onUploadComplete: (id, filename, response) =>
+        @uploadButton.spin()
+        @uploadButton.find("i").css('visibility', 'visible')
+        @$el.slideDown()
+        @model._attachments = {} if not @model._attachments?
+        @model._attachments[filename] = {}
+        @addFileLine filename
+        @setFileNumber()
+        @fileList.slideDown()
+
+    onMouseEnter: =>
+        @widget.unbind 'mouseleave'
+        @$el.slideDown =>
+            @widget.mouseleave @onMouseLeave
+
+    onMouseLeave: =>
+        @$el.slideUp()
 
     configure: (model) ->
         @model = model
