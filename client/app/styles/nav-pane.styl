@@ -3,7 +3,7 @@ bggrey = #F4F4F4
 whitegrey = #FCFCFC
 darkgrey = #333
 grey = #E8E8E8
-blue = #0596DF
+blue = #7DBBF4
 
 // Nav container styles
 
@@ -36,7 +36,7 @@ blue = #0596DF
     outline: none
     margin-top: 10px
     border-top: 1px solid grey
-    border-bottom: 1px solid whitegrey
+    border-bottom: 1px solid grey
     font-size: 14px
     background-color: transparent
 
@@ -47,7 +47,7 @@ blue = #0596DF
     #tree-node-all
         padding: 0
     #tree-node-all > ul
-        padding: 0
+        padding: 20px 0
         margin: 0
     #tree-node-all > li
         padding: 0
@@ -56,6 +56,15 @@ blue = #0596DF
         margin-left: 8px
         margin-top: 10px
 
+    li
+        position relative
+        margin-left: 10px
+    li:last-child
+        border-bottom: 1px solid whitegrey
+
+    ul > li > ul > li:last-child
+        border-bottom: 0
+    /*
     li
         padding 10px 0
         position relative
@@ -69,23 +78,24 @@ blue = #0596DF
         border: 0px
         padding: 3px
         margin-left: 10px
+    */
 
     ins
         width 14px 
-        margin-left: 20px
+        margin-left: 0px
 
     a
         padding: 1px 0 0 3px
         margin:  0
         border:  0
         color: treelinkcolor
-        left: 43px
+        left: 23px
         right: 0px
         position: absolute
         color: darkgrey
 
     .jstree-clicked
-        background #c5ebf9 
+        background blue + 60%
         border 0
 
     .jstree-leaf ins.jstree-icon
@@ -105,14 +115,21 @@ blue = #0596DF
     padding-bottom: 0px
     border-bottom: 1px solid grey
 
+#tree-buttons:hover
+    opacity: 1
+
 #tree-buttons
     display: none
     position: absolute
     right: 5px 
     top: 1px
+    opacity: 0.5
 
     div
         display: inline
+
+    button
+        opacity: 0.5
 
     .icon-plus
         background-image: url('../img/add.png')
@@ -182,28 +199,36 @@ blue = #0596DF
 // Separator style (between nav and content)
 
 .ui-layout-west
-  border: 0px  
+    border: 0px  
 
 .ui-layout-center
-  border: 0px  
-  
-.ui-layout-resizer-open:hover
-  background white
+    border: 0px  
     
+.ui-layout-resizer-open:hover
+    background white
+      
+
 .ui-layout-resizer
-  background-color: white
-  border-right: 2px solid white
-  border-left: 2px solid white
-  width: 10px
+    background-color: white
+    border-right: 1px solid grey
+    border-left: 1px solid grey
+    width: 10px
+
+.ui-layout-resizer:hover
+    border-right: 1px solid blue
+    border-left: 1px solid blue
 
 .ui-layout-pane
     border-right: 0px
-  
+    
 .ui-layout-toggler
-  background-color: white
-  border: 0px
-  position: absolute
-  right: 0px
+    background-color: white
+    border: 0px
+    position: absolute
+    right: 0px
+
+.ui-layout-resizer:hover .ui-layout-toggler:hover
+    background-color: blue
 
 .ui-layout-resizer-open:hover .ui-layout-toggler
     background-color: #BFBFBF

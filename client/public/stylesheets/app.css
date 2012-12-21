@@ -7553,6 +7553,7 @@ iframe {
   background-position: right top;
   background-repeat: no-repeat;
   border: 1px solid #e0e0e0;
+  box-shadow: 1px 1px 2px #ddd;
   margin-left: 2%;
   margin-right: 2%;
   padding: 20px 50px;
@@ -7581,7 +7582,7 @@ iframe {
   height: 35px;
   border: 0px;
   font-size: 30px;
-  margin-left: 2%;
+  margin-left: 30px;
   letter-spacing: -2px;
   margin-right: 2%;
   width: 92%;
@@ -7675,7 +7676,7 @@ iframe {
   background-image: url("../img/attachment.png");
 }
 #note-file-list {
-  min-width: 200px;
+  min-width: 250px;
   position: absolute;
   right: 14%;
   top: 75px;
@@ -7686,6 +7687,7 @@ iframe {
   margin: 0;
   font-family: main, helvetica;
   color: #d3d3d3;
+  box-shadow: 1px 1px 2px #eee;
 }
 #note-file-list .note-file {
   display: none;
@@ -7739,9 +7741,24 @@ iframe {
   outline: none;
   margin-top: 10px;
   border-top: 1px solid #e8e8e8;
-  border-bottom: 1px solid #fcfcfc;
+  border-bottom: 1px solid #e8e8e8;
   font-size: 14px;
   background-color: transparent;
+/*
+    li
+        padding 10px 0
+        position relative
+
+    ul > li > ul > li
+        border-top: 1px solid whitegrey
+        border-bottom: 1px solid grey
+        margin-left: 0px
+
+    ul > li > ul > li > ul > li
+        border: 0px
+        padding: 3px
+        margin-left: 10px
+    */
 }
 #tree #tree-node-all > ins:first-child {
   display: none;
@@ -7753,7 +7770,7 @@ iframe {
   padding: 0;
 }
 #tree #tree-node-all > ul {
-  padding: 0;
+  padding: 20px 0;
   margin: 0;
 }
 #tree #tree-node-all > li {
@@ -7764,35 +7781,31 @@ iframe {
   margin-top: 10px;
 }
 #tree li {
-  padding: 10px 0;
   position: relative;
-}
-#tree ul > li > ul > li {
-  border-top: 1px solid #fcfcfc;
-  border-bottom: 1px solid #e8e8e8;
-  margin-left: 0px;
-}
-#tree ul > li > ul > li > ul > li {
-  border: 0px;
-  padding: 3px;
   margin-left: 10px;
+}
+#tree li:last-child {
+  border-bottom: 1px solid #fcfcfc;
+}
+#tree ul > li > ul > li:last-child {
+  border-bottom: 0;
 }
 #tree ins {
   width: 14px;
-  margin-left: 20px;
+  margin-left: 0px;
 }
 #tree a {
   padding: 1px 0 0 3px;
   margin: 0;
   border: 0;
   color: treelinkcolor;
-  left: 43px;
+  left: 23px;
   right: 0px;
   position: absolute;
   color: #333;
 }
 #tree .jstree-clicked {
-  background: #c5ebf9;
+  background: #cbe4fb;
   border: 0;
 }
 #tree .jstree-leaf ins.jstree-icon {
@@ -7810,14 +7823,21 @@ iframe {
   padding-bottom: 0px;
   border-bottom: 1px solid #e8e8e8;
 }
+#tree-buttons:hover {
+  opacity: 1;
+}
 #tree-buttons {
   display: none;
   position: absolute;
   right: 5px;
   top: 1px;
+  opacity: 0.5;
 }
 #tree-buttons div {
   display: inline;
+}
+#tree-buttons button {
+  opacity: 0.5;
 }
 #tree-buttons .icon-plus {
   background-image: url("../img/add.png");
@@ -7895,9 +7915,13 @@ iframe {
 }
 .ui-layout-resizer {
   background-color: #fff;
-  border-right: 2px solid #fff;
-  border-left: 2px solid #fff;
+  border-right: 1px solid #e8e8e8;
+  border-left: 1px solid #e8e8e8;
   width: 10px;
+}
+.ui-layout-resizer:hover {
+  border-right: 1px solid #7dbbf4;
+  border-left: 1px solid #7dbbf4;
 }
 .ui-layout-pane {
   border-right: 0px;
@@ -7907,6 +7931,9 @@ iframe {
   border: 0px;
   position: absolute;
   right: 0px;
+}
+.ui-layout-resizer:hover .ui-layout-toggler:hover {
+  background-color: #7dbbf4;
 }
 .ui-layout-resizer-open:hover .ui-layout-toggler {
   background-color: #bfbfbf;

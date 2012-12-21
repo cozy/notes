@@ -10,101 +10,123 @@ var md2cozy;
 
 md2cozy = {};
 
+if (!String.prototype.trim) {
+  String.prototype.trim = function() {
+    return this.replace(/^\s+|\s+$/g, '');
+  };
+}
+
 /* ------------------------------------------------------------------------
 #  _cozy2md
-# Read a string of editor html code format and turns it into a string in
-#  markdown format
+# Turns line elements form editor into a string in markdown format
 */
 
 
-md2cozy.cozy2md = function(text) {
-  var children, classType, converter, currDepth, htmlCode, i, j, l, lineCode, lineElt, markCode, markup, space, _i, _ref;
-  htmlCode = $(document.createElement('div')).html(text);
-  markCode = '';
-  currDepth = 0;
-  converter = {
-    'A': function(obj) {
-      var href, title;
+md2cozy.cozy2md = function(linesDiv) {
+  var line, lineElt, lineMetaData, lines, markCode, prevLineMetaData, _i, _j, _len, _len1, _ref, _ref1;
+  md2cozy.currentDepth = 0;
+  lines = [];
+  prevLineMetaData = null;
+  _ref = linesDiv.children();
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    line = _ref[_i];
+    line = $(line);
+    lineMetaData = md2cozy.getLineMetadata(line.attr('class'));
+    markCode = md2cozy.buildMarkdownPrefix(lineMetaData, prevLineMetaData);
+    prevLineMetaData = lineMetaData;
+    _ref1 = line.children();
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      lineElt = _ref1[_j];
+      if (lineElt.nodeType === 1) {
+        markCode += md2cozy.convertInlineEltToMarkdown($(lineElt));
+      } else {
+        markCode += $(lineElt).text();
+      }
+    }
+    lines.push(markCode);
+  }
+  return lines.join('');
+};
+
+md2cozy.getLineMetadata = function(name) {
+  var data, depth, type;
+  if (name != null) {
+    data = name.split("-");
+    type = data[0];
+    depth = parseInt(data[1], 10);
+    return {
+      type: type,
+      depth: depth
+    };
+  } else {
+    return {
+      type: null,
+      depth: null
+    };
+  }
+};
+
+md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
+  var blanks, dieses, i, nbBlanks, prefix, _i, _j, _k, _ref, _ref1, _ref2;
+  blanks = "";
+  switch (metadata.type) {
+    case 'Th':
+      dieses = '';
+      for (i = _i = 1, _ref = metadata.depth; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
+        dieses += '#';
+      }
+      md2cozy.currentDepth = metadata.depth;
+      prefix = "" + dieses + " ";
+      if (prevMetadata != null) {
+        prefix = "\n\n" + prefix;
+      }
+      return prefix;
+    case 'Lh':
+      return "\n\n";
+    case 'Tu':
+      nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
+      if (nbBlanks > 0) {
+        for (i = _j = 0, _ref1 = nbBlanks - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+          blanks += '    ';
+        }
+      }
+      prefix = "" + blanks + "* ";
+      if ((prevMetadata != null ? prevMetadata.type : void 0) === "Tu" || (prevMetadata != null ? prevMetadata.type : void 0) === "Lu") {
+        prefix = "\n" + prefix;
+      } else if (prevMetadata != null) {
+        prefix = "\n\n" + prefix;
+      }
+      return prefix;
+    case 'Lu':
+      nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
+      if (nbBlanks > 0) {
+        for (i = _k = 0, _ref2 = nbBlanks - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
+          blanks += '    ';
+        }
+      }
+      return "\n\n" + blanks + " ";
+    default:
+      return '';
+  }
+};
+
+md2cozy.convertInlineEltToMarkdown = function(obj) {
+  var alt, href, src, title;
+  switch (obj[0].nodeName) {
+    case 'A':
       title = obj.attr('title') != null ? obj.attr('title') : "";
       href = obj.attr('href') != null ? obj.attr('href') : "";
       return '[' + obj.html() + '](' + href + ' "' + title + '")';
-    },
-    'IMG': function(obj) {
-      var alt, src, title;
+    case 'IMG':
       title = obj.attr('title') != null ? obj.attr('title') : "";
       alt = obj.attr('alt') != null ? obj.attr('alt') : "";
       src = obj.attr('src') != null ? obj.attr('src') : "";
       return '![' + alt + '](' + src + ' "' + title + '")';
-    },
-    'SPAN': function(obj) {
+    case 'SPAN':
       return obj.text();
-    }
-  };
-  markup = {
-    'Th': function(blanks, depth) {
-      var dieses, i;
-      currDepth = depth;
-      dieses = '';
-      i = 0;
-      while (i < depth) {
-        dieses += '#';
-        i++;
-      }
-      return "\n" + dieses + ' ';
-    },
-    'Lh': function(blanks, depth) {
-      return "\n";
-    },
-    'Tu': function(blanks, depth) {
-      return "\n" + blanks + "+   ";
-    },
-    'Lu': function(blanks, depth) {
-      return "\n" + blanks + "    ";
-    },
-    'To': function(blanks, depth) {
-      return "\n" + blanks + "1.   ";
-    },
-    'Lo': function(blanks, depth) {
-      return "\n" + blanks + "    ";
-    }
-  };
-  classType = function(className) {
-    var blanks, depth, i, tab, type;
-    tab = className.split("-");
-    type = tab[0];
-    depth = parseInt(tab[1], 10);
-    blanks = '';
-    i = 1;
-    while (i < depth - currDepth) {
-      blanks += '    ';
-      i++;
-    }
-    return markup[type](blanks, depth);
-  };
-  children = htmlCode.children();
-  for (i = _i = 0, _ref = children.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-    lineCode = $(children.get(i));
-    if (lineCode.attr('class') != null) {
-      markCode += classType(lineCode.attr('class'));
-    }
-    l = lineCode.children().length;
-    j = 0;
-    space = ' ';
-    while (j < l) {
-      lineElt = lineCode.children().get(j);
-      if (j + 2 === l) {
-        space = '';
-      }
-      if (lineElt.nodeType === 1 && (converter[lineElt.nodeName] != null)) {
-        markCode += converter[lineElt.nodeName]($(lineElt)) + space;
-      } else {
-        markCode += $(lineElt).text() + space;
-      }
-      j++;
-    }
-    markCode += "\n";
+    default:
+      return '';
   }
-  return markCode;
 };
 
 /* ------------------------------------------------------------------------
@@ -114,84 +136,89 @@ md2cozy.cozy2md = function(text) {
 
 
 md2cozy.md2cozy = function(text) {
-  var conv, cozyCode, cozyTurn, depth, htmlCode, id, readHtml, recRead;
+  var conv, cozyCode, htmlCode;
   conv = new Showdown.converter();
-  text = conv.makeHtml(text);
-  htmlCode = $(document.createElement('ul')).html(text);
+  htmlCode = $(conv.makeHtml(text));
+  console.log(htmlCode);
   cozyCode = '';
-  id = 0;
-  cozyTurn = function(type, depth, p) {
-    var code;
-    id++;
-    code = '';
-    if (p != null) {
-      p.contents().each(function() {
-        var name;
-        name = this.nodeName;
-        if (name === "#text") {
-          return code += "<span>" + ($(this).text()) + "</span>";
-        } else if (this.tagName != null) {
-          $(this).wrap('<div></div>');
-          code += "" + ($(this).parent().html());
-          return $(this).unwrap();
-        }
-      });
-    } else {
-      code = "<span></span>";
-    }
-    return ("<div id=CNID_" + id + " class=" + type + "-" + depth + ">") + code + "<br></div>";
-  };
-  depth = 0;
-  readHtml = function(obj) {
-    var tag;
-    tag = obj[0].tagName;
-    if (tag[0] === "H") {
-      depth = parseInt(tag[1], 10);
-      return cozyCode += cozyTurn("Th", depth, obj);
-    } else if (tag === "P") {
-      return cozyCode += cozyTurn("Lh", depth, obj);
-    } else {
-      return recRead(obj, "u");
-    }
-  };
-  recRead = function(obj, status) {
-    var child, i, tag, _i, _ref, _results;
-    tag = obj[0].tagName;
-    if (tag === "UL") {
-      depth++;
-      obj.children().each(function() {
-        return recRead($(this), "u");
-      });
-      return depth--;
-    } else if (tag === "OL") {
-      depth++;
-      obj.children().each(function() {
-        return recRead($(this), "o");
-      });
-      return depth--;
-    } else if (tag === "LI" && (obj.contents().get(0) != null)) {
-      if (obj.contents().get(0).nodeName === "#text") {
-        obj = obj.clone().wrap('<p></p>').parent();
-      }
-      _results = [];
-      for (i = _i = 0, _ref = obj.children().length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-        child = $(obj.children().get(i));
-        if (i === 0) {
-          _results.push(cozyCode += cozyTurn("T" + status, depth, child));
-        } else {
-          _results.push(recRead(child, status));
-        }
-      }
-      return _results;
-    } else if (tag === "P") {
-      return cozyCode += cozyTurn("L" + status, depth, obj);
-    }
-  };
-  htmlCode.children().each(function() {
-    return readHtml($(this));
+  md2cozy.currentId = 0;
+  md2cozy.editorDepth = 0;
+  htmlCode.each(function() {
+    return cozyCode += md2cozy.parseLine($(this));
   });
   if (cozyCode.length === 0) {
-    cozyCode = cozyTurn("Tu", 1, null);
+    cozyCode = md2cozy.buildEditorLine("Tu", 1, null);
+  }
+  return cozyCode;
+};
+
+md2cozy.parseLine = function(obj) {
+  var tag;
+  tag = obj[0].tagName;
+  if ((tag != null) && tag[0] === "H") {
+    md2cozy.editorDepth = parseInt(tag[1], 10);
+    return md2cozy.buildEditorLine("Th", md2cozy.editorDepth, obj);
+  } else if ((tag != null) && tag === "P") {
+    return md2cozy.buildEditorLine("Lh", md2cozy.editorDepth, obj);
+  } else {
+    return md2cozy.parseList(obj);
+  }
+};
+
+md2cozy.buildEditorLine = function(type, depth, obj) {
+  var code;
+  md2cozy.currentId++;
+  code = '';
+  if (obj != null) {
+    obj.contents().each(function() {
+      var name;
+      name = this.nodeName;
+      if (name === "#text") {
+        return code += "<span>" + ($(this).text()) + "</span>";
+      } else if (this.tagName != null) {
+        $(this).wrap('<div></div>');
+        code += "" + ($(this).parent().html());
+        return $(this).unwrap();
+      }
+    });
+  }
+  if (code === "") {
+    code = "<span></span>";
+  }
+  return ("<div id=CNID_" + md2cozy.currentId + " class=" + type + "-" + depth + ">") + code + "<br></div>";
+};
+
+md2cozy.parseList = function(obj) {
+  var child, cozyCode, i, nodeName, tag, type, _i, _len, _ref;
+  tag = obj[0].tagName;
+  cozyCode = "";
+  if ((tag != null) && tag === "UL") {
+    md2cozy.editorDepth++;
+    obj.children().each(function() {
+      return cozyCode += md2cozy.parseList($(this));
+    });
+    md2cozy.editorDepth--;
+  } else if ((tag != null) && tag === "LI" && (obj.contents().get(0) != null)) {
+    _ref = obj[0].childNodes;
+    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+      child = _ref[i];
+      child = $(child);
+      type = "Lu";
+      if (i === 0) {
+        type = "Tu";
+      }
+      nodeName = child[0].nodeName;
+      if (nodeName === "#text" && child.text().trim() !== "") {
+        child = child.clone().wrap('<p></p>').parent();
+        cozyCode += md2cozy.buildEditorLine(type, md2cozy.editorDepth, child);
+      } else if (nodeName === "P") {
+        cozyCode += md2cozy.buildEditorLine(type, md2cozy.editorDepth, child);
+      } else {
+        cozyCode += md2cozy.parseList(child);
+      }
+    }
+  } else if ((tag != null) && tag === "P") {
+    cozyCode += md2cozy.buildEditorLine("Lu", md2cozy.editorDepth, obj);
   }
   return cozyCode;
 };
@@ -314,14 +341,14 @@ selection.handleTextEltStart = function(range, startContainer) {
   }
 };
 
-selection.handleTextEltEnd = function(range, startContainer) {
+selection.handleTextEltEnd = function(range, endContainer) {
   if (endContainer.firstChild === null || endContainer.textContent.length === 0) {
     selection.putEndOnEnd(range, endContainer);
   }
   if (range.endOffset < endContainer.childNodes.length) {
     return selection.putEndOnNextChild(range, endContainer);
   } else {
-    return selection.putEndOnLastChildEnd(range, startContainer);
+    return selection.putEndOnLastChildEnd(range, endContainer);
   }
 };
 
@@ -356,7 +383,7 @@ selection.putStartOnOffset = function(range, container, offset) {
 
 selection.putEndOnOffset = function(range, container, offset) {
   var elt;
-  elt = endContainer.childNodes[offset];
+  elt = container.childNodes[offset];
   return selection.putEndOnStart(range, elt);
 };
 
@@ -592,6 +619,7 @@ exports.CNeditor = (function() {
           return _this.paste(event);
         });
         _this.linesDiv = document.createElement('div');
+        _this.linesDiv.setAttribute('id', 'editor-lines');
         _this.editorBody$.append(_this.linesDiv);
         _this._initClipBoard();
         callBack.call(_this);
@@ -660,9 +688,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype.getEditorContent = function() {
-    var cozyContent;
-    cozyContent = this.linesDiv.innerHTML;
-    return md2cozy.cozy2md(cozyContent);
+    return md2cozy.cozy2md($(this.linesDiv));
   };
 
   /* ------------------------------------------------------------------------
@@ -801,6 +827,9 @@ exports.CNeditor = (function() {
     if (shortcut === "-A" || shortcut === "-S" || shortcut === "-V" || shortcut === "-Y" || shortcut === "-Z") {
       shortcut = "-other";
     }
+    if (this._lastKey !== shortcut && (shortcut === "-tab" || shortcut === "-return" || shortcut === "-backspace" || shortcut === "-suppr" || shortcut === "CtrlShift-down" || shortcut === "CtrlShift-up" || shortcut === "CtrlShift-left" || shortcut === "CtrlShift-right" || shortcut === "Ctrl-V" || shortcut === "Shift-tab" || shortcut === "-space" || shortcut === "-other")) {
+      this._addHistory();
+    }
     this._lastKey = shortcut;
     if (this.newPosition && (shortcut === '-other' || shortcut === '-space' || shortcut === '-suppr' || shortcut === '-backspace' || shortcut === '-return')) {
       this.newPosition = false;
@@ -864,7 +893,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._suppr = function(event) {
-    var startLine;
+    var range, startLine, startOffset, textNode, txt;
     this._findLinesAndIsStartIsEnd();
     startLine = this.currentSel.startLine;
     if (this.currentSel.range.collapsed) {
@@ -873,22 +902,28 @@ exports.CNeditor = (function() {
           this.currentSel.range.setEndBefore(startLine.lineNext.line$[0].firstChild);
           this.currentSel.endLine = startLine.lineNext;
           this._deleteMultiLinesSelections();
-          event.preventDefault();
-          event.cancelBubble = true;
-          return false;
         } else {
-          event.preventDefault();
-          event.cancelBubble = true;
-          return false;
+          console.log('_suppr 2 - test ');
         }
+      } else {
+        console.log('_suppr 3 - test ');
+        textNode = this.currentSel.range.startContainer;
+        startOffset = this.currentSel.range.startOffset;
+        txt = textNode.textContent;
+        textNode.textContent = txt.substr(0, startOffset) + txt.substr(startOffset + 1);
+        range = rangy.createRange();
+        range.collapseToPoint(textNode, startOffset);
+        this.currentSel.sel.setSingleRange(range);
       }
     } else if (this.currentSel.endLine === startLine) {
-
+      console.log('_suppr 4 - test ');
+      this.currentSel.sel.range.deleteContents();
     } else {
+      console.log('_suppr 5 - test ');
       this._deleteMultiLinesSelections();
-      event.preventDefault();
-      return false;
     }
+    e.preventDefault();
+    return false;
   };
 
   /* ------------------------------------------------------------------------
@@ -920,7 +955,6 @@ exports.CNeditor = (function() {
           text = prevLine.lastChild.previousSibling.firstChild;
           range.collapseToPoint(text, offset);
           this.currentSel.sel.setSingleRange(range);
-          e.preventDefault();
         }
       } else {
         textNode = sel.range.startContainer;
@@ -933,15 +967,11 @@ exports.CNeditor = (function() {
         this.currentSel = null;
       }
     } else if (sel.endLine === startLine) {
-      text = startLine.line$[0].lastChild.previousSibling.firstChild;
-      range = rangy.createRange();
-      range.collapseToPoint(text, text.length);
-      this.currentSel.sel.setSingleRange(range);
-      return true;
+      sel.range.deleteContents();
     } else {
       this._deleteMultiLinesSelections();
-      e.preventDefault();
     }
+    e.preventDefault();
     return false;
   };
 
@@ -1718,7 +1748,9 @@ exports.CNeditor = (function() {
           startContainer = nextEndLine.line$[0];
         }
       } else {
+        console.log("ctrl a");
         startContainer = startLine.line$[0].lastChild;
+        console.log(startContainer);
       }
     } else {
       startContainer = startLine.line$[0].firstChild.firstChild;
@@ -2256,26 +2288,26 @@ exports.CNeditor = (function() {
     }
   };
 
-  /* ------------------------------------------------------------------------
-  #  HISTORY MANAGEMENT:
-  # 1. _addHistory (Save html code, selection markers, positions...)
-  # 2. undoPossible (Return true only if unDo can be called)
-  # 3. redoPossible (Return true only if reDo can be called)
-  # 4. unDo (Undo the previous action)
-  # 5. reDo ( Redo a undo-ed action)
-  #
-  # What is saved in the history:
-  #  - current html content
-  #  - current selection
-  #  - current scrollbar position
-  #  - the boolean newPosition
+  /*
+      #  HISTORY MANAGEMENT:
+      # 1. _addHistory (Save html code, selection markers, positions...)
+      # 2. undoPossible (Return true only if unDo can be called)
+      # 3. redoPossible (Return true only if reDo can be called)
+      # 4. unDo (Undo the previous action)
+      # 5. reDo ( Redo a undo-ed action)
+      #
+      # What is saved in the history:
+      #  - current html content
+      #  - current selection
+      #  - current scrollbar position
+      #  - the boolean newPosition
   */
 
 
-  /* -------------------------------------------------------------------------
-  #  _addHistory
-  # 
-  # Add html code and selection markers and scrollbar positions to the history
+  /*
+      #  _addHistory
+      # 
+      # Add html code and selection markers and scrollbar positions to the history
   */
 
 
@@ -2324,6 +2356,7 @@ exports.CNeditor = (function() {
     var savedSel, xcoord, ycoord;
     if (this.undoPossible()) {
       if (this._history.index === this._history.history.length - 1) {
+        this._addHistory();
         this._history.index -= 1;
       }
       this.newPosition = this._history.historyPos[this._history.index];
@@ -2879,9 +2912,7 @@ exports.CNeditor = (function() {
   */
 
 
-  CNeditor.prototype.logKeyPress = function(e) {
-    return console.clear();
-  };
+  CNeditor.prototype.logKeyPress = function(e) {};
 
   return CNeditor;
 

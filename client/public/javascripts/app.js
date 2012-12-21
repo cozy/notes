@@ -804,6 +804,9 @@ window.require.define({"views/note_view": function(exports, require, module) {
       this.noteFullTitle = this.$('#note-full-title');
       this.breadcrumb = this.$('#note-full-breadcrumb');
       this.editor = new CNeditor(this.$('#editorIframe')[0], this.onIFrameLoaded);
+      this.$('#editorIframe').niceScroll({
+        cursorcolor: "#CCC"
+      });
       this.configureButtons();
       this.configureTitle();
       this.configureIFrame();
@@ -1083,9 +1086,13 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
           _this.uploadButton.spin();
           _this.uploadButton.find("i").css('visibility', 'visible');
           _this.$el.slideDown();
+          if (!(_this.model._attachments != null)) {
+            _this.model._attachments = {};
+          }
+          _this.model._attachments[filename] = {};
           _this.addFileLine(filename);
-          _this.model._attachments.filename = {};
-          return _this.setFileNumber();
+          _this.setFileNumber();
+          return _this.fileList.slideDown();
         },
         onSubmit: function() {
           _this.uploadButton.find("i").css('visibility', 'hidden');
@@ -1164,8 +1171,10 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
       for (file in this.model._attachments) {
         fileNumber++;
       }
-      if (fileNumber > 0) {
+      if (fileNumber > 1) {
         return this.widget.find('#file-number').html("" + fileNumber + " files");
+      } else if (fileNumber === 1) {
+        return this.widget.find('#file-number').html("" + fileNumber + " file");
       } else {
         return this.widget.find('#file-number').html("no file");
       }

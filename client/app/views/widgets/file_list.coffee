@@ -14,9 +14,11 @@ class exports.FileList
                 @uploadButton.spin()
                 @uploadButton.find("i").css('visibility', 'visible')
                 @$el.slideDown()
+                @model._attachments = {} if not @model._attachments?
+                @model._attachments[filename] = {}
                 @addFileLine filename
-                @model._attachments.filename = {}
                 @setFileNumber()
+                @fileList.slideDown()
             onSubmit: =>
                 @uploadButton.find("i").css('visibility', 'hidden')
                 @uploadButton.spin 'small'
@@ -46,7 +48,7 @@ class exports.FileList
                 @addFileLine file
             @setFileNumber()
 
-    # Render lien corresponding to given file : label + delete button.
+    # Render link corresponding to given file : label + delete button.
     # Set listener on delete button.
     addFileLine: (file) ->
         path = "notes/#{@model.id}/files/#{file}"
@@ -81,8 +83,9 @@ class exports.FileList
         for file of @model._attachments
             fileNumber++
 
-        if fileNumber > 0
+        if fileNumber > 1
             @widget.find('#file-number').html "#{fileNumber} files"
+        else if fileNumber is 1
+            @widget.find('#file-number').html "#{fileNumber} file"
         else
             @widget.find('#file-number').html "no file"
-

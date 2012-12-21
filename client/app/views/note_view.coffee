@@ -30,6 +30,8 @@ class exports.NoteView extends Backbone.View
         @breadcrumb = @$('#note-full-breadcrumb')
 
         @editor = new CNeditor(@$('#editorIframe')[0], @onIFrameLoaded)
+        @$('#editorIframe').niceScroll
+            cursorcolor: "#CCC"
         @configureButtons()
         @configureTitle()
         @configureIFrame()
