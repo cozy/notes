@@ -23,14 +23,14 @@ class exports.FileList
         @uploadButton.spin 'small'
 
     onUploadComplete: (id, filename, response) =>
-        @uploadButton.spin()
         @uploadButton.find("i").css('visibility', 'visible')
         @$el.slideDown()
         @model._attachments = {} if not @model._attachments?
         @model._attachments[filename] = {}
         @addFileLine filename
         @setFileNumber()
-        @fileList.slideDown()
+        @fileList.slideDown =>
+            @uploadButton.spin()
 
     onMouseEnter: =>
         @widget.unbind 'mouseleave'

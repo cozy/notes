@@ -391,14 +391,6 @@ window.require.define({"routers/main_router": function(exports, require, module)
       return this._initializeTree("tree-node-all");
     };
 
-    MainRouter.prototype.note = function(note_uuid, path) {
-      if ($("#tree").length > 0) {
-        return app.homeView.selectNote(note_uuid);
-      } else {
-        return this._initializeTree(note_uuid);
-      }
-    };
-
     MainRouter.prototype.allNotes = function() {
       if ($('#tree').length > 0) {
         return app.homeView.selectNote("tree-node-all");
@@ -407,9 +399,17 @@ window.require.define({"routers/main_router": function(exports, require, module)
       }
     };
 
-    MainRouter.prototype._initializeTree = function(note_uuid) {
+    MainRouter.prototype.note = function(noteId, path) {
+      if ($("#tree").length > 0) {
+        return app.homeView.selectNote(noteId);
+      } else {
+        return this._initializeTree(noteId);
+      }
+    };
+
+    MainRouter.prototype._initializeTree = function(noteId) {
       $('body').append(app.homeView.el);
-      return app.homeView.initContent(note_uuid);
+      return app.homeView.initContent(noteId);
     };
 
     return MainRouter;
@@ -1106,7 +1106,7 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
     };
 
     FileList.prototype.onUploadComplete = function(id, filename, response) {
-      this.uploadButton.spin();
+      var _this = this;
       this.uploadButton.find("i").css('visibility', 'visible');
       this.$el.slideDown();
       if (!(this.model._attachments != null)) {
@@ -1115,7 +1115,9 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
       this.model._attachments[filename] = {};
       this.addFileLine(filename);
       this.setFileNumber();
-      return this.fileList.slideDown();
+      return this.fileList.slideDown(function() {
+        return _this.uploadButton.spin();
+      });
     };
 
     FileList.prototype.onMouseEnter = function() {
