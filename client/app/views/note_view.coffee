@@ -21,7 +21,6 @@ class exports.NoteView extends Backbone.View
 
         @$el = $("#note-full")
 
-        # load the base's content into the editor
         @$("#editor").html require('./templates/editor')
 
         @saveTimer = null
@@ -34,37 +33,43 @@ class exports.NoteView extends Backbone.View
             cursorcolor: "#CCC"
             enablekeyboard: false
         @configureButtons()
-        @configureTitle()
-        @configureIFrame()
+        @setTitleListeners()
+        @setSaveListeners()
+
         @fileList = new FileList @model, '#file-list'
         
     ###*
     # every keyUp in the note's editor will trigger a countdown of 3s, after
     # 3s and if the user didn't type anything, the content will be saved
     ###
-    configureIFrame: ->
+    setSaveListeners: ->
         @$("iframe").on "onKeyUp", () =>
-            clearTimeout @saveTimer
-            @saveButton.removeClass("active") if @saveButton.hasClass("active")
             id = @model.id
-            @saveTimer = setTimeout( =>
-                Note.updateNote id, content: @editor.getEditorContent()
-                unless @saveButton.hasClass("active")
+
+            clearTimeout @saveTimer
+            @saveButton.removeClass("active") if @saveButton.hasClass "active"
+
+            @saveTimer = setTimeout(=>
+                @saveButton.spin 'small'
+                Note.updateNote id, content: @editor.getEditorContent(), =>
+                    @saveButton.spin()
+
+                unless @saveButton.hasClass "active"
                     @saveButton.addClass "active"
             , 3000)
         @saveButton.click @saveEditorContent
 
-    configureTitle: ->
-        @noteFullTitle.live "keypress", (e) ->
-            noteFullTitle.trigger "blur" if e.keyCode is 13
+    setTitleListeners: ->
+        @noteFullTitle.live "keypress", (event) ->
+            noteFullTitle.trigger "blur" if event.keyCode is 13
 
         @noteFullTitle.blur =>
             newName = @noteFullTitle.val()
             oldName = @model.title
             if newName isnt "" and oldName != newName
-                @homeView.onNoteTitleChange(@model.id, newName)
-                @homeView.tree._updateSuggestionList("rename", newName, oldName)
-                @updateBreadcrumbOnTitleChange(newName)
+                @homeView.onNoteTitleChange @model.id, newName
+                @homeView.tree._updateSuggestionList "rename", newName, oldName
+                @updateBreadcrumbOnTitleChange newName
         
     configureButtons: ->
         @indentBtn = @$("#indentBtn")
@@ -110,9 +115,9 @@ class exports.NoteView extends Backbone.View
     ###
     setModel : (note, data) ->
         @model = note
-        @setTitle(note.title)
-        @setContent(note.content)
-        @createBreadcrumb(note, data)
+        @setTitle note.title
+        @setContent note.content
+        @createBreadcrumb note, data
         @fileList.configure @model
         @fileList.render()
         
@@ -129,14 +134,14 @@ class exports.NoteView extends Backbone.View
         if @model? and @editor? and @saveTimer?
             clearTimeout @saveTimer
             @saveTimer = null
-            Note.updateNote @model.id, content: @editor.getEditorContent()
-            @saveButton.addClass("active")
+            @saveButton.spin 'small'
+            Note.updateNote @model.id, content: @editor.getEditorContent(), =>
+                @saveButton.addClass("active")
+                @saveButton.spin()
 
-    ###*
-    # 
-    ###
+    # Display given content inside editor.
+    # If no content is given, editor is cleared.
     setContent : (content) ->
-        # load the base's content into the editor
         if content
             @editor.setEditorContent(content)
         else

@@ -1,34 +1,31 @@
 helpers = require '../../helpers'
 
-class exports.FileList
+class exports.FileList extends Backbone.View
 
     constructor: (@model, @id) ->
         @$el = $ @id
 
-        @uploadButton = $("#file-pic")
+        @uploadButton = @$("#file-pic")
         @uploader = new qq.FileUploaderBasic
             button: document.getElementById('file-pic')
             mutliple: false
             forceMultipart: true
             onComplete: @onUploadComplete
             onSubmit: @submitComplete
-        @uploadButton.find("input").css("cursor", "pointer !important")
 
         @widget = $("#note-file-list")
         @widget.mouseenter @onMouseEnter
         @widget.mouseleave @onMouseLeave
 
     onSubmit: =>
-        @uploadButton.find("i").css('visibility', 'hidden')
         @uploadButton.spin 'small'
 
     onUploadComplete: (id, filename, response) =>
-        @uploadButton.find("i").css('visibility', 'visible')
-        @$el.slideDown()
         @model._attachments = {} if not @model._attachments?
         @model._attachments[filename] = {}
         @addFileLine filename
         @setFileNumber()
+
         @fileList.slideDown =>
             @uploadButton.spin()
 
@@ -51,7 +48,7 @@ class exports.FileList
     ###
     render: ->
         if @model?
-            $('.note-file button').unbind()
+            @$('.note-file button').unbind()
             @$el.html null
             for file of @model._attachments
                 @addFileLine file
@@ -69,8 +66,9 @@ class exports.FileList
                 <button>(x)</button>
             </div>"""
         line = @$el.find("##{lineId}")
-        delButton = line.find("button")
         line.hide()
+
+        delButton = line.find("button")
         delButton.click (target) =>
             delButton.html "&nbsp;&nbsp;&nbsp;"
             delButton.spin 'tiny'

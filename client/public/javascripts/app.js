@@ -476,12 +476,10 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
     HomeView.prototype.initContent = function(note_uuid) {
       this.note_uuid = note_uuid;
-      this.progressBar = $(".bar");
       this.iframeLoaded = false;
       this.treeLoaded = false;
       this.buildViews();
       this.configureLayoutDrag();
-      this.setProgressBar();
       this.loadTree();
       this.configureResize();
       return this.configureSaving();
@@ -492,7 +490,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
       this.noteView = new NoteView(this, this.onIFrameLoaded);
       this.noteFull = this.$("#note-full");
       this.noteFull.hide();
-      this.$("#help-info").hide();
+      this.helpInfo = this.$("#help-info");
       return this.$el.layout({
         size: "250",
         minSize: "250",
@@ -518,7 +516,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
           onLoaded: _this.onTreeLoaded,
           onDrop: _this.onNoteDropped
         });
-        return $("#create-note").click(function() {
+        return _this.$("#create-note").click(function() {
           return _this.tree.widget.jstree("create", "#tree-node-all", "first", "A New Note");
         });
       });
@@ -544,37 +542,19 @@ window.require.define({"views/home_view": function(exports, require, module) {
       });
     };
 
-    HomeView.prototype.setProgressBar = function() {
-      var progressBarLeftPosition, progressBarTopPosition;
-      this.$(".ui-layout-center").append("<div class='progress progress-striped active'>                <div class='bar' style='width: 0%;'></div>            </div>");
-      this.progress = this.$el.find(".progress");
-      progressBarLeftPosition = this.$(".ui-layout-center").width() / 3 - 77;
-      progressBarTopPosition = this.$(".ui-layout-center").height() / 2;
-      this.progress.css("left", progressBarLeftPosition);
-      return this.progress.css("top", progressBarTopPosition);
-    };
-
     /* Listeners
     */
 
 
     HomeView.prototype.onIFrameLoaded = function() {
-      var cssLink;
-      this.progressBar.css("width", "10%");
       this.iframeLoaded = true;
       if (this.treeLoaded) {
         this.selectNote(note_uuid);
       }
-      this.iframe = $("iframe");
-      cssLink = document.createElement("link");
-      cssLink.href = "stylesheets/app.css";
-      cssLink.rel = "stylesheet";
-      cssLink.type = "text/css";
-      return console.log(this.iframe.get());
+      return this.iframe = $("iframe");
     };
 
     HomeView.prototype.onTreeLoaded = function() {
-      this.progressBar.css("width", "30%");
       this.treeLoaded = true;
       if (this.iframeLoaded) {
         return this.selectNote(this.note_uuid);
@@ -584,8 +564,8 @@ window.require.define({"views/home_view": function(exports, require, module) {
     HomeView.prototype.onWindowResized = function() {
       var windowHeight;
       windowHeight = $(window).height();
-      $("#note-style").height(windowHeight - 160);
-      return $("#editor").height(windowHeight - 260);
+      this.$("#note-style").height(windowHeight - 160);
+      return this.$("#editor").height(windowHeight - 260);
     };
 
     /**
@@ -682,62 +662,22 @@ window.require.define({"views/home_view": function(exports, require, module) {
     HomeView.prototype.onTreeSelectionChg = function(path, id, data) {
       var _this = this;
       this.noteView.saveEditorContent();
-      if (id === void 0) {
-        this.progress.remove();
-      } else {
-        this.progressBar.css("width", "70%");
-      }
       if (path.indexOf("/")) {
         path = "/" + path;
       }
       app.router.navigate("note" + path, {
         trigger: false
       });
-      if (id != null) {
-        if (id === "tree-node-all") {
-          this.progress.remove();
-          this.noteFull.hide();
-          return this.$("#help-info").show();
-        } else {
-          this.$("#help-info").hide();
-          return Note.getNote(id, function(note) {
-            _this.renderNote(note, data);
-            return _this.noteFull.show();
-          });
-        }
-      } else {
-        this.progress.remove();
-        this.$("#help-info").show();
+      if (!(id != null) || id === "tree-node-all") {
+        this.helpInfo.show();
         return this.noteFull.hide();
-      }
-    };
-
-    /**
-    # Force selection inside tree of note of a given uuid.
-    */
-
-
-    HomeView.prototype.selectNote = function(note_uuid) {
-      this.progressBar.css("width", "40%");
-      if (!(note_uuid === "all" || note_uuid === 'tree-node-all')) {
-        return this.tree.selectNode(note_uuid);
       } else {
-        this.$("#help-info").show();
-        return this.noteFull.hide();
+        this.helpInfo.hide();
+        return Note.getNote(id, function(note) {
+          _this.renderNote(note, data);
+          return _this.noteFull.show();
+        });
       }
-    };
-
-    /**
-    # Fill note widget with note data.
-    */
-
-
-    HomeView.prototype.renderNote = function(note, data) {
-      this.progressBar.css("width", "90%");
-      note.url = "notes/" + note.id;
-      this.currentNote = note;
-      this.noteView.setModel(note, data);
-      return this.progress.remove();
     };
 
     /**
@@ -750,6 +690,35 @@ window.require.define({"views/home_view": function(exports, require, module) {
       return Note.updateNote(nodeId, {
         parent_id: targetNodeId
       }, function() {});
+    };
+
+    /* Functions
+    */
+
+
+    /**
+    # Force selection inside tree of note of a given uuid.
+    */
+
+
+    HomeView.prototype.selectNote = function(note_uuid) {
+      if (note_uuid === "all" || note_uuid === 'tree-node-all') {
+        this.helpInfo.show();
+        return this.noteFull.hide();
+      } else {
+        return this.tree.selectNode(note_uuid);
+      }
+    };
+
+    /**
+    # Fill note widget with note data.
+    */
+
+
+    HomeView.prototype.renderNote = function(note, data) {
+      note.url = "notes/" + note.id;
+      this.currentNote = note;
+      return this.noteView.setModel(note, data);
     };
 
     return HomeView;
@@ -810,8 +779,8 @@ window.require.define({"views/note_view": function(exports, require, module) {
         enablekeyboard: false
       });
       this.configureButtons();
-      this.configureTitle();
-      this.configureIFrame();
+      this.setTitleListeners();
+      this.setSaveListeners();
       this.fileList = new FileList(this.model, '#file-list');
     }
 
@@ -821,18 +790,21 @@ window.require.define({"views/note_view": function(exports, require, module) {
     */
 
 
-    NoteView.prototype.configureIFrame = function() {
+    NoteView.prototype.setSaveListeners = function() {
       var _this = this;
       this.$("iframe").on("onKeyUp", function() {
         var id;
+        id = _this.model.id;
         clearTimeout(_this.saveTimer);
         if (_this.saveButton.hasClass("active")) {
           _this.saveButton.removeClass("active");
         }
-        id = _this.model.id;
         return _this.saveTimer = setTimeout(function() {
+          _this.saveButton.spin('small');
           Note.updateNote(id, {
             content: _this.editor.getEditorContent()
+          }, function() {
+            return _this.saveButton.spin();
           });
           if (!_this.saveButton.hasClass("active")) {
             return _this.saveButton.addClass("active");
@@ -842,10 +814,10 @@ window.require.define({"views/note_view": function(exports, require, module) {
       return this.saveButton.click(this.saveEditorContent);
     };
 
-    NoteView.prototype.configureTitle = function() {
+    NoteView.prototype.setTitleListeners = function() {
       var _this = this;
-      this.noteFullTitle.live("keypress", function(e) {
-        if (e.keyCode === 13) {
+      this.noteFullTitle.live("keypress", function(event) {
+        if (event.keyCode === 13) {
           return noteFullTitle.trigger("blur");
         }
       });
@@ -935,20 +907,19 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
 
     NoteView.prototype.saveEditorContent = function() {
+      var _this = this;
       if ((this.model != null) && (this.editor != null) && (this.saveTimer != null)) {
         clearTimeout(this.saveTimer);
         this.saveTimer = null;
-        Note.updateNote(this.model.id, {
+        this.saveButton.spin('small');
+        return Note.updateNote(this.model.id, {
           content: this.editor.getEditorContent()
+        }, function() {
+          _this.saveButton.addClass("active");
+          return _this.saveButton.spin();
         });
-        return this.saveButton.addClass("active");
       }
     };
-
-    /**
-    #
-    */
-
 
     NoteView.prototype.setContent = function(content) {
       if (content) {
@@ -1069,11 +1040,15 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
 
 window.require.define({"views/widgets/file_list": function(exports, require, module) {
   var helpers,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   helpers = require('../../helpers');
 
-  exports.FileList = (function() {
+  exports.FileList = (function(_super) {
+
+    __extends(FileList, _super);
 
     function FileList(model, id) {
       this.model = model;
@@ -1087,7 +1062,7 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
       this.onSubmit = __bind(this.onSubmit, this);
 
       this.$el = $(this.id);
-      this.uploadButton = $("#file-pic");
+      this.uploadButton = this.$("#file-pic");
       this.uploader = new qq.FileUploaderBasic({
         button: document.getElementById('file-pic'),
         mutliple: false,
@@ -1095,21 +1070,17 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
         onComplete: this.onUploadComplete,
         onSubmit: this.submitComplete
       });
-      this.uploadButton.find("input").css("cursor", "pointer !important");
       this.widget = $("#note-file-list");
       this.widget.mouseenter(this.onMouseEnter);
       this.widget.mouseleave(this.onMouseLeave);
     }
 
     FileList.prototype.onSubmit = function() {
-      this.uploadButton.find("i").css('visibility', 'hidden');
       return this.uploadButton.spin('small');
     };
 
     FileList.prototype.onUploadComplete = function(id, filename, response) {
       var _this = this;
-      this.uploadButton.find("i").css('visibility', 'visible');
-      this.$el.slideDown();
       if (!(this.model._attachments != null)) {
         this.model._attachments = {};
       }
@@ -1148,7 +1119,7 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
     FileList.prototype.render = function() {
       var file;
       if (this.model != null) {
-        $('.note-file button').unbind();
+        this.$('.note-file button').unbind();
         this.$el.html(null);
         for (file in this.model._attachments) {
           this.addFileLine(file);
@@ -1165,8 +1136,8 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
       lineId = "note-" + slug;
       this.$el.append("<div class=\"note-file spacer\" id=\"" + lineId + "\">\n    <a href=\"" + path + "\" target=\"_blank\">" + file + "</a>\n    <button>(x)</button>\n</div>");
       line = this.$el.find("#" + lineId);
-      delButton = line.find("button");
       line.hide();
+      delButton = line.find("button");
       delButton.click(function(target) {
         delButton.html("&nbsp;&nbsp;&nbsp;");
         delButton.spin('tiny');
@@ -1206,7 +1177,7 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
 
     return FileList;
 
-  })();
+  })(Backbone.View);
   
 }});
 

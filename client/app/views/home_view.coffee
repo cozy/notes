@@ -22,13 +22,11 @@ class exports.HomeView extends Backbone.View
     ###
     initContent: (note_uuid) ->
         @note_uuid = note_uuid
-        @progressBar = $(".bar")
         @iframeLoaded = false
         @treeLoaded = false
 
         @buildViews()
         @configureLayoutDrag()
-        @setProgressBar()
         @loadTree()
         @configureResize()
         @configureSaving()
@@ -40,7 +38,7 @@ class exports.HomeView extends Backbone.View
         @noteView = new NoteView @, @onIFrameLoaded
         @noteFull = @$ "#note-full"
         @noteFull.hide()
-        @$("#help-info").hide()
+        @helpInfo = @$("#help-info")
 
         @$el.layout
             size: "250"
@@ -64,8 +62,9 @@ class exports.HomeView extends Backbone.View
                 onLoaded: @onTreeLoaded
                 onDrop  : @onNoteDropped
 
-            $("#create-note").click =>
-                @tree.widget.jstree("create","#tree-node-all","first","A New Note")
+            @$("#create-note").click =>
+                @tree.widget.jstree(
+                    "create","#tree-node-all","first","A New Note")
 
     # Detect the start of resize with the on mousedown instead of 
     # the onresize_start because this one happens a bit latter what may be a pb.
@@ -84,47 +83,26 @@ class exports.HomeView extends Backbone.View
         $(window).unload =>
             @noteView.saveEditorContent()
 
-    # Build and configure presse bar.
-    setProgressBar: ->
-        @$(".ui-layout-center").append(
-            "<div class='progress progress-striped active'>
-                <div class='bar' style='width: 0%;'></div>
-            </div>")
-        @progress = @$el.find ".progress"
-        progressBarLeftPosition = @$(".ui-layout-center").width()/3-77
-        progressBarTopPosition = @$(".ui-layout-center").height()/2
-        @progress.css "left", progressBarLeftPosition
-        @progress.css "top", progressBarTopPosition
-
-
     ### Listeners ###
     
     # If editor iframe is loaded after tree, it displays the note that should be 
     # loaded first.
     onIFrameLoaded: =>
-        @progressBar.css "width","10%"
         @iframeLoaded = true
         @selectNote note_uuid if @treeLoaded
         @iframe = $ "iframe"
-        cssLink = document.createElement "link"
-        cssLink.href = "stylesheets/app.css"
-        cssLink .rel = "stylesheet"
-        cssLink .type = "text/css"
-        console.log @iframe.get()
-        #@iframe.get().document.head.appendChild cssLink
 
     # If tree is loaded after iframe, it displays the note that should be
     # loaded first.
     onTreeLoaded: =>
-        @progressBar.css "width","30%"
         @treeLoaded = true
         @selectNote(@note_uuid) if @iframeLoaded
         
     # Small trick to adapt editor size when window is resized.
     onWindowResized: ->
         windowHeight = $(window).height()
-        $("#note-style").height(windowHeight - 160)
-        $("#editor").height(windowHeight - 260)
+        @$("#note-style").height(windowHeight - 160)
+        @$("#editor").height(windowHeight - 260)
 
     ###*
     Create a new folder.
@@ -140,7 +118,7 @@ class exports.HomeView extends Backbone.View
                 if err
                     alert "Server error occured."
                 else
-                    data.rslt.obj.data("id", note.id) # TODO BJA : use case ?
+                    data.rslt.obj.data("id", note.id)
                     data.rslt.obj.prop("id", note.id)
                     data.inst.deselect_all()
                     data.inst.select_node data.rslt.obj
@@ -152,9 +130,9 @@ class exports.HomeView extends Backbone.View
     ###
     onTreeRename: (uuid, newName) =>
         if newName?
-            if @tree.currentNote_uuid == uuid
-                @noteView.setTitle(newName)
-                @noteView.updateBreadcrumbOnTitleChange(newName)
+            if @tree.currentNote_uuid is uuid
+                @noteView.setTitle newName
+                @noteView.updateBreadcrumbOnTitleChange newName
             Note.updateNote uuid, title: newName, (err) ->
                 alert "Server error occured" if err
 
@@ -173,7 +151,7 @@ class exports.HomeView extends Backbone.View
     # Delete currently selected node.
     ###
     onTreeRemove: (note_uuid) =>
-        if @currentNote and @currentNote.id == note_uuid
+        if @currentNote and @currentNote.id is note_uuid
             @currentNote.destroy()
         else
             Note.deleteNote note_uuid, (err) ->
@@ -187,50 +165,17 @@ class exports.HomeView extends Backbone.View
     onTreeSelectionChg: (path, id, data) =>
         @noteView.saveEditorContent()
 
-        if id is undefined
-            @progress.remove()
-        else
-            @progressBar.css "width", "70%"
-            
         path = "/#{path}" if path.indexOf "/"
         app.router.navigate "note#{path}", trigger: false
-        if id?
-            if id is "tree-node-all"
-                @progress.remove()
+
+        if not id? or id is "tree-node-all"
+                @helpInfo.show()
                 @noteFull.hide()
-                @$("#help-info").show()
-            else
-                @$("#help-info").hide()
-                Note.getNote id, (note) =>
-                    @renderNote note, data
-                    @noteFull.show()
         else
-            @progress.remove()
-            @$("#help-info").show()
-            @noteFull.hide()
-
-    ###*
-    # Force selection inside tree of note of a given uuid.
-    ###
-    selectNote: (note_uuid) =>
-        @progressBar.css "width","40%"
-
-        if not (note_uuid in ["all", 'tree-node-all'])
-            @tree.selectNode note_uuid
-        else
-            @$("#help-info").show()
-            @noteFull.hide()
-
-    ###*
-    # Fill note widget with note data.
-    ###
-    renderNote: (note, data) =>
-        @progressBar.css "width","90%"
-        note.url = "notes/#{note.id}"
-        @currentNote = note
-        @noteView.setModel(note, data)
-        @progress.remove()
-
+            @helpInfo.hide()
+            Note.getNote id, (note) =>
+                @renderNote note, data
+                @noteFull.show()
 
     ###*
     # When note is dropped, its old path and its new path are sent to server
@@ -238,3 +183,24 @@ class exports.HomeView extends Backbone.View
     ###
     onNoteDropped: (nodeId, targetNodeId) ->
         Note.updateNote nodeId, {parent_id:targetNodeId} , () ->
+            
+
+    ### Functions ###
+
+    ###*
+    # Force selection inside tree of note of a given uuid.
+    ###
+    selectNote: (note_uuid) =>
+        if note_uuid in ["all", 'tree-node-all']
+            @helpInfo.show()
+            @noteFull.hide()
+        else
+            @tree.selectNode note_uuid
+
+    ###*
+    # Fill note widget with note data.
+    ###
+    renderNote: (note, data) =>
+        note.url = "notes/#{note.id}"
+        @currentNote = note
+        @noteView.setModel(note, data)
