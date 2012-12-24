@@ -1,0 +1,196 @@
+iframe
+    border: 0
+
+#help-info
+    margin-top: 3%
+    text-align: center
+    color: #999
+
+#note-full-breadcrumb
+    margin-top: 10px
+    margin-bottom: 10px
+    margin-left: 2%
+    margin-right: 2%
+    font-family: main
+    font-size: 14px
+    border: 0
+    color: darkgrey
+
+    a
+        color: darkgrey
+
+#note-full
+    padding: 8px 2% 0px 2% 
+    border: 0
+    box-shadow: 0
+
+#editor
+    padding: 0
+    margin: 0
+    width: 100%
+    height: 70%
+
+#note-area
+    height: 100%
+    margin: 0
+    background: #F5F5F5
+    
+#note-style
+    padding: 20px 50px
+    margin-left: 2%
+    margin-right: 2%
+    border: 1px solid lightgrey + 30%
+    background: #FDFDFD
+    background-image: url('../img/note-corner.png')
+    background-position: right top
+    background-repeat: no-repeat
+    box-shadow: 1px 1px 2px #DDD
+
+#editor-container
+    margin-left: 0
+    margin-right: 0
+    height: 100%
+    width: 100%
+
+#editorIframe
+    width: 96%
+    height: 100%
+
+#note-full-title
+    height: 35px
+    margin: 40px 0 5px 10px
+    width: 92%
+    color: #222
+    border: 0px
+    background: none repeat scroll 0 0 transparent
+    font-family: main
+    font-size: 30px
+    letter-spacing: -2px
+    
+#note-full-title:focus
+    outline: 0 none
+    border-color: rgba(82, 168, 236, 0.8)
+    background-color: white
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6)
+
+
+// Buttons
+
+#editor-button-bar
+    position: absolute
+    opacity: 0.3
+
+    left: 3.5%;
+    top: 200px;
+
+    .btn
+        background-color: #FCFCFC
+        background-image: none
+        box-shadow: inset -4px 0px 3px #F5F5F5
+        padding: 8px 8px 8px 8px
+
+    .btn:active
+    .active
+        background-color: #EAEAEA
+        box-shadow: inset 4px 0px 3px #EAEAEA - 10%
+
+    .btn
+        i
+            background-position: 0 0
+
+        i.icon-indent-left
+            background-image: url('../img/menu-indent-left.png')
+        i.icon-indent-right
+            background-image: url('../img/menu-indent-right.png')
+        i.icon-th-list
+            background-image: url('../img/menu-bullet-point.png')
+        i.icon-text-height
+            background-image: url('../img/menu-title.png')
+        i.icon-download-alt
+            background-image: url('../img/menu-save.png')
+
+    .btn:hover
+        i.icon-indent-left
+            background-image: url('../img/menu-indent-left-over.png')
+        i.icon-indent-right
+            background-image: url('../img/menu-indent-right-over.png')
+        i.icon-th-list
+            background-image: url('../img/menu-bullet-point-over.png')
+        i.icon-text-height
+            background-image: url('../img/menu-title-over.png')
+        i.icon-download-alt
+            background-image: url('../img/menu-save-over.png')
+
+#editor-button-bar:hover
+    opacity: 1
+
+
+// File list
+
+#note-file-list .note-file:first-child
+    border: 0
+
+#note-file-list #file-list
+    display: none
+
+#note-file-list
+    position: absolute
+    padding: 0 0 10px 0
+    margin: 0
+    min-width: 250px
+    right: 14%
+    top: 55px
+    border: 1px solid lightgrey
+    text-align: center
+    background: white
+    box-shadow: 1px 1px 2px #EEE
+    font-family: main, helvetica
+    color: lightgrey
+
+    .note-file
+        display: none
+        padding-left: 10px
+        padding-bottom: 3px
+        margin-top: 5px
+        z-index: 10
+        border-top: 1px solid lightgrey
+
+        a
+            font-size: 0.9em
+            color: lightgrey - 20%
+
+        a:hover
+            color: lightgrey - 50%
+
+        button
+            border: none
+            background: white
+            font-size: 0.6em
+            color: lightgrey
+
+        button:hover
+            text-decoration: underline
+            color: lightgrey - 20%
+
+    #file-number
+        float: left
+        padding: 6px
+
+    #file-pic
+        position: absolute
+        left: 60%
+        top: -16px
+        height: 40px
+        width: 27px
+        background-image: url('../img/attachment.png')
+
+
+// Misc
+
+#drag
+    z-index: -1
+    bottom: 22px;
+    left: 17px;
+    position: absolute;
+    right: 15px;
+    top: 112px;
