@@ -1,13 +1,17 @@
 // Functions
+@import 'nib'
 
-shadow()
-  -moz-box-shadow: arguments
-  -webkit-box-shadow: arguments
-  box-shadow: arguments
+// Colors
 
-// Variables
+lightgrey = #FAFAFA
+bggrey = #F4F4F4
+whitegrey = #FCFCFC
+darkgrey = #333
+grey = #E8E8E8
+blue = #7DBBF4
 
-// Base
+// Base styles
+
 html
 body  
 #home-view
@@ -16,38 +20,18 @@ body
   margin 0
   overflow: hidden
   box-sizing border-box
-  -moz-box-sizing border-box
-  -webkit-box-sizing border-box
-
 
 body
-  color: #444
-  background-color: white
+  color: darkgrey
+  background-color: whitegrey
 
 a:focus, a:hover
   text-decoration: underline
 
 h1, h2, h3, h4, h5
   font-weight: normal
-  color: #222
+  color: darkgrey
   clear: left
-
-h1
-  font-size: 5em
-  line-height: 1.4
-  margin-bottom: 0.5em
-
-h2
-  font-size: 2em
-  line-height: 1
-  margin-bottom: 0.5em
-
-p
-  margin: 0 0 1.5em
-
-ul, ol
-  margin: 0 1.5em 1.5em 0
-  list-style-type: none
 
 .spacer
   clear both

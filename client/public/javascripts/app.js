@@ -236,7 +236,8 @@ window.require.define({"lib/request": function(exports, require, module) {
     return $.ajax({
       type: type,
       url: url,
-      data: data,
+      data: data != null ? JSON.stringify(data) : null,
+      contentType: "application/json",
       success: function(data) {
         if (callback != null) {
           return callback(null, data);
