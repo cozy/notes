@@ -107,8 +107,6 @@ class exports.Tree
 
         __initSuggestionList data
         suggestionList.sort(@_sortFunction)
-
-
  
     ###*
     # Bind listeners given in parameters with comment events (creation,
@@ -282,30 +280,33 @@ class exports.Tree
             # set regular expression with the characters of the search strings
             regSentence = ""
 
-            for char in searchString
-                regSentence += ".*(#{char})"
-                # matches the suggestions which begin with searchString
+            # matches the suggestions which begin with searchString
+            # matches the suggestions which contain searchString
+
+            # completing and ordering the output array plus adding bold characters
+            # which match the searchString
+            for name in array
                 expFirst = new RegExp("^#{searchString}","i")
-                # matches the suggestions which contain searchString
-                expBold = new RegExp("([#{searchString}])","gi")
-                exp = new RegExp(regSentence, "i")
+                isMatchFirst = expFirst.test(name)
+                expBold = new RegExp("(#{searchString})","gi")
+                isMatch = expBold.test(name)
 
-                # completing and ordering the output array plus adding bold characters
-                # which match the searchString
-                for name in array
-                    if expFirst.test(name)
-                        nameBold = name.replace expBold, (match, pattern) ->
-                            "<span class='bold-name'>#{pattern}</span>"
-                            filteredFirst.push nameBold
-                        
-                    if exp.test(name)
-                        nameBold = name.replace expBold, (match, pattern) ->
-                            "<span class='bold-name'>#{pattern}</span>"
+                if isMatchFirst
+                    nameBold = name.replace expBold, (match, pattern) ->
+                        "<span class='bold-name'>#{match}</span>"
+                    filteredFirst.push nameBold
+                    
+                else if isMatch
+                    
+                    nameBold = name.replace expBold, (match, pattern) ->
+                        "<span class='bold-name'>#{match}</span>"
 
-                        if not (nameBold in filteredFirst) and not (nameBold in filtered)
-                            filtered.push nameBold
+                    if not (nameBold in filteredFirst) and not (nameBold in filtered)
+                        filtered.push nameBold
 
-            filteredFirst.concat(filtered)
+            result = filteredFirst.concat(filtered)
+            return result
+            
 
 
         ###*
@@ -320,12 +321,12 @@ class exports.Tree
                 "<i class='icon-search icon-suggestion'></i>"
             else
                 i = 0
-                suggestion2 = suggestion.replace(/<.*?>/g,"")
-                while suggestion2 isnt array[i].name
+                suggestion = suggestion.replace(/<.*?>/g,"")
+                while i < array.length and suggestion isnt array[i].name
                     i++
                     
                 # when you add a new type, add the corresponding icon here
-                if array[i].type == "folder"
+                if i < array.length and array[i].type == "folder"
                     "<i class='icon-folder-open icon-suggestion'></i>"
 
         ###*
@@ -437,8 +438,8 @@ class exports.Tree
             # add what is typing the user in the list
             list = ["\"#{searchField.val()}\""].concat(list)
             # move the tree in order to be visible with the dropdown open
-            treeHeight = list.length*22 + 10
-            jstreeEl.css("margin-top", treeHeight)
+            treeHeight = list.length * 12
+            #jstreeEl.css("margin-top", treeHeight)
             $(this).trigger "setSuggestions",
             result: list
         

@@ -1492,35 +1492,32 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       */
 
       _filterAutocomplete = function(array, searchString) {
-        var char, exp, expBold, expFirst, filtered, filteredFirst, name, nameBold, regSentence, _i, _j, _len, _len1;
+        var expBold, expFirst, filtered, filteredFirst, isMatch, isMatchFirst, name, nameBold, regSentence, result, _i, _len;
         filteredFirst = [];
         filtered = [];
         regSentence = "";
-        for (_i = 0, _len = searchString.length; _i < _len; _i++) {
-          char = searchString[_i];
-          regSentence += ".*(" + char + ")";
+        for (_i = 0, _len = array.length; _i < _len; _i++) {
+          name = array[_i];
           expFirst = new RegExp("^" + searchString, "i");
-          expBold = new RegExp("([" + searchString + "])", "gi");
-          exp = new RegExp(regSentence, "i");
-          for (_j = 0, _len1 = array.length; _j < _len1; _j++) {
-            name = array[_j];
-            if (expFirst.test(name)) {
-              nameBold = name.replace(expBold, function(match, pattern) {
-                "<span class='bold-name'>" + pattern + "</span>";
-                return filteredFirst.push(nameBold);
-              });
-            }
-            if (exp.test(name)) {
-              nameBold = name.replace(expBold, function(match, pattern) {
-                return "<span class='bold-name'>" + pattern + "</span>";
-              });
-              if (!(__indexOf.call(filteredFirst, nameBold) >= 0) && !(__indexOf.call(filtered, nameBold) >= 0)) {
-                filtered.push(nameBold);
-              }
+          isMatchFirst = expFirst.test(name);
+          expBold = new RegExp("(" + searchString + ")", "gi");
+          isMatch = expBold.test(name);
+          if (isMatchFirst) {
+            nameBold = name.replace(expBold, function(match, pattern) {
+              return "<span class='bold-name'>" + match + "</span>";
+            });
+            filteredFirst.push(nameBold);
+          } else if (isMatch) {
+            nameBold = name.replace(expBold, function(match, pattern) {
+              return "<span class='bold-name'>" + match + "</span>";
+            });
+            if (!(__indexOf.call(filteredFirst, nameBold) >= 0) && !(__indexOf.call(filtered, nameBold) >= 0)) {
+              filtered.push(nameBold);
             }
           }
         }
-        return filteredFirst.concat(filtered);
+        result = filteredFirst.concat(filtered);
+        return result;
       };
       /**
       #used by textext to change the render of the suggestion list
@@ -1531,16 +1528,16 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       */
 
       _selectIcon = function(suggestion, array) {
-        var i, suggestion2;
+        var i;
         if (suggestion === ("\"" + (searchField.val()) + "\"")) {
           return "<i class='icon-search icon-suggestion'></i>";
         } else {
           i = 0;
-          suggestion2 = suggestion.replace(/<.*?>/g, "");
-          while (suggestion2 !== array[i].name) {
+          suggestion = suggestion.replace(/<.*?>/g, "");
+          while (i < array.length && suggestion !== array[i].name) {
             i++;
           }
-          if (array[i].type === "folder") {
+          if (i < array.length && array[i].type === "folder") {
             return "<i class='icon-folder-open icon-suggestion'></i>";
           }
         }
@@ -1681,8 +1678,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         list = textext.itemManager().nameField(suggestionList);
         list = _filterAutocomplete(list, query);
         list = ["\"" + (searchField.val()) + "\""].concat(list);
-        treeHeight = list.length * 22 + 10;
-        jstreeEl.css("margin-top", treeHeight);
+        treeHeight = list.length * 12;
         return $(this).trigger("setSuggestions", {
           result: list
         });
