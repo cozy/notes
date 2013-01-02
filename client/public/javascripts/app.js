@@ -1475,14 +1475,18 @@ window.require.register("views/search_view", function(exports, require, module) 
       this.results.html(null);
       this.queryTitle.html(" " + query);
       template = require('views/templates/search_result');
-      _results = [];
-      for (_i = 0, _len = notes.length; _i < _len; _i++) {
-        note = notes[_i];
-        _results.push(this.results.append(template({
-          note: note
-        })));
+      if (notes.length) {
+        _results = [];
+        for (_i = 0, _len = notes.length; _i < _len; _i++) {
+          note = notes[_i];
+          _results.push(this.results.append(template({
+            note: note
+          })));
+        }
+        return _results;
+      } else {
+        return this.results.append('<p class="pl1">No note found.</p>');
       }
-      return _results;
     };
 
     SearchView.prototype.fadeIn = function(callback) {

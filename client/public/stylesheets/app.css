@@ -7495,6 +7495,9 @@ h5 {
 .no-padding {
   padding: 0;
 }
+.pl1 {
+  padding-left: 10px;
+}
 .tooltip-inner {
   background-color: #3997ee;
   opacity: 1;

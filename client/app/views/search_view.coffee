@@ -15,8 +15,11 @@ class SearchView extends Backbone.View
         @queryTitle.html " " + query
         
         template = require('views/templates/search_result')
-        for note in notes
-            @results.append template(note: note)
+        if notes.length
+            for note in notes
+                @results.append template(note: note)
+        else
+            @results.append '<p class="pl1">No note found.</p>'
 
     fadeIn: (callback) ->
         @$el.fadeIn callback
