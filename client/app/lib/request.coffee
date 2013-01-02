@@ -5,7 +5,7 @@ exports.request = (type, url, data, callback) ->
         type: type
         url: url
         data: if data? then JSON.stringify data else null
-        contentType: "application/json"
+        contentType: if data? then "application/json" else null
         success: (data) ->
             callback(null, data) if callback?
         error: ->
