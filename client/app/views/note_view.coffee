@@ -166,7 +166,7 @@ class exports.NoteView extends Backbone.View
             noteName = paths.pop()
             breadcrumb = "<a href='#{path}#{currentPath}'> #{noteName}</a> >#{breadcrumb}"
 
-        breadcrumb = "<a href='#note/all'> All</a> >#{breadcrumb}"
+        breadcrumb = "<a href='#note/all'> All</a> > #{breadcrumb}"
         
         @breadcrumb.find("a").unbind()
         @breadcrumb.html breadcrumb

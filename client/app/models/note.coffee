@@ -1,5 +1,6 @@
 BaseModel = require("models/models").BaseModel
 request = require("lib/request")
+slugify = require("lib/slug")
 
 
 # Model that describes a single note.
@@ -12,6 +13,12 @@ class exports.Note extends BaseModel
         super()
         for property of note
             @[property] = note[property]
+
+        @path = JSON.parse @path if typeof @path is "string"
+        slugs = []
+        slugs.push slugify dir for dir in @path
+        @slugPath = "all/" + slugs.join("/")
+        
 
     # Set right url then send save request to server.
     saveContent: (content) ->
@@ -26,7 +33,7 @@ class exports.Note extends BaseModel
         request.put "notes/#{id}", data, callback
 
     @deleteNote = (id, callback) ->
-        request.del "DELETE", "notes/#{id}", callback
+        request.del "notes/#{id}", callback
 
     @getNote = (id, callback) ->
         $.get "notes/#{id}", (data) =>

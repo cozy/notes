@@ -1,16 +1,13 @@
 Tree = require("./widgets/tree").Tree
 NoteView = require("./note_view").NoteView
 Note = require("../models/note").Note
+NotesCollection = require("../collections/notes")
+SearchView = require './search_view'
+slugify = require '../lib/slug'
+
 
 ###*
 # Main view that manages interaction between toolprogressBar, navigation and notes
-    id : ='home-view'
-    @treeCreationCallback 
-    @noteFull
-    @tree
-    @noteView
-    @treeLoaded
-    @iframeLoaded
 ###
 
 class exports.HomeView extends Backbone.View
@@ -20,14 +17,14 @@ class exports.HomeView extends Backbone.View
     # Load the home view and the tree
     # Called once by the main_router
     ###
-    initContent: (note_uuid) ->
+    initContent: (note_uuid, callback) ->
         @note_uuid = note_uuid
         @iframeLoaded = false
         @treeLoaded = false
 
         @buildViews()
         @configureLayoutDrag()
-        @loadTree()
+        @loadTree callback
         @configureResize()
         @configureSaving()
 
@@ -38,7 +35,8 @@ class exports.HomeView extends Backbone.View
         @noteView = new NoteView @, @onIFrameLoaded
         @noteFull = @$ "#note-full"
         @noteFull.hide()
-        @helpInfo = @$("#help-info")
+        @helpInfo = @$ "#help-info"
+        @searchView = new SearchView @$("#search-view")
 
         @$el.layout
             size: "250"
@@ -51,7 +49,7 @@ class exports.HomeView extends Backbone.View
                 drag.css "z-index","-1"
 
     # Load data for tree and render it.
-    loadTree: ->
+    loadTree: (callback) ->
         $.get "tree/", (data) =>
             window.tree = data
             @tree = new Tree @$("#nav"), data,
@@ -59,8 +57,9 @@ class exports.HomeView extends Backbone.View
                 onRename: @onTreeRename
                 onRemove: @onTreeRemove
                 onSelect: @onTreeSelectionChg
-                onLoaded: @onTreeLoaded
+                onLoaded: callback
                 onDrop  : @onNoteDropped
+                onSearch: @onSearch
 
             @$("#create-note").click =>
                 @tree.widget.jstree(
@@ -94,7 +93,7 @@ class exports.HomeView extends Backbone.View
 
     # If tree is loaded after iframe, it displays the note that should be
     # loaded first.
-    onTreeLoaded: =>
+    selectNoteIfTreeLoaded: =>
         @treeLoaded = true
         @selectNote(@note_uuid) if @iframeLoaded
         
@@ -103,6 +102,22 @@ class exports.HomeView extends Backbone.View
         windowHeight = $(window).height()
         @$("#note-style").height(windowHeight - 160)
         @$("#editor").height(windowHeight - 260)
+
+    onSearch: (query) =>
+        if query.length > 0
+            app.router.navigate "search/#{slugify query}", trigger: true
+        else
+            if @treeLoaded
+                app.router.navigate "note/all", trigger: true
+
+    search: (query) =>
+        if @tree?
+            @helpInfo.hide()
+            @tree.widget.jstree "search", query
+            NotesCollection.search query, (notes) =>
+                @searchView.fill notes, query
+                @noteFull.fadeOut =>
+                    @searchView.fadeIn()
 
     ###*
     Create a new folder.
@@ -163,14 +178,16 @@ class exports.HomeView extends Backbone.View
     # note data.
     ###
     onTreeSelectionChg: (path, id, data) =>
+        @tree.widget.jstree "search", ""
+        @searchView.hide()
         @noteView.saveEditorContent()
 
         path = "/#{path}" if path.indexOf "/"
         app.router.navigate "note#{path}", trigger: false
 
         if not id? or id is "tree-node-all"
-                @helpInfo.show()
-                @noteFull.hide()
+            @helpInfo.show()
+            @noteFull.hide()
         else
             @helpInfo.hide()
             Note.getNote id, (note) =>
@@ -190,12 +207,14 @@ class exports.HomeView extends Backbone.View
     ###*
     # Force selection inside tree of note of a given uuid.
     ###
-    selectNote: (note_uuid) =>
-        if note_uuid in ["all", 'tree-node-all']
+    selectNote: (noteId) =>
+        if not noteId? or noteId in ["all", 'tree-node-all'] or noteId.length is 0
             @helpInfo.show()
             @noteFull.hide()
+            @tree?.widget.jstree "search", ""
+            @searchView.hide()
         else
-            @tree.selectNode note_uuid
+            @tree.selectNode noteId
 
     ###*
     # Fill note widget with note data.

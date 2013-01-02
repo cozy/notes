@@ -1,4 +1,4 @@
-slugify = require("helpers").slugify
+slugify = require("lib/slug")
 
 
 ### Widget to easily manipulate data tree (navigation for cozy apps)
@@ -37,8 +37,6 @@ class exports.Tree
         
         jstreeEl = $("#tree")
         @jstreeEl = jstreeEl
-        @supprButton  = $("#suppr-button")
-        supprButton = @supprButton
         @searchField = $("#tree-search-field")
 
         # Create toolbar inside DOM.
@@ -114,7 +112,6 @@ class exports.Tree
     ###
     setListeners: (homeViewCbk) ->
         jstreeEl     = @jstreeEl
-        supprButton  = @supprButton
         tree_buttons = $("#tree-buttons")
         modalAlert   = $('#myModal')
         modalYesBtn  = $("#modal-yes")
@@ -235,6 +232,8 @@ class exports.Tree
 
             homeViewCbk.onLoaded()
 
+        @onSearch = homeViewCbk.onSearch
+
 
     setSearchField: ->
         ###*
@@ -242,27 +241,11 @@ class exports.Tree
         ###
         @searchField = $("#tree-search-field")
         searchField = @searchField
-        supprButton = @supprButton
         jstreeEl = @jstreeEl
  
         # Events related to search field.
         @searchField.blur ->
             jstreeEl.css "margin-top", 10
-
-        # repositionning the input field, tree and suggestion list when the
-        # suppression button is used
-        supprButton.click ->
-            textPrompt = $(".text-prompt")
-            $(".text-tags").empty()
-            searchField.css("padding-left", "5px")
-            searchField.css("padding-top", "3px")
-            textPrompt.css("padding-left", "5px")
-            textPrompt.css("padding-top", "3px")
-            $(".text-wrap").css("height", "22px")
-            $(".text-core").css("height", "22px")
-            $(".text-dropdown").css("top", "22px")
-            supprButton.css("display","none")
-            jstreeEl.jstree("search", "")
     
         ###
         # this function allow to select what appears in the suggestion list
@@ -306,8 +289,6 @@ class exports.Tree
 
             result = filteredFirst.concat(filtered)
             return result
-            
-
 
         ###*
         #used by textext to change the render of the suggestion list
@@ -334,8 +315,8 @@ class exports.Tree
         ###
         searchFunction = (searchString) =>
             for string in $(".text-tag .text-label")
-                searchString += "_#{string.innerHTML}"
-            @jstreeEl.jstree "search", searchString
+                searchString += " #{string.innerHTML}"
+            @onSearch searchString
 
         ###*
         # Textext plugin is used to implement the autocomplete plugin Please
@@ -369,8 +350,6 @@ class exports.Tree
                         data[0] = 'input': textInput, 'form': textInput
                         if textInput == ""
                             searchFunction("")
-                            if $(".text-tag .text-label")[0] is undefined
-                                supprButton.css "display", "none"
                                 
                 autocomplete:
                     ###*
@@ -411,17 +390,12 @@ class exports.Tree
                     # to what the user is typing
                     ###
                     renderTag: (tag) ->
-                        node = $(this.opts('html.tag'))
+                        node = $(@opts('html.tag'))
 
                         node.find('.text-label').text(
-                            this.itemManager().itemToString(tag))
+                            @itemManager().itemToString(tag))
 
-                        if /icon-search/.test($(".text-selected")[0].innerHTML)
-                            node.find('.text-button').addClass("tag-special")
-                            node.find('.text-button').removeClass("text-button")
-                            node.data('text-tag', tag)
-                        else
-                            node.data('text-tag', tag)
+                        node.data('text-tag', tag)
                         return node
 
         #every keyup(<=> getSuggestions) in the textext's input show suggestionList as a
@@ -449,10 +423,13 @@ class exports.Tree
         textextWidget.bind 'isTagAllowed', (e, data) ->
             # move tree to its original place
             jstreeEl.css "margin-top", 10
-            # add the suppression button for the input field
-            supprButton.css "display", "block"
+
             # launching the searching function in jstree
             searchFunction data.tag
+
+
+    addSearchTag: (tag) ->
+        @searchField.textext()[0].tags().addTags([tag])
 
     ###*
     #Select node corresponding to given path

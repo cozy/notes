@@ -61,27 +61,50 @@
     throw new Error('Cannot find module "' + name + '"');
   };
 
-  var define = function(bundle) {
-    for (var key in bundle) {
-      if (has(bundle, key)) {
-        modules[key] = bundle[key];
+  var define = function(bundle, fn) {
+    if (typeof bundle === 'object') {
+      for (var key in bundle) {
+        if (has(bundle, key)) {
+          modules[key] = bundle[key];
+        }
       }
+    } else {
+      modules[bundle] = fn;
     }
-  }
+  };
 
   globals.require = require;
   globals.require.define = define;
+  globals.require.register = define;
   globals.require.brunch = true;
 })();
 
-window.require.define({"collections/notes": function(exports, require, module) {
-  var Note,
+window.require.register("collections/notes", function(exports, require, module) {
+  var Note, NotesCollection, add3Dots, getPreview, request,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  Note = require("models/notes").Note;
+  Note = require("models/note").Note;
 
-  exports.NotesCollection = (function(_super) {
+  request = require('../lib/request');
+
+  add3Dots = function(string, limit) {
+    if ((string != null ? string.length : void 0) > limit) {
+      return string.substring(1, limit - 1) + "...";
+    } else {
+      return string;
+    }
+  };
+
+  getPreview = function(note) {
+    var converter, preview;
+    preview = add3Dots(note.content, 200);
+    converter = new Showdown.converter();
+    preview = converter.makeHtml(preview);
+    return preview;
+  };
+
+  NotesCollection = (function(_super) {
 
     __extends(NotesCollection, _super);
 
@@ -97,13 +120,37 @@ window.require.define({"collections/notes": function(exports, require, module) {
       return response.rows;
     };
 
+    NotesCollection.search = function(query, callback) {
+      var _this = this;
+      if (query.length > 0) {
+        return request.post('notes/search', {
+          query: query
+        }, function(err, notes) {
+          var note, results, _i, _len;
+          if (err) {
+            return alert("Server error occured while searching.");
+          } else {
+            results = [];
+            for (_i = 0, _len = notes.length; _i < _len; _i++) {
+              note = notes[_i];
+              results.push(new Note(note));
+            }
+            return callback(results);
+          }
+        });
+      } else {
+        return callback([]);
+      }
+    };
+
     return NotesCollection;
 
   })(Backbone.Collection);
-  
-}});
 
-window.require.define({"helpers": function(exports, require, module) {
+  module.exports = NotesCollection;
+  
+});
+window.require.register("helpers", function(exports, require, module) {
   
   exports.BrunchApplication = (function() {
 
@@ -194,9 +241,8 @@ window.require.define({"helpers": function(exports, require, module) {
     return "^" + (path.replace(slashReg, "\/"));
   };
   
-}});
-
-window.require.define({"initialize": function(exports, require, module) {
+});
+window.require.register("initialize", function(exports, require, module) {
   var BrunchApplication, HomeView, MainRouter,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -228,16 +274,15 @@ window.require.define({"initialize": function(exports, require, module) {
 
   window.app = new exports.Application;
   
-}});
-
-window.require.define({"lib/request": function(exports, require, module) {
+});
+window.require.register("lib/request", function(exports, require, module) {
   
   exports.request = function(type, url, data, callback) {
     return $.ajax({
       type: type,
       url: url,
       data: data != null ? JSON.stringify(data) : null,
-      contentType: "application/json",
+      contentType: data != null ? "application/json" : null,
       success: function(data) {
         if (callback != null) {
           return callback(null, data);
@@ -269,9 +314,371 @@ window.require.define({"lib/request": function(exports, require, module) {
     return exports.request("DELETE", url, null, callbacks);
   };
   
-}});
+});
+window.require.register("lib/slug", function(exports, require, module) {
+  var char_map, removelist, slug, word;
 
-window.require.define({"models/models": function(exports, require, module) {
+  removelist = ['sign', 'cross', 'of', 'symbol', 'staff'];
+
+  removelist = (function() {
+    var _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = removelist.length; _i < _len; _i++) {
+      word = removelist[_i];
+      _results.push(new RegExp(word, 'gi'));
+    }
+    return _results;
+  })();
+
+  char_map = {
+    'À': 'A',
+    'Á': 'A',
+    'Â': 'A',
+    'Ã': 'A',
+    'Ä': 'A',
+    'Å': 'A',
+    'Æ': 'AE',
+    'Ç': 'C',
+    'È': 'E',
+    'É': 'E',
+    'Ê': 'E',
+    'Ë': 'E',
+    'Ì': 'I',
+    'Í': 'I',
+    'Î': 'I',
+    'Ï': 'I',
+    'Ð': 'D',
+    'Ñ': 'N',
+    'Ò': 'O',
+    'Ó': 'O',
+    'Ô': 'O',
+    'Õ': 'O',
+    'Ö': 'O',
+    'Ő': 'O',
+    'Ø': 'O',
+    'Ù': 'U',
+    'Ú': 'U',
+    'Û': 'U',
+    'Ü': 'U',
+    'Ű': 'U',
+    'Ý': 'Y',
+    'Þ': 'TH',
+    'ß': 'ss',
+    'à': 'a',
+    'á': 'a',
+    'â': 'a',
+    'ã': 'a',
+    'ä': 'a',
+    'å': 'a',
+    'æ': 'ae',
+    'ç': 'c',
+    'è': 'e',
+    'é': 'e',
+    'ê': 'e',
+    'ë': 'e',
+    'ì': 'i',
+    'í': 'i',
+    'î': 'i',
+    'ï': 'i',
+    'ð': 'd',
+    'ñ': 'n',
+    'ò': 'o',
+    'ó': 'o',
+    'ô': 'o',
+    'õ': 'o',
+    'ö': 'o',
+    'ő': 'o',
+    'ø': 'o',
+    'ù': 'u',
+    'ú': 'u',
+    'û': 'u',
+    'ü': 'u',
+    'ű': 'u',
+    'ý': 'y',
+    'þ': 'th',
+    'ÿ': 'y',
+    'ẞ': 'SS',
+    'α': 'a',
+    'β': 'b',
+    'γ': 'g',
+    'δ': 'd',
+    'ε': 'e',
+    'ζ': 'z',
+    'η': 'h',
+    'θ': '8',
+    'ι': 'i',
+    'κ': 'k',
+    'λ': 'l',
+    'μ': 'm',
+    'ν': 'n',
+    'ξ': '3',
+    'ο': 'o',
+    'π': 'p',
+    'ρ': 'r',
+    'σ': 's',
+    'τ': 't',
+    'υ': 'y',
+    'φ': 'f',
+    'χ': 'x',
+    'ψ': 'ps',
+    'ω': 'w',
+    'ά': 'a',
+    'έ': 'e',
+    'ί': 'i',
+    'ό': 'o',
+    'ύ': 'y',
+    'ή': 'h',
+    'ώ': 'w',
+    'ς': 's',
+    'ϊ': 'i',
+    'ΰ': 'y',
+    'ϋ': 'y',
+    'ΐ': 'i',
+    'Α': 'A',
+    'Β': 'B',
+    'Γ': 'G',
+    'Δ': 'D',
+    'Ε': 'E',
+    'Ζ': 'Z',
+    'Η': 'H',
+    'Θ': '8',
+    'Ι': 'I',
+    'Κ': 'K',
+    'Λ': 'L',
+    'Μ': 'M',
+    'Ν': 'N',
+    'Ξ': '3',
+    'Ο': 'O',
+    'Π': 'P',
+    'Ρ': 'R',
+    'Σ': 'S',
+    'Τ': 'T',
+    'Υ': 'Y',
+    'Φ': 'F',
+    'Χ': 'X',
+    'Ψ': 'PS',
+    'Ω': 'W',
+    'Ά': 'A',
+    'Έ': 'E',
+    'Ί': 'I',
+    'Ό': 'O',
+    'Ύ': 'Y',
+    'Ή': 'H',
+    'Ώ': 'W',
+    'Ϊ': 'I',
+    'Ϋ': 'Y',
+    'ş': 's',
+    'Ş': 'S',
+    'ı': 'i',
+    'İ': 'I',
+    'ğ': 'g',
+    'Ğ': 'G',
+    'а': 'a',
+    'б': 'b',
+    'в': 'v',
+    'г': 'g',
+    'д': 'd',
+    'е': 'e',
+    'ё': 'yo',
+    'ж': 'zh',
+    'з': 'z',
+    'и': 'i',
+    'й': 'j',
+    'к': 'k',
+    'л': 'l',
+    'м': 'm',
+    'н': 'n',
+    'о': 'o',
+    'п': 'p',
+    'р': 'r',
+    'с': 's',
+    'т': 't',
+    'у': 'u',
+    'ф': 'f',
+    'х': 'h',
+    'ц': 'c',
+    'ч': 'ch',
+    'ш': 'sh',
+    'щ': 'sh',
+    'ъ': 'u',
+    'ы': 'y',
+    'ь': '',
+    'э': 'e',
+    'ю': 'yu',
+    'я': 'ya',
+    'А': 'A',
+    'Б': 'B',
+    'В': 'V',
+    'Г': 'G',
+    'Д': 'D',
+    'Е': 'E',
+    'Ё': 'Yo',
+    'Ж': 'Zh',
+    'З': 'Z',
+    'И': 'I',
+    'Й': 'J',
+    'К': 'K',
+    'Л': 'L',
+    'М': 'M',
+    'Н': 'N',
+    'О': 'O',
+    'П': 'P',
+    'Р': 'R',
+    'С': 'S',
+    'Т': 'T',
+    'У': 'U',
+    'Ф': 'F',
+    'Х': 'H',
+    'Ц': 'C',
+    'Ч': 'Ch',
+    'Ш': 'Sh',
+    'Щ': 'Sh',
+    'Ъ': 'U',
+    'Ы': 'Y',
+    'Ь': '',
+    'Э': 'E',
+    'Ю': 'Yu',
+    'Я': 'Ya',
+    'Є': 'Ye',
+    'І': 'I',
+    'Ї': 'Yi',
+    'Ґ': 'G',
+    'є': 'ye',
+    'і': 'i',
+    'ї': 'yi',
+    'ґ': 'g',
+    'č': 'c',
+    'ď': 'd',
+    'ě': 'e',
+    'ň': 'n',
+    'ř': 'r',
+    'š': 's',
+    'ť': 't',
+    'ů': 'u',
+    'ž': 'z',
+    'Č': 'C',
+    'Ď': 'D',
+    'Ě': 'E',
+    'Ň': 'N',
+    'Ř': 'R',
+    'Š': 'S',
+    'Ť': 'T',
+    'Ů': 'U',
+    'Ž': 'Z',
+    'ą': 'a',
+    'ć': 'c',
+    'ę': 'e',
+    'ł': 'l',
+    'ń': 'n',
+    'ś': 's',
+    'ź': 'z',
+    'ż': 'z',
+    'Ą': 'A',
+    'Ć': 'C',
+    'Ę': 'e',
+    'Ł': 'L',
+    'Ń': 'N',
+    'Ś': 'S',
+    'Ź': 'Z',
+    'Ż': 'Z',
+    'ā': 'a',
+    'ē': 'e',
+    'ģ': 'g',
+    'ī': 'i',
+    'ķ': 'k',
+    'ļ': 'l',
+    'ņ': 'n',
+    'ū': 'u',
+    'Ā': 'A',
+    'Ē': 'E',
+    'Ģ': 'G',
+    'Ī': 'i',
+    'Ķ': 'k',
+    'Ļ': 'L',
+    'Ņ': 'N',
+    'Ū': 'u',
+    '€': 'euro',
+    '₢': 'cruzeiro',
+    '₣': 'french franc',
+    '£': 'pound',
+    '₤': 'lira',
+    '₥': 'mill',
+    '₦': 'naira',
+    '₧': 'peseta',
+    '₨': 'rupee',
+    '₩': 'won',
+    '₪': 'new shequel',
+    '₫': 'dong',
+    '₭': 'kip',
+    '₮': 'tugrik',
+    '₯': 'drachma',
+    '₰': 'penny',
+    '₱': 'peso',
+    '₲': 'guarani',
+    '₳': 'austral',
+    '₴': 'hryvnia',
+    '₵': 'cedi',
+    '¢': 'cent',
+    '¥': 'yen',
+    '元': 'yuan',
+    '円': 'yen',
+    '﷼': 'rial',
+    '₠': 'ecu',
+    '¤': 'currency',
+    '฿': 'baht',
+    "$": 'dollar',
+    '©': '(c)',
+    'œ': 'oe',
+    'Œ': 'OE',
+    '∑': 'sum',
+    '®': '(r)',
+    '†': '+',
+    '“': '"',
+    '”': '"',
+    '‘': "'",
+    '’': "'",
+    '∂': 'd',
+    'ƒ': 'f',
+    '™': 'tm',
+    '℠': 'sm',
+    '…': '...',
+    '˚': 'o',
+    'º': 'o',
+    'ª': 'a',
+    '•': '*',
+    '∆': 'delta',
+    '∞': 'infinity',
+    '♥': 'love',
+    '&': 'and',
+    '|': 'or',
+    '<': 'less',
+    '>': 'greater'
+  };
+
+  module.exports = slug = function(string, replacement) {
+    var char, code, i, result, _i, _len;
+    if (replacement == null) {
+      replacement = '-';
+    }
+    result = "";
+    for (i = _i = 0, _len = string.length; _i < _len; i = ++_i) {
+      char = string[i];
+      code = string.charCodeAt(i);
+      if (char_map[char]) {
+        char = char_map[char];
+        code = char.charCodeAt(0);
+      }
+      char = char.replace(/[^\w\s$\*\_\+~\.\(\)\'\"\!\-:@]/g, '');
+      result += char;
+    }
+    result = result.replace(/^\s+|\s+$/g, '');
+    result = result.replace(/[-\s]+/g, replacement);
+    result.replace("" + replacement + "$", '');
+    return result.toLowerCase();
+  };
+  
+});
+window.require.register("models/models", function(exports, require, module) {
   var __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -291,16 +698,17 @@ window.require.define({"models/models": function(exports, require, module) {
 
   })(Backbone.Model);
   
-}});
-
-window.require.define({"models/note": function(exports, require, module) {
-  var BaseModel, request,
+});
+window.require.register("models/note", function(exports, require, module) {
+  var BaseModel, request, slugify,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   BaseModel = require("models/models").BaseModel;
 
   request = require("lib/request");
+
+  slugify = require("lib/slug");
 
   exports.Note = (function(_super) {
 
@@ -309,11 +717,21 @@ window.require.define({"models/note": function(exports, require, module) {
     Note.prototype.rootUrl = 'notes/';
 
     function Note(note) {
-      var property;
+      var dir, property, slugs, _i, _len, _ref;
       Note.__super__.constructor.call(this);
       for (property in note) {
         this[property] = note[property];
       }
+      if (typeof this.path === "string") {
+        this.path = JSON.parse(this.path);
+      }
+      slugs = [];
+      _ref = this.path;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        dir = _ref[_i];
+        slugs.push(slugify(dir));
+      }
+      this.slugPath = "all/" + slugs.join("/");
     }
 
     Note.prototype.saveContent = function(content) {
@@ -333,7 +751,7 @@ window.require.define({"models/note": function(exports, require, module) {
     };
 
     Note.deleteNote = function(id, callback) {
-      return request.del("DELETE", "notes/" + id, callback);
+      return request.del("notes/" + id, callback);
     };
 
     Note.getNote = function(id, callback) {
@@ -349,9 +767,8 @@ window.require.define({"models/note": function(exports, require, module) {
 
   })(BaseModel);
   
-}});
-
-window.require.define({"routers/main_router": function(exports, require, module) {
+});
+window.require.register("routers/main_router", function(exports, require, module) {
   var slugify,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -378,7 +795,8 @@ window.require.define({"routers/main_router": function(exports, require, module)
 
     MainRouter.prototype.routes = {
       '': 'home',
-      'note/all': 'allNotes'
+      'note/all': 'allNotes',
+      'search/:query': 'search'
     };
 
     MainRouter.prototype.initialize = function() {
@@ -389,14 +807,18 @@ window.require.define({"routers/main_router": function(exports, require, module)
       this.navigate("note/all", {
         trigger: false
       });
-      return this._initializeTree("tree-node-all");
+      return this._initializeTree("tree-node-all", function() {
+        return app.homeView.selectNoteIfTreeLoaded();
+      });
     };
 
     MainRouter.prototype.allNotes = function() {
       if ($('#tree').length > 0) {
         return app.homeView.selectNote("tree-node-all");
       } else {
-        return this._initializeTree("tree-node-all");
+        return this._initializeTree("tree-node-all", function() {
+          return app.homeView.selectNoteIfTreeLoaded();
+        });
       }
     };
 
@@ -404,23 +826,36 @@ window.require.define({"routers/main_router": function(exports, require, module)
       if ($("#tree").length > 0) {
         return app.homeView.selectNote(noteId);
       } else {
-        return this._initializeTree(noteId);
+        return this._initializeTree(noteId, function() {
+          return app.homeView.selectNoteIfTreeLoaded();
+        });
       }
     };
 
-    MainRouter.prototype._initializeTree = function(noteId) {
+    MainRouter.prototype.search = function(query) {
+      query = query.replace(/-/g, ' ');
+      if ($('#tree').length === 0) {
+        return this._initializeTree("", function() {
+          app.homeView.tree.addSearchTag(query);
+          return app.homeView.search(query);
+        });
+      } else {
+        return app.homeView.search(query);
+      }
+    };
+
+    MainRouter.prototype._initializeTree = function(noteId, callback) {
       $('body').append(app.homeView.el);
-      return app.homeView.initContent(noteId);
+      return app.homeView.initContent(noteId, callback);
     };
 
     return MainRouter;
 
   })(Backbone.Router);
   
-}});
-
-window.require.define({"views/home_view": function(exports, require, module) {
-  var Note, NoteView, Tree,
+});
+window.require.register("views/home_view", function(exports, require, module) {
+  var Note, NoteView, NotesCollection, SearchView, Tree, slugify,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -431,15 +866,14 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
   Note = require("../models/note").Note;
 
+  NotesCollection = require("../collections/notes");
+
+  SearchView = require('./search_view');
+
+  slugify = require('../lib/slug');
+
   /**
   # Main view that manages interaction between toolprogressBar, navigation and notes
-      id : ='home-view'
-      @treeCreationCallback 
-      @noteFull
-      @tree
-      @noteView
-      @treeLoaded
-      @iframeLoaded
   */
 
 
@@ -460,7 +894,11 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
       this.onTreeRename = __bind(this.onTreeRename, this);
 
-      this.onTreeLoaded = __bind(this.onTreeLoaded, this);
+      this.search = __bind(this.search, this);
+
+      this.onSearch = __bind(this.onSearch, this);
+
+      this.selectNoteIfTreeLoaded = __bind(this.selectNoteIfTreeLoaded, this);
 
       this.onIFrameLoaded = __bind(this.onIFrameLoaded, this);
       return HomeView.__super__.constructor.apply(this, arguments);
@@ -474,13 +912,13 @@ window.require.define({"views/home_view": function(exports, require, module) {
     */
 
 
-    HomeView.prototype.initContent = function(note_uuid) {
+    HomeView.prototype.initContent = function(note_uuid, callback) {
       this.note_uuid = note_uuid;
       this.iframeLoaded = false;
       this.treeLoaded = false;
       this.buildViews();
       this.configureLayoutDrag();
-      this.loadTree();
+      this.loadTree(callback);
       this.configureResize();
       return this.configureSaving();
     };
@@ -491,6 +929,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
       this.noteFull = this.$("#note-full");
       this.noteFull.hide();
       this.helpInfo = this.$("#help-info");
+      this.searchView = new SearchView(this.$("#search-view"));
       return this.$el.layout({
         size: "250",
         minSize: "250",
@@ -504,7 +943,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
       });
     };
 
-    HomeView.prototype.loadTree = function() {
+    HomeView.prototype.loadTree = function(callback) {
       var _this = this;
       return $.get("tree/", function(data) {
         window.tree = data;
@@ -513,8 +952,9 @@ window.require.define({"views/home_view": function(exports, require, module) {
           onRename: _this.onTreeRename,
           onRemove: _this.onTreeRemove,
           onSelect: _this.onTreeSelectionChg,
-          onLoaded: _this.onTreeLoaded,
-          onDrop: _this.onNoteDropped
+          onLoaded: callback,
+          onDrop: _this.onNoteDropped,
+          onSearch: _this.onSearch
         });
         return _this.$("#create-note").click(function() {
           return _this.tree.widget.jstree("create", "#tree-node-all", "first", "A New Note");
@@ -554,7 +994,7 @@ window.require.define({"views/home_view": function(exports, require, module) {
       return this.iframe = $("iframe");
     };
 
-    HomeView.prototype.onTreeLoaded = function() {
+    HomeView.prototype.selectNoteIfTreeLoaded = function() {
       this.treeLoaded = true;
       if (this.iframeLoaded) {
         return this.selectNote(this.note_uuid);
@@ -566,6 +1006,34 @@ window.require.define({"views/home_view": function(exports, require, module) {
       windowHeight = $(window).height();
       this.$("#note-style").height(windowHeight - 160);
       return this.$("#editor").height(windowHeight - 260);
+    };
+
+    HomeView.prototype.onSearch = function(query) {
+      if (query.length > 0) {
+        return app.router.navigate("search/" + (slugify(query)), {
+          trigger: true
+        });
+      } else {
+        if (this.treeLoaded) {
+          return app.router.navigate("note/all", {
+            trigger: true
+          });
+        }
+      }
+    };
+
+    HomeView.prototype.search = function(query) {
+      var _this = this;
+      if (this.tree != null) {
+        this.helpInfo.hide();
+        this.tree.widget.jstree("search", query);
+        return NotesCollection.search(query, function(notes) {
+          _this.searchView.fill(notes, query);
+          return _this.noteFull.fadeOut(function() {
+            return _this.searchView.fadeIn();
+          });
+        });
+      }
     };
 
     /**
@@ -661,6 +1129,8 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
     HomeView.prototype.onTreeSelectionChg = function(path, id, data) {
       var _this = this;
+      this.tree.widget.jstree("search", "");
+      this.searchView.hide();
       this.noteView.saveEditorContent();
       if (path.indexOf("/")) {
         path = "/" + path;
@@ -701,12 +1171,17 @@ window.require.define({"views/home_view": function(exports, require, module) {
     */
 
 
-    HomeView.prototype.selectNote = function(note_uuid) {
-      if (note_uuid === "all" || note_uuid === 'tree-node-all') {
+    HomeView.prototype.selectNote = function(noteId) {
+      var _ref;
+      if (!(noteId != null) || (noteId === "all" || noteId === 'tree-node-all') || noteId.length === 0) {
         this.helpInfo.show();
-        return this.noteFull.hide();
+        this.noteFull.hide();
+        if ((_ref = this.tree) != null) {
+          _ref.widget.jstree("search", "");
+        }
+        return this.searchView.hide();
       } else {
-        return this.tree.selectNode(note_uuid);
+        return this.tree.selectNode(noteId);
       }
     };
 
@@ -725,9 +1200,8 @@ window.require.define({"views/home_view": function(exports, require, module) {
 
   })(Backbone.View);
   
-}});
-
-window.require.define({"views/note_view": function(exports, require, module) {
+});
+window.require.register("views/note_view", function(exports, require, module) {
   var FileList, Note, TreeInst, helpers, template,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
@@ -950,7 +1424,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         noteName = paths.pop();
         breadcrumb = "<a href='" + path + currentPath + "'> " + noteName + "</a> >" + breadcrumb;
       }
-      breadcrumb = "<a href='#note/all'> All</a> >" + breadcrumb;
+      breadcrumb = "<a href='#note/all'> All</a> > " + breadcrumb;
       this.breadcrumb.find("a").unbind();
       this.breadcrumb.html(breadcrumb);
       return this.breadcrumb.find("a").click(function(event) {
@@ -976,9 +1450,61 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
   })(Backbone.View);
   
-}});
+});
+window.require.register("views/search_view", function(exports, require, module) {
+  var SearchView,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-window.require.define({"views/templates/content-empty": function(exports, require, module) {
+  SearchView = (function(_super) {
+
+    __extends(SearchView, _super);
+
+    SearchView.prototype.id = "note-search";
+
+    function SearchView($el) {
+      this.$el = $el;
+      this.$el.hide();
+      this.$el.html(require('views/templates/search_view'));
+      this.results = this.$(".results");
+      this.queryTitle = this.$("span");
+    }
+
+    SearchView.prototype.fill = function(notes, query) {
+      var note, template, _i, _len, _results;
+      this.results.html(null);
+      this.queryTitle.html(" " + query);
+      template = require('views/templates/search_result');
+      _results = [];
+      for (_i = 0, _len = notes.length; _i < _len; _i++) {
+        note = notes[_i];
+        _results.push(this.results.append(template({
+          note: note
+        })));
+      }
+      return _results;
+    };
+
+    SearchView.prototype.fadeIn = function(callback) {
+      return this.$el.fadeIn(callback);
+    };
+
+    SearchView.prototype.fadeOut = function(callback) {
+      return this.$el.fadeOut(callback);
+    };
+
+    SearchView.prototype.hide = function() {
+      return this.$el.hide();
+    };
+
+    return SearchView;
+
+  })(Backbone.View);
+
+  module.exports = SearchView;
+  
+});
+window.require.register("views/templates/content-empty", function(exports, require, module) {
   module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
   attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
   var buf = [];
@@ -988,9 +1514,8 @@ window.require.define({"views/templates/content-empty": function(exports, requir
   }
   return buf.join("");
   };
-}});
-
-window.require.define({"views/templates/editor": function(exports, require, module) {
+});
+window.require.register("views/templates/editor", function(exports, require, module) {
   module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
   attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
   var buf = [];
@@ -1000,21 +1525,19 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   }
   return buf.join("");
   };
-}});
-
-window.require.define({"views/templates/home": function(exports, require, module) {
+});
+window.require.register("views/templates/home", function(exports, require, module) {
   module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
   attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="nav" class="ui-layout-west"><div id="tree"></div></div><div id="note-area" class="ui-layout-center"><div id="help-info">You don\'t have any note selected yet. To select a note use the tree\non your left.</div><div id="note-full" class="note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><div class="no-padding"><input id="note-full-title"/></div><div id="editor"></div></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
+  buf.push('<div id="nav" class="ui-layout-west"><div id="tree"></div></div><div id="note-area" class="ui-layout-center"><div id="search-view"></div><div id="help-info">You don\'t have any note selected yet. To select a note use the tree\non your left.</div><div id="note-full" class="note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><div class="no-padding"><input id="note-full-title"/></div><div id="editor"></div></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
   }
   return buf.join("");
   };
-}});
-
-window.require.define({"views/templates/note": function(exports, require, module) {
+});
+window.require.register("views/templates/note", function(exports, require, module) {
   module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
   attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
   var buf = [];
@@ -1024,9 +1547,32 @@ window.require.define({"views/templates/note": function(exports, require, module
   }
   return buf.join("");
   };
-}});
-
-window.require.define({"views/templates/tree_buttons": function(exports, require, module) {
+});
+window.require.register("views/templates/search_result", function(exports, require, module) {
+  module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+  attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
+  var buf = [];
+  with (locals || {}) {
+  var interp;
+  buf.push('<div class="search-result"><h2> <a');
+  buf.push(attrs({ 'href':("#note/" + (note.id) + "/" + (note.slugPath) + "") }, {"href":true}));
+  buf.push('>' + escape((interp = note.title) == null ? '' : interp) + '</a></h2><p><' + (note.preview) + '> </' + (note.preview) + '></p></div>');
+  }
+  return buf.join("");
+  };
+});
+window.require.register("views/templates/search_view", function(exports, require, module) {
+  module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+  attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
+  var buf = [];
+  with (locals || {}) {
+  var interp;
+  buf.push('<h1>Search results for<span></span></h1><div class="results"></div>');
+  }
+  return buf.join("");
+  };
+});
+window.require.register("views/templates/tree_buttons", function(exports, require, module) {
   module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
   attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
   var buf = [];
@@ -1036,9 +1582,8 @@ window.require.define({"views/templates/tree_buttons": function(exports, require
   }
   return buf.join("");
   };
-}});
-
-window.require.define({"views/widgets/file_list": function(exports, require, module) {
+});
+window.require.register("views/widgets/file_list", function(exports, require, module) {
   var helpers,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
@@ -1179,14 +1724,13 @@ window.require.define({"views/widgets/file_list": function(exports, require, mod
 
   })(Backbone.View);
   
-}});
-
-window.require.define({"views/widgets/tree": function(exports, require, module) {
+});
+window.require.register("views/widgets/tree", function(exports, require, module) {
   var slugify,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-  slugify = require("helpers").slugify;
+  slugify = require("lib/slug");
 
   /* Widget to easily manipulate data tree (navigation for cozy apps)
   Properties :
@@ -1231,11 +1775,9 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
 
       this._recursiveRemoveSuggestionList = __bind(this._recursiveRemoveSuggestionList, this);
 
-      var jstreeEl, supprButton, __initSuggestionList;
+      var jstreeEl, __initSuggestionList;
       jstreeEl = $("#tree");
       this.jstreeEl = jstreeEl;
-      this.supprButton = $("#suppr-button");
-      supprButton = this.supprButton;
       this.searchField = $("#tree-search-field");
       navEl.prepend(require('../templates/tree_buttons'));
       /**
@@ -1331,10 +1873,9 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
 
 
     Tree.prototype.setListeners = function(homeViewCbk) {
-      var jstreeEl, modalAlert, modalYesBtn, supprButton, tree_buttons, tree_buttons_root, tree_buttons_target,
+      var jstreeEl, modalAlert, modalYesBtn, tree_buttons, tree_buttons_root, tree_buttons_target,
         _this = this;
       jstreeEl = this.jstreeEl;
-      supprButton = this.supprButton;
       tree_buttons = $("#tree-buttons");
       modalAlert = $('#myModal');
       modalYesBtn = $("#modal-yes");
@@ -1450,9 +1991,10 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         targetNodeId = data.rslt.o[0].parentElement.parentElement.id;
         return homeViewCbk.onDrop(nodeId, targetNodeId);
       });
-      return this.widget.on("loaded.jstree", function(e, data) {
+      this.widget.on("loaded.jstree", function(e, data) {
         return homeViewCbk.onLoaded();
       });
+      return this.onSearch = homeViewCbk.onSearch;
     };
 
     Tree.prototype.setSearchField = function() {
@@ -1460,28 +2002,13 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       #Autocompletion
       */
 
-      var jstreeEl, searchField, searchFunction, supprButton, textextWidget, _filterAutocomplete, _selectIcon,
+      var jstreeEl, searchField, searchFunction, textextWidget, _filterAutocomplete, _selectIcon,
         _this = this;
       this.searchField = $("#tree-search-field");
       searchField = this.searchField;
-      supprButton = this.supprButton;
       jstreeEl = this.jstreeEl;
       this.searchField.blur(function() {
         return jstreeEl.css("margin-top", 10);
-      });
-      supprButton.click(function() {
-        var textPrompt;
-        textPrompt = $(".text-prompt");
-        $(".text-tags").empty();
-        searchField.css("padding-left", "5px");
-        searchField.css("padding-top", "3px");
-        textPrompt.css("padding-left", "5px");
-        textPrompt.css("padding-top", "3px");
-        $(".text-wrap").css("height", "22px");
-        $(".text-core").css("height", "22px");
-        $(".text-dropdown").css("top", "22px");
-        supprButton.css("display", "none");
-        return jstreeEl.jstree("search", "");
       });
       /*
               # this function allow to select what appears in the suggestion list
@@ -1551,9 +2078,9 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         _ref = $(".text-tag .text-label");
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           string = _ref[_i];
-          searchString += "_" + string.innerHTML;
+          searchString += " " + string.innerHTML;
         }
-        return _this.jstreeEl.jstree("search", searchString);
+        return _this.onSearch(searchString);
       };
       /**
       # Textext plugin is used to implement the autocomplete plugin Please
@@ -1595,10 +2122,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
                 'form': textInput
               };
               if (textInput === "") {
-                searchFunction("");
-                if ($(".text-tag .text-label")[0] === void 0) {
-                  return supprButton.css("display", "none");
-                }
+                return searchFunction("");
               }
             }
           },
@@ -1659,13 +2183,7 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
               var node;
               node = $(this.opts('html.tag'));
               node.find('.text-label').text(this.itemManager().itemToString(tag));
-              if (/icon-search/.test($(".text-selected")[0].innerHTML)) {
-                node.find('.text-button').addClass("tag-special");
-                node.find('.text-button').removeClass("text-button");
-                node.data('text-tag', tag);
-              } else {
-                node.data('text-tag', tag);
-              }
+              node.data('text-tag', tag);
               return node;
             }
           }
@@ -1685,9 +2203,12 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
       });
       return textextWidget.bind('isTagAllowed', function(e, data) {
         jstreeEl.css("margin-top", 10);
-        supprButton.css("display", "block");
         return searchFunction(data.tag);
       });
+    };
+
+    Tree.prototype.addSearchTag = function(tag) {
+      return this.searchField.textext()[0].tags().addTags([tag]);
     };
 
     /**
@@ -1804,5 +2325,4 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
 
   })();
   
-}});
-
+});

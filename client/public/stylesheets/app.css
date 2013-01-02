@@ -7495,6 +7495,25 @@ h5 {
 .no-padding {
   padding: 0;
 }
+.tooltip-inner {
+  background-color: #3997ee;
+  opacity: 1;
+  -ms-filter: none;
+  filter: none;
+  background-opacity: 1;
+}
+.tooltip.top .tooltip-arrow {
+  border-top-color: #3997ee;
+}
+.tooltip.right .tooltip-arrow {
+  border-right-color: #3997ee;
+}
+.tooltip.left .tooltip-arrow {
+  border-left-color: #3997ee;
+}
+.tooltip.bottom .tooltip-arrow {
+  border-bottom-color: #3997ee;
+}
 #nav {
   padding: 0;
   background: #f4f4f4;
@@ -7746,6 +7765,7 @@ iframe {
   height: 100%;
   margin: 0;
   background: #f5f5f5;
+  background-image: url("../img/background-note.jpg");
 }
 #note-style {
   padding: 20px 50px;
@@ -7753,7 +7773,6 @@ iframe {
   margin-right: 2%;
   border: 1px solid #e0e0e0;
   background: #fdfdfd;
-  background-image: url("../img/note-corner.png");
   background-position: right top;
   background-repeat: no-repeat;
   box-shadow: 1px 1px 2px #ddd;
@@ -7902,6 +7921,31 @@ iframe {
   position: absolute;
   right: 15px;
   top: 112px;
+}
+#search-view {
+  font-family: main, helvetica;
+}
+#search-view span {
+  font-style: italic;
+}
+#search-view h1 {
+  font-size: 16px;
+  padding: 10px;
+}
+#search-view a,
+#search-view a:visited {
+  color: #222;
+}
+#search-view h2 {
+  font-size: 25px;
+}
+#search-view .search-result {
+  margin: 10px;
+  padding: 0 20px;
+  border: 1px solid #d3d3d3;
+  box-shadow: 1px 1px 2px #eee;
+  background: #fff;
+  box-shadow: none;
 }
 @font-facefont-family: main {
   src: url("../fonts/signika-light.ttf");
