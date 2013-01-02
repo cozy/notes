@@ -78,25 +78,22 @@ iframe
 
 #editor-button-bar
     position: absolute
-    opacity: 0.3
+    opacity: 1
 
     left: 3.5%;
     top: 200px;
 
     .btn
+        border: 1px solid #F2F2F2
         background-color: #FCFCFC
         background-image: none
-        box-shadow: inset -4px 0px 3px #F5F5F5
+        box-shadow: 0
         padding: 8px 8px 8px 8px
 
-    .btn:active
-    .active
-        background-color: #EAEAEA
-        box-shadow: inset 4px 0px 3px #EAEAEA - 10%
 
-    .btn
         i
             background-position: 0 0
+            opacity: 0.3
 
         i.icon-indent-left
             background-image: url('../img/menu-indent-left.png')
@@ -110,6 +107,7 @@ iframe
             background-image: url('../img/menu-save.png')
 
     .btn:hover
+
         i.icon-indent-left
             background-image: url('../img/menu-indent-left-over.png')
         i.icon-indent-right
@@ -121,8 +119,24 @@ iframe
         i.icon-download-alt
             background-image: url('../img/menu-save-over.png')
 
+    .btn:active
+    .active
+        background-color: #EAEAEA
+        box-shadow: inset 4px 0px 3px #EAEAEA - 10%
+
 #editor-button-bar:hover
-    opacity: 1
+    .btn
+        box-shadow: inset -4px 0px 3px #F5F5F5
+        border: 1px solid #DDD
+
+        i
+            background-position: 0 0
+            opacity: 1
+
+    .btn:active
+    .active
+        background-color: #EAEAEA
+        box-shadow: inset 4px 0px 3px #EAEAEA - 10%
 
 
 // File list
