@@ -25,7 +25,7 @@ class exports.MainRouter extends Backbone.Router
     home: ->
         @navigate "note/all", trigger: false
         @_initializeTree "tree-node-all", ->
-            app.homeView.selectNoteIfTreeLoaded()
+            app.homeView.selectNoteIfIframeLoaded()
 
     # Navigate to root tree, display no note
     allNotes: ->
@@ -33,7 +33,7 @@ class exports.MainRouter extends Backbone.Router
             app.homeView.selectNote "tree-node-all"
         else
             @_initializeTree "tree-node-all", ->
-                app.homeView.selectNoteIfTreeLoaded()
+                app.homeView.selectNoteIfIframeLoaded()
 
     # Select given note (represented by its path), if tree is already 
     # rendered, note is directly selected else it loads tree then it selects 
@@ -43,7 +43,7 @@ class exports.MainRouter extends Backbone.Router
             app.homeView.selectNote noteId
         else
             @_initializeTree noteId, ->
-                app.homeView.selectNoteIfTreeLoaded()
+                app.homeView.selectNoteIfIframeLoaded()
 
     # Build tree if needed, then asks to home view which request to perform.
     search: (query) ->

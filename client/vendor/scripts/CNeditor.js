@@ -139,7 +139,6 @@ md2cozy.md2cozy = function(text) {
   var conv, cozyCode, htmlCode;
   conv = new Showdown.converter();
   htmlCode = $(conv.makeHtml(text));
-  console.log(htmlCode);
   cozyCode = '';
   md2cozy.currentId = 0;
   md2cozy.editorDepth = 0;
@@ -224,8 +223,7 @@ md2cozy.parseList = function(obj) {
 };
 
 exports.md2cozy = md2cozy;
-var selection,
-  _this = this;
+var selection;
 
 selection = {};
 
@@ -237,6 +235,11 @@ selection = {};
 #
 # note: with google chrome, it seems that non visible elements
 #       cannot be selected with rangy (that's where 'blank' comes in)
+*/
+
+
+/**
+ * Called only once from the editor - TODO : role to be verified
 */
 
 
@@ -256,6 +259,22 @@ selection.cleanSelection = function(startLine, endLine, range) {
   }
 };
 
+selection.selectAll = function(editor) {
+  var range, sel;
+  range = document.createRange();
+  range.setStartBefore(editor.linesDiv.firstChild);
+  range.setEndAfter(editor.linesDiv.lastChild);
+  selection.normalize(range);
+  sel = editor.getEditorSelection();
+  sel.removeAllRanges();
+  return sel.addRange(range);
+};
+
+/**
+ * Called only once from the editor - TODO : role to be verified
+*/
+
+
 selection.cloneEndFragment = function(range, endLine) {
   var range4fragment;
   range4fragment = rangy.createRangyRange();
@@ -265,176 +284,417 @@ selection.cloneEndFragment = function(range, endLine) {
 };
 
 /* ------------------------------------------------------------------------
-#  _normalize(range)
+#  normalize(range)
 # 
 #  Modify 'range' containers and offsets so it represent a clean selection
-#  that it starts inside a textNode and ends inside a textNode.
+#  that starts and ends inside a textNode.
 #
 #  Set the flag isEmptyLine to true if an empty line is being normalized
 #  so further suppr ~ backspace work properly.
-#
+# 
+#  All possible breakpoints :
+    - <span>|<nodeText>|Text |node content|</nodeText>|<any>...</nodeText>|</span>
+           BP1        BP2   BP3          BP4         BP5             BP6 
+
+    - <div>|<span>...</span>|<any>...</span>|</br>|</div>
+          BP7              BP8             BP9    BP10
+
+    - <body>|<div>...</div>|<div>...</div>|</body>
+           BP11           BP12           BP13
+
+
+    BP1 : <span>|<nodeText>
+             
+        |     test    |               action              |
+        |-------------|-----------------------------------|
+        | cont = span | if cont.length = 0                |
+        | offset = 0  | * create nodeText                 |
+        |             | * BP2 => BP2                      |
+        |             | else if cont.child(0) = nodeText  |
+        |             | * BP2 => BP2                      |
+        |             | else if cont.child(0) != nodeText |
+        |             | * error                           |
+
+    BP2 : <nodeText>|Text node content</nodeText>
+                
+        |       test      |  action |
+        |-----------------|---------|
+        | cont = nodeText | nothing |
+        | offset = 0      |         |
+        
+    BP3 : <nodeText>Text |node content</nodeText>
+
+        |         test         |  action |
+        |----------------------|---------|
+        | cont = nodeText      | nothing |
+        | 0<offset<cont.length |         |
+        
+    BP4 : <nodeText>Text node content|</nodeText>
+
+        |         test         |  action |
+        |----------------------|---------|
+        | cont = nodeText      | nothing |
+        | offset = cont.length |         |
+        
+    BP5 & BP6 : </nodeText>|<any>
+        |               test              |            action           |
+        |---------------------------------|-----------------------------|
+        | cont != nodeText                | bpEnd(cont.child(offset-1)) |
+        | offset > 0                      |                             |
+        | cont.child(offset-1) = nodeText |                             |
+        
+    BP7 : <div>|<span>...
+        |    test    |          action          |
+        |------------|--------------------------|
+        | cont = div | if cont.length = 0       |
+        | offset = 0 | * error                  |
+        |            | else                     |
+        |            | bpStart(cont.firstChild) |
+
+    BP8 & BP9 : ...</span>|<any>...
+        |             test            |            action           |
+        |-----------------------------|-----------------------------|
+        | cont != nodeText            | bpEnd(cont.child(offset-1)) |
+        | offset > 0                  |                             |
+        | cont.child(offset-1) = span |                             |
+
+    BP10 : </br>|</div>
+        |            test           |            action           |
+        |---------------------------|-----------------------------|
+        | cont != nodeText          | bpEnd(cont.child(offset-2)) |
+        | offset > 0                |                             |
+        | offset=cont.length        |                             |
+        | cont.child(offset-1) = br |                             |
+
+    BP11 : <body>|<div>...
+        |     test    |          action          |
+        |-------------|--------------------------|
+        | cont = body | bpStart(cont.firstChild) |
+        | offset = 0  |                          |
+
+    BP12 : </div>|<any>
+        |            test            |            action           |
+        |----------------------------|-----------------------------|
+        | cont != nodeText           | bpEnd(cont.child(offset-1)) |
+        | offset > 0                 |                             |
+        | offset=cont.length         |                             |
+        | cont.child(offset-1) = div |                             |
+
+
+    BP13 : ...</div>|</body>
+        |         test         |         action        |
+        |----------------------|-----------------------|
+        | cont = body          | bpEnd(cont.lastChild) |
+        | offset = cont.length |                       |
 */
 
 
 selection.normalize = function(range) {
-  var endContainer, endDiv, isEmptyLine, startContainer, startDiv, _ref, _ref1;
-  startDiv = selection.getStartDiv(range);
-  endDiv = selection.getEndDiv(range, startDiv);
-  isEmptyLine = startDiv === endDiv && startDiv.innerHTML === '<span></span><br>';
-  startContainer = range.startContainer;
-  if (startContainer.nodeName === "BODY") {
-    selection.handleBodyStart(range, startContainer, isEmptyLine);
-  } else if (startContainer.nodeName === "DIV") {
-    selection.handleDivStart(range, startContainer);
-  } else if ((_ref = startContainer.nodeName) === "SPAN" || _ref === "IMG" || _ref === "A") {
-    selection.handleTextEltStart(range, startContainer);
-  }
-  endContainer = range.endContainer;
-  if (endContainer.nodeName === "BODY") {
-    selection.handleBodyEnd(range, endContainer);
-  }
-  if (endContainer.nodeName === "DIV") {
-    selection.handleDivEnd(range, endContainer);
-  } else if ((_ref1 = endContainer.nodeName) === "SPAN" || _ref1 === "IMG" || _ref1 === "A") {
-    selection.handleTextEltEnd(range, endContainer);
+  var isCollapsed, newEndBP, newStartBP;
+  isCollapsed = range.collapsed;
+  newStartBP = selection.normalizeBP(range.startContainer, range.startOffset);
+  range.setStart(newStartBP.cont, newStartBP.offset);
+  if (isCollapsed) {
+    range.collapse(true);
+  } else {
+    newEndBP = selection.normalizeBP(range.endContainer, range.endOffset);
+    range.setEnd(newEndBP.cont, newEndBP.offset);
   }
   return range;
 };
 
-selection.handleBodyStart = function(range, startContainer) {
-  var elt;
-  elt = selection.getFirstLineFromBody(startContainer);
-  return selection.putStartOnStart(range, elt);
-};
+/**
+ * returns a break point in the most pertinent text node given a random bp.
+ * @param  {element} cont   the container of the break point
+ * @param  {number} offset offset of the break point
+ * @return {object} the suggested break point : {cont:newCont,offset:newOffset}
+*/
 
-selection.handleBodyEnd = function(range, endContainer) {
-  var elt;
-  elt = selection.getLastLineFromBody(endContainer);
-  return selection.putEndAtEndOfLine(range, elt);
-};
 
-selection.handleDivStart = function(range, startContainer, isEmptyLine) {
-  if (isEmptyLine) {
-    return selection.putStartOnFirstChild(range, startContainer);
-  } else if (range.startOffset < startContainer.childNodes.length - 1) {
-    return selection.putStartOnOffset(range, startContainer, range.startOffset);
-  } else {
-    return selection.putStartAtEndOfLine(range, startContainer);
+selection.normalizeBP = function(cont, offset) {
+  var newCont, newOffset, res;
+  if (cont.nodeName === '#text') {
+    res = {
+      cont: cont,
+      offset: offset
+    };
+  } else if (cont.nodeName === 'SPAN') {
+    if (offset > 0) {
+      newCont = cont.childNodes[offset - 1];
+      newOffset = newCont.length;
+    } else if (cont.childNodes.length > 0) {
+      newCont = cont.firstChild;
+      newOffset = 0;
+    } else {
+      newCont = document.createTextNode('');
+      cont.appendChild(newCont);
+      newOffset = 0;
+    }
+  } else if (cont.nodeName === 'DIV' && cont.id !== "editor-lines") {
+    if (offset === 0) {
+      res = selection.normalizeBP(cont.firstChild, 0);
+    } else if (offset < cont.children.length - 1) {
+      newCont = cont.children[offset - 1];
+      newOffset = newCont.childNodes.length;
+      res = selection.normalizeBP(newCont, newOffset);
+    } else {
+      newCont = cont.children[cont.children.length - 2];
+      newOffset = newCont.childNodes.length;
+      res = selection.normalizeBP(newCont, newOffset);
+    }
+  } else if (cont.nodeName === 'DIV' && cont.id === "editor-lines") {
+    if (offset === 0) {
+      newCont = cont.firstChild;
+      newOffset = 0;
+      res = selection.normalizeBP(newCont, newOffset);
+    } else if (offset === cont.childNodes.length) {
+      newCont = cont.lastChild;
+      newOffset = newCont.childNodes.length;
+      res = selection.normalizeBP(newCont, newOffset);
+    } else {
+      newCont = cont.children[offset - 1];
+      newOffset = newCont.childNodes.length;
+      res = selection.normalizeBP(newCont, newOffset);
+    }
   }
+  if (!res) {
+    res = {
+      cont: newCont,
+      offset: newOffset
+    };
+  }
+  return res;
 };
 
-selection.handleDivEnd = function(range, endContainer) {
-  if (range.endOffset < endContainer.childNodes.length - 1) {
-    return selection.putEndOnOffset(range, endContainer, range.endOffset);
-  } else {
-    return selection.putEndAtEndOfLine(range, endContainer);
-  }
-};
+/* old normalize :
 
-selection.handleTextEltStart = function(range, startContainer) {
-  if (startContainer.firstChild === null || startContainer.textContent.length === 0) {
-    return selection.putStartOnEnd(range, startContainer);
-  } else if (range.startOffset < startContainer.childNodes.length) {
-    return selection.putStartOnNextChild(range, startContainer);
-  } else {
-    return selection.putStartOnLastChildEnd(range, startContainer);
-  }
-};
+selection.normalize = (range) =>
+    startDiv = selection.getStartDiv range
+    endDiv   = selection.getEndDiv range, startDiv
 
-selection.handleTextEltEnd = function(range, endContainer) {
-  if (endContainer.firstChild === null || endContainer.textContent.length === 0) {
-    selection.putEndOnEnd(range, endContainer);
-  }
-  if (range.endOffset < endContainer.childNodes.length) {
-    return selection.putEndOnNextChild(range, endContainer);
-  } else {
-    return selection.putEndOnLastChildEnd(range, endContainer);
-  }
-};
+    isEmptyLine = startDiv == endDiv and startDiv.innerHTML == '<span></span><br>'
 
-selection.getLineDiv = function(elt) {
+    startContainer = range.startContainer
+
+    if startContainer.nodeName == "BODY"
+        selection.handleBodyStart range, startContainer, isEmptyLine
+
+    else if startContainer.nodeName == "DIV"
+        selection.handleDivStart range, startContainer
+
+    else if startContainer.nodeName in ["SPAN","IMG","A"]
+        selection.handleTextEltStart range, startContainer
+
+    # if startC is a textNode ; do nothing
+
+    endContainer = range.endContainer
+
+    if endContainer.nodeName == "BODY"
+        selection.handleBodyEnd range, endContainer
+
+    if endContainer.nodeName == "DIV"
+        selection.handleDivEnd range, endContainer
+
+    else if endContainer.nodeName in ["SPAN","IMG","A"]
+        selection.handleTextEltEnd range, endContainer
+
+    # if endC is a textNode ;   do nothing
+
+    return range
+
+
+# Put selection start at the beginning of the first line of given editor body
+selection.handleBodyStart = (range, startContainer) ->
+    elt = selection.getFirstLineFromBody startContainer
+    selection.putStartOnStart range, elt
+
+# Put selection start at the end of the last line of given editor body
+selection.handleBodyEnd = (range, endContainer) ->
+    elt = selection.getLastLineFromBody endContainer
+    selection.putEndAtEndOfLine range, elt
+
+# Put selection start at the beginning of a workable element in given div 
+# empty line are filled with a en empty span
+# if caret is between two children <div>|<></>|<></> <br> </div>
+#      pust start on start offset
+# if caret is around <br> <div> <></> <></>|<br>|</div>
+selection.handleDivStart = (range, startContainer, isEmptyLine) ->
+    if isEmptyLine
+        selection.putStartOnFirstChild range, startContainer
+    else if range.startOffset < startContainer.childNodes.length - 1
+        selection.putStartOnOffset range, startContainer, range.startOffset
+    else
+        selection.putStartAtEndOfLine range, startContainer
+ 
+# if caret is between two children <div>|<></>|<></> <br> </div>
+# if caret is around <br>          <div> <></> <></>|<br>|</div>
+selection.handleDivEnd = (range, endContainer) ->
+    if range.endOffset < endContainer.childNodes.length - 1
+        selection.putEndOnOffset range, endContainer, range.endOffset
+    else
+        selection.putEndAtEndOfLine range, endContainer
+
+# Put selection start at the beginning of a workable element around given elt. 
+selection.handleTextEltStart = (range, startContainer) ->
+    # 2.0 if startC is empty
+    if startContainer.firstChild == null || startContainer.textContent.length == 0
+        selection.putStartOnEnd range, startContainer
+    # 2.1 if caret is between two textNode children
+    else if range.startOffset < startContainer.childNodes.length
+        selection.putStartOnNextChild range, startContainer
+    # 2.2 if caret is after last textNode
+    else
+        selection.putStartOnLastChildEnd range, startContainer
+
+# 2.0 if endC is empty
+# 2.1 if caret is between two textNode children
+# 2.2 if caret is after last textNode
+selection.handleTextEltEnd = (range, endContainer) ->
+    if endContainer.firstChild == null || endContainer.textContent.length == 0
+        selection.putEndOnEnd range, endContainer
+    if range.endOffset < endContainer.childNodes.length
+        selection.putEndOnNextChild range, endContainer
+    else
+        selection.putEndOnLastChildEnd range, endContainer
+
+
+# Get first line from given editor body.
+selection.getFirstLineFromBody = (body) ->
+    body.children[1].firstChild
+
+# Get first line from given editor body.
+selection.getLastLineFromBody = (body) ->
+    body.children[1].lastChild
+
+# Put start caret at beginning of first child of given container
+selection.putStartOnFirstChild = (range, container) ->
+    elt = container.firstChild
+    selection.putStartOnStart range, elt
+
+# Put start caret at offset position  of first child of given container
+selection.putStartOnOffset = (range, container, offset) ->
+    elt = container.childNodes[offset]
+    selection.putStartOnStart range, elt
+
+selection.putEndOnOffset = (range, container, offset) ->
+    elt = container.childNodes[offset]
+    selection.putEndOnStart range, elt
+
+# Put selection start at the en of given line. 
+# not sure about the result,
+# TODO: code should be tested/verified
+selection.putStartOnNextChild  = (range, container) ->
+    elt = container.childNodes[range.startOffset]
+    range.setStart elt, 0
+
+selection.putEndOnNextChild  = (range, container) ->
+    elt = container.childNodes[range.endOffset]
+    range.setEnd elt, 0
+
+#TODO:  Check if it should handle the br at the end of the line.
+selection.putStartOnLastChildEnd = (range, container) ->
+    elt = container.lastChild
+    offset = elt.data.length
+    range.setStart elt, offset
+
+selection.putEndOnLastChildEnd = (range, container) ->
+    elt = container.lastChild
+    offset = elt.data.length
+    range.setEnd elt, offset
+
+# place caret at the end of the last child (before br)
+# TODO: compare with putStartOnLastChildEnd 
+selection.putStartAtEndOfLine = (range, container) ->
+    elt = container.lastChild.previousElementSibling
+    if elt?
+        selection.putStartOnEnd range, elt
+    else if container.lastChild?
+        selection.putStartOnEnd container.lastChild
+    else
+        console.log "Normalize: no where to put selection start."
+         
+# TOOD: replace by putStartOnLastChildEnd  ?
+selection.putEndAtEndOfLine = (range, container) ->
+    elt = container.lastChild.previousElementSibling
+    if elt?
+        selection.putEndOnEnd range, elt
+    else if container.lastChild?
+        selection.putEndOnEnd container.lastChild
+    else
+        console.log "Normalize: no where to put selection start."
+
+selection.putStartOnEnd = (range, elt) ->
+    if elt?.lastChild?
+        offset = elt.lastChild.textContent.length
+        if offset == 0
+            elt.lastChild.data = " "
+            offset = 1
+        range.setStart(elt.lastChild, offset)
+    else if elt?
+        blank = document.createTextNode " "
+        elt.appendChild blank
+        range.setStart(blank, 0)
+
+
+selection.putEndOnEnd = (range, elt) ->
+    if elt?
+        range.setEnd elt.nextSibling, 0
+    range
+*/
+
+
+selection._getLineDiv = function(elt) {
   var parent;
   parent = elt;
-  while (parent.nodeName !== 'DIV' && (((parent.id != null) && parent.id.substr(0, 5) !== 'CNID_') || !(parent.id != null)) && parent.parentNode !== null) {
+  while (!(parent.nodeName === 'DIV' && (parent.id != null) && parent.id.substr(0, 5) === 'CNID_') || parent.parentNode === null) {
     parent = parent.parentNode;
   }
   return parent;
 };
 
-selection.getFirstLineFromBody = function(body) {
-  return body.children[1].firstChild;
-};
+/**
+ * return the div corresponding to an element inside a line and tells wheter
+ * the breabk point is at the end or at the beginning of the line
+ * @param  {element} cont   the container of the break point
+ * @param  {number} offset offset of the break point
+ * @return {object}        {div[element], isStart[bool], isEnd[bool]}
+*/
 
-selection.getLastLineFromBody = function(body) {
-  return body.children[1].lastChild;
-};
 
-selection.putStartOnFirstChild = function(range, container) {
-  var elt;
-  elt = container.firstChild;
-  return selection.putStartOnStart(range, elt);
-};
-
-selection.putStartOnOffset = function(range, container, offset) {
-  var elt;
-  elt = container.childNodes[offset];
-  return selection.putStartOnStart(range, elt);
-};
-
-selection.putEndOnOffset = function(range, container, offset) {
-  var elt;
-  elt = container.childNodes[offset];
-  return selection.putEndOnStart(range, elt);
-};
-
-selection.putStartOnNextChild = function(range, container) {
-  var elt;
-  elt = container.childNodes[range.startOffset];
-  return range.setStart(elt, 0);
-};
-
-selection.putEndOnNextChild = function(range, container) {
-  var elt;
-  elt = container.childNodes[range.endOffset];
-  return range.setEnd(elt, 0);
-};
-
-selection.putStartOnLastChildEnd = function(range, container) {
-  var elt, offset;
-  elt = container.lastChild;
-  offset = elt.data.length;
-  return range.setStart(elt, offset);
-};
-
-selection.putEndOnLastChildEnd = function(range, container) {
-  var elt, offset;
-  elt = container.lastChild;
-  offset = elt.data.length;
-  return range.setEnd(elt, offset);
-};
-
-selection.putStartAtEndOfLine = function(range, container) {
-  var elt;
-  elt = container.lastChild.previousElementSibling;
-  if (elt != null) {
-    return selection.putStartOnEnd(range, elt);
-  } else if (container.lastChild != null) {
-    return selection.putStartOnEnd(container.lastChild);
-  } else {
-    return console.log("Normalize: no where to put selection start.");
+selection.getLineDivIsStartIsEnd = function(cont, offset) {
+  var isEnd, isStart, nodesNum, parent;
+  parent = cont;
+  isStart = true;
+  isEnd = true;
+  while (!(parent.nodeName === 'DIV' && (parent.id != null) && parent.id.substr(0, 5) === 'CNID_') && parent.parentNode !== null) {
+    isStart = isStart && (offset === 0);
+    if (parent.length != null) {
+      isEnd = isEnd && (offset === parent.length);
+    } else {
+      isEnd = isEnd && (offset === parent.childNodes.length - 1);
+    }
+    if (parent.previousSibling === null) {
+      offset = 0;
+    } else if (parent.nextSibling === null) {
+      offset = parent.parentNode.childNodes.length - 1;
+    } else if (parent.nextSibling.nextSibling === null) {
+      offset = parent.parentNode.childNodes.length - 2;
+    } else {
+      offset = 1;
+    }
+    parent = parent.parentNode;
   }
-};
-
-selection.putEndAtEndOfLine = function(range, container) {
-  var elt;
-  elt = container.lastChild.previousElementSibling;
-  if (elt != null) {
-    return selection.putEndOnEnd(range, elt);
-  } else if (container.lastChild != null) {
-    return selection.putEndOnEnd(container.lastChild);
-  } else {
-    return console.log("Normalize: no where to put selection start.");
+  nodesNum = parent.childNodes.length;
+  isStart = isStart && (offset === 0);
+  if (parent.textContent === '') {
+    isStart = true;
   }
+  isEnd = isEnd && (offset === nodesNum - 1 || offset === nodesNum - 2);
+  return {
+    div: parent,
+    isStart: isStart,
+    isEnd: isEnd
+  };
 };
 
 selection.putStartOnStart = function(range, elt) {
@@ -445,22 +705,6 @@ selection.putStartOnStart = function(range, elt) {
       elt.firstChild.data = " ";
     }
     return range.setStart(elt.firstChild, 0);
-  } else if (elt != null) {
-    blank = document.createTextNode(" ");
-    elt.appendChild(blank);
-    return range.setStart(blank, 0);
-  }
-};
-
-selection.putStartOnEnd = function(range, elt) {
-  var blank, offset;
-  if ((elt != null ? elt.lastChild : void 0) != null) {
-    offset = elt.lastChild.textContent.length;
-    if (offset === 0) {
-      elt.lastChild.data = " ";
-      offset = 1;
-    }
-    return range.setStart(elt.lastChild, offset);
   } else if (elt != null) {
     blank = document.createTextNode(" ");
     elt.appendChild(blank);
@@ -483,39 +727,26 @@ selection.putEndOnStart = function(range, elt) {
   }
 };
 
-selection.putEndOnEnd = function(range, elt) {
-  if (elt != null) {
-    range.setEnd(elt.nextSibling, 0);
-  }
-  return range;
-};
+/**
+ * Returns the DIV of the line where the break point is.
+ * @param  {element} cont   The contener of the break point
+ * @param  {number} offset Offset of the break point.
+ * @return {element}        The DIV of the line where the break point is.
+*/
 
-selection.getStartDiv = function(range) {
+
+selection.getLineDiv = function(cont, offset) {
   var startDiv;
-  if (range.startContainer.nodeName === 'BODY') {
-    startDiv = range.startContainer.children[range.startOffset];
+  if (cont.nodeName === 'DIV') {
+    if (cont.id === 'editor-lines') {
+      startDiv = cont.children[offset];
+    } else {
+      startDiv = selection._getLineDiv(cont);
+    }
   } else {
-    startDiv = range.startContainer;
-  }
-  if (startDiv.nodeName !== "DIV") {
-    startDiv = selection.getLineDiv(startDiv);
+    startDiv = selection._getLineDiv(cont);
   }
   return startDiv;
-};
-
-selection.getEndDiv = function(range, startDiv) {
-  var endDiv;
-  if (range.endContainer.nodeName === "BODY") {
-    endDiv = range.endContainer.children[range.endOffset - 1];
-  } else {
-    endDiv = range.endContainer;
-  }
-  if ((endDiv != null ? endDiv.nodeName : void 0) !== "DIV") {
-    endDiv = selection.getLineDiv(endDiv);
-  } else {
-    endDiv = startDiv;
-  }
-  return endDiv;
 };
 
 exports.selection = selection;
@@ -572,25 +803,23 @@ exports.CNeditor = (function() {
     this._keyPressListener = __bind(this._keyPressListener, this);
 
     if (this.editorTarget.nodeName === "IFRAME") {
-      this.getEditorSelection = function() {
-        return rangy.getIframeSelection(this.editorTarget);
-      };
-      this.saveEditorSelection = function() {
-        return rangy.saveSelection(rangy.dom.getIframeWindow(this.editorTarget));
-      };
       iframe$ = $(this.editorTarget);
       iframe$.on('load', function() {
         var cssLink, editor_head$, editor_html$;
         editor_html$ = iframe$.contents().find("html");
         _this.editorBody$ = editor_html$.find("body");
         _this.editorBody$.parent().attr('id', '__ed-iframe-html');
-        _this.editorBody$.attr("contenteditable", "true");
         _this.editorBody$.attr("id", "__ed-iframe-body");
         _this.document = _this.editorBody$[0].ownerDocument;
         editor_head$ = editor_html$.find("head");
         cssLink = '<link id="editorCSS" ';
         cssLink += 'href="stylesheets/CNeditor.css" rel="stylesheet">';
         editor_head$.html(cssLink);
+        _this.linesDiv = document.createElement('div');
+        _this.linesDiv.setAttribute('id', 'editor-lines');
+        _this.linesDiv.setAttribute('contenteditable', 'true');
+        _this.editorBody$.append(_this.linesDiv);
+        _this._initClipBoard();
         _this._lines = {};
         _this.newPosition = true;
         _this._highestId = 0;
@@ -618,16 +847,20 @@ exports.CNeditor = (function() {
         _this.editorBody$.on('paste', function(event) {
           return _this.paste(event);
         });
-        _this.linesDiv = document.createElement('div');
-        _this.linesDiv.setAttribute('id', 'editor-lines');
-        _this.editorBody$.append(_this.linesDiv);
-        _this._initClipBoard();
         callBack.call(_this);
         return _this;
       });
       this.editorTarget.src = '';
     }
   }
+
+  CNeditor.prototype.getEditorSelection = function() {
+    return rangy.getIframeSelection(this.editorTarget);
+  };
+
+  CNeditor.prototype.saveEditorSelection = function() {
+    return rangy.saveSelection(rangy.dom.getIframeWindow(this.editorTarget));
+  };
 
   /* ------------------------------------------------------------------------
   # EXTENSION : _updateDeepest
@@ -716,6 +949,104 @@ exports.CNeditor = (function() {
     return document.head.appendChild(linkElm);
   };
 
+  /**
+   * Return [metaKeyCode,keyCode] corresponding to the key strike combinaison. 
+   * the string structure = [meta key]-[key]
+   *   * [metaKeyCode] : (Alt)*(Ctrl)*(Shift)*
+   *   * [keyCode] : (return|end|...|A|S|V|Y|Z)|(other) 
+   * ex : 
+   *   * "AltShift" & "up" 
+   *   * "AltCtrl" & "down" 
+   *   * "Shift" & "A"
+   *   * "Ctrl" & "S"
+   *   * "" & "other"
+   * @param  {[type]} e [description]
+   * @return {[type]}   [description]
+  */
+
+
+  CNeditor.prototype.getShortCut = function(e) {
+    var keyCode, metaKeyCode, shortcut;
+    metaKeyCode = (e.altKey ? "Alt" : "") + 
+                              (e.ctrlKey ? "Ctrl" : "") + 
+                              (e.shiftKey ? "Shift" : "");
+    switch (e.keyCode) {
+      case 13:
+        keyCode = 'return';
+        break;
+      case 35:
+        keyCode = 'end';
+        break;
+      case 36:
+        keyCode = 'home';
+        break;
+      case 33:
+        keyCode = 'pgUp';
+        break;
+      case 34:
+        keyCode = 'pgDwn';
+        break;
+      case 37:
+        keyCode = 'left';
+        break;
+      case 38:
+        keyCode = 'up';
+        break;
+      case 39:
+        keyCode = 'right';
+        break;
+      case 40:
+        keyCode = 'down';
+        break;
+      case 9:
+        keyCode = 'tab';
+        break;
+      case 8:
+        keyCode = 'backspace';
+        break;
+      case 32:
+        keyCode = 'space';
+        break;
+      case 27:
+        keyCode = 'esc';
+        break;
+      case 46:
+        keyCode = 'suppr';
+        break;
+      default:
+        switch (e.which) {
+          case 32:
+            keyCode = 'space';
+            break;
+          case 8:
+            keyCode = 'backspace';
+            break;
+          case 65:
+            keyCode = 'A';
+            break;
+          case 83:
+            keyCode = 'S';
+            break;
+          case 86:
+            keyCode = 'V';
+            break;
+          case 89:
+            keyCode = 'Y';
+            break;
+          case 90:
+            keyCode = 'Z';
+            break;
+          default:
+            keyCode = 'other';
+        }
+    }
+    shortcut = metaKeyCode + '-' + keyCode;
+    if (metaKeyCode === '' && (keyCode === 'A' || keyCode === 'S' || keyCode === 'V' || keyCode === 'Y' || keyCode === 'Z')) {
+      keyCode = 'other';
+    }
+    return [metaKeyCode, keyCode];
+  };
+
   /* ------------------------------------------------------------------------
   #   _keyPressListener
   # 
@@ -740,53 +1071,10 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._keyPressListener = function(e) {
-    var keyStrokesCode, metaKeyStrokesCode, normalizedRange, range, sel, shortcut;
-    metaKeyStrokesCode = (e.altKey ? "Alt" : "") + 
-                              (e.ctrlKey ? "Ctrl" : "") + 
-                              (e.shiftKey ? "Shift" : "");
+    var keyCode, metaKeyCode, range, sel, shortcut, _ref;
+    _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
+    shortcut = metaKeyCode + '-' + keyCode;
     switch (e.keyCode) {
-      case 13:
-        keyStrokesCode = "return";
-        break;
-      case 35:
-        keyStrokesCode = "end";
-        break;
-      case 36:
-        keyStrokesCode = "home";
-        break;
-      case 33:
-        keyStrokesCode = "pgUp";
-        break;
-      case 34:
-        keyStrokesCode = "pgDwn";
-        break;
-      case 37:
-        keyStrokesCode = "left";
-        break;
-      case 38:
-        keyStrokesCode = "up";
-        break;
-      case 39:
-        keyStrokesCode = "right";
-        break;
-      case 40:
-        keyStrokesCode = "down";
-        break;
-      case 9:
-        keyStrokesCode = "tab";
-        break;
-      case 8:
-        keyStrokesCode = "backspace";
-        break;
-      case 32:
-        keyStrokesCode = "space";
-        break;
-      case 27:
-        keyStrokesCode = "esc";
-        break;
-      case 46:
-        keyStrokesCode = "suppr";
-        break;
       case 16:
         e.preventDefault();
         return;
@@ -796,49 +1084,15 @@ exports.CNeditor = (function() {
       case 18:
         e.preventDefault();
         return;
-      default:
-        switch (e.which) {
-          case 32:
-            keyStrokesCode = "space";
-            break;
-          case 8:
-            keyStrokesCode = "backspace";
-            break;
-          case 65:
-            keyStrokesCode = "A";
-            break;
-          case 83:
-            keyStrokesCode = "S";
-            break;
-          case 86:
-            keyStrokesCode = "V";
-            break;
-          case 89:
-            keyStrokesCode = "Y";
-            break;
-          case 90:
-            keyStrokesCode = "Z";
-            break;
-          default:
-            keyStrokesCode = "other";
-        }
-    }
-    shortcut = metaKeyStrokesCode + '-' + keyStrokesCode;
-    if (shortcut === "-A" || shortcut === "-S" || shortcut === "-V" || shortcut === "-Y" || shortcut === "-Z") {
-      shortcut = "-other";
-    }
-    if (this._lastKey !== shortcut && (shortcut === "-tab" || shortcut === "-return" || shortcut === "-backspace" || shortcut === "-suppr" || shortcut === "CtrlShift-down" || shortcut === "CtrlShift-up" || shortcut === "CtrlShift-left" || shortcut === "CtrlShift-right" || shortcut === "Ctrl-V" || shortcut === "Shift-tab" || shortcut === "-space" || shortcut === "-other")) {
-      this._addHistory();
     }
     this._lastKey = shortcut;
     if (this.newPosition && (shortcut === '-other' || shortcut === '-space' || shortcut === '-suppr' || shortcut === '-backspace' || shortcut === '-return')) {
       this.newPosition = false;
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
-      normalizedRange = selection.normalize(range);
-      sel.setSingleRange(normalizedRange);
+      selection.normalize(range);
     }
-    if ((keyStrokesCode === "left" || keyStrokesCode === "up" || keyStrokesCode === "right" || keyStrokesCode === "down" || keyStrokesCode === "pgUp" || keyStrokesCode === "pgDwn" || keyStrokesCode === "end" || keyStrokesCode === "home" || keyStrokesCode === "return" || keyStrokesCode === "suppr" || keyStrokesCode === "backspace") && (shortcut !== "CtrlShift-down" && shortcut !== "CtrlShift-up" && shortcut !== "CtrlShift-right" && shortcut !== "CtrlShift-left")) {
+    if ((keyCode === "left" || keyCode === "up" || keyCode === "right" || keyCode === "down" || keyCode === "pgUp" || keyCode === "pgDwn" || keyCode === "end" || keyCode === "home" || keyCode === "return" || keyCode === "suppr" || keyCode === "backspace") && (shortcut !== "CtrlShift-down" && shortcut !== "CtrlShift-up" && shortcut !== "CtrlShift-right" && shortcut !== "CtrlShift-left")) {
       this.newPosition = true;
     }
     this.currentSel = null;
@@ -847,9 +1101,6 @@ exports.CNeditor = (function() {
         this._return();
         return e.preventDefault();
       case "-tab":
-        this.tab();
-        return e.preventDefault();
-      case "CtrlShift-right":
         this.tab();
         return e.preventDefault();
       case "-backspace":
@@ -865,8 +1116,8 @@ exports.CNeditor = (function() {
       case "Shift-tab":
         this.shiftTab();
         return e.preventDefault();
-      case "CtrlShift-left":
-        this.shiftTab();
+      case "Ctrl-A":
+        selection.selectAll(this);
         return e.preventDefault();
       case "Alt-A":
         this._toggleLineType();
@@ -876,12 +1127,6 @@ exports.CNeditor = (function() {
       case "Ctrl-S":
         $(this.editorTarget).trigger(jQuery.Event("saveRequest"));
         return e.preventDefault();
-      case "Ctrl-Z":
-        e.preventDefault();
-        return this.unDo();
-      case "Ctrl-Y":
-        e.preventDefault();
-        return this.reDo();
     }
   };
 
@@ -917,12 +1162,12 @@ exports.CNeditor = (function() {
       }
     } else if (this.currentSel.endLine === startLine) {
       console.log('_suppr 4 - test ');
-      this.currentSel.sel.range.deleteContents();
+      this.currentSel.range.deleteContents();
     } else {
       console.log('_suppr 5 - test ');
       this._deleteMultiLinesSelections();
     }
-    e.preventDefault();
+    event.preventDefault();
     return false;
   };
 
@@ -934,26 +1179,21 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._backspace = function(e) {
-    var offset, prevLine, range, sel, startLine, startOffset, text, textNode, txt;
+    var cont, offset, range, sel, startCont, startLine, startOffset, textNode, txt, _ref;
     this._findLinesAndIsStartIsEnd();
     sel = this.currentSel;
-    if (this.isEmptyLine) {
-      this.isEmptyLine = false;
-      sel.range.deleteContents();
-    }
     startLine = sel.startLine;
     if (sel.range.collapsed) {
       if (sel.rangeIsStartLine) {
         if (startLine.linePrev !== null) {
           sel.range.setStartBefore(startLine.linePrev.line$[0].lastChild);
           sel.startLine = startLine.linePrev;
-          prevLine = startLine.linePrev.line$[0];
-          text = prevLine.lastChild.previousSibling.firstChild;
-          offset = text.length;
+          startCont = sel.range.startContainer;
+          startOffset = sel.range.startOffset;
+          _ref = selection.normalizeBP(startCont, startOffset), cont = _ref.cont, offset = _ref.offset;
           this._deleteMultiLinesSelections();
           range = rangy.createRange();
-          text = prevLine.lastChild.previousSibling.firstChild;
-          range.collapseToPoint(text, offset);
+          range.collapseToPoint(cont, offset);
           this.currentSel.sel.setSingleRange(range);
         }
       } else {
@@ -986,8 +1226,8 @@ exports.CNeditor = (function() {
     var endDiv, line, range, sel, startDiv, _results;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
-    startDiv = selection.getStartDiv(range);
-    endDiv = selection.getEndDiv(range, startDiv);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
     line = this._lines[startDiv.id];
     _results = [];
     while (true) {
@@ -1090,8 +1330,8 @@ exports.CNeditor = (function() {
       endLineID = startDivID;
     } else {
       range = this.getEditorSelection().getRangeAt(0);
-      startDiv = selection.getStartDiv(range);
-      endDiv = selection.getEndDiv(range, startDiv);
+      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
       startDivID = startDiv.id;
       endLineID = endDiv.id;
     }
@@ -1198,8 +1438,8 @@ exports.CNeditor = (function() {
     var endDiv, endLineID, l, line, lineTypeTarget, range, sel, startDiv, _results;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
-    startDiv = selection.getStartDiv(range);
-    endDiv = selection.getEndDiv(range, startDiv);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
     endLineID = endDiv.id;
     line = this._lines[startDiv.id];
     _results = [];
@@ -1295,14 +1535,8 @@ exports.CNeditor = (function() {
     } else {
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
-      startDiv = selection.getStartDiv(range);
-      endDiv = selection.getEndDiv(range, startDiv);
-    }
-    if (startDiv.nodeName !== "DIV") {
-      startDiv = $(startDiv).parents("div")[0];
-    }
-    if (endDiv.nodeName !== "DIV") {
-      endDiv = $(endDiv).parents("div")[0];
+      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
     }
     endLineID = endDiv.id;
     line = this._lines[startDiv.id];
@@ -1415,8 +1649,8 @@ exports.CNeditor = (function() {
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
     }
-    startDiv = selection.getStartDiv(range);
-    endDiv = selection.getEndDiv(range, startDiv);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
     endLineID = endDiv.id;
     line = this._lines[startDiv.id];
     _results = [];
@@ -1500,7 +1734,7 @@ exports.CNeditor = (function() {
         targetLineDepthRel: startLine.lineDepthRel
       });
       range4sel = rangy.createRange();
-      range4sel.collapseToPoint(newLine.line$[0].firstChild, 0);
+      range4sel.collapseToPoint(newLine.line$[0].firstChild.firstChild, 0);
       return currSel.sel.setSingleRange(range4sel);
     } else if (currSel.rangeIsStartLine) {
       newLine = this._insertLineBefore({
@@ -1594,28 +1828,28 @@ exports.CNeditor = (function() {
   };
 
   /**
-  # Delete the user multi line selection
-  # Prerequisite : at least 2 different lines must be selected
-  # If startLine and endLine are specified, lines included between these two
-  # are deleted (including startLine & endLine.
-  # @param  {[line]} startLine [optional] if exists, the whole line will be taken
-  # @param  {[line]} endLine   [optional] if exists, the whole line will be taken
+  # Delete the user multi line selection :
+  #    * The 2 lines (selected of given in param) must be distinct
+  #    * If no params, @currentSel will be used to find the lines to delete
+  #    * Carret is positioned at the end of the line before startLine.
+  #    * startLine, endLine and lines between are deleted
+  # @param  {[line]} startLine [optional] if exists, the whole line will be deleted
+  # @param  {[line]} endLine   [optional] if exists, the whole line will be deleted
   # @return {[none]}           [nothing]
   */
 
 
   CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
     var curSel, deltaDepth, endLineDepth, endOfLineFragment, nextEndLine, prevStartLine, range, replaceCaret, startContainer, startLineDepth, startOffset;
-    if (this.currentSel == null) {
-      console.log("no selection, can't delete multi lines");
-      return null;
+    if (startLine === null || endLine === null) {
+      throw new Error('CEeditor._deleteMultiLinesSelections called with a null param');
     }
     if (startLine != null) {
       range = rangy.createRange();
       selection.cleanSelection(startLine, endLine, range);
       replaceCaret = false;
     } else {
-      curSel = this._findLines();
+      curSel = this.currentSel;
       range = curSel.range;
       startContainer = range.startContainer;
       startOffset = range.startOffset;
@@ -1634,16 +1868,14 @@ exports.CNeditor = (function() {
     deltaDepth = endLineDepth - startLineDepth;
     endOfLineFragment = selection.cloneEndFragment(range, endLine);
     this._adaptEndLineType(startLine, endLine);
-    this._deleteSelectedLines(range);
+    range.deleteContents();
     this._addMissingFragment(startLine, endOfLineFragment);
     this._removeEndLine(startLine, endLine);
     this._adaptDepth(startLine, startLineDepth, endLineDepth, deltaDepth);
     if (replaceCaret) {
-      return this._setCaret(startContainer, startOffset, startLine, nextEndLine);
+      return this._setCaret(startContainer, startOffset);
     }
   };
-
-  CNeditor.prototype._trimLine = function(startLine) {};
 
   CNeditor.prototype._adaptDepth = function(startLine, startLineDepthAbs, endLineDepthAbs, deltaDepth) {
     var deltaDepth1stLine, depthSibling, firstLineAfterSiblingsOfDeleted, line, newDepth, prevSiblingType;
@@ -1661,8 +1893,10 @@ exports.CNeditor = (function() {
     }
     if (line !== null) {
       if (line.lineType[0] === 'L') {
-        line.lineType = 'T' + line.lineType[1];
-        line.line$.prop("class", "" + line.lineType + "-" + line.lineDepthAbs);
+        if (!(startLine.lineType[1] === line.lineType[1] && startLine.lineDepthAbs === line.lineDepthAbs)) {
+          line.lineType = 'T' + line.lineType[1];
+          line.line$.prop('class', "" + line.lineType + "-" + line.lineDepthAbs);
+        }
       }
       firstLineAfterSiblingsOfDeleted = line;
       depthSibling = line.lineDepthAbs;
@@ -1682,36 +1916,26 @@ exports.CNeditor = (function() {
     }
   };
 
-  CNeditor.prototype._deleteSelectedLines = function(range) {
-    return range.deleteContents();
-  };
-
-  CNeditor.prototype._addMissingFragment = function(startLine, endOfLineFragment) {
-    var endLine, l, newText, startContainer, startFrag, startOffset, _ref;
-    startFrag = endOfLineFragment.childNodes[0];
-    if (startLine.line$[0].lastChild === null) {
-      startLine.line$.prepend('<span></span>');
+  CNeditor.prototype._addMissingFragment = function(line, fragment) {
+    var lastNode, lineEl, newText, node, startFrag, startOffset, _ref;
+    startFrag = fragment.childNodes[0];
+    lineEl = line.line$[0];
+    if (lineEl.lastChild === null) {
+      node = document.createElement('span');
+      lineEl.insertBefore(node, lineEl.firstChild);
     }
-    if (startLine.line$[0].lastChild.nodeName === 'BR') {
-      startLine.line$[0].removeChild(startLine.line$[0].lastChild);
+    if (lineEl.lastChild.nodeName === 'BR') {
+      lineEl.removeChild(lineEl.lastChild);
     }
-    endLine = startLine.line$[0].lastChild;
-    if ((startFrag.tagName === (_ref = endLine.tagName) && _ref === 'SPAN') && startFrag.className === endLine.className) {
-      startOffset = endLine.textContent.length;
-      newText = endLine.textContent + startFrag.textContent;
-      endLine.innerHTML = newText;
-      startContainer = endLine.firstChild;
-      l = 1;
-      while (l < endOfLineFragment.childNodes.length) {
-        $(endOfLineFragment.childNodes[l]).appendTo(startLine.line$);
-        l++;
-      }
-      if ((startContainer != null ? startContainer.nodeName : void 0) === '#text') {
-        startContainer = endLine.nextLine;
-      }
-      return startContainer;
+    lastNode = lineEl.lastChild;
+    if ((startFrag.tagName === (_ref = lastNode.tagName) && _ref === 'SPAN') && startFrag.className === lastNode.className) {
+      startOffset = lastNode.textContent.length;
+      newText = lastNode.textContent + startFrag.textContent;
+      lastNode.firstChild.textContent = newText;
+      fragment.removeChild(fragment.firstChild);
+      return lineEl.appendChild(fragment);
     } else {
-      startLine.line$.append(endOfLineFragment);
+      lineEl.appendChild(fragment);
       return null;
     }
   };
@@ -1738,23 +1962,8 @@ exports.CNeditor = (function() {
     }
   };
 
-  CNeditor.prototype._setCaret = function(startContainer, startOffset, startLine, nextEndLine, prevStartLine) {
+  CNeditor.prototype._setCaret = function(startContainer, startOffset) {
     var range;
-    if (startOffset === 0) {
-      if ((prevStartLine != null) || (nextEndLine != null)) {
-        if (startLine != null) {
-          startContainer = startLine.line$[0].firstChild.firstChild;
-        } else {
-          startContainer = nextEndLine.line$[0];
-        }
-      } else {
-        console.log("ctrl a");
-        startContainer = startLine.line$[0].lastChild;
-        console.log(startContainer);
-      }
-    } else {
-      startContainer = startLine.line$[0].firstChild.firstChild;
-    }
     range = rangy.createRange();
     range.collapseToPoint(startContainer, startOffset);
     return this.currentSel.sel.setSingleRange(range);
@@ -1770,7 +1979,8 @@ exports.CNeditor = (function() {
   #     sourceLine         : line after which the line will be added
   #     fragment           : [optionnal] - an html fragment that will be added
   #                          in the div of the line.
-  #     innerHTML          : [optionnal] - an html string that will be added
+  #     innerHTML          : [optionnal] - if no fragment is given, an html
+  #                          string that will be added to the new line.
   #     targetLineType     : type of the line to add
   #     targetLineDepthAbs : absolute depth of the line to add
   #     targetLineDepthRel : relative depth of the line to add
@@ -1778,7 +1988,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._insertLineAfter = function(p) {
-    var lineID, newLine, newLine$, nextSibling, sourceLine;
+    var lineID, newLine, newLine$, nextSibling, node, sourceLine;
     this._highestId += 1;
     lineID = 'CNID_' + this._highestId;
     if (p.fragment != null) {
@@ -1793,8 +2003,14 @@ exports.CNeditor = (function() {
         newLine$.append('<br>');
       }
     } else {
-      newLine$ = $("<div id='" + lineID + "' class='" + p.targetLineType + "-" + p.targetLineDepthAbs + "'></div>");
-      newLine$.append($('<span></span><br>'));
+      newLine = document.createElement('div');
+      newLine.id = lineID;
+      newLine.setAttribute('class', p.targetLineType + '-' + p.targetLineDepthAbs);
+      node = document.createElement('span');
+      node.appendChild(document.createTextNode(''));
+      newLine.appendChild(node);
+      newLine.appendChild(document.createElement('br'));
+      newLine$ = $(newLine);
     }
     sourceLine = p.sourceLine;
     nextSibling = sourceLine.line$[0].nextSibling;
@@ -1827,6 +2043,7 @@ exports.CNeditor = (function() {
   # p = 
   #     sourceLine         : ID of the line before which a line will be added
   #     fragment           : [optionnal] - an html fragment that will be added
+  #                          the fragment is not supposed to end with a <br>
   #     targetLineType     : type of the line to add
   #     targetLineDepthAbs : absolute depth of the line to add
   #     targetLineDepthRel : relative depth of the line to add
@@ -1834,16 +2051,22 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._insertLineBefore = function(p) {
-    var lineID, newLine, newLine$, sourceLine;
+    var lineID, newLine, newLine$, newLineEl, node, sourceLine;
     this._highestId += 1;
     lineID = 'CNID_' + this._highestId;
-    newLine$ = $("<div id='" + lineID + "' class='" + p.targetLineType + "-" + p.targetLineDepthAbs + "'></div>");
+    newLineEl = document.createElement('div');
+    newLineEl.id = lineID;
+    newLineEl.setAttribute('class', p.targetLineType + '-' + p.targetLineDepthAbs);
     if (p.fragment != null) {
-      newLine$.append(p.fragment);
-      newLine$.append($('<br>'));
+      newLineEl.appendChild(p.fragment);
+      newLineEl.appendChild(document.createElement('br'));
     } else {
-      newLine$.append($('<span></span><br>'));
+      node = document.createElement('span');
+      node.appendChild(document.createTextNode(''));
+      newLineEl.appendChild(node);
+      newLineEl.appendChild(document.createElement('br'));
     }
+    newLine$ = $(newLineEl);
     sourceLine = p.sourceLine;
     newLine$ = newLine$.insertBefore(sourceLine.line$);
     newLine = {
@@ -1861,25 +2084,6 @@ exports.CNeditor = (function() {
     }
     sourceLine.linePrev = newLine;
     return newLine;
-  };
-
-  CNeditor.prototype._findStartLine = function(startContainer) {
-    var startLine;
-    if (startContainer.nodeName === 'DIV') {
-      return startLine = this._lines[startContainer.id];
-    } else {
-      return startLine = this._lines[selection.getLineDiv(startContainer).id];
-    }
-  };
-
-  CNeditor.prototype._findEndLine = function(endContainer) {
-    var endLine;
-    if ((endContainer.id != null) && endContainer.id.substr(0, 5) === 'CNID_') {
-      endLine = this._lines[endContainer.id];
-    } else {
-      endLine = this._lines[selection.getLineDiv(endContainer).id];
-    }
-    return endLine;
   };
 
   /* ------------------------------------------------------------------------
@@ -1902,8 +2106,8 @@ exports.CNeditor = (function() {
     if (this.currentSel === null) {
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
-      endLine = this._findEndLine(range.endContainer);
-      startLine = this._findStartLine(range.startContainer);
+      startLine = this._lines[selection.getLineDiv(range.startContainer).id];
+      endLine = this._lines[selection.getLineDiv(range.endContainer).id];
       this.currentSel = {
         sel: sel,
         range: range,
@@ -1938,68 +2142,123 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._findLinesAndIsStartIsEnd = function() {
-    var endContainer, endLine, endLineDiv, initialEndOffset, initialStartOffset, nextSibling, parentEndContainer, parentStartContainer, range, rangeIsEndLine, rangeIsStartLine, sel, startContainer, startLine;
+    var div, endContainer, endLine, initialEndOffset, initialStartOffset, isEnd, isStart, noMatter, range, sel, startContainer, startLine, _ref, _ref1;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
     startContainer = range.startContainer;
     endContainer = range.endContainer;
     initialStartOffset = range.startOffset;
     initialEndOffset = range.endOffset;
-    if ((endContainer.id != null) && endContainer.id.substr(0, 5) === 'CNID_') {
-      endLine = this._lines[endContainer.id];
-      rangeIsEndLine = endContainer.children.length < initialEndOffset || endContainer.children[initialEndOffset].nodeName === "BR";
-    } else if ($(endContainer).parents("div").length > 0) {
-      endLineDiv = selection.getLineDiv(endContainer);
-      endLine = this._lines[endLineDiv.id];
-      rangeIsEndLine = false;
-      if (endContainer.nodeType === Node.TEXT_NODE) {
-        rangeIsEndLine = endContainer.nextSibling === null && initialEndOffset === endContainer.textContent.length;
-      } else {
-        rangeIsEndLine = endContainer.nodeName === 'BR' || (endContainer.nextSibling.nodeName === 'BR' && endContainer.childNodes.length === initialEndOffset);
-      }
-      parentEndContainer = endContainer.parentNode;
-      while (rangeIsEndLine && parentEndContainer.nodeName !== "DIV") {
-        nextSibling = parentEndContainer.nextSibling;
-        rangeIsEndLine = nextSibling === null || nextSibling.nodeName === 'BR';
-        parentEndContainer = parentEndContainer.parentNode;
-      }
-    } else {
-      endLine = this._lines["CNID_1"];
-    }
-    if (startContainer.nodeName === 'DIV') {
-      startLine = this._lines[startContainer.id];
-      rangeIsStartLine = initialStartOffset === 0;
-    } else if ($(startContainer).parents("div").length > 0) {
-      startLine = this._lines[selection.getLineDiv(startContainer).id];
-      if (startContainer.nodeType === Node.TEXT_NODE) {
-        rangeIsStartLine = endContainer.previousSibling === null && initialStartOffset === 0;
-      } else {
-        rangeIsStartLine = initialStartOffset === 0;
-      }
-      parentStartContainer = startContainer.parentNode;
-      while (rangeIsStartLine && parentStartContainer.nodeName !== "DIV") {
-        rangeIsStartLine = parentStartContainer.previousSibling === null;
-        parentStartContainer = parentStartContainer.parentNode;
-      }
-    } else {
-      startLine = this._lines["CNID_1"];
-    }
-    if ((endLine != null ? endLine.line$[0].innerHTML : void 0) === "<span></span><br>") {
-      rangeIsEndLine = true;
-    }
-    if ((startLine != null ? startLine.line$[0].innerHTML : void 0) === "<span></span><br>") {
-      rangeIsStartLine = true;
-    }
+    _ref = selection.getLineDivIsStartIsEnd(startContainer, initialStartOffset), div = _ref.div, isStart = _ref.isStart, noMatter = _ref.noMatter;
+    startLine = this._lines[div.id];
+    _ref1 = selection.getLineDivIsStartIsEnd(endContainer, initialEndOffset), div = _ref1.div, noMatter = _ref1.noMatter, isEnd = _ref1.isEnd;
+    endLine = this._lines[div.id];
     this.currentSel = {
       sel: sel,
       range: range,
       startLine: startLine,
       endLine: endLine,
-      rangeIsStartLine: rangeIsStartLine,
-      rangeIsEndLine: rangeIsEndLine
+      rangeIsStartLine: isStart,
+      rangeIsEndLine: isEnd
     };
     return this.currrentSel;
   };
+
+  /* OLD
+  _findLinesAndIsStartIsEnd : ->
+      # if this.currentSel == null
+          
+      # 1- Variables
+      sel                = @getEditorSelection()
+      range              = sel.getRangeAt(0)
+      startContainer     = range.startContainer
+      endContainer       = range.endContainer
+      initialStartOffset = range.startOffset
+      initialEndOffset   = range.endOffset
+  
+      # 2- find endLine and the rangeIsEndLine
+      # endContainer refers to a div of a line
+      if endContainer.id? and endContainer.id.substr(0,5) == 'CNID_'
+          endLine = @_lines[ endContainer.id ]
+          # rangeIsEndLine if endOffset points on the last node of the div
+          # or on the one before the last which is a <br>
+          rangeIsEndLine = endContainer.children.length < initialEndOffset or endContainer.children[initialEndOffset].nodeName=="BR"
+      # means the range ends inside a div (span, textNode...)
+      else if $(endContainer).parents("div").length > 0
+          endLineDiv = selection.getLineDiv(endContainer)
+          endLine = @_lines[endLineDiv.id]
+          # rangeIsEndLine if the selection is at the end of the
+          # endContainer and of each of its parents (this approach is more
+          # robust than just considering that the line is a flat
+          # succession of span : maybe one day there will be a table for
+          # instance...)
+          rangeIsEndLine = false
+          # case of a textNode: it must have no nextSibling
+          # and offset must be its length
+          if endContainer.nodeType == Node.TEXT_NODE
+              rangeIsEndLine = endContainer.nextSibling == null and
+                               initialEndOffset == endContainer.textContent.length
+          # case of another node : it must be a br;
+          # or be followed by a br and have maximal offset.
+          else
+              rangeIsEndLine = endContainer.nodeName=='BR' or
+                               (endContainer.nextSibling.nodeName=='BR' and
+                               endContainer.childNodes.length==initialEndOffset)
+              #nextSibling    = endContainer.nextSibling
+              #rangeIsEndLine = (nextSibling == null or nextSibling.nodeName=='BR')
+              #(nextSibling == null or (initialEndOffset==parentEndContainer.textContent.length and nextSibling.nodeName=='BR'))
+          parentEndContainer = endContainer.parentNode
+          while rangeIsEndLine and parentEndContainer.nodeName != "DIV"
+              nextSibling = parentEndContainer.nextSibling
+              rangeIsEndLine = (nextSibling == null or nextSibling.nodeName=='BR')
+              # rangeIsEndLine = endContainer.nodeName=='BR' or
+              #                  (nextSibling.nodeName=='BR' and
+              #                  endContainer.childNodes.length==initialEndOffset)
+              parentEndContainer = parentEndContainer.parentNode
+      else
+          endLine = @_lines["CNID_1"]
+      
+      # 3- find startLine and rangeIsStartLine
+      if startContainer.nodeName == 'DIV' # startContainer refers to a div of a line
+          startLine = @_lines[ startContainer.id ]
+          rangeIsStartLine = initialStartOffset == 0
+          
+      else if $(startContainer).parents("div").length > 0
+          # means the range starts inside a div (span, textNode...)
+      
+          startLine = @_lines[selection.getLineDiv(startContainer).id]
+          # case of a textNode: it must have no previousSibling nor offset
+          if startContainer.nodeType == Node.TEXT_NODE
+              rangeIsStartLine = endContainer.previousSibling == null and
+                                 initialStartOffset == 0
+          else
+              rangeIsStartLine = initialStartOffset == 0
+          
+          parentStartContainer = startContainer.parentNode
+          while rangeIsStartLine && parentStartContainer.nodeName != "DIV"
+              rangeIsStartLine = parentStartContainer.previousSibling == null
+              parentStartContainer = parentStartContainer.parentNode
+      else
+          startLine = @_lines["CNID_1"]
+  
+      # Special case of an "empty" line (<span><""></span><br>)
+      if endLine?.line$[0].innerHTML == "<span></span><br>"
+          rangeIsEndLine = true
+      if startLine?.line$[0].innerHTML == "<span></span><br>"
+          rangeIsStartLine = true
+  
+      # 4- build result
+      @currentSel =
+          sel              : sel
+          range            : range
+          startLine        : startLine
+          endLine          : endLine
+          rangeIsStartLine : rangeIsStartLine
+          rangeIsEndLine   : rangeIsEndLine
+  
+      @currrentSel
+  */
+
 
   /*  -----------------------------------------------------------------------
   #   _readHtml
@@ -2093,8 +2352,8 @@ exports.CNeditor = (function() {
     var cloneLine, endDiv, endLineID, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
-    startDiv = selection.getStartDiv(range);
-    endDiv = selection.getEndDiv(range, startDiv);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
     startLineID = startDiv.id;
     endLineID = endDiv.id;
     lineStart = this._lines[startLineID];
@@ -2201,8 +2460,8 @@ exports.CNeditor = (function() {
     var cloneLine, endDiv, endLineID, isSecondLine, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
-    startDiv = selection.getStartDiv(range);
-    endDiv = selection.getEndDiv(range, startDiv);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
     startLineID = startDiv.id;
     endLineID = endDiv.id;
     lineStart = this._lines[startLineID];
@@ -2465,7 +2724,7 @@ exports.CNeditor = (function() {
       } else if (event.clipboardData.types === "text/plain") {
         mySandBox.innerHTML = event.clipboardData.getData('text/plain');
       } else {
-        mySandBox.innerHTML = "";
+        mySandBox.innerHTML = " ";
       }
       this._waitForPasteData(mySandBox);
       if (event.preventDefault) {
@@ -2474,7 +2733,7 @@ exports.CNeditor = (function() {
       }
       return false;
     } else {
-      mySandBox.innerHTML = "";
+      mySandBox.innerHTML = " ";
       this._waitForPasteData(mySandBox);
       return true;
     }

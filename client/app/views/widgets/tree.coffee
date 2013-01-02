@@ -348,8 +348,7 @@ class exports.Tree
                     onGetFormData: (e, data, keyCode) ->
                         textInput = this.input().val()
                         data[0] = 'input': textInput, 'form': textInput
-                        if textInput == ""
-                            searchFunction("")
+                        searchFunction "" if textInput is ""
                                 
                 autocomplete:
                     ###*

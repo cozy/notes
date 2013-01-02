@@ -808,7 +808,7 @@ window.require.register("routers/main_router", function(exports, require, module
         trigger: false
       });
       return this._initializeTree("tree-node-all", function() {
-        return app.homeView.selectNoteIfTreeLoaded();
+        return app.homeView.selectNoteIfIframeLoaded();
       });
     };
 
@@ -817,7 +817,7 @@ window.require.register("routers/main_router", function(exports, require, module
         return app.homeView.selectNote("tree-node-all");
       } else {
         return this._initializeTree("tree-node-all", function() {
-          return app.homeView.selectNoteIfTreeLoaded();
+          return app.homeView.selectNoteIfIframeLoaded();
         });
       }
     };
@@ -827,7 +827,7 @@ window.require.register("routers/main_router", function(exports, require, module
         return app.homeView.selectNote(noteId);
       } else {
         return this._initializeTree(noteId, function() {
-          return app.homeView.selectNoteIfTreeLoaded();
+          return app.homeView.selectNoteIfIframeLoaded();
         });
       }
     };
@@ -898,7 +898,7 @@ window.require.register("views/home_view", function(exports, require, module) {
 
       this.onSearch = __bind(this.onSearch, this);
 
-      this.selectNoteIfTreeLoaded = __bind(this.selectNoteIfTreeLoaded, this);
+      this.selectNoteIfIframeLoaded = __bind(this.selectNoteIfIframeLoaded, this);
 
       this.onIFrameLoaded = __bind(this.onIFrameLoaded, this);
       return HomeView.__super__.constructor.apply(this, arguments);
@@ -991,10 +991,11 @@ window.require.register("views/home_view", function(exports, require, module) {
       if (this.treeLoaded) {
         this.selectNote(note_uuid);
       }
+      this.treeLoaded = true;
       return this.iframe = $("iframe");
     };
 
-    HomeView.prototype.selectNoteIfTreeLoaded = function() {
+    HomeView.prototype.selectNoteIfIframeLoaded = function() {
       this.treeLoaded = true;
       if (this.iframeLoaded) {
         return this.selectNote(this.note_uuid);
@@ -1004,8 +1005,8 @@ window.require.register("views/home_view", function(exports, require, module) {
     HomeView.prototype.onWindowResized = function() {
       var windowHeight;
       windowHeight = $(window).height();
-      this.$("#note-style").height(windowHeight - 160);
-      return this.$("#editor").height(windowHeight - 260);
+      this.$("#note-style").height(windowHeight - 140);
+      return this.$("#editor").height(windowHeight - 240);
     };
 
     HomeView.prototype.onSearch = function(query) {
@@ -1248,10 +1249,6 @@ window.require.register("views/note_view", function(exports, require, module) {
       this.noteFullTitle = this.$('#note-full-title');
       this.breadcrumb = this.$('#note-full-breadcrumb');
       this.editor = new CNeditor(this.$('#editorIframe')[0], this.onIFrameLoaded);
-      this.$('#editorIframe').niceScroll({
-        cursorcolor: "#CCC",
-        enablekeyboard: false
-      });
       this.configureButtons();
       this.setTitleListeners();
       this.setSaveListeners();

@@ -89,19 +89,20 @@ class exports.HomeView extends Backbone.View
     onIFrameLoaded: =>
         @iframeLoaded = true
         @selectNote note_uuid if @treeLoaded
+        @treeLoaded = true
         @iframe = $ "iframe"
 
     # If tree is loaded after iframe, it displays the note that should be
     # loaded first.
-    selectNoteIfTreeLoaded: =>
+    selectNoteIfIframeLoaded: =>
         @treeLoaded = true
         @selectNote(@note_uuid) if @iframeLoaded
         
     # Small trick to adapt editor size when window is resized.
     onWindowResized: ->
         windowHeight = $(window).height()
-        @$("#note-style").height(windowHeight - 160)
-        @$("#editor").height(windowHeight - 260)
+        @$("#note-style").height(windowHeight - 140)
+        @$("#editor").height(windowHeight - 240)
 
     onSearch: (query) =>
         if query.length > 0
