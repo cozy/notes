@@ -20254,183 +20254,6 @@ selection.normalizeBP = function(cont, offset) {
   return res;
 };
 
-/* old normalize :
-
-selection.normalize = (range) =>
-    startDiv = selection.getStartDiv range
-    endDiv   = selection.getEndDiv range, startDiv
-
-    isEmptyLine = startDiv == endDiv and startDiv.innerHTML == '<span></span><br>'
-
-    startContainer = range.startContainer
-
-    if startContainer.nodeName == "BODY"
-        selection.handleBodyStart range, startContainer, isEmptyLine
-
-    else if startContainer.nodeName == "DIV"
-        selection.handleDivStart range, startContainer
-
-    else if startContainer.nodeName in ["SPAN","IMG","A"]
-        selection.handleTextEltStart range, startContainer
-
-    # if startC is a textNode ; do nothing
-
-    endContainer = range.endContainer
-
-    if endContainer.nodeName == "BODY"
-        selection.handleBodyEnd range, endContainer
-
-    if endContainer.nodeName == "DIV"
-        selection.handleDivEnd range, endContainer
-
-    else if endContainer.nodeName in ["SPAN","IMG","A"]
-        selection.handleTextEltEnd range, endContainer
-
-    # if endC is a textNode ;   do nothing
-
-    return range
-
-
-# Put selection start at the beginning of the first line of given editor body
-selection.handleBodyStart = (range, startContainer) ->
-    elt = selection.getFirstLineFromBody startContainer
-    selection.putStartOnStart range, elt
-
-# Put selection start at the end of the last line of given editor body
-selection.handleBodyEnd = (range, endContainer) ->
-    elt = selection.getLastLineFromBody endContainer
-    selection.putEndAtEndOfLine range, elt
-
-# Put selection start at the beginning of a workable element in given div 
-# empty line are filled with a en empty span
-# if caret is between two children <div>|<></>|<></> <br> </div>
-#      pust start on start offset
-# if caret is around <br> <div> <></> <></>|<br>|</div>
-selection.handleDivStart = (range, startContainer, isEmptyLine) ->
-    if isEmptyLine
-        selection.putStartOnFirstChild range, startContainer
-    else if range.startOffset < startContainer.childNodes.length - 1
-        selection.putStartOnOffset range, startContainer, range.startOffset
-    else
-        selection.putStartAtEndOfLine range, startContainer
- 
-# if caret is between two children <div>|<></>|<></> <br> </div>
-# if caret is around <br>          <div> <></> <></>|<br>|</div>
-selection.handleDivEnd = (range, endContainer) ->
-    if range.endOffset < endContainer.childNodes.length - 1
-        selection.putEndOnOffset range, endContainer, range.endOffset
-    else
-        selection.putEndAtEndOfLine range, endContainer
-
-# Put selection start at the beginning of a workable element around given elt. 
-selection.handleTextEltStart = (range, startContainer) ->
-    # 2.0 if startC is empty
-    if startContainer.firstChild == null || startContainer.textContent.length == 0
-        selection.putStartOnEnd range, startContainer
-    # 2.1 if caret is between two textNode children
-    else if range.startOffset < startContainer.childNodes.length
-        selection.putStartOnNextChild range, startContainer
-    # 2.2 if caret is after last textNode
-    else
-        selection.putStartOnLastChildEnd range, startContainer
-
-# 2.0 if endC is empty
-# 2.1 if caret is between two textNode children
-# 2.2 if caret is after last textNode
-selection.handleTextEltEnd = (range, endContainer) ->
-    if endContainer.firstChild == null || endContainer.textContent.length == 0
-        selection.putEndOnEnd range, endContainer
-    if range.endOffset < endContainer.childNodes.length
-        selection.putEndOnNextChild range, endContainer
-    else
-        selection.putEndOnLastChildEnd range, endContainer
-
-
-# Get first line from given editor body.
-selection.getFirstLineFromBody = (body) ->
-    body.children[1].firstChild
-
-# Get first line from given editor body.
-selection.getLastLineFromBody = (body) ->
-    body.children[1].lastChild
-
-# Put start caret at beginning of first child of given container
-selection.putStartOnFirstChild = (range, container) ->
-    elt = container.firstChild
-    selection.putStartOnStart range, elt
-
-# Put start caret at offset position  of first child of given container
-selection.putStartOnOffset = (range, container, offset) ->
-    elt = container.childNodes[offset]
-    selection.putStartOnStart range, elt
-
-selection.putEndOnOffset = (range, container, offset) ->
-    elt = container.childNodes[offset]
-    selection.putEndOnStart range, elt
-
-# Put selection start at the en of given line. 
-# not sure about the result,
-# TODO: code should be tested/verified
-selection.putStartOnNextChild  = (range, container) ->
-    elt = container.childNodes[range.startOffset]
-    range.setStart elt, 0
-
-selection.putEndOnNextChild  = (range, container) ->
-    elt = container.childNodes[range.endOffset]
-    range.setEnd elt, 0
-
-#TODO:  Check if it should handle the br at the end of the line.
-selection.putStartOnLastChildEnd = (range, container) ->
-    elt = container.lastChild
-    offset = elt.data.length
-    range.setStart elt, offset
-
-selection.putEndOnLastChildEnd = (range, container) ->
-    elt = container.lastChild
-    offset = elt.data.length
-    range.setEnd elt, offset
-
-# place caret at the end of the last child (before br)
-# TODO: compare with putStartOnLastChildEnd 
-selection.putStartAtEndOfLine = (range, container) ->
-    elt = container.lastChild.previousElementSibling
-    if elt?
-        selection.putStartOnEnd range, elt
-    else if container.lastChild?
-        selection.putStartOnEnd container.lastChild
-    else
-        console.log "Normalize: no where to put selection start."
-         
-# TOOD: replace by putStartOnLastChildEnd  ?
-selection.putEndAtEndOfLine = (range, container) ->
-    elt = container.lastChild.previousElementSibling
-    if elt?
-        selection.putEndOnEnd range, elt
-    else if container.lastChild?
-        selection.putEndOnEnd container.lastChild
-    else
-        console.log "Normalize: no where to put selection start."
-
-selection.putStartOnEnd = (range, elt) ->
-    if elt?.lastChild?
-        offset = elt.lastChild.textContent.length
-        if offset == 0
-            elt.lastChild.data = " "
-            offset = 1
-        range.setStart(elt.lastChild, offset)
-    else if elt?
-        blank = document.createTextNode " "
-        elt.appendChild blank
-        range.setStart(blank, 0)
-
-
-selection.putEndOnEnd = (range, elt) ->
-    if elt?
-        range.setEnd elt.nextSibling, 0
-    range
-*/
-
-
 selection._getLineDiv = function(elt) {
   var parent;
   parent = elt;
@@ -20560,7 +20383,7 @@ exports.selection = selection;
 #   _firstLine        : points the first line : TODO : not taken into account
 */
 
-var CNeditor, md2cozy, selection,
+var CNeditor, Line, md2cozy, selection,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 if (typeof require !== "undefined" && require !== null) {
@@ -20571,6 +20394,121 @@ if (typeof require !== "undefined" && require !== null) {
     selection = require('./selection').selection;
   }
 }
+
+/**
+ * line$        : 
+ * lineID       : 
+ * lineType     : 
+ * lineDepthAbs : 
+ * lineDepthRel : 
+ * lineNext     : 
+ * linePrev     :
+*/
+
+
+Line = (function() {
+  /**
+   * If no arguments, returns an empty object (only methods), otherwise
+   * constructs a full line. The dom element of the line is inserted according
+   * to the previous or next line given in the arguments.
+   * @param  {Array}  Array of parameters :
+   *   [ 
+          editor        , # 
+          type          , # 
+          depthAbs      , # 
+          depthRelative , # 
+          prevLine      , # The prev line, null if nextLine is given
+          nextLine      , # The next line, null if prevLine is given
+          fragment        # [optional] a fragment to insert in the line, no br at the end
+        ]
+  */
+
+  function Line() {
+    var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
+    if (arguments.length === 0) {
+      return;
+    } else {
+      editor = arguments[0], type = arguments[1], depthAbs = arguments[2], depthRelative = arguments[3], prevLine = arguments[4], nextLine = arguments[5], fragment = arguments[6];
+    }
+    editor._highestId += 1;
+    lineID = 'CNID_' + editor._highestId;
+    newLineEl = document.createElement('div');
+    newLineEl.id = lineID;
+    newLineEl.setAttribute('class', type + '-' + depthAbs);
+    if (fragment != null) {
+      newLineEl.appendChild(fragment);
+      newLineEl.appendChild(document.createElement('br'));
+    } else {
+      node = document.createElement('span');
+      node.appendChild(document.createTextNode(''));
+      newLineEl.appendChild(node);
+      newLineEl.appendChild(document.createElement('br'));
+    }
+    this.line$ = $(newLineEl);
+    if (prevLine != null) {
+      this.linePrev = prevLine;
+      linesDiv = prevLine.line$[0].parentNode;
+      if (prevLine.lineNext != null) {
+        nextL = prevLine.lineNext;
+        linesDiv.insertBefore(newLineEl, nextL.line$[0]);
+        this.lineNext = nextL;
+        nextL.linePrev = this;
+      } else {
+        linesDiv.appendChild(newLineEl);
+        this.lineNext = null;
+      }
+      prevLine.lineNext = this;
+    } else if (nextLine != null) {
+      linesDiv = nextLine.line$[0].parentNode;
+      this.lineNext = nextLine;
+      linesDiv.insertBefore(newLineEl, nextLine.line$[0]);
+      if (nextLine.linePrev != null) {
+        this.linePrev = nextLine.linePrev;
+        nextLine.linePrev.lineNext = this;
+      } else {
+        this.linePrev = null;
+      }
+      nextLine.linePrev = this;
+    }
+    this.lineID = lineID;
+    this.lineType = type;
+    this.lineDepthAbs = depthAbs;
+    this.lineDepthRel = depthRelative;
+    editor._lines[lineID] = this;
+  }
+
+  Line.prototype.setType = function(type) {
+    this.lineType = type;
+    return this.line$.prop('class', "" + type + "-" + this.lineDepthAbs);
+  };
+
+  Line.prototype.setDepthAbs = function(absDepth) {
+    this.lineDepthAbs = absDepth;
+    return this.line$.prop('class', "" + this.lineType + "-" + absDepth);
+  };
+
+  Line.prototype.setTypeDepth = function(type, absDepth) {
+    this.lineType = type;
+    this.lineDepthAbs = absDepth;
+    return this.line$.prop('class', "" + type + "-" + absDepth);
+  };
+
+  return Line;
+
+})();
+
+Line.clone = function(line) {
+  var clone;
+  clone = new Line();
+  clone.line$ = line.line$.clone();
+  clone.lineID = line.lineID;
+  clone.lineType = line.lineType;
+  clone.lineDepthAbs = line.lineDepthAbs;
+  clone.lineDepthRel = line.lineDepthRel;
+  clone.linePrev = line.linePrev;
+  clone.lineNext = line.lineNext;
+  return clone;
+};
 
 exports.CNeditor = (function() {
   /*
@@ -20622,10 +20560,10 @@ exports.CNeditor = (function() {
         };
         _this._lastKey = null;
         _this.editorBody$.prop('__editorCtl', _this);
-        _this.editorBody$.on('keydown', _this._keyPressListener);
-        _this.editorBody$.on('mouseup', function() {
+        _this.linesDiv.addEventListener('keydown', _this._keyPressListener, true);
+        _this.linesDiv.addEventListener('mouseup', function() {
           return _this.newPosition = true;
-        });
+        }, true);
         _this.editorBody$.on('keyup', function() {
           return iframe$.trigger(jQuery.Event("onKeyUp"));
         });
@@ -20642,12 +20580,18 @@ exports.CNeditor = (function() {
     }
   }
 
+  CNeditor.prototype.setFocus = function() {
+    return this.linesDiv.focus();
+  };
+
   CNeditor.prototype.getEditorSelection = function() {
     return rangy.getIframeSelection(this.editorTarget);
   };
 
   CNeditor.prototype.saveEditorSelection = function() {
-    return rangy.saveSelection(rangy.dom.getIframeWindow(this.editorTarget));
+    var sel;
+    sel = rangy.getIframeSelection(this.editorTarget);
+    return rangy.serializeSelection(sel, true, this.linesDiv);
   };
 
   /* ------------------------------------------------------------------------
@@ -20681,13 +20625,19 @@ exports.CNeditor = (function() {
     }
   };
 
-  /* ------------------------------------------------------------------------
-  # Initialize the editor content from a html string
+  /** ------------------------------------------------------------------------
+   * Initialize the editor content from a html string
+   * The html string should not been pretified because of the spaces and
+   * charriage return. 
+   * If unPretify = true then a regex tries to set up things
   */
 
 
-  CNeditor.prototype.replaceContent = function(htmlContent) {
-    this.linesDiv.innerHTML = htmlContent;
+  CNeditor.prototype.replaceContent = function(htmlString, unPretify) {
+    if (unPretify) {
+      htmlString = htmlString.replace(/>[\n ]*</g, "><");
+    }
+    this.linesDiv.innerHTML = htmlString;
     return this._readHtml();
   };
 
@@ -20873,47 +20823,58 @@ exports.CNeditor = (function() {
         e.preventDefault();
         return;
     }
+    if (this._lastKey !== shortcut && (shortcut === '-tab' || shortcut === '-return' || shortcut === '-backspace' || shortcut === '-suppr' || shortcut === 'CtrlShift-down' || shortcut === 'CtrlShift-up' || shortcut === 'CtrlShift-left' || shortcut === 'CtrlShift-right' || shortcut === 'Ctrl-V' || shortcut === 'Shift-tab' || shortcut === '-space' || shortcut === '-other' || shortcut === 'Alt-A')) {
+      this._addHistory();
+    }
     this._lastKey = shortcut;
-    if (this.newPosition && (shortcut === '-other' || shortcut === '-space' || shortcut === '-suppr' || shortcut === '-backspace' || shortcut === '-return')) {
+    if (this.newPosition && (shortcut === '-other' || shortcut === '-space' || shortcut === 'Ctrl-V' || shortcut === '-suppr' || shortcut === '-backspace' || shortcut === '-return')) {
       this.newPosition = false;
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       selection.normalize(range);
     }
-    if ((keyCode === "left" || keyCode === "up" || keyCode === "right" || keyCode === "down" || keyCode === "pgUp" || keyCode === "pgDwn" || keyCode === "end" || keyCode === "home" || keyCode === "return" || keyCode === "suppr" || keyCode === "backspace") && (shortcut !== "CtrlShift-down" && shortcut !== "CtrlShift-up" && shortcut !== "CtrlShift-right" && shortcut !== "CtrlShift-left")) {
+    if ((keyCode === 'left' || keyCode === 'up' || keyCode === 'right' || keyCode === 'down' || keyCode === 'pgUp' || keyCode === 'pgDwn' || keyCode === 'end' || keyCode === 'home' || keyCode === 'return' || keyCode === 'suppr' || keyCode === 'backspace') && (shortcut !== 'CtrlShift-down' && shortcut !== 'CtrlShift-up' && shortcut !== 'CtrlShift-right' && shortcut !== 'CtrlShift-left')) {
       this.newPosition = true;
     }
     this.currentSel = null;
     switch (shortcut) {
-      case "-return":
+      case '-return':
         this._return();
         return e.preventDefault();
-      case "-tab":
+      case '-backspace':
+        this._backspace();
+        return e.preventDefault();
+      case '-tab':
         this.tab();
         return e.preventDefault();
-      case "-backspace":
-        return this._backspace(e);
-      case "-suppr":
-        return this._suppr(e);
-      case "CtrlShift-down":
-        this._moveLinesDown();
-        return e.preventDefault();
-      case "CtrlShift-up":
-        this._moveLinesUp();
-        return e.preventDefault();
-      case "Shift-tab":
+      case 'Shift-tab':
         this.shiftTab();
         return e.preventDefault();
-      case "Ctrl-A":
+      case '-suppr':
+        return this._suppr(e);
+      case 'CtrlShift-down':
+        this._moveLinesDown();
+        return e.preventDefault();
+      case 'CtrlShift-up':
+        this._moveLinesUp();
+        return e.preventDefault();
+      case 'Ctrl-A':
         selection.selectAll(this);
         return e.preventDefault();
-      case "Alt-A":
-        this._toggleLineType();
-        return e.preventDefault();
-      case "Ctrl-V":
+      case 'Alt-A':
+        this.toggleType();
+        e.preventDefault();
+        return console.log('EVENT (editor)');
+      case 'Ctrl-V':
         return true;
-      case "Ctrl-S":
-        $(this.editorTarget).trigger(jQuery.Event("saveRequest"));
+      case 'Ctrl-S':
+        $(this.editorTarget).trigger(jQuery.Event('saveRequest'));
+        return e.preventDefault();
+      case 'Ctrl-Z':
+        this.unDo();
+        return e.preventDefault();
+      case 'Ctrl-Y':
+        this.reDo();
         return e.preventDefault();
     }
   };
@@ -20936,10 +20897,9 @@ exports.CNeditor = (function() {
           this.currentSel.endLine = startLine.lineNext;
           this._deleteMultiLinesSelections();
         } else {
-          console.log('_suppr 2 - test ');
+
         }
       } else {
-        console.log('_suppr 3 - test ');
         textNode = this.currentSel.range.startContainer;
         startOffset = this.currentSel.range.startOffset;
         txt = textNode.textContent;
@@ -20949,10 +20909,8 @@ exports.CNeditor = (function() {
         this.currentSel.sel.setSingleRange(range);
       }
     } else if (this.currentSel.endLine === startLine) {
-      console.log('_suppr 4 - test ');
       this.currentSel.range.deleteContents();
     } else {
-      console.log('_suppr 5 - test ');
       this._deleteMultiLinesSelections();
     }
     event.preventDefault();
@@ -20966,7 +20924,7 @@ exports.CNeditor = (function() {
   */
 
 
-  CNeditor.prototype._backspace = function(e) {
+  CNeditor.prototype._backspace = function() {
     var cont, offset, range, sel, startCont, startLine, startOffset, textNode, txt, _ref;
     this._findLinesAndIsStartIsEnd();
     sel = this.currentSel;
@@ -20999,8 +20957,7 @@ exports.CNeditor = (function() {
     } else {
       this._deleteMultiLinesSelections();
     }
-    e.preventDefault();
-    return false;
+    return true;
   };
 
   /* ------------------------------------------------------------------------
@@ -21010,98 +20967,39 @@ exports.CNeditor = (function() {
   */
 
 
-  CNeditor.prototype.titleList = function() {
-    var endDiv, line, range, sel, startDiv, _results;
-    sel = this.getEditorSelection();
-    range = sel.getRangeAt(0);
-    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
-    line = this._lines[startDiv.id];
+  CNeditor.prototype.titleList = function(l) {
+    var endDiv, endLineID, line, range, startDiv, startDivID, _results;
+    if (l != null) {
+      startDivID = l.lineID;
+      endLineID = startDivID;
+    } else {
+      range = this.getEditorSelection().getRangeAt(0);
+      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+      startDivID = startDiv.id;
+      endLineID = endDiv.id;
+    }
+    line = this._lines[startDivID];
     _results = [];
     while (true) {
-      this._line2titleList(line);
-      if (line.lineID === endDiv.id) {
-        break;
-      } else {
-        _results.push(line = line.lineNext);
+      switch (line.lineType) {
+        case 'Tu':
+        case 'To':
+          this._toggleLineType(line);
+          break;
+        case 'Lh':
+          line.setType('Th');
+          break;
+        case 'Lu':
+          line.setType('Tu');
+          this._toggleLineType(line);
       }
+      if (line.lineID === endLineID) {
+        break;
+      }
+      _results.push(line = line.lineNext);
     }
     return _results;
-  };
-
-  /* ------------------------------------------------------------------------
-  #  _line2titleList
-  # 
-  #  Turn a given line in a title List Line (Th)
-  */
-
-
-  CNeditor.prototype._line2titleList = function(line) {
-    var parent1stSibling, _results;
-    if (line.lineType !== 'Th') {
-      if (line.lineType[0] === 'L') {
-        line.lineType = 'Tu';
-        line.lineDepthAbs += 1;
-      }
-      this._titilizeSiblings(line);
-      parent1stSibling = this._findParent1stSibling(line);
-      _results = [];
-      while (parent1stSibling !== null && parent1stSibling.lineType !== 'Th') {
-        this._titilizeSiblings(parent1stSibling);
-        _results.push(parent1stSibling = this._findParent1stSibling(parent1stSibling));
-      }
-      return _results;
-    }
-  };
-
-  /* ------------------------------------------------------------------------
-  # turn in Th or Lh of the siblings of line (and line itself of course)
-  # the children are not modified
-  */
-
-
-  CNeditor.prototype._titilizeSiblings = function(line) {
-    var l, lineDepthAbs;
-    lineDepthAbs = line.lineDepthAbs;
-    l = line;
-    while (l !== null && l.lineDepthAbs >= lineDepthAbs) {
-      if (l.lineDepthAbs === lineDepthAbs) {
-        switch (l.lineType) {
-          case 'Tu':
-          case 'To':
-            l.line$.prop("class", "Th-" + lineDepthAbs);
-            l.lineType = 'Th';
-            l.lineDepthRel = 0;
-            break;
-          case 'Lu':
-          case 'Lo':
-            l.line$.prop("class", "Lh-" + lineDepthAbs);
-            l.lineType = 'Lh';
-            l.lineDepthRel = 0;
-        }
-      }
-      l = l.lineNext;
-    }
-    l = line.linePrev;
-    while (l !== null && l.lineDepthAbs >= lineDepthAbs) {
-      if (l.lineDepthAbs === lineDepthAbs) {
-        switch (l.lineType) {
-          case 'Tu':
-          case 'To':
-            l.line$.prop("class", "Th-" + lineDepthAbs);
-            l.lineType = 'Th';
-            l.lineDepthRel = 0;
-            break;
-          case 'Lu':
-          case 'Lo':
-            l.line$.prop("class", "Lh-" + lineDepthAbs);
-            l.lineType = 'Lh';
-            l.lineDepthRel = 0;
-        }
-      }
-      l = l.linePrev;
-    }
-    return true;
   };
 
   /* ------------------------------------------------------------------------
@@ -21112,7 +21010,8 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype.markerList = function(l) {
-    var endDiv, endLineID, line, lineTypeTarget, range, startDiv, startDivID, _results;
+    var endDiv, endLineID, line, range, startDiv, startDivID, _results;
+    this._addHistory();
     if (l != null) {
       startDivID = l.lineID;
       endLineID = startDivID;
@@ -21128,54 +21027,20 @@ exports.CNeditor = (function() {
     while (true) {
       switch (line.lineType) {
         case 'Th':
-          lineTypeTarget = 'Tu';
-          l = line.lineNext;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            switch (l.lineType) {
-              case 'Th':
-                l.line$.prop("class", "Tu-" + l.lineDepthAbs);
-                l.lineType = 'Tu';
-                l.lineDepthRel = this._findDepthRel(l);
-                break;
-              case 'Lh':
-                l.line$.prop("class", "Lu-" + l.lineDepthAbs);
-                l.lineType = 'Lu';
-                l.lineDepthRel = this._findDepthRel(l);
-            }
-            l = l.lineNext;
-          }
-          l = line.linePrev;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            switch (l.lineType) {
-              case 'Th':
-                l.line$.prop("class", "Tu-" + l.lineDepthAbs);
-                l.lineType = 'Tu';
-                l.lineDepthRel = this._findDepthRel(l);
-                break;
-              case 'Lh':
-                l.line$.prop("class", "Lu-" + l.lineDepthAbs);
-                l.lineType = 'Lu';
-                l.lineDepthRel = this._findDepthRel(l);
-            }
-            l = l.linePrev;
-          }
+        case 'To':
+          this._toggleLineType(line);
           break;
         case 'Lh':
-        case 'Lu':
-          this.tab(line);
+        case 'Lo':
+          line.setTypeDepth('Tu', line.lineDepthAbs + 1);
           break;
-        default:
-          lineTypeTarget = false;
-      }
-      if (lineTypeTarget) {
-        line.line$.prop("class", "" + lineTypeTarget + "-" + line.lineDepthAbs);
-        line.lineType = lineTypeTarget;
+        case 'Lu':
+          line.setType('Tu');
       }
       if (line.lineID === endLineID) {
         break;
-      } else {
-        _results.push(line = line.lineNext);
       }
+      _results.push(line = line.lineNext);
     }
     return _results;
   };
@@ -21213,98 +21078,106 @@ exports.CNeditor = (function() {
   };
 
   /* ------------------------------------------------------------------------
-  #  _toggleLineType
-  # 
-  # Toggle line type
-  #   usage : cycle : Tu => To => Lx => Th
-  #   param :
-  #       e = event
+  # Toggle the selected lines type
+  #   cycle : Tu <=> Th
   */
 
 
-  CNeditor.prototype._toggleLineType = function() {
-    var endDiv, endLineID, l, line, lineTypeTarget, range, sel, startDiv, _results;
+  CNeditor.prototype.toggleType = function() {
+    var currentDepth, depthIsTreated, done, endDiv, endLineID, line, range, sel, startDiv;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
     startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
     endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
     endLineID = endDiv.id;
     line = this._lines[startDiv.id];
-    _results = [];
+    depthIsTreated = {};
+    currentDepth = line.lineDepthAbs;
+    depthIsTreated[currentDepth] = false;
     while (true) {
-      switch (line.lineType) {
-        case 'Tu':
-          lineTypeTarget = 'Th';
-          l = line.lineNext;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            if (l.lineDepthAbs === line.lineDepthAbs) {
-              if (l.lineType === 'Tu') {
-                l.line$.prop("class", "Th-" + line.lineDepthAbs);
-                l.lineType = 'Th';
-              } else {
-                l.line$.prop("class", "Lh-" + line.lineDepthAbs);
-                l.lineType = 'Lh';
-              }
-            }
-            l = l.lineNext;
-          }
-          l = line.linePrev;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            if (l.lineDepthAbs === line.lineDepthAbs) {
-              if (l.lineType === 'Tu') {
-                l.line$.prop("class", "Th-" + line.lineDepthAbs);
-                l.lineType = 'Th';
-              } else {
-                l.line$.prop("class", "Lh-" + line.lineDepthAbs);
-                l.lineType = 'Lh';
-              }
-            }
-            l = l.linePrev;
-          }
-          break;
-        case 'Th':
-          lineTypeTarget = 'Tu';
-          l = line.lineNext;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            if (l.lineDepthAbs === line.lineDepthAbs) {
-              if (l.lineType === 'Th') {
-                l.line$.prop("class", "Tu-" + line.lineDepthAbs);
-                l.lineType = 'Tu';
-              } else {
-                l.line$.prop("class", "Lu-" + line.lineDepthAbs);
-                l.lineType = 'Lu';
-              }
-            }
-            l = l.lineNext;
-          }
-          l = line.linePrev;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            if (l.lineDepthAbs === line.lineDepthAbs) {
-              if (l.lineType === 'Th') {
-                l.line$.prop("class", "Tu-" + line.lineDepthAbs);
-                l.lineType = 'Tu';
-              } else {
-                l.line$.prop("class", "Lu-" + line.lineDepthAbs);
-                l.lineType = 'Lu';
-              }
-            }
-            l = l.linePrev;
-          }
-          break;
-        default:
-          lineTypeTarget = false;
-      }
-      if (lineTypeTarget) {
-        line.line$.prop("class", "" + lineTypeTarget + "-" + line.lineDepthAbs);
-        line.lineType = lineTypeTarget;
+      if (!depthIsTreated[currentDepth]) {
+        done = this._toggleLineType(line);
+        depthIsTreated[line.lineDepthAbs] = done;
       }
       if (line.lineID === endDiv.id) {
-        break;
+        return;
+      }
+      line = line.lineNext;
+      if (line.lineDepthAbs < currentDepth) {
+        depthIsTreated[currentDepth] = false;
+        currentDepth = line.lineDepthAbs;
       } else {
-        _results.push(line = line.lineNext);
+        currentDepth = line.lineDepthAbs;
       }
     }
-    return _results;
+  };
+
+  CNeditor.prototype._toggleLineType = function(line) {
+    var l, lineTypeTarget;
+    switch (line.lineType) {
+      case 'Tu':
+        lineTypeTarget = 'Th';
+        l = line.lineNext;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Tu') {
+              l.setType('Th');
+            } else if (l.lineType === 'Lu') {
+              l.setType('Lh');
+            } else {
+              break;
+            }
+          }
+          l = l.lineNext;
+        }
+        l = line.linePrev;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Tu') {
+              l.setType('Th');
+            } else if (l.lineType === 'Lu') {
+              l.setType('Lh');
+            } else {
+              break;
+            }
+          }
+          l = l.linePrev;
+        }
+        break;
+      case 'Th':
+        lineTypeTarget = 'Tu';
+        l = line.lineNext;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Th') {
+              l.setType('Tu');
+            } else if (l.lineType === 'Lh') {
+              l.setType('Lu');
+            } else {
+              break;
+            }
+          }
+          l = l.lineNext;
+        }
+        l = line.linePrev;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Th') {
+              l.setType('Tu');
+            } else if (l.lineType === 'Lh') {
+              l.setType('Lu');
+            } else {
+              break;
+            }
+          }
+          l = l.linePrev;
+        }
+        break;
+      default:
+        return false;
+    }
+    line.setType(lineTypeTarget);
+    return true;
   };
 
   /* ------------------------------------------------------------------------
@@ -21316,7 +21189,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype.tab = function(l) {
-    var endDiv, endLineID, isTabAllowed, line, lineNext, linePrev, linePrevSibling, lineTypeTarget, nextLineType, range, sel, startDiv, _results;
+    var endDiv, endLineID, line, range, sel, startDiv, _results;
     if (l != null) {
       startDiv = l.line$[0];
       endDiv = startDiv;
@@ -21330,92 +21203,7 @@ exports.CNeditor = (function() {
     line = this._lines[startDiv.id];
     _results = [];
     while (true) {
-      switch (line.lineType) {
-        case 'Tu':
-        case 'Th':
-          linePrevSibling = this._findPrevSibling(line);
-          if (linePrevSibling === null) {
-            isTabAllowed = false;
-          } else {
-            isTabAllowed = true;
-            if (linePrevSibling.lineType === 'Th') {
-              lineTypeTarget = 'Lh';
-            } else {
-              if (linePrevSibling.lineType === 'Tu') {
-                lineTypeTarget = 'Lu';
-              } else {
-                lineTypeTarget = 'Lo';
-              }
-              if (line.lineType === 'Th') {
-                lineNext = line.lineNext;
-                while (lineNext !== null && lineNext.lineDepthAbs > line.lineDepthAbs) {
-                  switch (lineNext.lineType) {
-                    case 'Th':
-                      lineNext.lineType = 'Tu';
-                      line.line$.prop("class", "Tu-" + lineNext.lineDepthAbs);
-                      nextLineType = prevTxType;
-                      break;
-                    case 'Tu':
-                      nextLineType = 'Lu';
-                      break;
-                    case 'To':
-                      nextLineType = 'Lo';
-                      break;
-                    case 'Lh':
-                      lineNext.lineType = nextLineType;
-                      line.line$.prop("class", "" + nextLineType + "-" + lineNext.lineDepthAbs);
-                  }
-                }
-              }
-            }
-          }
-          break;
-        case 'Lh':
-        case 'Lu':
-        case 'Lo':
-          lineNext = line.lineNext;
-          lineTypeTarget = null;
-          while (lineNext !== null && lineNext.lineDepthAbs >= line.lineDepthAbs) {
-            if (lineNext.lineDepthAbs !== line.lineDepthAbs + 1) {
-              lineNext = lineNext.lineNext;
-            } else {
-              lineTypeTarget = lineNext.lineType;
-              lineNext = null;
-            }
-          }
-          if (lineTypeTarget === null) {
-            linePrev = line.linePrev;
-            while (linePrev !== null && linePrev.lineDepthAbs >= line.lineDepthAbs) {
-              if (linePrev.lineDepthAbs === line.lineDepthAbs + 1) {
-                lineTypeTarget = linePrev.lineType;
-                linePrev = null;
-              } else {
-                linePrev = linePrev.linePrev;
-              }
-            }
-          }
-          if (lineTypeTarget === null) {
-            isTabAllowed = true;
-            lineTypeTarget = 'Tu';
-            line.lineDepthAbs += 1;
-            line.lineDepthRel += 1;
-          } else {
-            if (lineTypeTarget === 'Th') {
-              isTabAllowed = true;
-              line.lineDepthAbs += 1;
-              line.lineDepthRel = 0;
-            }
-            if (lineTypeTarget === 'Tu' || lineTypeTarget === 'To') {
-              isTabAllowed = true;
-              line.lineDepthAbs += 1;
-              line.lineDepthRel += 1;
-            }
-          }
-      }
-      if (isTabAllowed) {
-        line.line$.prop("class", "" + lineTypeTarget + "-" + line.lineDepthAbs);
-        line.lineType = lineTypeTarget;
-      }
+      this._tabLine(line);
       if (line.lineID === endLineID) {
         break;
       } else {
@@ -21425,6 +21213,60 @@ exports.CNeditor = (function() {
     return _results;
   };
 
+  CNeditor.prototype._tabLine = function(line) {
+    var depthAbsTarget, nextSib, nextSibType, prevSib, prevSibType, prevSibling, typeTarget;
+    switch (line.lineType) {
+      case 'Tu':
+      case 'Th':
+      case 'To':
+        prevSibling = this._findPrevSibling(line);
+        if (prevSibling === null) {
+          return;
+        }
+        if (prevSibling.lineType === 'Th') {
+          typeTarget = 'Lh';
+        } else if (prevSibling.lineType === 'Tu') {
+          typeTarget = 'Lu';
+        } else {
+          typeTarget = 'Lo';
+        }
+        break;
+      case 'Lh':
+      case 'Lu':
+      case 'Lo':
+        depthAbsTarget = line.lineDepthAbs + 1;
+        nextSib = this._findNextSibling(line, depthAbsTarget);
+        nextSibType = nextSib === null ? null : nextSib.lineType;
+        prevSib = this._findPrevSibling(line, depthAbsTarget);
+        prevSibType = prevSib === null ? null : prevSib.lineType;
+        typeTarget = this._chooseTypeTarget(prevSibType, nextSibType);
+        if (typeTarget === 'Th') {
+          line.lineDepthAbs += 1;
+          line.lineDepthRel = 0;
+        } else {
+          line.lineDepthAbs += 1;
+          line.lineDepthRel += 1;
+        }
+    }
+    return line.setType(typeTarget);
+  };
+
+  CNeditor.prototype._chooseTypeTarget = function(prevSibType, nextSibType) {
+    var typeTarget;
+    if ((prevSibType === nextSibType && nextSibType === null)) {
+      typeTarget = 'Tu';
+    } else if (prevSibType === nextSibType) {
+      typeTarget = nextSibType;
+    } else if (prevSibType === null) {
+      typeTarget = nextSibType;
+    } else if (nextSibType === null) {
+      typeTarget = prevSibType;
+    } else {
+      typeTarget = 'Tu';
+    }
+    return typeTarget;
+  };
+
   /* ------------------------------------------------------------------------
   #  shiftTab
   #   param : myRange : if defined, refers to a specific region to untab
@@ -21432,7 +21274,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype.shiftTab = function(range) {
-    var endDiv, endLineID, isTabAllowed, line, lineTypeTarget, nextL, parent, sel, startDiv, _results;
+    var endDiv, endLineID, line, sel, startDiv, _results;
     if (range == null) {
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
@@ -21443,45 +21285,7 @@ exports.CNeditor = (function() {
     line = this._lines[startDiv.id];
     _results = [];
     while (true) {
-      switch (line.lineType) {
-        case 'Tu':
-        case 'Th':
-        case 'To':
-          parent = line.linePrev;
-          while (parent !== null && parent.lineDepthAbs >= line.lineDepthAbs) {
-            parent = parent.linePrev;
-          }
-          if (parent !== null) {
-            isTabAllowed = true;
-            lineTypeTarget = parent.lineType;
-            lineTypeTarget = "L" + lineTypeTarget.charAt(1);
-            line.lineDepthAbs -= 1;
-            line.lineDepthRel -= parent.lineDepthRel;
-            if ((line.lineNext != null) && line.lineNext.lineType[0] === 'L') {
-              nextL = line.lineNext;
-              nextL.lineType = 'T' + nextL.lineType[1];
-              nextL.line$.prop('class', "" + nextL.lineType + "-" + nextL.lineDepthAbs);
-            }
-          } else {
-            isTabAllowed = false;
-          }
-          break;
-        case 'Lh':
-          isTabAllowed = true;
-          lineTypeTarget = 'Th';
-          break;
-        case 'Lu':
-          isTabAllowed = true;
-          lineTypeTarget = 'Tu';
-          break;
-        case 'Lo':
-          isTabAllowed = true;
-          lineTypeTarget = 'To';
-      }
-      if (isTabAllowed) {
-        line.line$.prop("class", "" + lineTypeTarget + "-" + line.lineDepthAbs);
-        line.lineType = lineTypeTarget;
-      }
+      this._shiftTabLine(line);
       if (line.lineID === endDiv.id) {
         break;
       } else {
@@ -21489,6 +21293,57 @@ exports.CNeditor = (function() {
       }
     }
     return _results;
+  };
+
+  /**
+   * un-tab a single line
+   * @param  {line} line the line to un-tab
+  */
+
+
+  CNeditor.prototype._shiftTabLine = function(line) {
+    var depthAbsTarget, nextL, nextSib, nextSibType, parent, prevSib, prevSibType, typeTarget;
+    switch (line.lineType) {
+      case 'Tu':
+      case 'Th':
+      case 'To':
+        parent = line.linePrev;
+        while (parent !== null && parent.lineDepthAbs >= line.lineDepthAbs) {
+          parent = parent.linePrev;
+        }
+        if (parent === null) {
+          return;
+        }
+        if ((line.lineNext != null) && line.lineNext.lineType[0] === 'L' && line.lineNext.lineDepthAbs === line.lineDepthAbs) {
+          nextL = line.lineNext;
+          nextL.setType('T' + nextL.lineType[1]);
+        }
+        if ((line.lineNext != null) && line.lineNext.lineDepthAbs > line.lineDepthAbs) {
+          nextL = line.lineNext;
+          while (nextL.lineDepthAbs > line.lineDepthAbs) {
+            nextL.setDepthAbs(nextL.lineDepthAbs - 1);
+            nextL = nextL.lineNext;
+          }
+          if ((nextL != null) && nextL.lineType[0] === 'L') {
+            nextL.setType('T' + nextL.lineType[1]);
+          }
+        }
+        typeTarget = parent.lineType;
+        typeTarget = "L" + typeTarget.charAt(1);
+        line.lineDepthAbs -= 1;
+        line.lineDepthRel -= parent.lineDepthRel;
+        break;
+      case 'Lh':
+      case 'Lu':
+      case 'Lo':
+        depthAbsTarget = line.lineDepthAbs;
+        nextSib = this._findNextSibling(line, depthAbsTarget);
+        nextSibType = nextSib === null ? null : nextSib.lineType;
+        prevSib = this._findPrevSibling(line, depthAbsTarget);
+        prevSibType = prevSib === null ? null : prevSib.lineType;
+        typeTarget = this._chooseTypeTarget(prevSibType, nextSibType);
+    }
+    return line.setType(typeTarget);
   };
 
   /* ------------------------------------------------------------------------
@@ -21587,32 +21442,62 @@ exports.CNeditor = (function() {
     }
   };
 
-  /* ------------------------------------------------------------------------
-  #  _findPrevSibling
-  # 
-  # find the previous sibling line.
-  # returns null if no previous sibling, the line otherwise
-  # the sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+  /** -----------------------------------------------------------------------
+   * Find the next sibling line.
+   * Returns null if no next sibling, the line otherwise.
+   * The sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+   * @param  {line} line     The starting line for which we search a sibling
+   * @param  {number} depthAbs [optional] If the siblings we search is not
+   *                           of the same absolute depth
+   * @return {line}          The next sibling if one, null otherwise
   */
 
 
-  CNeditor.prototype._findPrevSibling = function(line) {
-    var lineDepthAbs, linePrevSibling;
-    lineDepthAbs = line.lineDepthAbs;
-    linePrevSibling = line.linePrev;
-    if (linePrevSibling === null) {
-      return null;
-    } else if (linePrevSibling.lineDepthAbs < lineDepthAbs) {
-      return null;
-    } else {
-      while (linePrevSibling.lineDepthAbs > lineDepthAbs) {
-        linePrevSibling = linePrevSibling.linePrev;
-      }
-      while (linePrevSibling.lineType[0] === 'L') {
-        linePrevSibling = linePrevSibling.linePrev;
-      }
-      return linePrevSibling;
+  CNeditor.prototype._findNextSibling = function(line, depth) {
+    var nextSib;
+    if (!(depth != null)) {
+      depth = line.lineDepthAbs;
     }
+    nextSib = line.lineNext;
+    while (true) {
+      if (nextSib === null || nextSib.lineDepthAbs < depth) {
+        nextSib = null;
+        break;
+      } else if (nextSib.lineDepthAbs === depth && nextSib.lineType[0] === 'T') {
+        break;
+      }
+      nextSib = nextSib.lineNext;
+    }
+    return nextSib;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Find the previous sibling line.
+   * Returns null if no previous sibling, the line otherwise.
+   * The sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+   * @param  {line} line     Rhe starting line for which we search a sibling
+   * @param  {number} depthAbs [optional] If the siblings we search is not
+   *                           of the same absolute depth
+   * @return {line}          The previous sibling if one, null otherwise
+  */
+
+
+  CNeditor.prototype._findPrevSibling = function(line, depth) {
+    var prevSib;
+    if (!(depth != null)) {
+      depth = line.lineDepthAbs;
+    }
+    prevSib = line.linePrev;
+    while (true) {
+      if (prevSib === null || prevSib.lineDepthAbs < depth) {
+        prevSib = null;
+        break;
+      } else if (prevSib.lineDepthAbs === depth && prevSib.lineType[0] === 'T') {
+        break;
+      }
+      prevSib = prevSib.linePrev;
+    }
+    return prevSib;
   };
 
   /**
@@ -21655,7 +21540,7 @@ exports.CNeditor = (function() {
     endLineDepth = endLine.lineDepthAbs;
     deltaDepth = endLineDepth - startLineDepth;
     endOfLineFragment = selection.cloneEndFragment(range, endLine);
-    this._adaptEndLineType(startLine, endLine);
+    this._adaptEndLineType(startLine, endLine, endLineDepth);
     range.deleteContents();
     this._addMissingFragment(startLine, endOfLineFragment);
     this._removeEndLine(startLine, endLine);
@@ -21673,8 +21558,7 @@ exports.CNeditor = (function() {
       if (deltaDepth1stLine > 1) {
         while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
           newDepth = line.lineDepthAbs - deltaDepth;
-          line.lineDepthAbs = newDepth;
-          line.line$.prop("class", "" + line.lineType + "-" + newDepth);
+          line.setDepthAbs(newDepth);
           line = line.lineNext;
         }
       }
@@ -21682,8 +21566,7 @@ exports.CNeditor = (function() {
     if (line !== null) {
       if (line.lineType[0] === 'L') {
         if (!(startLine.lineType[1] === line.lineType[1] && startLine.lineDepthAbs === line.lineDepthAbs)) {
-          line.lineType = 'T' + line.lineType[1];
-          line.line$.prop('class', "" + line.lineType + "-" + line.lineDepthAbs);
+          line.setType('T' + line.lineType[1]);
         }
       }
       firstLineAfterSiblingsOfDeleted = line;
@@ -21695,7 +21578,7 @@ exports.CNeditor = (function() {
         prevSiblingType = line.lineType;
         if (firstLineAfterSiblingsOfDeleted.lineType !== prevSiblingType) {
           if (prevSiblingType[1] === 'h') {
-            return this._line2titleList(firstLineAfterSiblingsOfDeleted);
+            return this.titleList(firstLineAfterSiblingsOfDeleted);
           } else {
             return this.markerList(firstLineAfterSiblingsOfDeleted);
           }
@@ -21737,14 +21620,13 @@ exports.CNeditor = (function() {
     return delete this._lines[endLine.lineID];
   };
 
-  CNeditor.prototype._adaptEndLineType = function(startLine, endLine) {
+  CNeditor.prototype._adaptEndLineType = function(startLine, endLine, endLineDepth) {
     var endLineType, startLineType;
     endLineType = endLine.lineType;
     startLineType = startLine.lineType;
-    if (endLineType[1] === 'h' && startLineType[1] === !'h') {
+    if (endLineType[1] === 'h' && startLineType[1] !== 'h') {
       if (endLineType[0] === 'L') {
-        endLineType = 'T' + endLineType[1];
-        endLine.line$.prop("class", "" + endLineType + "-" + endLineDepth);
+        endLine.setType('T' + endLineType[1]);
       }
       return this.markerList(endLine);
     }
@@ -21776,51 +21658,8 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._insertLineAfter = function(p) {
-    var lineID, newLine, newLine$, nextSibling, node, sourceLine;
-    this._highestId += 1;
-    lineID = 'CNID_' + this._highestId;
-    if (p.fragment != null) {
-      newLine$ = $("<div id='" + lineID + "' class='" + p.targetLineType + "-" + p.targetLineDepthAbs + "'></div>");
-      newLine$.append(p.fragment);
-      if (newLine$[0].childNodes.length === 0 || newLine$[0].lastChild.nodeName !== 'BR') {
-        newLine$.append('<br>');
-      }
-    } else if (p.innerHTML != null) {
-      newLine$ = $("<div id='" + lineID + "' class='" + p.targetLineType + "-" + p.targetLineDepthAbs + "'>                " + p.innerHTML + "</div>");
-      if (newLine$[0].lastChild.nodeName !== 'BR') {
-        newLine$.append('<br>');
-      }
-    } else {
-      newLine = document.createElement('div');
-      newLine.id = lineID;
-      newLine.setAttribute('class', p.targetLineType + '-' + p.targetLineDepthAbs);
-      node = document.createElement('span');
-      node.appendChild(document.createTextNode(''));
-      newLine.appendChild(node);
-      newLine.appendChild(document.createElement('br'));
-      newLine$ = $(newLine);
-    }
-    sourceLine = p.sourceLine;
-    nextSibling = sourceLine.line$[0].nextSibling;
-    if (nextSibling === null) {
-      sourceLine.line$[0].parentNode.appendChild(newLine$[0]);
-    } else {
-      newLine$ = $(sourceLine.line$[0].parentNode.insertBefore(newLine$[0], nextSibling));
-    }
-    newLine = {
-      line$: newLine$,
-      lineID: lineID,
-      lineType: p.targetLineType,
-      lineDepthAbs: p.targetLineDepthAbs,
-      lineDepthRel: p.targetLineDepthRel,
-      lineNext: sourceLine.lineNext,
-      linePrev: sourceLine
-    };
-    this._lines[lineID] = newLine;
-    if (sourceLine.lineNext !== null) {
-      sourceLine.lineNext.linePrev = newLine;
-    }
-    sourceLine.lineNext = newLine;
+    var newLine;
+    newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, p.sourceLine, null, p.fragment);
     return newLine;
   };
 
@@ -21829,7 +21668,7 @@ exports.CNeditor = (function() {
   # 
   # Insert a line before a source line
   # p = 
-  #     sourceLine         : ID of the line before which a line will be added
+  #     sourceLine         : Line before which a line will be added
   #     fragment           : [optionnal] - an html fragment that will be added
   #                          the fragment is not supposed to end with a <br>
   #     targetLineType     : type of the line to add
@@ -21839,38 +21678,8 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._insertLineBefore = function(p) {
-    var lineID, newLine, newLine$, newLineEl, node, sourceLine;
-    this._highestId += 1;
-    lineID = 'CNID_' + this._highestId;
-    newLineEl = document.createElement('div');
-    newLineEl.id = lineID;
-    newLineEl.setAttribute('class', p.targetLineType + '-' + p.targetLineDepthAbs);
-    if (p.fragment != null) {
-      newLineEl.appendChild(p.fragment);
-      newLineEl.appendChild(document.createElement('br'));
-    } else {
-      node = document.createElement('span');
-      node.appendChild(document.createTextNode(''));
-      newLineEl.appendChild(node);
-      newLineEl.appendChild(document.createElement('br'));
-    }
-    newLine$ = $(newLineEl);
-    sourceLine = p.sourceLine;
-    newLine$ = newLine$.insertBefore(sourceLine.line$);
-    newLine = {
-      line$: newLine$,
-      lineID: lineID,
-      lineType: p.targetLineType,
-      lineDepthAbs: p.targetLineDepthAbs,
-      lineDepthRel: p.targetLineDepthRel,
-      lineNext: sourceLine,
-      linePrev: sourceLine.linePrev
-    };
-    this._lines[lineID] = newLine;
-    if (sourceLine.linePrev !== null) {
-      sourceLine.linePrev.lineNext = newLine;
-    }
-    sourceLine.linePrev = newLine;
+    var newLine;
+    newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, null, p.sourceLine, p.fragment);
     return newLine;
   };
 
@@ -21952,102 +21761,6 @@ exports.CNeditor = (function() {
     return this.currrentSel;
   };
 
-  /* OLD
-  _findLinesAndIsStartIsEnd : ->
-      # if this.currentSel == null
-          
-      # 1- Variables
-      sel                = @getEditorSelection()
-      range              = sel.getRangeAt(0)
-      startContainer     = range.startContainer
-      endContainer       = range.endContainer
-      initialStartOffset = range.startOffset
-      initialEndOffset   = range.endOffset
-  
-      # 2- find endLine and the rangeIsEndLine
-      # endContainer refers to a div of a line
-      if endContainer.id? and endContainer.id.substr(0,5) == 'CNID_'
-          endLine = @_lines[ endContainer.id ]
-          # rangeIsEndLine if endOffset points on the last node of the div
-          # or on the one before the last which is a <br>
-          rangeIsEndLine = endContainer.children.length < initialEndOffset or endContainer.children[initialEndOffset].nodeName=="BR"
-      # means the range ends inside a div (span, textNode...)
-      else if $(endContainer).parents("div").length > 0
-          endLineDiv = selection.getLineDiv(endContainer)
-          endLine = @_lines[endLineDiv.id]
-          # rangeIsEndLine if the selection is at the end of the
-          # endContainer and of each of its parents (this approach is more
-          # robust than just considering that the line is a flat
-          # succession of span : maybe one day there will be a table for
-          # instance...)
-          rangeIsEndLine = false
-          # case of a textNode: it must have no nextSibling
-          # and offset must be its length
-          if endContainer.nodeType == Node.TEXT_NODE
-              rangeIsEndLine = endContainer.nextSibling == null and
-                               initialEndOffset == endContainer.textContent.length
-          # case of another node : it must be a br;
-          # or be followed by a br and have maximal offset.
-          else
-              rangeIsEndLine = endContainer.nodeName=='BR' or
-                               (endContainer.nextSibling.nodeName=='BR' and
-                               endContainer.childNodes.length==initialEndOffset)
-              #nextSibling    = endContainer.nextSibling
-              #rangeIsEndLine = (nextSibling == null or nextSibling.nodeName=='BR')
-              #(nextSibling == null or (initialEndOffset==parentEndContainer.textContent.length and nextSibling.nodeName=='BR'))
-          parentEndContainer = endContainer.parentNode
-          while rangeIsEndLine and parentEndContainer.nodeName != "DIV"
-              nextSibling = parentEndContainer.nextSibling
-              rangeIsEndLine = (nextSibling == null or nextSibling.nodeName=='BR')
-              # rangeIsEndLine = endContainer.nodeName=='BR' or
-              #                  (nextSibling.nodeName=='BR' and
-              #                  endContainer.childNodes.length==initialEndOffset)
-              parentEndContainer = parentEndContainer.parentNode
-      else
-          endLine = @_lines["CNID_1"]
-      
-      # 3- find startLine and rangeIsStartLine
-      if startContainer.nodeName == 'DIV' # startContainer refers to a div of a line
-          startLine = @_lines[ startContainer.id ]
-          rangeIsStartLine = initialStartOffset == 0
-          
-      else if $(startContainer).parents("div").length > 0
-          # means the range starts inside a div (span, textNode...)
-      
-          startLine = @_lines[selection.getLineDiv(startContainer).id]
-          # case of a textNode: it must have no previousSibling nor offset
-          if startContainer.nodeType == Node.TEXT_NODE
-              rangeIsStartLine = endContainer.previousSibling == null and
-                                 initialStartOffset == 0
-          else
-              rangeIsStartLine = initialStartOffset == 0
-          
-          parentStartContainer = startContainer.parentNode
-          while rangeIsStartLine && parentStartContainer.nodeName != "DIV"
-              rangeIsStartLine = parentStartContainer.previousSibling == null
-              parentStartContainer = parentStartContainer.parentNode
-      else
-          startLine = @_lines["CNID_1"]
-  
-      # Special case of an "empty" line (<span><""></span><br>)
-      if endLine?.line$[0].innerHTML == "<span></span><br>"
-          rangeIsEndLine = true
-      if startLine?.line$[0].innerHTML == "<span></span><br>"
-          rangeIsStartLine = true
-  
-      # 4- build result
-      @currentSel =
-          sel              : sel
-          range            : range
-          startLine        : startLine
-          endLine          : endLine
-          rangeIsStartLine : rangeIsStartLine
-          rangeIsEndLine   : rangeIsEndLine
-  
-      @currrentSel
-  */
-
-
   /*  -----------------------------------------------------------------------
   #   _readHtml
   # 
@@ -22083,15 +21796,14 @@ exports.CNeditor = (function() {
         lineID = parseInt(lineID, 10) + 1;
         lineID_st = "CNID_" + lineID;
         htmlLine$.prop("id", lineID_st);
-        lineNew = {
-          line$: htmlLine$,
-          lineID: lineID_st,
-          lineType: lineType,
-          lineDepthAbs: lineDepthAbs,
-          lineDepthRel: lineDepthRel,
-          lineNext: null,
-          linePrev: linePrev
-        };
+        lineNew = new Line();
+        lineNew.line$ = htmlLine$;
+        lineNew.lineID = lineID_st;
+        lineNew.lineType = lineType;
+        lineNew.lineDepthAbs = lineDepthAbs;
+        lineNew.lineDepthRel = lineDepthRel;
+        lineNew.lineNext = null;
+        lineNew.linePrev = linePrev;
         if (linePrev !== null) {
           linePrev.lineNext = lineNew;
         }
@@ -22149,15 +21861,7 @@ exports.CNeditor = (function() {
     linePrev = lineStart.linePrev;
     lineNext = lineEnd.lineNext;
     if (lineNext !== null) {
-      cloneLine = {
-        line$: lineNext.line$.clone(),
-        lineID: lineNext.lineID,
-        lineType: lineNext.lineType,
-        lineDepthAbs: lineNext.lineDepthAbs,
-        lineDepthRel: lineNext.lineDepthRel,
-        linePrev: lineNext.linePrev,
-        lineNext: lineNext.lineNext
-      };
+      cloneLine = Line.clone(lineNext);
       this._deleteMultiLinesSelections(lineEnd, lineNext);
       lineNext = cloneLine;
       this._lines[lineNext.lineID] = lineNext;
@@ -22258,15 +21962,7 @@ exports.CNeditor = (function() {
     lineNext = lineEnd.lineNext;
     if (linePrev !== null) {
       isSecondLine = linePrev.linePrev === null;
-      cloneLine = {
-        line$: linePrev.line$.clone(),
-        lineID: linePrev.lineID,
-        lineType: linePrev.lineType,
-        lineDepthAbs: linePrev.lineDepthAbs,
-        lineDepthRel: linePrev.lineDepthRel,
-        linePrev: linePrev.linePrev,
-        lineNext: linePrev.lineNext
-      };
+      cloneLine = Line.clone(linePrev);
       this._deleteMultiLinesSelections(linePrev.linePrev, linePrev);
       if (isSecondLine) {
         $(linePrev.line$[0].firstElementChild).remove();
@@ -22368,8 +22064,7 @@ exports.CNeditor = (function() {
     };
     this._history.historyScroll.push(savedScroll);
     this._history.historyPos.push(this.newPosition);
-    this._history.history.push(this.editorBody$.html());
-    rangy.removeMarkers(savedSel);
+    this._history.history.push(this.linesDiv.innerHTML);
     return this._history.index = this._history.history.length - 1;
   };
 
@@ -22409,8 +22104,7 @@ exports.CNeditor = (function() {
       this.newPosition = this._history.historyPos[this._history.index];
       this.linesDiv.innerHTML = this._history.history[this._history.index];
       savedSel = this._history.historySelect[this._history.index];
-      savedSel.restored = false;
-      rangy.restoreSelection(savedSel);
+      rangy.deserializeSelection(savedSel, this.linesDiv);
       xcoord = this._history.historyScroll[this._history.index].xcoord;
       ycoord = this._history.historyScroll[this._history.index].ycoord;
       this.editorBody$.scrollTop(xcoord);
@@ -22512,7 +22206,7 @@ exports.CNeditor = (function() {
       } else if (event.clipboardData.types === "text/plain") {
         mySandBox.innerHTML = event.clipboardData.getData('text/plain');
       } else {
-        mySandBox.innerHTML = " ";
+        mySandBox.innerHTML = "";
       }
       this._waitForPasteData(mySandBox);
       if (event.preventDefault) {
@@ -22521,7 +22215,6 @@ exports.CNeditor = (function() {
       }
       return false;
     } else {
-      mySandBox.innerHTML = " ";
       this._waitForPasteData(mySandBox);
       return true;
     }
@@ -22538,8 +22231,10 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._initClipBoard = function() {
-    var getOffTheScreen;
-    this.clipboard$ = $(document.createElement('div'));
+    var clipboardEl, getOffTheScreen;
+    clipboardEl = document.createElement('div');
+    clipboardEl.setAttribute('contenteditable', 'true');
+    this.clipboard$ = $(clipboardEl);
     this.clipboard$.attr('id', 'editor-clipboard');
     getOffTheScreen = {
       left: -300
@@ -22566,19 +22261,19 @@ exports.CNeditor = (function() {
     if (this.clipboard.childNodes && this.clipboard.childNodes.length > 0) {
       return this._processPaste();
     } else {
-      return setTimeout(this._waitForPasteData, 10);
+      return setTimeout(this._waitForPasteData, 100);
     }
   };
 
   /*
-       * Called when the browser has pasted data in the clipboard div. Its role is to
-       * insert the content of the clipboard into the editor.
+       * Called when the browser has pasted data in the clipboard div. 
+       * Its role is to insert the content of the clipboard into the editor.
        * @param  {element} sandbox
   */
 
 
   CNeditor.prototype._processPaste = function() {
-    var absDepth, caretOffset, caretTextNodeTarget, currSel, currentLineFrag, domWalkContext, dummyLine, elToInsert, endLine, endOffset, endTargetLineFrag, firstAddedLine, frag, htmlStr, i, line, lineElements, lineNextStartLine, nbElements, newText, parendDiv, range, sandbox, secondAddedLine, startLine, startOffset, targetNode, targetText, txt;
+    var absDepth, caretOffset, caretTextNodeTarget, currSel, currentLineFrag, domWalkContext, dummyLine, elToInsert, endLine, endOffset, endTargetLineFrag, firstAddedLine, frag, htmlStr, lineElements, lineNextStartLine, newText, parendDiv, parent, range, sandbox, secondAddedLine, startLine, startOffset, targetNode, targetText, _i, _len, _ref;
     sandbox = this.clipboard;
     currSel = this.currentSel;
     sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
@@ -22595,13 +22290,13 @@ exports.CNeditor = (function() {
       absDepth += 1;
     }
     domWalkContext = {
-      absDepth: absDepth,
-      prevHxLevel: null,
       frag: frag,
-      prevCNLineAbsDepth: null,
       lastAddedLine: dummyLine,
       currentLineFrag: currentLineFrag,
       currentLineEl: currentLineFrag,
+      absDepth: absDepth,
+      prevHxLevel: null,
+      prevCNLineAbsDepth: null,
       isCurrentLineBeingPopulated: false
     };
     htmlStr = this._domWalk(sandbox, domWalkContext);
@@ -22612,14 +22307,6 @@ exports.CNeditor = (function() {
             # Later this will be removed in order to take into account styles.
     */
 
-    i = 0;
-    while (i < frag.childNodes.length) {
-      line = frag.childNodes[i];
-      txt = line.textContent;
-      line.innerHTML = '<span></span><br>';
-      line.firstChild.appendChild(document.createTextNode(txt));
-      i += 1;
-    }
     /*
             # END TODO
     */
@@ -22630,46 +22317,69 @@ exports.CNeditor = (function() {
 
     } else if (endLine === startLine) {
       currSel.range.deleteContents();
+      selection.normalize(currSel.range);
     } else {
       this._deleteMultiLinesSelections();
+      selection.normalize(currSel.range);
       this._findLinesAndIsStartIsEnd();
       currSel = this.currentSel;
       startLine = currSel.startLine;
     }
+    /* 5- Insert first line of the frag in the target line
+    # We assume that the structure of lines in frag and in the editor are :
+    #   <div><span>(TextNode)</span><br></div>
+    # what will be incorrect when styles will be taken into account.
+    #
+    */
+
     targetNode = currSel.range.startContainer;
     startOffset = currSel.range.startOffset;
-    if (targetNode.nodeName === 'DIV' && targetNode.id.substr(0, 5) === 'CNID_') {
-      targetNode = targetNode.firstChild.firstChild;
-      if (startOffset > 0) {
-        startOffset = targetNode.length;
-      } else {
-        startOffset = 0;
-      }
-      endOffset = targetNode.length - startOffset;
-    }
-    if (targetNode.nodeName === 'SPAN') {
-      targetNode = targetNode.firstChild;
-      endOffset = targetNode.length - startOffset;
-    }
+    endOffset = targetNode.length - startOffset;
     if (frag.childNodes.length > 0) {
-      lineElements = frag.firstChild.childNodes;
+      lineElements = Array.prototype.slice.call(frag.firstChild.childNodes);
     } else {
       lineElements = [frag];
     }
-    i = 0;
-    nbElements = lineElements.length;
-    while (i < nbElements - 1) {
-      elToInsert = lineElements[i];
-      i += 1;
-      if ((elToInsert.tagName === 'SPAN') && (targetNode.tagName === 'SPAN' || targetNode.nodeType === Node.TEXT_NODE)) {
-        targetText = targetNode.textContent;
-        newText = targetText.substr(0, startOffset);
-        newText += elToInsert.textContent;
-        newText += targetText.substr(startOffset);
-        targetNode.textContent = newText;
-        startOffset += elToInsert.textContent.length;
+    for (_i = 0, _len = lineElements.length; _i < _len; _i++) {
+      elToInsert = lineElements[_i];
+      this._insertElement;
+      if (elToInsert.tagName === 'SPAN') {
+        if (targetNode.tagName === 'SPAN' || targetNode.nodeType === Node.TEXT_NODE) {
+          targetText = targetNode.textContent;
+          newText = targetText.substr(0, startOffset);
+          newText += elToInsert.textContent;
+          newText += targetText.substr(startOffset);
+          targetNode.textContent = newText;
+          startOffset += elToInsert.textContent.length;
+        } else if (targetNode.tagName === 'A') {
+          targetNode.parentElement.insertBefore(elToInsert, targetNode.nextSibling);
+          targetNode = targetNode.parentElement;
+          startOffset = $(targetNode).children().index(elToInsert) + 1;
+        } else if (targetNode.tagName === 'DIV') {
+          targetNode.insertBefore(elToInsert, targetNode[startOffset]);
+          startOffset += 1;
+        }
+      } else if (elToInsert.tagName === 'A') {
+        if (targetNode.nodeName === '#text') {
+          parent = targetNode.parentElement;
+          parent.parentElement.insertBefore(elToInsert, parent.nextSibling);
+          targetNode = parent.parentElement;
+          startOffset = $(targetNode).children().index(elToInsert) + 1;
+        } else if ((_ref = targetNode.tagName) === 'SPAN' || _ref === 'A') {
+          targetNode.parentElement.insertBefore(elToInsert, targetNode.nextSibling);
+          targetNode = targetNode.parentElement;
+          startOffset = $(targetNode).children().index(elToInsert) + 1;
+        } else if (targetNode.tagName === 'DIV') {
+          targetNode.insertBefore(elToInsert, targetNode[startOffset]);
+          startOffset += 1;
+        }
       }
     }
+    /*
+            # 6- If the clipboard has more than one line, insert the end of target
+            #    line in the last line of frag and delete it
+    */
+
     if (frag.childNodes.length > 1) {
       range = document.createRange();
       range.setStart(targetNode, startOffset);
@@ -22686,6 +22396,10 @@ exports.CNeditor = (function() {
         parendDiv = parendDiv.parentElement;
       }
     }
+    /**
+     * remove the firstAddedLine from the fragment
+    */
+
     firstAddedLine = dummyLine.lineNext;
     secondAddedLine = firstAddedLine != null ? firstAddedLine.lineNext : void 0;
     if (frag.firstChild != null) {
@@ -22694,6 +22408,10 @@ exports.CNeditor = (function() {
     if (firstAddedLine != null) {
       delete this._lines[firstAddedLine.lineID];
     }
+    /**
+     * 7- updates nextLine and prevLines, insert frag in the editor
+    */
+
     if (secondAddedLine != null) {
       lineNextStartLine = currSel.startLine.lineNext;
       currSel.startLine.lineNext = secondAddedLine;
@@ -22706,6 +22424,10 @@ exports.CNeditor = (function() {
         this.linesDiv.insertBefore(frag, lineNextStartLine.line$[0]);
       }
     }
+    /**
+     * 8- position caret
+    */
+
     if (secondAddedLine != null) {
       caretTextNodeTarget = lineNextStartLine.linePrev.line$[0].childNodes[0].firstChild;
       caretOffset = caretTextNodeTarget.length - endOffset;
@@ -22782,7 +22504,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype.__domWalk = function(nodeToParse, context) {
-    var absDepth, child, deltaHxLevel, lastInsertedEl, prevHxLevel, spanEl, spanNode, txtNode, _i, _len, _ref, _ref1;
+    var aNode, absDepth, child, deltaHxLevel, lastInsertedEl, prevHxLevel, spanEl, spanNode, txtNode, _i, _len, _ref, _ref1;
     absDepth = context.absDepth;
     prevHxLevel = context.prevHxLevel;
     _ref = nodeToParse.childNodes;
@@ -22790,10 +22512,10 @@ exports.CNeditor = (function() {
       child = _ref[_i];
       switch (child.nodeName) {
         case '#text':
-          txtNode = document.createTextNode(child.textContent);
           if ((_ref1 = context.currentLineEl.nodeName) === 'SPAN' || _ref1 === 'A') {
-            context.currentLineEl.appendChild(txtNode);
+            context.currentLineEl.textContent += child.textContent;
           } else {
+            txtNode = document.createTextNode(child.textContent);
             spanEl = document.createElement('span');
             spanEl.appendChild(txtNode);
             context.currentLineEl.appendChild(spanEl);
@@ -22830,22 +22552,27 @@ exports.CNeditor = (function() {
             this._appendCurrentLineFrag(context, absDepth, absDepth);
           }
           break;
+        case 'TR':
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
+          }
+          this.__domWalk(child, context);
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
+          }
+          break;
         case 'BR':
           this._appendCurrentLineFrag(context, absDepth, absDepth);
           break;
         case 'A':
-          lastInsertedEl = context.currentLineEl.lastChild;
-          if (lastInsertedEl !== null && lastInsertedEl.nodeName === 'SPAN') {
-            lastInsertedEl.textContent += '[[' + child.textContent + '|' + child.href + ']]';
-          } else {
-            spanNode = document.createElement('a');
-            spanNode.href = child.href;
-            spanNode.textContent = child.textContent;
-            context.currentLineEl.appendChild(spanNode);
-          }
-          context.isCurrentLineBeingPopulated = true;
+          aNode = document.createElement('a');
+          aNode.textContent = child.textContent;
+          aNode.href = child.href;
+          context.currentLineEl.appendChild(aNode);
           break;
         case 'DIV':
+        case 'TABLE':
+        case 'TBODY':
           if (child.id.substr(0, 5) === 'CNID_') {
             this._clipBoard_Insert_InternalLine(child, context);
           } else {
@@ -22879,6 +22606,7 @@ exports.CNeditor = (function() {
     var p, spanNode;
     if (context.currentLineFrag.childNodes.length === 0) {
       spanNode = document.createElement('span');
+      spanNode.appendChild(document.createTextNode(''));
       context.currentLineFrag.appendChild(spanNode);
     }
     p = {
@@ -22902,7 +22630,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._clipBoard_Insert_InternalLine = function(elemt, context) {
-    var deltaDepth, lineClass, lineDepthAbs, p;
+    var deltaDepth, elemtFrag, i, lineClass, lineDepthAbs, n, p;
     lineClass = elemt.className.split('-');
     lineDepthAbs = +lineClass[1];
     lineClass = lineClass[0];
@@ -22915,9 +22643,16 @@ exports.CNeditor = (function() {
     } else {
 
     }
+    elemtFrag = document.createDocumentFragment();
+    n = elemt.childNodes.length;
+    i = 0;
+    while (i < n) {
+      elemtFrag.appendChild(elemt.childNodes[0]);
+      i++;
+    }
     p = {
       sourceLine: context.lastAddedLine,
-      innerHTML: elemt.innerHTML,
+      fragment: elemtFrag,
       targetLineType: "Tu",
       targetLineDepthAbs: context.absDepth,
       targetLineDepthRel: context.absDepth
@@ -31495,6 +31230,29 @@ qq.DisposeSupport = {
  */
 ;(function(a,b){function c(){}function d(){}function e(){}function x(a,b){typeof b=="string"&&(b=b.split("."));var c=b.join(".").replace(/\.(\w)/g,function(a,b){return b.toUpperCase()}),d=b.shift(),e;return typeof (e=a[c])!=h?e=e:typeof (e=a[d])!=h&&b.length>0&&(e=x(e,b)),e}function y(){function e(a,d){c.bind(a,function(){return d.apply(b,arguments)})}var a=g.apply(arguments),b=this,c=a.length===1?b:a.shift(),d;a=a[0]||{};for(d in a)e(d,a[d])}function z(a,b){return{input:a,form:b}}var f=(JSON||{}).stringify,g=Array.prototype.slice,h="undefined",i="item.manager",j="plugins",k="ext",l="html.wrap",m="html.hidden",n="keys",o="preInvalidate",q="postInvalidate",r="getFormData",s="setFormData",t="setInputData",u="postInit",v="ready",w={itemManager:d,plugins:[],ext:{},html:{wrap:'<div class="text-core"><div class="text-wrap"/></div>',hidden:'<input type="hidden" />'},keys:{8:"backspace",9:"tab",13:"enter!",27:"escape!",37:"left",38:"up!",39:"right",40:"down!",46:"delete",108:"numpadEnter"}};if(!f)throw new Error("JSON.stringify() not found");p=d.prototype,p.init=function(a){},p.filter=function(a,b){var c=[],d,e;for(d=0;d<a.length;d++)e=a[d],this.itemContains(e,b)&&c.push(e);return c},p.itemContains=function(a,b){return this.itemToString(a).toLowerCase().indexOf(b.toLowerCase())==0},p.stringToItem=function(a){return a},p.itemToString=function(a){return a},p.compareItems=function(a,b){return a==b},p=c.prototype,p.init=function(b,c){var d=this,e,f,g;d._defaults=a.extend({},w),d._opts=c||{},d._plugins={},d._itemManager=f=new(d.opts(i)),b=a(b),g=a(d.opts(l)),e=a(d.opts(m)),b.wrap(g).keydown(function(a){return d.onKeyDown(a)}).keyup(function(a){return d.onKeyUp(a)}).data("textext",d),a(d).data({hiddenInput:e,wrapElement:b.parents(".text-wrap").first(),input:b}),e.attr("name",b.attr("name")),b.attr("name",null),e.insertAfter(b),a.extend(!0,f,d.opts(k+".item.manager")),a.extend(!0,d,d.opts(k+".*"),d.opts(k+".core")),d.originalWidth=b.outerWidth(),d.invalidateBounds(),f.init(d),d.initPatches(),d.initPlugins(d.opts(j),a.fn.textext.plugins),d.on({setFormData:d.onSetFormData,getFormData:d.onGetFormData,setInputData:d.onSetInputData,anyKeyUp:d.onAnyKeyUp}),d.trigger(u),d.trigger(v),d.getFormData(0)},p.initPatches=function(){var b=[],c=a.fn.textext.patches,d;for(d in c)b.push(d);this.initPlugins(b,c)},p.initPlugins=function(b,c){var d=this,e,f,g,h=[],i;typeof b=="string"&&(b=b.split(/\s*,\s*|\s+/g));for(i=0;i<b.length;i++)f=b[i],g=c[f],g&&(d._plugins[f]=g=new g,d[f]=function(a){return function(){return a}}(g),h.push(g),a.extend(!0,g,d.opts(k+".*"),d.opts(k+"."+f)));h.sort(function(a,b){return a=a.initPriority(),b=b.initPriority(),a===b?0:a<b?1:-1});for(i=0;i<h.length;i++)h[i].init(d)},p.hasPlugin=function(a){return!!this._plugins[a]},p.on=y,p.bind=function(a,b){this.input().bind(a,b)},p.trigger=function(){var a=arguments;this.input().trigger(a[0],g.call(a,1))},p.itemManager=function(){return this._itemManager},p.input=function(){return a(this).data("input")},p.opts=function(a){var b=x(this._opts,a);return typeof b=="undefined"?x(this._defaults,a):b},p.wrapElement=function(){return a(this).data("wrapElement")},p.invalidateBounds=function(){var a=this,b=a.input(),c=a.wrapElement(),d=c.parent(),e=a.originalWidth,f;a.trigger(o),f=b.outerHeight(),b.width(e),c.width(e).height(f),d.height(f),a.trigger(q)},p.focusInput=function(){this.input()[0].focus()},p.serializeData=f,p.hiddenInput=function(b){return a(this).data("hiddenInput")},p.getWeightedEventResponse=function(a,b){var c=this,d={},e=0;c.trigger(a,d,b);for(var f in d)e=Math.max(e,f);return d[e]},p.getFormData=function(a){var b=this,c=b.getWeightedEventResponse(r,a||0);b.trigger(s,c.form),b.trigger(t,c.input)},p.onAnyKeyUp=function(a,b){this.getFormData(b)},p.onSetInputData=function(a,b){this.input().val(b)},p.onSetFormData=function(a,b){var c=this;c.hiddenInput().val(c.serializeData(b))},p.onGetFormData=function(a,b){var c=this.input().val();b[0]=z(c,c)},a(["Down","Up"]).each(function(){var a=this.toString();p["onKey"+a]=function(b){var c=this,d=c.opts(n)[b.keyCode],e=!0;return d&&(e=d.substr(-1)!="!",d=d.replace("!",""),c.trigger(d+"Key"+a),a=="Up"&&c._lastKeyDown==b.keyCode&&(c._lastKeyDown=null,c.trigger(d+"KeyPress")),a=="Down"&&(c._lastKeyDown=b.keyCode)),c.trigger("anyKey"+a,b.keyCode),e}}),p=e.prototype,p.on=y,p.formDataObject=z,p.init=function(a){throw new Error("Not implemented")},p.baseInit=function(b,c){var d=this;b._defaults=a.extend(!0,b._defaults,c),d._core=b,d._timers={}},p.startTimer=function(a,b,c){var d=this;d.stopTimer(a),d._timers[a]=setTimeout(function(){delete d._timers[a],c.apply(d)},b*1e3)},p.stopTimer=function(a){clearTimeout(this._timers[a])},p.core=function(){return this._core},p.opts=function(a){return this.core().opts(a)},p.itemManager=function(){return this.core().itemManager()},p.input=function(){return this.core().input()},p.val=function(a){var b=this.input();if(typeof a===h)return b.val();b.val(a)},p.trigger=function(){var a=this.core();a.trigger.apply(a,arguments)},p.bind=function(a,b){this.core().bind(a,b)},p.initPriority=function(){return 0};var A=!1,B=a.fn.textext=function(b){var d;return!A&&(d=a.fn.textext.css)!=null&&(a("head").append("<style>"+d+"</style>"),A=!0),this.map(function(){var d=a(this);if(b==null)return d.data("textext");var e=new c;return e.init(d,b),d.data("textext",e),e.input()[0]})};B.addPlugin=function(a,b){B.plugins[a]=b,b.prototype=new B.TextExtPlugin},B.addPatch=function(a,b){B.patches[a]=b,b.prototype=new B.TextExtPlugin},B.TextExt=c,B.TextExtPlugin=e,B.ItemManager=d,B.plugins={},B.patches={}})(jQuery),function(a){function b(){}a.fn.textext.TextExtIE9Patches=b,a.fn.textext.addPatch("ie9",b);var c=b.prototype;c.init=function(a){if(navigator.userAgent.indexOf("MSIE 9")==-1)return;var b=this;a.on({postInvalidate:b.onPostInvalidate})},c.onPostInvalidate=function(){var a=this,b=a.input(),c=b.val();b.val(Math.random()),b.val(c)}}(jQuery);(function(a){function b(){}a.fn.textext.TextExtAjax=b,a.fn.textext.addPlugin("ajax",b);var c=b.prototype,d="ajax.data.callback",e="ajax.cache.results",f="ajax.loading.delay",g="ajax.loading.message",h="ajax.type.delay",i="setSuggestions",j="showDropdown",k="loading",l={ajax:{typeDelay:.5,loadingMessage:"Loading...",loadingDelay:.5,cacheResults:!1,dataCallback:null}};c.init=function(a){var b=this;b.baseInit(a,l),b.on({getSuggestions:b.onGetSuggestions}),b._suggestions=null},c.load=function(b){var c=this,e=c.opts(d)||function(a){return{q:a}},f;f=a.extend(!0,{data:e(b),success:function(a){c.onComplete(a,b)},error:function(a,c){console.error(c,b)}},c.opts("ajax")),a.ajax(f)},c.onComplete=function(a,b){var c=this,d=a;c.dontShowLoading(),c.opts(e)==1&&(c._suggestions=a,d=c.itemManager().filter(a,b)),c.trigger(i,{result:d})},c.dontShowLoading=function(){this.stopTimer(k)},c.showLoading=function(){var a=this;a.dontShowLoading(),a.startTimer(k,a.opts(f),function(){a.trigger(j,function(b){b.clearItems();var c=b.addDropdownItem(a.opts(g));c.addClass("text-loading")})})},c.onGetSuggestions=function(a,b){var c=this,d=c._suggestions,f=(b||{}).query||"";if(d&&c.opts(e)===!0)return c.onComplete(d,f);c.startTimer("ajax",c.opts(h),function(){c.showLoading(),c.load(f)})}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtArrow=b,a.fn.textext.addPlugin("arrow",b);var c=b.prototype,d="html.arrow",e={html:{arrow:'<div class="text-arrow"/>'}};c.init=function(b){var c=this,f;c.baseInit(b,e),c._arrow=f=a(c.opts(d)),c.core().wrapElement().append(f),f.bind("click",function(a){c.onArrowClick(a)})},c.onArrowClick=function(a){this.trigger("toggleDropdown"),this.core().focusInput()}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtAutocomplete=b,a.fn.textext.addPlugin("autocomplete",b);var c=b.prototype,d=".",e="text-selected",f=d+e,g="text-suggestion",h=d+g,i="text-label",j=d+i,k="autocomplete.enabled",l="autocomplete.dropdown.position",m="autocomplete.dropdown.maxHeight",n="autocomplete.render",o="html.dropdown",p="html.suggestion",q="hideDropdown",r="showDropdown",s="getSuggestions",t="getFormData",u="toggleDropdown",v="above",w="below",x="mousedownOnAutocomplete",y={autocomplete:{enabled:!0,dropdown:{position:w,maxHeight:"100px"}},html:{dropdown:'<div class="text-dropdown"><div class="text-list"/></div>',suggestion:'<div class="text-suggestion"><span class="text-label"/></div>'}};c.init=function(b){var c=this;c.baseInit(b,y);var d=c.input(),e;c.opts(k)===!0&&(c.on({blur:c.onBlur,anyKeyUp:c.onAnyKeyUp,deleteKeyUp:c.onAnyKeyUp,backspaceKeyPress:c.onBackspaceKeyPress,enterKeyPress:c.onEnterKeyPress,escapeKeyPress:c.onEscapeKeyPress,setSuggestions:c.onSetSuggestions,showDropdown:c.onShowDropdown,hideDropdown:c.onHideDropdown,toggleDropdown:c.onToggleDropdown,postInvalidate:c.positionDropdown,getFormData:c.onGetFormData,downKeyDown:c.onDownKeyDown,upKeyDown:c.onUpKeyDown}),e=a(c.opts(o)),e.insertAfter(d),c.on(e,{mouseover:c.onMouseOver,mousedown:c.onMouseDown,click:c.onClick}),e.css("maxHeight",c.opts(m)).addClass("text-position-"+c.opts(l)),a(c).data("container",e),a(document.body).click(function(a){c.isDropdownVisible()&&!c.withinWrapElement(a.target)&&c.trigger(q)}),c.positionDropdown())},c.containerElement=function(){return a(this).data("container")},c.onMouseOver=function(b){var c=this,d=a(b.target);d.is(h)&&(c.clearSelected(),d.addClass(e))},c.onMouseDown=function(a){this.containerElement().data(x,!0)},c.onClick=function(b){var c=this,d=a(b.target);(d.is(h)||d.is(j))&&c.trigger("enterKeyPress"),c.core().hasPlugin("tags")&&c.val("")},c.onBlur=function(a){var b=this,c=b.containerElement(),d=c.data(x)===!0;b.isDropdownVisible()&&(d?b.core().focusInput():b.trigger(q)),c.removeData(x)},c.onBackspaceKeyPress=function(a){var b=this,c=b.val().length>0;(c||b.isDropdownVisible())&&b.getSuggestions()},c.onAnyKeyUp=function(a,b){var c=this,d=c.opts("keys."+b)!=null;c.val().length>0&&!d&&c.getSuggestions()},c.onDownKeyDown=function(a){var b=this;b.isDropdownVisible()?b.toggleNextSuggestion():b.getSuggestions()},c.onUpKeyDown=function(a){this.togglePreviousSuggestion()},c.onEnterKeyPress=function(a){var b=this;b.isDropdownVisible()&&b.selectFromDropdown()},c.onEscapeKeyPress=function(a){var b=this;b.isDropdownVisible()&&b.trigger(q)},c.positionDropdown=function(){var a=this,b=a.containerElement(),c=a.opts(l),d=a.core().wrapElement().outerHeight(),e={};e[c===v?"bottom":"top"]=d+"px",b.css(e)},c.suggestionElements=function(){return this.containerElement().find(h)},c.setSelectedSuggestion=function(b){if(!b)return;var c=this,d=c.suggestionElements(),f=d.first(),h,i;c.clearSelected();for(i=0;i<d.length;i++){h=a(d[i]);if(c.itemManager().compareItems(h.data(g),b)){f=h.addClass(e);break}}f.addClass(e),c.scrollSuggestionIntoView(f)},c.selectedSuggestionElement=function(){return this.suggestionElements().filter(f).first()},c.isDropdownVisible=function(){return this.containerElement().is(":visible")===!0},c.onGetFormData=function(a,b,c){var d=this,e=d.val(),f=e,g=e;b[100]=d.formDataObject(f,g)},c.initPriority=function(){return 200},c.onHideDropdown=function(a){this.hideDropdown()},c.onToggleDropdown=function(a){var b=this;b.trigger(b.containerElement().is(":visible")?q:r)},c.onShowDropdown=function(b,c){var d=this,e=d.selectedSuggestionElement().data(g),f=d._suggestions;if(!f)return d.trigger(s);a.isFunction(c)?c(d):(d.renderSuggestions(d._suggestions),d.toggleNextSuggestion()),d.showDropdown(d.containerElement()),d.setSelectedSuggestion(e)},c.onSetSuggestions=function(a,b){var c=this,d=c._suggestions=b.result;b.showHideDropdown!==!1&&c.trigger(d===null||d.length===0?q:r)},c.getSuggestions=function(){var a=this,b=a.val();if(a._previousInputValue==b)return;b==""&&(current=null),a._previousInputValue=b,a.trigger(s,{query:b})},c.clearItems=function(){this.containerElement().find(".text-list").children().remove()},c.renderSuggestions=function(b){var c=this;c.clearItems(),a.each(b||[],function(a,b){c.addSuggestion(b)})},c.showDropdown=function(){this.containerElement().show()},c.hideDropdown=function(){var a=this,b=a.containerElement();a._previousInputValue=null,b.hide()},c.addSuggestion=function(a){var b=this,c=b.opts(n),d=b.addDropdownItem(c?c.call(b,a):b.itemManager().itemToString(a));d.data(g,a)},c.addDropdownItem=function(b){var c=this,d=c.containerElement().find(".text-list"),e=a(c.opts(p));return e.find(".text-label").html(b),d.append(e),e},c.clearSelected=function(){this.suggestionElements().removeClass(e)},c.toggleNextSuggestion=function(){var a=this,b=a.selectedSuggestionElement(),c;b.length>0?(c=b.next(),c.length>0&&b.removeClass(e)):c=a.suggestionElements().first(),c.addClass(e),a.scrollSuggestionIntoView(c)},c.togglePreviousSuggestion=function(){var a=this,b=a.selectedSuggestionElement(),c=b.prev();if(c.length==0)return;a.clearSelected(),c.addClass(e),a.scrollSuggestionIntoView(c)},c.scrollSuggestionIntoView=function(a){var b=a.outerHeight(),c=this.containerElement(),d=c.innerHeight(),e=c.scrollTop(),f=(a.position()||{}).top,g=null,h=parseInt(c.css("paddingTop"));if(f==null)return;f+b>d&&(g=f+e+b-d+h),f<0&&(g=f+e-h),g!=null&&c.scrollTop(g)},c.selectFromDropdown=function(){var a=this,b=a.selectedSuggestionElement().data(g);b&&(a.val(a.itemManager().itemToString(b)),a.core().getFormData()),a.trigger(q)},c.withinWrapElement=function(a){return this.core().wrapElement().find(a).size()>0}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtFilter=b,a.fn.textext.addPlugin("filter",b);var c=b.prototype,d="filter.enabled",e="filter.items",f={filter:{enabled:!0,items:null}};c.init=function(a){var b=this;b.baseInit(a,f),b.on({getFormData:b.onGetFormData,isTagAllowed:b.onIsTagAllowed,setSuggestions:b.onSetSuggestions}),b._suggestions=null},c.onGetFormData=function(a,b,c){var d=this,e=d.val(),f=e,g="";d.core().hasPlugin("tags")||(d.isValueAllowed(f)&&(g=e),b[300]=d.formDataObject(f,g))},c.isValueAllowed=function(a){var b=this,c=b.opts("filterItems")||b._suggestions||[],e=b.itemManager(),f=!b.opts(d),g;for(g=0;g<c.length&&!f;g++)e.compareItems(a,c[g])&&(f=!0);return f},c.onIsTagAllowed=function(a,b){b.result=this.isValueAllowed(b.tag)},c.onSetSuggestions=function(a,b){this._suggestions=b.result}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtFocus=b,a.fn.textext.addPlugin("focus",b);var c=b.prototype,d="html.focus",e={html:{focus:'<div class="text-focus"/>'}};c.init=function(a){var b=this;b.baseInit(a,e),b.core().wrapElement().append(b.opts(d)),b.on({blur:b.onBlur,focus:b.onFocus}),b._timeoutId=0},c.onBlur=function(a){var b=this;clearTimeout(b._timeoutId),b._timeoutId=setTimeout(function(){b.getFocus().hide()},100)},c.onFocus=function(a){var b=this;clearTimeout(b._timeoutId),b.getFocus().show()},c.getFocus=function(){return this.core().wrapElement().find(".text-focus")}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtPrompt=b,a.fn.textext.addPlugin("prompt",b);var c=b.prototype,d="text-hide-prompt",e="prompt",f="html.prompt",g={prompt:"Awaiting input...",html:{prompt:'<div class="text-prompt"/>'}};c.init=function(b){var c=this,d="placeholder",h,i;c.baseInit(b,g),h=a(c.opts(f)),a(c).data("container",h),c.core().wrapElement().append(h),c.setPrompt(c.opts(e)),i=b.input().attr(d),i||(i=c.opts(e)),b.input().attr(d,""),i&&c.setPrompt(i),a.trim(c.val()).length>0&&c.hidePrompt(),c.on({blur:c.onBlur,focus:c.onFocus,postInvalidate:c.onPostInvalidate,postInit:c.onPostInit})},c.onPostInit=function(a){this.invalidateBounds()},c.onPostInvalidate=function(a){this.invalidateBounds()},c.invalidateBounds=function(){var a=this,b=a.input();a.containerElement().css({paddingLeft:b.css("paddingLeft"),paddingTop:b.css("paddingTop")})},c.onBlur=function(a){var b=this;b.startTimer("prompt",.1,function(){b.showPrompt()})},c.showPrompt=function(){var b=this,c=b.input();a.trim(b.val()).length===0&&!c.is(":focus")&&b.containerElement().removeClass(d)},c.hidePrompt=function(){this.stopTimer("prompt"),this.containerElement().addClass(d)},c.onFocus=function(a){this.hidePrompt()},c.setPrompt=function(a){this.containerElement().text(a)},c.containerElement=function(){return a(this).data("container")}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtSuggestions=b,a.fn.textext.addPlugin("suggestions",b);var c=b.prototype,d="suggestions",e={suggestions:null};c.init=function(a){var b=this;b.baseInit(a,e),b.on({getSuggestions:b.onGetSuggestions,postInit:b.onPostInit})},c.setSuggestions=function(a,b){this.trigger("setSuggestions",{result:a,showHideDropdown:b!=0})},c.onPostInit=function(a){var b=this;b.setSuggestions(b.opts(d),!1)},c.onGetSuggestions=function(a,b){var c=this,e=c.opts(d);e.sort(),c.setSuggestions(c.itemManager().filter(e,b.query))}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtTags=b,a.fn.textext.addPlugin("tags",b);var c=b.prototype,d=".",e="text-tags-on-top",f=d+e,g="text-tag",h=d+g,i="text-tags",j=d+i,k="text-label",l=d+k,m="text-remove",n=d+m,o="tags.enabled",p="tags.items",q="html.tag",r="html.tags",s="isTagAllowed",t="tagClick",u={tags:{enabled:!0,items:null},html:{tags:'<div class="text-tags"/>',tag:'<div class="text-tag"><div class="text-button"><span class="text-label"/><a class="text-remove"/></div></div>'}};c.init=function(b){this.baseInit(b,u);var c=this,d=c.input(),e;c.opts(o)&&(e=a(c.opts(r)),d.after(e),a(c).data("container",e),c.on({enterKeyPress:c.onEnterKeyPress,backspaceKeyDown:c.onBackspaceKeyDown,preInvalidate:c.onPreInvalidate,postInit:c.onPostInit,getFormData:c.onGetFormData}),c.on(e,{click:c.onClick,mousemove:c.onContainerMouseMove}),c.on(d,{mousemove:c.onInputMouseMove})),c._originalPadding={left:parseInt(d.css("paddingLeft")||0),top:parseInt(d.css("paddingTop")||0)},c._paddingBox={left:0,top:0},c.updateFormCache()},c.containerElement=function(){return a(this).data("container")},c.onPostInit=function(a){var b=this;b.addTags(b.opts(p))},c.onGetFormData=function(a,b,c){var d=this,e=c===13?"":d.val(),f=d._formData;b[200]=d.formDataObject(e,f)},c.initPriority=function(){return 100},c.onInputMouseMove=function(a){this.toggleZIndex(a)},c.onContainerMouseMove=function(a){this.toggleZIndex(a)},c.onBackspaceKeyDown=function(a){var b=this,c=b.tagElements().last();b.val().length==0&&b.removeTag(c)},c.onPreInvalidate=function(a){var b=this,c=b.tagElements().last(),d=c.position();c.length>0?d.left+=c.innerWidth():d=b._originalPadding,b._paddingBox=d,b.input().css({paddingLeft:d.left,paddingTop:d.top})},c.onClick=function(b){function k(a,b){i.data(g,a),i.find(l).text(c.itemManager().itemToString(a)),c.updateFormCache(),d.getFormData(),d.invalidateBounds(),b&&d.focusInput()}var c=this,d=c.core(),e=a(b.target),f=0,i;e.is(j)?f=1:e.is(n)?(c.removeTag(e.parents(h+":first")),f=1):e.is(l)&&(i=e.parents(h+":first"),c.trigger(t,i,i.data(g),k)),f&&d.focusInput()},c.onEnterKeyPress=function(a){var b=this,c=b.val(),d=b.itemManager().stringToItem(c);b.isTagAllowed(d)&&(b.addTags([d]),b.core().focusInput())},c.updateFormCache=function(){var b=this,c=[];b.tagElements().each(function(){c.push(a(this).data(g))}),b._formData=c},c.toggleZIndex=function(a){var b=this,c=b.input().offset(),d=a.clientX-c.left,g=a.clientY-c.top,h=b._paddingBox,i=b.containerElement(),j=i.is(f),k=d>h.left&&g>h.top;(!j&&!k||j&&k)&&i[(j?"remove":"add")+"Class"](e)},c.tagElements=function(){return this.containerElement().find(h)},c.isTagAllowed=function(a){var b={tag:a,result:!0};return this.trigger(s,b),b.result===!0},c.addTags=function(a){if(!a||a.length==0)return;var b=this,c=b.core(),d=b.containerElement(),e,f;for(e=0;e<a.length;e++)f=a[e],f&&b.isTagAllowed(f)&&d.append(b.renderTag(f));b.updateFormCache(),c.getFormData(),c.invalidateBounds()},c.getTagElement=function(b){var c=this,d=c.tagElements(),e,f;for(e=0;e<d.length,f=a(d[e]);e++)if(c.itemManager().compareItems(f.data(g),b))return f},c.removeTag=function(b){var c=this,d=c.core(),e;b instanceof a?(e=b,b=b.data(g)):e=c.getTagElement(b),e.remove(),c.updateFormCache(),d.getFormData(),d.invalidateBounds()},c.renderTag=function(b){var c=this,d=a(c.opts(q));return d.find(".text-label").text(c.itemManager().itemToString(b)),d.data(g,b),d}})(jQuery);(function(a){var b=document,c="getElementsByTagName",d=b[c]("head")[0]||b[c]("body")[0],e=b.createElement("style");e.innerHTML=a,d.appendChild(e)})('\n.text-core{position:relative;}\n.text-core .text-wrap{background:#fff;position:absolute;}\n.text-core .text-wrap textarea,.text-core .text-wrap input{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;-webkit-border-radius:0px;-moz-border-radius:0px;border-radius:0px;border:1px solid #9daccc;outline:none;resize:none;position:absolute;z-index:1;background:none;overflow:hidden;margin:0;padding:3px 5px 4px 5px;white-space:nowrap;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;line-height:13px;height:auto;}\n\n.text-core .text-wrap .text-arrow{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:absolute;top:0;right:0;width:22px;height:22px;background:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAOAQMAAADHWqTrAAAAA3NCSVQICAjb4U/gAAAABlBMVEX///8yXJnt8Ns4AAAACXBIWXMAAAsSAAALEgHS3X78AAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1MzmNZGAwAAABpJREFUCJljYEAF/xsY6hkY7BgYZBgYOFBkADkdAmFDagYFAAAAAElFTkSuQmCC") 50% 50% no-repeat;cursor:pointer;z-index:2;}\n\n.text-core .text-wrap .text-dropdown{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;padding:0;position:absolute;z-index:3;background:#fff;border:1px solid #9daccc;width:100%;max-height:100px;padding:1px;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;display:none;overflow-x:hidden;overflow-y:auto;}\n.text-core .text-wrap .text-dropdown.text-position-below{margin-top:1px;}\n.text-core .text-wrap .text-dropdown.text-position-above{margin-bottom:1px;}\n.text-core .text-wrap .text-dropdown .text-list .text-suggestion{padding:3px 5px;cursor:pointer;}\n.text-core .text-wrap .text-dropdown .text-list .text-suggestion em{font-style:normal;text-decoration:underline;}\n.text-core .text-wrap .text-dropdown .text-list .text-suggestion.text-selected{color:#fff;background:#6d84b4;}\n\n.text-core .text-wrap .text-focus{-webkit-box-shadow:0px 0px 6px #6d84b4;-moz-box-shadow:0px 0px 6px #6d84b4;box-shadow:0px 0px 6px #6d84b4;position:absolute;width:100%;height:100%;display:none;}\n.text-core .text-wrap .text-focus.text-show-focus{display:block;}\n\n.text-core .text-wrap .text-prompt{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:absolute;width:100%;height:100%;margin:1px 0 0 2px;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;color:#c0c0c0;overflow:hidden;white-space:pre;}\n.text-core .text-wrap .text-prompt.text-hide-prompt{display:none;}\n\n.text-core .text-wrap .text-tags{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:absolute;width:100%;height:100%;padding:3px 35px 3px 3px;cursor:text;}\n.text-core .text-wrap .text-tags.text-tags-on-top{z-index:2;}\n.text-core .text-wrap .text-tags .text-tag{float:left;}\n.text-core .text-wrap .text-tags .text-tag .text-button{-webkit-border-radius:2px;-moz-border-radius:2px;border-radius:2px;-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:relative;float:left;border:1px solid #9daccc;background:#e2e6f0;color:#000;padding:0px 17px 0px 3px;margin:0 2px 2px 0;cursor:pointer;height:16px;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;}\n.text-core .text-wrap .text-tags .text-tag .text-button a.text-remove{position:absolute;right:3px;top:2px;display:block;width:11px;height:11px;background:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAhCAYAAAAPm1F2AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAAB50RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNS4xqx9I6wAAAQ5JREFUOI2dlD0WwiAQhCc8L6HHgAPoASwtSYvX8BrQxtIyveYA8RppLO1jE+LwE8lzms2yH8MCj1QoaBzH+VuUYNYMS213UlvDRamtUbXb5ZyPHuDoxwGgip3ipfvGuGzPz+vZ/coDONdzFuYCO6ramQQG0DJIE1oPBBvM6e9LqaS2FwD7FWwnVoIAsOc2Xn1jDlyd8pfPBRVOBHA8cc/3yCmQqt0jcY4LuTyAF3pOYS6wI48LAm4MUrx5JthgSQJAt5LtNgAUgEMBBIC3AL2xgo58dEPfhE9wygef89FtCeC49UwltR1pQrK2qr9vNr7uRTCBF3pOYS6wI4/zdQ8MUpxPI9hgSQL0Xyio/QBt54DzsHQx6gAAAABJRU5ErkJggg==") 0 0 no-repeat;}\n.text-core .text-wrap .text-tags .text-tag .text-button a.text-remove:hover{background-position:0 -11px;}\n.text-core .text-wrap .text-tags .text-tag .text-button a.text-remove:active{background-position:0 -22px;}\n');
 ;
+/*
+ Serializer module for Rangy.
+ Serializes Ranges and Selections. An example use would be to store a user's selection on a particular page in a
+ cookie or local storage and restore it on the user's next visit to the same page.
+
+ Part of Rangy, a cross-browser JavaScript range and selection library
+ http://code.google.com/p/rangy/
+
+ Depends on Rangy core.
+
+ Copyright 2012, Tim Down
+ Licensed under the MIT license.
+ Version: 1.2.3
+ Build date: 26 February 2012
+*/
+rangy.createModule("Serializer",function(g,n){function o(c,a){a=a||[];var b=c.nodeType,e=c.childNodes,d=e.length,f=[b,c.nodeName,d].join(":"),h="",k="";switch(b){case 3:h=c.nodeValue.replace(/</g,"&lt;").replace(/>/g,"&gt;");break;case 8:h="<!--"+c.nodeValue.replace(/</g,"&lt;").replace(/>/g,"&gt;")+"--\>";break;default:h="<"+f+">";k="</>";break}h&&a.push(h);for(b=0;b<d;++b)o(e[b],a);k&&a.push(k);return a}function j(c){c=o(c).join("");return u(c).toString(16)}function l(c,a,b){var e=[],d=c;for(b=
+b||i.getDocument(c).documentElement;d&&d!=b;){e.push(i.getNodeIndex(d,true));d=d.parentNode}return e.join("/")+":"+a}function m(c,a,b){if(a)b||i.getDocument(a);else{b=b||document;a=b.documentElement}c=c.split(":");a=a;b=c[0]?c[0].split("/"):[];for(var e=b.length,d;e--;){d=parseInt(b[e],10);if(d<a.childNodes.length)a=a.childNodes[parseInt(b[e],10)];else throw n.createError("deserializePosition failed: node "+i.inspectNode(a)+" has no child with index "+d+", "+e);}return new i.DomPosition(a,parseInt(c[1],
+10))}function p(c,a,b){b=b||g.DomRange.getRangeDocument(c).documentElement;if(!i.isAncestorOf(b,c.commonAncestorContainer,true))throw Error("serializeRange: range is not wholly contained within specified root node");c=l(c.startContainer,c.startOffset,b)+","+l(c.endContainer,c.endOffset,b);a||(c+="{"+j(b)+"}");return c}function q(c,a,b){if(a)b=b||i.getDocument(a);else{b=b||document;a=b.documentElement}c=/^([^,]+),([^,\{]+)({([^}]+)})?$/.exec(c);var e=c[4],d=j(a);if(e&&e!==j(a))throw Error("deserializeRange: checksums of serialized range root node ("+
+e+") and target root node ("+d+") do not match");e=m(c[1],a,b);a=m(c[2],a,b);b=g.createRange(b);b.setStart(e.node,e.offset);b.setEnd(a.node,a.offset);return b}function r(c,a,b){if(a)b||i.getDocument(a);else{b=b||document;a=b.documentElement}c=/^([^,]+),([^,]+)({([^}]+)})?$/.exec(c)[3];return!c||c===j(a)}function s(c,a,b){c=c||g.getSelection();c=c.getAllRanges();for(var e=[],d=0,f=c.length;d<f;++d)e[d]=p(c[d],a,b);return e.join("|")}function t(c,a,b){if(a)b=b||i.getWindow(a);else{b=b||window;a=b.document.documentElement}c=
+c.split("|");for(var e=g.getSelection(b),d=[],f=0,h=c.length;f<h;++f)d[f]=q(c[f],a,b.document);e.setRanges(d);return e}g.requireModules(["WrappedSelection","WrappedRange"]);if(typeof encodeURIComponent=="undefined"||typeof decodeURIComponent=="undefined")n.fail("Global object is missing encodeURIComponent and/or decodeURIComponent method");var u=function(){var c=null;return function(a){for(var b=[],e=0,d=a.length,f;e<d;++e){f=a.charCodeAt(e);if(f<128)b.push(f);else f<2048?b.push(f>>6|192,f&63|128):
+b.push(f>>12|224,f>>6&63|128,f&63|128)}a=-1;if(!c){e=[];d=0;for(var h;d<256;++d){h=d;for(f=8;f--;)if((h&1)==1)h=h>>>1^3988292384;else h>>>=1;e[d]=h>>>0}c=e}e=c;d=0;for(f=b.length;d<f;++d){h=(a^b[d])&255;a=a>>>8^e[h]}return(a^-1)>>>0}}(),i=g.dom;g.serializePosition=l;g.deserializePosition=m;g.serializeRange=p;g.deserializeRange=q;g.canDeserializeRange=r;g.serializeSelection=s;g.deserializeSelection=t;g.canDeserializeSelection=function(c,a,b){var e;if(a)e=b?b.document:i.getDocument(a);else{b=b||window;
+a=b.document.documentElement}c=c.split("|");b=0;for(var d=c.length;b<d;++b)if(!r(c[b],a,e))return false;return true};g.restoreSelectionFromCookie=function(c){c=c||window;var a;a:{a=c.document.cookie.split(/[;,]/);for(var b=0,e=a.length,d;b<e;++b){d=a[b].split("=");if(d[0].replace(/^\s+/,"")=="rangySerializedSelection")if(d=d[1]){a=decodeURIComponent(d.replace(/\s+$/,""));break a}}a=null}a&&t(a,c.doc)};g.saveSelectionCookie=function(c,a){c=c||window;a=typeof a=="object"?a:{};var b=a.expires?";expires="+
+a.expires.toUTCString():"",e=a.path?";path="+a.path:"",d=a.domain?";domain="+a.domain:"",f=a.secure?";secure":"",h=s(g.getSelection(c));c.document.cookie=encodeURIComponent("rangySerializedSelection")+"="+encodeURIComponent(h)+b+e+d+f};g.getElementChecksum=j});;
 //fgnass.github.com/spin.js#v1.2.5
 (function(window, document, undefined) {
 
