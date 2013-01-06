@@ -8,7 +8,7 @@
   var cache = {};
 
   var has = function(object, name) {
-    return hasOwnProperty.call(object, name);
+    return ({}).hasOwnProperty.call(object, name);
   };
 
   var expand = function(root, name) {
@@ -37,7 +37,7 @@
     return function(name) {
       var dir = dirname(path);
       var absolute = expand(dir, name);
-      return require(absolute);
+      return globals.require(absolute);
     };
   };
 
@@ -61,23 +61,27 @@
     throw new Error('Cannot find module "' + name + '"');
   };
 
-  var define = function(bundle) {
-    for (var key in bundle) {
-      if (has(bundle, key)) {
-        modules[key] = bundle[key];
+  var define = function(bundle, fn) {
+    if (typeof bundle === 'object') {
+      for (var key in bundle) {
+        if (has(bundle, key)) {
+          modules[key] = bundle[key];
+        }
       }
+    } else {
+      modules[bundle] = fn;
     }
-  }
+  };
 
   globals.require = require;
   globals.require.define = define;
+  globals.require.register = define;
   globals.require.brunch = true;
 })();
 
 (function(a){var b,c=function(){},d="assert,count,debug,dir,dirxml,error,exception,group,groupCollapsed,groupEnd,info,log,markTimeline,profile,profileEnd,time,timeEnd,trace,warn".split(",");while(b=d.pop())a[b]=a[b]||c})(window.console=window.console||{});
 
 ;
-
 /*!
  * jQuery JavaScript Library v1.7.1
  * http://jquery.com/
@@ -9345,7 +9349,6 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 })( window );
 ;
-
 /*! jQuery UI - v1.8.23 - 2012-08-15
 * https://github.com/jquery/jquery-ui
 * Includes: jquery.ui.core.js
@@ -9363,7 +9366,6 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 * Includes: jquery.ui.draggable.js
 * Copyright (c) 2012 AUTHORS.txt; Licensed MIT, GPL */
 (function(a,b){a.widget("ui.draggable",a.ui.mouse,{widgetEventPrefix:"drag",options:{addClasses:!0,appendTo:"parent",axis:!1,connectToSortable:!1,containment:!1,cursor:"auto",cursorAt:!1,grid:!1,handle:!1,helper:"original",iframeFix:!1,opacity:!1,refreshPositions:!1,revert:!1,revertDuration:500,scope:"default",scroll:!0,scrollSensitivity:20,scrollSpeed:20,snap:!1,snapMode:"both",snapTolerance:20,stack:!1,zIndex:!1},_create:function(){this.options.helper=="original"&&!/^(?:r|a|f)/.test(this.element.css("position"))&&(this.element[0].style.position="relative"),this.options.addClasses&&this.element.addClass("ui-draggable"),this.options.disabled&&this.element.addClass("ui-draggable-disabled"),this._mouseInit()},destroy:function(){if(!this.element.data("draggable"))return;return this.element.removeData("draggable").unbind(".draggable").removeClass("ui-draggable ui-draggable-dragging ui-draggable-disabled"),this._mouseDestroy(),this},_mouseCapture:function(b){var c=this.options;return this.helper||c.disabled||a(b.target).is(".ui-resizable-handle")?!1:(this.handle=this._getHandle(b),this.handle?(c.iframeFix&&a(c.iframeFix===!0?"iframe":c.iframeFix).each(function(){a('<div class="ui-draggable-iframeFix" style="background: #fff;"></div>').css({width:this.offsetWidth+"px",height:this.offsetHeight+"px",position:"absolute",opacity:"0.001",zIndex:1e3}).css(a(this).offset()).appendTo("body")}),!0):!1)},_mouseStart:function(b){var c=this.options;return this.helper=this._createHelper(b),this.helper.addClass("ui-draggable-dragging"),this._cacheHelperProportions(),a.ui.ddmanager&&(a.ui.ddmanager.current=this),this._cacheMargins(),this.cssPosition=this.helper.css("position"),this.scrollParent=this.helper.scrollParent(),this.offset=this.positionAbs=this.element.offset(),this.offset={top:this.offset.top-this.margins.top,left:this.offset.left-this.margins.left},a.extend(this.offset,{click:{left:b.pageX-this.offset.left,top:b.pageY-this.offset.top},parent:this._getParentOffset(),relative:this._getRelativeOffset()}),this.originalPosition=this.position=this._generatePosition(b),this.originalPageX=b.pageX,this.originalPageY=b.pageY,c.cursorAt&&this._adjustOffsetFromHelper(c.cursorAt),c.containment&&this._setContainment(),this._trigger("start",b)===!1?(this._clear(),!1):(this._cacheHelperProportions(),a.ui.ddmanager&&!c.dropBehaviour&&a.ui.ddmanager.prepareOffsets(this,b),this._mouseDrag(b,!0),a.ui.ddmanager&&a.ui.ddmanager.dragStart(this,b),!0)},_mouseDrag:function(b,c){this.position=this._generatePosition(b),this.positionAbs=this._convertPositionTo("absolute");if(!c){var d=this._uiHash();if(this._trigger("drag",b,d)===!1)return this._mouseUp({}),!1;this.position=d.position}if(!this.options.axis||this.options.axis!="y")this.helper[0].style.left=this.position.left+"px";if(!this.options.axis||this.options.axis!="x")this.helper[0].style.top=this.position.top+"px";return a.ui.ddmanager&&a.ui.ddmanager.drag(this,b),!1},_mouseStop:function(b){var c=!1;a.ui.ddmanager&&!this.options.dropBehaviour&&(c=a.ui.ddmanager.drop(this,b)),this.dropped&&(c=this.dropped,this.dropped=!1);var d=this.element[0],e=!1;while(d&&(d=d.parentNode))d==document&&(e=!0);if(!e&&this.options.helper==="original")return!1;if(this.options.revert=="invalid"&&!c||this.options.revert=="valid"&&c||this.options.revert===!0||a.isFunction(this.options.revert)&&this.options.revert.call(this.element,c)){var f=this;a(this.helper).animate(this.originalPosition,parseInt(this.options.revertDuration,10),function(){f._trigger("stop",b)!==!1&&f._clear()})}else this._trigger("stop",b)!==!1&&this._clear();return!1},_mouseUp:function(b){return this.options.iframeFix===!0&&a("div.ui-draggable-iframeFix").each(function(){this.parentNode.removeChild(this)}),a.ui.ddmanager&&a.ui.ddmanager.dragStop(this,b),a.ui.mouse.prototype._mouseUp.call(this,b)},cancel:function(){return this.helper.is(".ui-draggable-dragging")?this._mouseUp({}):this._clear(),this},_getHandle:function(b){var c=!this.options.handle||!a(this.options.handle,this.element).length?!0:!1;return a(this.options.handle,this.element).find("*").andSelf().each(function(){this==b.target&&(c=!0)}),c},_createHelper:function(b){var c=this.options,d=a.isFunction(c.helper)?a(c.helper.apply(this.element[0],[b])):c.helper=="clone"?this.element.clone().removeAttr("id"):this.element;return d.parents("body").length||d.appendTo(c.appendTo=="parent"?this.element[0].parentNode:c.appendTo),d[0]!=this.element[0]&&!/(fixed|absolute)/.test(d.css("position"))&&d.css("position","absolute"),d},_adjustOffsetFromHelper:function(b){typeof b=="string"&&(b=b.split(" ")),a.isArray(b)&&(b={left:+b[0],top:+b[1]||0}),"left"in b&&(this.offset.click.left=b.left+this.margins.left),"right"in b&&(this.offset.click.left=this.helperProportions.width-b.right+this.margins.left),"top"in b&&(this.offset.click.top=b.top+this.margins.top),"bottom"in b&&(this.offset.click.top=this.helperProportions.height-b.bottom+this.margins.top)},_getParentOffset:function(){this.offsetParent=this.helper.offsetParent();var b=this.offsetParent.offset();this.cssPosition=="absolute"&&this.scrollParent[0]!=document&&a.ui.contains(this.scrollParent[0],this.offsetParent[0])&&(b.left+=this.scrollParent.scrollLeft(),b.top+=this.scrollParent.scrollTop());if(this.offsetParent[0]==document.body||this.offsetParent[0].tagName&&this.offsetParent[0].tagName.toLowerCase()=="html"&&a.browser.msie)b={top:0,left:0};return{top:b.top+(parseInt(this.offsetParent.css("borderTopWidth"),10)||0),left:b.left+(parseInt(this.offsetParent.css("borderLeftWidth"),10)||0)}},_getRelativeOffset:function(){if(this.cssPosition=="relative"){var a=this.element.position();return{top:a.top-(parseInt(this.helper.css("top"),10)||0)+this.scrollParent.scrollTop(),left:a.left-(parseInt(this.helper.css("left"),10)||0)+this.scrollParent.scrollLeft()}}return{top:0,left:0}},_cacheMargins:function(){this.margins={left:parseInt(this.element.css("marginLeft"),10)||0,top:parseInt(this.element.css("marginTop"),10)||0,right:parseInt(this.element.css("marginRight"),10)||0,bottom:parseInt(this.element.css("marginBottom"),10)||0}},_cacheHelperProportions:function(){this.helperProportions={width:this.helper.outerWidth(),height:this.helper.outerHeight()}},_setContainment:function(){var b=this.options;b.containment=="parent"&&(b.containment=this.helper[0].parentNode);if(b.containment=="document"||b.containment=="window")this.containment=[b.containment=="document"?0:a(window).scrollLeft()-this.offset.relative.left-this.offset.parent.left,b.containment=="document"?0:a(window).scrollTop()-this.offset.relative.top-this.offset.parent.top,(b.containment=="document"?0:a(window).scrollLeft())+a(b.containment=="document"?document:window).width()-this.helperProportions.width-this.margins.left,(b.containment=="document"?0:a(window).scrollTop())+(a(b.containment=="document"?document:window).height()||document.body.parentNode.scrollHeight)-this.helperProportions.height-this.margins.top];if(!/^(document|window|parent)$/.test(b.containment)&&b.containment.constructor!=Array){var c=a(b.containment),d=c[0];if(!d)return;var e=c.offset(),f=a(d).css("overflow")!="hidden";this.containment=[(parseInt(a(d).css("borderLeftWidth"),10)||0)+(parseInt(a(d).css("paddingLeft"),10)||0),(parseInt(a(d).css("borderTopWidth"),10)||0)+(parseInt(a(d).css("paddingTop"),10)||0),(f?Math.max(d.scrollWidth,d.offsetWidth):d.offsetWidth)-(parseInt(a(d).css("borderLeftWidth"),10)||0)-(parseInt(a(d).css("paddingRight"),10)||0)-this.helperProportions.width-this.margins.left-this.margins.right,(f?Math.max(d.scrollHeight,d.offsetHeight):d.offsetHeight)-(parseInt(a(d).css("borderTopWidth"),10)||0)-(parseInt(a(d).css("paddingBottom"),10)||0)-this.helperProportions.height-this.margins.top-this.margins.bottom],this.relative_container=c}else b.containment.constructor==Array&&(this.containment=b.containment)},_convertPositionTo:function(b,c){c||(c=this.position);var d=b=="absolute"?1:-1,e=this.options,f=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,g=/(html|body)/i.test(f[0].tagName);return{top:c.top+this.offset.relative.top*d+this.offset.parent.top*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollTop():g?0:f.scrollTop())*d),left:c.left+this.offset.relative.left*d+this.offset.parent.left*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():g?0:f.scrollLeft())*d)}},_generatePosition:function(b){var c=this.options,d=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,e=/(html|body)/i.test(d[0].tagName),f=b.pageX,g=b.pageY;if(this.originalPosition){var h;if(this.containment){if(this.relative_container){var i=this.relative_container.offset();h=[this.containment[0]+i.left,this.containment[1]+i.top,this.containment[2]+i.left,this.containment[3]+i.top]}else h=this.containment;b.pageX-this.offset.click.left<h[0]&&(f=h[0]+this.offset.click.left),b.pageY-this.offset.click.top<h[1]&&(g=h[1]+this.offset.click.top),b.pageX-this.offset.click.left>h[2]&&(f=h[2]+this.offset.click.left),b.pageY-this.offset.click.top>h[3]&&(g=h[3]+this.offset.click.top)}if(c.grid){var j=c.grid[1]?this.originalPageY+Math.round((g-this.originalPageY)/c.grid[1])*c.grid[1]:this.originalPageY;g=h?j-this.offset.click.top<h[1]||j-this.offset.click.top>h[3]?j-this.offset.click.top<h[1]?j+c.grid[1]:j-c.grid[1]:j:j;var k=c.grid[0]?this.originalPageX+Math.round((f-this.originalPageX)/c.grid[0])*c.grid[0]:this.originalPageX;f=h?k-this.offset.click.left<h[0]||k-this.offset.click.left>h[2]?k-this.offset.click.left<h[0]?k+c.grid[0]:k-c.grid[0]:k:k}}return{top:g-this.offset.click.top-this.offset.relative.top-this.offset.parent.top+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollTop():e?0:d.scrollTop()),left:f-this.offset.click.left-this.offset.relative.left-this.offset.parent.left+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():e?0:d.scrollLeft())}},_clear:function(){this.helper.removeClass("ui-draggable-dragging"),this.helper[0]!=this.element[0]&&!this.cancelHelperRemoval&&this.helper.remove(),this.helper=null,this.cancelHelperRemoval=!1},_trigger:function(b,c,d){return d=d||this._uiHash(),a.ui.plugin.call(this,b,[c,d]),b=="drag"&&(this.positionAbs=this._convertPositionTo("absolute")),a.Widget.prototype._trigger.call(this,b,c,d)},plugins:{},_uiHash:function(a){return{helper:this.helper,position:this.position,originalPosition:this.originalPosition,offset:this.positionAbs}}}),a.extend(a.ui.draggable,{version:"1.8.23"}),a.ui.plugin.add("draggable","connectToSortable",{start:function(b,c){var d=a(this).data("draggable"),e=d.options,f=a.extend({},c,{item:d.element});d.sortables=[],a(e.connectToSortable).each(function(){var c=a.data(this,"sortable");c&&!c.options.disabled&&(d.sortables.push({instance:c,shouldRevert:c.options.revert}),c.refreshPositions(),c._trigger("activate",b,f))})},stop:function(b,c){var d=a(this).data("draggable"),e=a.extend({},c,{item:d.element});a.each(d.sortables,function(){this.instance.isOver?(this.instance.isOver=0,d.cancelHelperRemoval=!0,this.instance.cancelHelperRemoval=!1,this.shouldRevert&&(this.instance.options.revert=!0),this.instance._mouseStop(b),this.instance.options.helper=this.instance.options._helper,d.options.helper=="original"&&this.instance.currentItem.css({top:"auto",left:"auto"})):(this.instance.cancelHelperRemoval=!1,this.instance._trigger("deactivate",b,e))})},drag:function(b,c){var d=a(this).data("draggable"),e=this,f=function(b){var c=this.offset.click.top,d=this.offset.click.left,e=this.positionAbs.top,f=this.positionAbs.left,g=b.height,h=b.width,i=b.top,j=b.left;return a.ui.isOver(e+c,f+d,i,j,g,h)};a.each(d.sortables,function(f){this.instance.positionAbs=d.positionAbs,this.instance.helperProportions=d.helperProportions,this.instance.offset.click=d.offset.click,this.instance._intersectsWith(this.instance.containerCache)?(this.instance.isOver||(this.instance.isOver=1,this.instance.currentItem=a(e).clone().removeAttr("id").appendTo(this.instance.element).data("sortable-item",!0),this.instance.options._helper=this.instance.options.helper,this.instance.options.helper=function(){return c.helper[0]},b.target=this.instance.currentItem[0],this.instance._mouseCapture(b,!0),this.instance._mouseStart(b,!0,!0),this.instance.offset.click.top=d.offset.click.top,this.instance.offset.click.left=d.offset.click.left,this.instance.offset.parent.left-=d.offset.parent.left-this.instance.offset.parent.left,this.instance.offset.parent.top-=d.offset.parent.top-this.instance.offset.parent.top,d._trigger("toSortable",b),d.dropped=this.instance.element,d.currentItem=d.element,this.instance.fromOutside=d),this.instance.currentItem&&this.instance._mouseDrag(b)):this.instance.isOver&&(this.instance.isOver=0,this.instance.cancelHelperRemoval=!0,this.instance.options.revert=!1,this.instance._trigger("out",b,this.instance._uiHash(this.instance)),this.instance._mouseStop(b,!0),this.instance.options.helper=this.instance.options._helper,this.instance.currentItem.remove(),this.instance.placeholder&&this.instance.placeholder.remove(),d._trigger("fromSortable",b),d.dropped=!1)})}}),a.ui.plugin.add("draggable","cursor",{start:function(b,c){var d=a("body"),e=a(this).data("draggable").options;d.css("cursor")&&(e._cursor=d.css("cursor")),d.css("cursor",e.cursor)},stop:function(b,c){var d=a(this).data("draggable").options;d._cursor&&a("body").css("cursor",d._cursor)}}),a.ui.plugin.add("draggable","opacity",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("opacity")&&(e._opacity=d.css("opacity")),d.css("opacity",e.opacity)},stop:function(b,c){var d=a(this).data("draggable").options;d._opacity&&a(c.helper).css("opacity",d._opacity)}}),a.ui.plugin.add("draggable","scroll",{start:function(b,c){var d=a(this).data("draggable");d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"&&(d.overflowOffset=d.scrollParent.offset())},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=!1;if(d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"){if(!e.axis||e.axis!="x")d.overflowOffset.top+d.scrollParent[0].offsetHeight-b.pageY<e.scrollSensitivity?d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop+e.scrollSpeed:b.pageY-d.overflowOffset.top<e.scrollSensitivity&&(d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop-e.scrollSpeed);if(!e.axis||e.axis!="y")d.overflowOffset.left+d.scrollParent[0].offsetWidth-b.pageX<e.scrollSensitivity?d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft+e.scrollSpeed:b.pageX-d.overflowOffset.left<e.scrollSensitivity&&(d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft-e.scrollSpeed)}else{if(!e.axis||e.axis!="x")b.pageY-a(document).scrollTop()<e.scrollSensitivity?f=a(document).scrollTop(a(document).scrollTop()-e.scrollSpeed):a(window).height()-(b.pageY-a(document).scrollTop())<e.scrollSensitivity&&(f=a(document).scrollTop(a(document).scrollTop()+e.scrollSpeed));if(!e.axis||e.axis!="y")b.pageX-a(document).scrollLeft()<e.scrollSensitivity?f=a(document).scrollLeft(a(document).scrollLeft()-e.scrollSpeed):a(window).width()-(b.pageX-a(document).scrollLeft())<e.scrollSensitivity&&(f=a(document).scrollLeft(a(document).scrollLeft()+e.scrollSpeed))}f!==!1&&a.ui.ddmanager&&!e.dropBehaviour&&a.ui.ddmanager.prepareOffsets(d,b)}}),a.ui.plugin.add("draggable","snap",{start:function(b,c){var d=a(this).data("draggable"),e=d.options;d.snapElements=[],a(e.snap.constructor!=String?e.snap.items||":data(draggable)":e.snap).each(function(){var b=a(this),c=b.offset();this!=d.element[0]&&d.snapElements.push({item:this,width:b.outerWidth(),height:b.outerHeight(),top:c.top,left:c.left})})},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=e.snapTolerance,g=c.offset.left,h=g+d.helperProportions.width,i=c.offset.top,j=i+d.helperProportions.height;for(var k=d.snapElements.length-1;k>=0;k--){var l=d.snapElements[k].left,m=l+d.snapElements[k].width,n=d.snapElements[k].top,o=n+d.snapElements[k].height;if(!(l-f<g&&g<m+f&&n-f<i&&i<o+f||l-f<g&&g<m+f&&n-f<j&&j<o+f||l-f<h&&h<m+f&&n-f<i&&i<o+f||l-f<h&&h<m+f&&n-f<j&&j<o+f)){d.snapElements[k].snapping&&d.options.snap.release&&d.options.snap.release.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=!1;continue}if(e.snapMode!="inner"){var p=Math.abs(n-j)<=f,q=Math.abs(o-i)<=f,r=Math.abs(l-h)<=f,s=Math.abs(m-g)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n-d.helperProportions.height,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l-d.helperProportions.width}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m}).left-d.margins.left)}var t=p||q||r||s;if(e.snapMode!="outer"){var p=Math.abs(n-i)<=f,q=Math.abs(o-j)<=f,r=Math.abs(l-g)<=f,s=Math.abs(m-h)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o-d.helperProportions.height,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m-d.helperProportions.width}).left-d.margins.left)}!d.snapElements[k].snapping&&(p||q||r||s||t)&&d.options.snap.snap&&d.options.snap.snap.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=p||q||r||s||t}}}),a.ui.plugin.add("draggable","stack",{start:function(b,c){var d=a(this).data("draggable").options,e=a.makeArray(a(d.stack)).sort(function(b,c){return(parseInt(a(b).css("zIndex"),10)||0)-(parseInt(a(c).css("zIndex"),10)||0)});if(!e.length)return;var f=parseInt(e[0].style.zIndex)||0;a(e).each(function(a){this.style.zIndex=f+a}),this[0].style.zIndex=f+e.length}}),a.ui.plugin.add("draggable","zIndex",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("zIndex")&&(e._zIndex=d.css("zIndex")),d.css("zIndex",e.zIndex)},stop:function(b,c){var d=a(this).data("draggable").options;d._zIndex&&a(c.helper).css("zIndex",d._zIndex)}})})(jQuery);;;
-
 //     Underscore.js 1.3.1
 //     (c) 2009-2012 Jeremy Ashkenas, DocumentCloud Inc.
 //     Underscore is freely distributable under the MIT license.
@@ -10364,7 +10366,6 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 }).call(this);
 ;
-
 //     Backbone.js 0.9.1
 
 //     (c) 2010-2012 Jeremy Ashkenas, DocumentCloud Inc.
@@ -11656,7 +11657,6 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 }).call(this);
 ;
-
 /*
  * jsTree 1.0-rc3
  * http://jstree.com/
@@ -16210,7 +16210,6 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 })();
 ;
-
 /*
  jquery.layout 1.3.0 - Release Candidate 30.62
  $Date: 2012-08-04 08:00:00 (Thu, 23 Aug 2012) $
@@ -16344,7 +16343,6 @@ b.attr("pin");if(!(h&&f===(h=="down"))){var a=a.options[d],h=a.buttonClass+"-pin
 b,d,j)},addOpenBtn:function(b,d,j){return c.addOpen(a,b,d,j)},addCloseBtn:function(b,d){return c.addClose(a,b,d)},addPinBtn:function(b,d){return c.addPin(a,b,d)}});for(var d=0;d<4;d++)a.state[b.layout.config.borderPanes[d]].pins=[];a.options.autoBindCustomButtons&&c.init(a)},_unload:function(){}};b.layout.onLoad.push(b.layout.buttons._load);b.layout.plugins.browserZoom=!0;b.layout.defaults.browserZoomCheckInterval=1E3;b.layout.optionsMap.layout.push("browserZoomCheckInterval");b.layout.browserZoom=
 {_init:function(a){b.layout.browserZoom.ratio()!==false&&b.layout.browserZoom._setTimer(a)},_setTimer:function(a){if(!a.destroyed){var c=a.options,d=a.state,f=a.hasParentLayout?5E3:Math.max(c.browserZoomCheckInterval,100);setTimeout(function(){if(!a.destroyed&&c.resizeWithWindow){var f=b.layout.browserZoom.ratio();if(f!==d.browserZoom){d.browserZoom=f;a.resizeAll()}b.layout.browserZoom._setTimer(a)}},f)}},ratio:function(){function a(a,b){return(parseInt(a,10)/parseInt(b,10)*100).toFixed()}var c=window,
 d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r,y,D;return j.msie&&m>8||!j.msie?false:d.deviceXDPI?a(d.deviceXDPI,d.systemXDPI):j.webkit&&(r=f.body.getBoundingClientRect)?a(r.left-r.right,f.body.offsetWidth):j.webkit&&(y=c.outerWidth)?a(y,c.innerWidth):(y=d.width)&&(D=h.clientWidth)?a(y,D):false}};b.layout.onReady.push(b.layout.browserZoom._init)})(jQuery);;
-
 /**
  * @license Rangy, a cross-browser JavaScript range and selection library
  * http://code.google.com/p/rangy/
@@ -19570,7 +19568,6 @@ rangy.createModule("DomUtil", function(api, module) {
     });
 });
 ;
-
 /**
  * @license Selection save and restore module for Rangy.
  * Saves and restores user selections using marker invisible elements in the DOM.
@@ -19767,7 +19764,2944 @@ rangy.createModule("SaveRestore", function(api, module) {
     api.removeMarkers = removeMarkers;
 });
 ;
+/*!
+ * Copyright (c) 2010 Chris O'Hara <cohara87@gmail.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);;
+exports = {};/* ------------------------------------------------------------------------
+#  MARKUP LANGUAGE CONVERTERS
+# _cozy2md (Read a string of editor html code format and turns it into a
+#           string in markdown format)
+# _md2cozy (Read a string of html code given by showdown and turns it into
+#           a string of editor html code)
+*/
 
+var md2cozy;
+
+md2cozy = {};
+
+if (!String.prototype.trim) {
+  String.prototype.trim = function() {
+    return this.replace(/^\s+|\s+$/g, '');
+  };
+}
+
+/* ------------------------------------------------------------------------
+#  _cozy2md
+# Turns line elements form editor into a string in markdown format
+*/
+
+
+md2cozy.cozy2md = function(linesDiv) {
+  var line, lineElt, lineMetaData, lines, markCode, prevLineMetaData, _i, _j, _len, _len1, _ref, _ref1;
+  md2cozy.currentDepth = 0;
+  lines = [];
+  prevLineMetaData = null;
+  _ref = linesDiv.children();
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    line = _ref[_i];
+    line = $(line);
+    lineMetaData = md2cozy.getLineMetadata(line.attr('class'));
+    markCode = md2cozy.buildMarkdownPrefix(lineMetaData, prevLineMetaData);
+    prevLineMetaData = lineMetaData;
+    _ref1 = line.children();
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      lineElt = _ref1[_j];
+      if (lineElt.nodeType === 1) {
+        markCode += md2cozy.convertInlineEltToMarkdown($(lineElt));
+      } else {
+        markCode += $(lineElt).text();
+      }
+    }
+    lines.push(markCode);
+  }
+  return lines.join('');
+};
+
+md2cozy.getLineMetadata = function(name) {
+  var data, depth, type;
+  if (name != null) {
+    data = name.split("-");
+    type = data[0];
+    depth = parseInt(data[1], 10);
+    return {
+      type: type,
+      depth: depth
+    };
+  } else {
+    return {
+      type: null,
+      depth: null
+    };
+  }
+};
+
+md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
+  var blanks, dieses, i, nbBlanks, prefix, _i, _j, _k, _ref, _ref1, _ref2;
+  blanks = "";
+  switch (metadata.type) {
+    case 'Th':
+      dieses = '';
+      for (i = _i = 1, _ref = metadata.depth; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
+        dieses += '#';
+      }
+      md2cozy.currentDepth = metadata.depth;
+      prefix = "" + dieses + " ";
+      if (prevMetadata != null) {
+        prefix = "\n\n" + prefix;
+      }
+      return prefix;
+    case 'Lh':
+      return "\n\n";
+    case 'Tu':
+      nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
+      if (nbBlanks > 0) {
+        for (i = _j = 0, _ref1 = nbBlanks - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+          blanks += '    ';
+        }
+      }
+      prefix = "" + blanks + "* ";
+      if ((prevMetadata != null ? prevMetadata.type : void 0) === "Tu" || (prevMetadata != null ? prevMetadata.type : void 0) === "Lu") {
+        prefix = "\n" + prefix;
+      } else if (prevMetadata != null) {
+        prefix = "\n\n" + prefix;
+      }
+      return prefix;
+    case 'Lu':
+      nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
+      if (nbBlanks > 0) {
+        for (i = _k = 0, _ref2 = nbBlanks - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
+          blanks += '    ';
+        }
+      }
+      return "\n\n" + blanks + " ";
+    default:
+      return '';
+  }
+};
+
+md2cozy.convertInlineEltToMarkdown = function(obj) {
+  var alt, href, src, title;
+  switch (obj[0].nodeName) {
+    case 'A':
+      title = obj.attr('title') != null ? obj.attr('title') : "";
+      href = obj.attr('href') != null ? obj.attr('href') : "";
+      return '[' + obj.html() + '](' + href + ' "' + title + '")';
+    case 'IMG':
+      title = obj.attr('title') != null ? obj.attr('title') : "";
+      alt = obj.attr('alt') != null ? obj.attr('alt') : "";
+      src = obj.attr('src') != null ? obj.attr('src') : "";
+      return '![' + alt + '](' + src + ' "' + title + '")';
+    case 'SPAN':
+      return obj.text();
+    default:
+      return '';
+  }
+};
+
+/* ------------------------------------------------------------------------
+# Read a string of html code given by showdown and turns it into a string
+# of editor html code
+*/
+
+
+md2cozy.md2cozy = function(text) {
+  var conv, cozyCode, htmlCode;
+  conv = new Showdown.converter();
+  htmlCode = $(conv.makeHtml(text));
+  cozyCode = '';
+  md2cozy.currentId = 0;
+  md2cozy.editorDepth = 0;
+  htmlCode.each(function() {
+    return cozyCode += md2cozy.parseLine($(this));
+  });
+  if (cozyCode.length === 0) {
+    cozyCode = md2cozy.buildEditorLine("Tu", 1, null);
+  }
+  return cozyCode;
+};
+
+md2cozy.parseLine = function(obj) {
+  var tag;
+  tag = obj[0].tagName;
+  if ((tag != null) && tag[0] === "H") {
+    md2cozy.editorDepth = parseInt(tag[1], 10);
+    return md2cozy.buildEditorLine("Th", md2cozy.editorDepth, obj);
+  } else if ((tag != null) && tag === "P") {
+    return md2cozy.buildEditorLine("Lh", md2cozy.editorDepth, obj);
+  } else {
+    return md2cozy.parseList(obj);
+  }
+};
+
+md2cozy.buildEditorLine = function(type, depth, obj) {
+  var code;
+  md2cozy.currentId++;
+  code = '';
+  if (obj != null) {
+    obj.contents().each(function() {
+      var name;
+      name = this.nodeName;
+      if (name === "#text") {
+        return code += "<span>" + ($(this).text()) + "</span>";
+      } else if (this.tagName != null) {
+        $(this).wrap('<div></div>');
+        code += "" + ($(this).parent().html());
+        return $(this).unwrap();
+      }
+    });
+  }
+  if (code === "") {
+    code = "<span></span>";
+  }
+  return ("<div id=CNID_" + md2cozy.currentId + " class=" + type + "-" + depth + ">") + code + "<br></div>";
+};
+
+md2cozy.parseList = function(obj) {
+  var child, cozyCode, i, nodeName, tag, type, _i, _len, _ref;
+  tag = obj[0].tagName;
+  cozyCode = "";
+  if ((tag != null) && tag === "UL") {
+    md2cozy.editorDepth++;
+    obj.children().each(function() {
+      return cozyCode += md2cozy.parseList($(this));
+    });
+    md2cozy.editorDepth--;
+  } else if ((tag != null) && tag === "LI" && (obj.contents().get(0) != null)) {
+    _ref = obj[0].childNodes;
+    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+      child = _ref[i];
+      child = $(child);
+      type = "Lu";
+      if (i === 0) {
+        type = "Tu";
+      }
+      nodeName = child[0].nodeName;
+      if (nodeName === "#text" && child.text().trim() !== "") {
+        child = child.clone().wrap('<p></p>').parent();
+        cozyCode += md2cozy.buildEditorLine(type, md2cozy.editorDepth, child);
+      } else if (nodeName === "P") {
+        cozyCode += md2cozy.buildEditorLine(type, md2cozy.editorDepth, child);
+      } else {
+        cozyCode += md2cozy.parseList(child);
+      }
+    }
+  } else if ((tag != null) && tag === "P") {
+    cozyCode += md2cozy.buildEditorLine("Lu", md2cozy.editorDepth, obj);
+  }
+  return cozyCode;
+};
+
+exports.md2cozy = md2cozy;
+var selection;
+
+selection = {};
+
+/* ------------------------------------------------------------------------
+# UTILITY FUNCTIONS
+# used to set ranges and help normalize selection
+# 
+# parameters: elt  :  a dom object with only textNode children
+#
+# note: with google chrome, it seems that non visible elements
+#       cannot be selected with rangy (that's where 'blank' comes in)
+*/
+
+
+/**
+ * Called only once from the editor - TODO : role to be verified
+*/
+
+
+selection.cleanSelection = function(startLine, endLine, range) {
+  var endNode, startNode;
+  if (startLine === null) {
+    startLine = endLine;
+    endLine = endLine.lineNext;
+    selection.putStartOnStart(range, startLine.line$[0].firstElementChild);
+    endLine.line$.prepend('<span></span>');
+    return selection.putEndOnStart(range, endLine.line$[0].firstElementChild);
+  } else {
+    startNode = startLine.line$[0].lastElementChild.previousElementSibling;
+    endNode = endLine.line$[0].lastElementChild.previousElementSibling;
+    range.setStartAfter(startNode, 0);
+    return range.setEndAfter(endNode, 0);
+  }
+};
+
+selection.selectAll = function(editor) {
+  var range, sel;
+  range = document.createRange();
+  range.setStartBefore(editor.linesDiv.firstChild);
+  range.setEndAfter(editor.linesDiv.lastChild);
+  selection.normalize(range);
+  sel = editor.getEditorSelection();
+  sel.removeAllRanges();
+  return sel.addRange(range);
+};
+
+/**
+ * Called only once from the editor - TODO : role to be verified
+*/
+
+
+selection.cloneEndFragment = function(range, endLine) {
+  var range4fragment;
+  range4fragment = rangy.createRangyRange();
+  range4fragment.setStart(range.endContainer, range.endOffset);
+  range4fragment.setEndAfter(endLine.line$[0].lastChild);
+  return range4fragment.cloneContents();
+};
+
+/* ------------------------------------------------------------------------
+#  normalize(range)
+# 
+#  Modify 'range' containers and offsets so it represent a clean selection
+#  that starts and ends inside a textNode.
+#
+#  Set the flag isEmptyLine to true if an empty line is being normalized
+#  so further suppr ~ backspace work properly.
+# 
+#  All possible breakpoints :
+    - <span>|<nodeText>|Text |node content|</nodeText>|<any>...</nodeText>|</span>
+           BP1        BP2   BP3          BP4         BP5             BP6 
+
+    - <div>|<span>...</span>|<any>...</span>|</br>|</div>
+          BP7              BP8             BP9    BP10
+
+    - <body>|<div>...</div>|<div>...</div>|</body>
+           BP11           BP12           BP13
+
+
+    BP1 : <span>|<nodeText>
+             
+        |     test    |               action              |
+        |-------------|-----------------------------------|
+        | cont = span | if cont.length = 0                |
+        | offset = 0  | * create nodeText                 |
+        |             | * BP2 => BP2                      |
+        |             | else if cont.child(0) = nodeText  |
+        |             | * BP2 => BP2                      |
+        |             | else if cont.child(0) != nodeText |
+        |             | * error                           |
+
+    BP2 : <nodeText>|Text node content</nodeText>
+                
+        |       test      |  action |
+        |-----------------|---------|
+        | cont = nodeText | nothing |
+        | offset = 0      |         |
+        
+    BP3 : <nodeText>Text |node content</nodeText>
+
+        |         test         |  action |
+        |----------------------|---------|
+        | cont = nodeText      | nothing |
+        | 0<offset<cont.length |         |
+        
+    BP4 : <nodeText>Text node content|</nodeText>
+
+        |         test         |  action |
+        |----------------------|---------|
+        | cont = nodeText      | nothing |
+        | offset = cont.length |         |
+        
+    BP5 & BP6 : </nodeText>|<any>
+        |               test              |            action           |
+        |---------------------------------|-----------------------------|
+        | cont != nodeText                | bpEnd(cont.child(offset-1)) |
+        | offset > 0                      |                             |
+        | cont.child(offset-1) = nodeText |                             |
+        
+    BP7 : <div>|<span>...
+        |    test    |          action          |
+        |------------|--------------------------|
+        | cont = div | if cont.length = 0       |
+        | offset = 0 | * error                  |
+        |            | else                     |
+        |            | bpStart(cont.firstChild) |
+
+    BP8 & BP9 : ...</span>|<any>...
+        |             test            |            action           |
+        |-----------------------------|-----------------------------|
+        | cont != nodeText            | bpEnd(cont.child(offset-1)) |
+        | offset > 0                  |                             |
+        | cont.child(offset-1) = span |                             |
+
+    BP10 : </br>|</div>
+        |            test           |            action           |
+        |---------------------------|-----------------------------|
+        | cont != nodeText          | bpEnd(cont.child(offset-2)) |
+        | offset > 0                |                             |
+        | offset=cont.length        |                             |
+        | cont.child(offset-1) = br |                             |
+
+    BP11 : <body>|<div>...
+        |     test    |          action          |
+        |-------------|--------------------------|
+        | cont = body | bpStart(cont.firstChild) |
+        | offset = 0  |                          |
+
+    BP12 : </div>|<any>
+        |            test            |            action           |
+        |----------------------------|-----------------------------|
+        | cont != nodeText           | bpEnd(cont.child(offset-1)) |
+        | offset > 0                 |                             |
+        | offset=cont.length         |                             |
+        | cont.child(offset-1) = div |                             |
+
+
+    BP13 : ...</div>|</body>
+        |         test         |         action        |
+        |----------------------|-----------------------|
+        | cont = body          | bpEnd(cont.lastChild) |
+        | offset = cont.length |                       |
+*/
+
+
+selection.normalize = function(range) {
+  var isCollapsed, newEndBP, newStartBP;
+  isCollapsed = range.collapsed;
+  newStartBP = selection.normalizeBP(range.startContainer, range.startOffset);
+  range.setStart(newStartBP.cont, newStartBP.offset);
+  if (isCollapsed) {
+    range.collapse(true);
+  } else {
+    newEndBP = selection.normalizeBP(range.endContainer, range.endOffset);
+    range.setEnd(newEndBP.cont, newEndBP.offset);
+  }
+  return range;
+};
+
+/**
+ * returns a break point in the most pertinent text node given a random bp.
+ * @param  {element} cont   the container of the break point
+ * @param  {number} offset offset of the break point
+ * @return {object} the suggested break point : {cont:newCont,offset:newOffset}
+*/
+
+
+selection.normalizeBP = function(cont, offset) {
+  var newCont, newOffset, res;
+  if (cont.nodeName === '#text') {
+    res = {
+      cont: cont,
+      offset: offset
+    };
+  } else if (cont.nodeName === 'SPAN') {
+    if (offset > 0) {
+      newCont = cont.childNodes[offset - 1];
+      newOffset = newCont.length;
+    } else if (cont.childNodes.length > 0) {
+      newCont = cont.firstChild;
+      newOffset = 0;
+    } else {
+      newCont = document.createTextNode('');
+      cont.appendChild(newCont);
+      newOffset = 0;
+    }
+  } else if (cont.nodeName === 'DIV' && cont.id !== "editor-lines") {
+    if (offset === 0) {
+      res = selection.normalizeBP(cont.firstChild, 0);
+    } else if (offset < cont.children.length - 1) {
+      newCont = cont.children[offset - 1];
+      newOffset = newCont.childNodes.length;
+      res = selection.normalizeBP(newCont, newOffset);
+    } else {
+      newCont = cont.children[cont.children.length - 2];
+      newOffset = newCont.childNodes.length;
+      res = selection.normalizeBP(newCont, newOffset);
+    }
+  } else if (cont.nodeName === 'DIV' && cont.id === "editor-lines") {
+    if (offset === 0) {
+      newCont = cont.firstChild;
+      newOffset = 0;
+      res = selection.normalizeBP(newCont, newOffset);
+    } else if (offset === cont.childNodes.length) {
+      newCont = cont.lastChild;
+      newOffset = newCont.childNodes.length;
+      res = selection.normalizeBP(newCont, newOffset);
+    } else {
+      newCont = cont.children[offset - 1];
+      newOffset = newCont.childNodes.length;
+      res = selection.normalizeBP(newCont, newOffset);
+    }
+  }
+  if (!res) {
+    res = {
+      cont: newCont,
+      offset: newOffset
+    };
+  }
+  return res;
+};
+
+selection._getLineDiv = function(elt) {
+  var parent;
+  parent = elt;
+  while (!(parent.nodeName === 'DIV' && (parent.id != null) && parent.id.substr(0, 5) === 'CNID_') || parent.parentNode === null) {
+    parent = parent.parentNode;
+  }
+  return parent;
+};
+
+/**
+ * return the div corresponding to an element inside a line and tells wheter
+ * the breabk point is at the end or at the beginning of the line
+ * @param  {element} cont   the container of the break point
+ * @param  {number} offset offset of the break point
+ * @return {object}        {div[element], isStart[bool], isEnd[bool]}
+*/
+
+
+selection.getLineDivIsStartIsEnd = function(cont, offset) {
+  var isEnd, isStart, nodesNum, parent;
+  parent = cont;
+  isStart = true;
+  isEnd = true;
+  while (!(parent.nodeName === 'DIV' && (parent.id != null) && parent.id.substr(0, 5) === 'CNID_') && parent.parentNode !== null) {
+    isStart = isStart && (offset === 0);
+    if (parent.length != null) {
+      isEnd = isEnd && (offset === parent.length);
+    } else {
+      isEnd = isEnd && (offset === parent.childNodes.length - 1);
+    }
+    if (parent.previousSibling === null) {
+      offset = 0;
+    } else if (parent.nextSibling === null) {
+      offset = parent.parentNode.childNodes.length - 1;
+    } else if (parent.nextSibling.nextSibling === null) {
+      offset = parent.parentNode.childNodes.length - 2;
+    } else {
+      offset = 1;
+    }
+    parent = parent.parentNode;
+  }
+  nodesNum = parent.childNodes.length;
+  isStart = isStart && (offset === 0);
+  if (parent.textContent === '') {
+    isStart = true;
+  }
+  isEnd = isEnd && (offset === nodesNum - 1 || offset === nodesNum - 2);
+  return {
+    div: parent,
+    isStart: isStart,
+    isEnd: isEnd
+  };
+};
+
+selection.putStartOnStart = function(range, elt) {
+  var blank, offset;
+  if ((elt != null ? elt.firstChild : void 0) != null) {
+    offset = elt.firstChild.textContent.length;
+    if (offset === 0) {
+      elt.firstChild.data = " ";
+    }
+    return range.setStart(elt.firstChild, 0);
+  } else if (elt != null) {
+    blank = document.createTextNode(" ");
+    elt.appendChild(blank);
+    return range.setStart(blank, 0);
+  }
+};
+
+selection.putEndOnStart = function(range, elt) {
+  var blank, offset;
+  if ((elt != null ? elt.firstChild : void 0) != null) {
+    offset = elt.firstChild.textContent.length;
+    if (offset === 0) {
+      elt.firstChild.data = " ";
+    }
+    return range.setEnd(elt.firstChild, 0);
+  } else if (elt != null) {
+    blank = document.createTextNode(" ");
+    elt.appendChild(blank);
+    return range.setEnd(blank, 0);
+  }
+};
+
+/**
+ * Returns the DIV of the line where the break point is.
+ * @param  {element} cont   The contener of the break point
+ * @param  {number} offset Offset of the break point.
+ * @return {element}        The DIV of the line where the break point is.
+*/
+
+
+selection.getLineDiv = function(cont, offset) {
+  var startDiv;
+  if (cont.nodeName === 'DIV') {
+    if (cont.id === 'editor-lines') {
+      startDiv = cont.children[offset];
+    } else {
+      startDiv = selection._getLineDiv(cont);
+    }
+  } else {
+    startDiv = selection._getLineDiv(cont);
+  }
+  return startDiv;
+};
+
+exports.selection = selection;
+/* ------------------------------------------------------------------------
+# CLASS FOR THE COZY NOTE EDITOR
+#
+# usage : 
+#
+# newEditor = new CNEditor( iframeTarget,callBack )
+#   iframeTarget = iframe where the editor will be nested
+#   callBack     = launched when editor ready, the context 
+#                  is set to the editorCtrl (callBack.call(this))
+# properties & methods :
+#   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
+#   _keyPressListener : (e) =>
+#   _insertLineAfter  : (param) ->
+#   _insertLineBefore : (param) ->
+#   
+#   editorIframe      : the iframe element where is nested the editor
+#   editorBody$       : the jquery pointer on the body of the iframe
+#   _lines            : {} an objet, each property refers a line
+#   _highestId        : 
+#   _firstLine        : points the first line : TODO : not taken into account
+*/
+
+var CNeditor, Line, md2cozy, selection,
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+if (typeof require !== "undefined" && require !== null) {
+  if (!(typeof md2cozy !== "undefined" && md2cozy !== null)) {
+    md2cozy = require('./md2cozy').md2cozy;
+  }
+  if (!(typeof selection !== "undefined" && selection !== null)) {
+    selection = require('./selection').selection;
+  }
+}
+
+/**
+ * line$        : 
+ * lineID       : 
+ * lineType     : 
+ * lineDepthAbs : 
+ * lineDepthRel : 
+ * lineNext     : 
+ * linePrev     :
+*/
+
+
+Line = (function() {
+  /**
+   * If no arguments, returns an empty object (only methods), otherwise
+   * constructs a full line. The dom element of the line is inserted according
+   * to the previous or next line given in the arguments.
+   * @param  {Array}  Array of parameters :
+   *   [ 
+          editor        , # 
+          type          , # 
+          depthAbs      , # 
+          depthRelative , # 
+          prevLine      , # The prev line, null if nextLine is given
+          nextLine      , # The next line, null if prevLine is given
+          fragment        # [optional] a fragment to insert in the line, no br at the end
+        ]
+  */
+
+  function Line() {
+    var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
+    if (arguments.length === 0) {
+      return;
+    } else {
+      editor = arguments[0], type = arguments[1], depthAbs = arguments[2], depthRelative = arguments[3], prevLine = arguments[4], nextLine = arguments[5], fragment = arguments[6];
+    }
+    editor._highestId += 1;
+    lineID = 'CNID_' + editor._highestId;
+    newLineEl = document.createElement('div');
+    newLineEl.id = lineID;
+    newLineEl.setAttribute('class', type + '-' + depthAbs);
+    if (fragment != null) {
+      newLineEl.appendChild(fragment);
+      newLineEl.appendChild(document.createElement('br'));
+    } else {
+      node = document.createElement('span');
+      node.appendChild(document.createTextNode(''));
+      newLineEl.appendChild(node);
+      newLineEl.appendChild(document.createElement('br'));
+    }
+    this.line$ = $(newLineEl);
+    if (prevLine != null) {
+      this.linePrev = prevLine;
+      linesDiv = prevLine.line$[0].parentNode;
+      if (prevLine.lineNext != null) {
+        nextL = prevLine.lineNext;
+        linesDiv.insertBefore(newLineEl, nextL.line$[0]);
+        this.lineNext = nextL;
+        nextL.linePrev = this;
+      } else {
+        linesDiv.appendChild(newLineEl);
+        this.lineNext = null;
+      }
+      prevLine.lineNext = this;
+    } else if (nextLine != null) {
+      linesDiv = nextLine.line$[0].parentNode;
+      this.lineNext = nextLine;
+      linesDiv.insertBefore(newLineEl, nextLine.line$[0]);
+      if (nextLine.linePrev != null) {
+        this.linePrev = nextLine.linePrev;
+        nextLine.linePrev.lineNext = this;
+      } else {
+        this.linePrev = null;
+      }
+      nextLine.linePrev = this;
+    }
+    this.lineID = lineID;
+    this.lineType = type;
+    this.lineDepthAbs = depthAbs;
+    this.lineDepthRel = depthRelative;
+    editor._lines[lineID] = this;
+  }
+
+  Line.prototype.setType = function(type) {
+    this.lineType = type;
+    return this.line$.prop('class', "" + type + "-" + this.lineDepthAbs);
+  };
+
+  Line.prototype.setDepthAbs = function(absDepth) {
+    this.lineDepthAbs = absDepth;
+    return this.line$.prop('class', "" + this.lineType + "-" + absDepth);
+  };
+
+  Line.prototype.setTypeDepth = function(type, absDepth) {
+    this.lineType = type;
+    this.lineDepthAbs = absDepth;
+    return this.line$.prop('class', "" + type + "-" + absDepth);
+  };
+
+  return Line;
+
+})();
+
+Line.clone = function(line) {
+  var clone;
+  clone = new Line();
+  clone.line$ = line.line$.clone();
+  clone.lineID = line.lineID;
+  clone.lineType = line.lineType;
+  clone.lineDepthAbs = line.lineDepthAbs;
+  clone.lineDepthRel = line.lineDepthRel;
+  clone.linePrev = line.linePrev;
+  clone.lineNext = line.lineNext;
+  return clone;
+};
+
+exports.CNeditor = (function() {
+  /*
+      #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
+      #       iframeTarget = iframe where the editor will be nested
+      #       callBack     = launched when editor ready, the context 
+      #                      is set to the editorCtrl (callBack.call(this))
+  */
+
+  function CNeditor(editorTarget, callBack) {
+    var iframe$,
+      _this = this;
+    this.editorTarget = editorTarget;
+    this._processPaste = __bind(this._processPaste, this);
+
+    this._waitForPasteData = __bind(this._waitForPasteData, this);
+
+    this._keyPressListener = __bind(this._keyPressListener, this);
+
+    if (this.editorTarget.nodeName === "IFRAME") {
+      iframe$ = $(this.editorTarget);
+      iframe$.on('load', function() {
+        var cssLink, editor_head$, editor_html$;
+        editor_html$ = iframe$.contents().find("html");
+        _this.editorBody$ = editor_html$.find("body");
+        _this.editorBody$.parent().attr('id', '__ed-iframe-html');
+        _this.editorBody$.attr("id", "__ed-iframe-body");
+        _this.document = _this.editorBody$[0].ownerDocument;
+        editor_head$ = editor_html$.find("head");
+        cssLink = '<link id="editorCSS" ';
+        cssLink += 'href="stylesheets/CNeditor.css" rel="stylesheet">';
+        editor_head$.html(cssLink);
+        _this.linesDiv = document.createElement('div');
+        _this.linesDiv.setAttribute('id', 'editor-lines');
+        _this.linesDiv.setAttribute('contenteditable', 'true');
+        _this.editorBody$.append(_this.linesDiv);
+        _this._initClipBoard();
+        _this._lines = {};
+        _this.newPosition = true;
+        _this._highestId = 0;
+        _this._deepest = 1;
+        _this._firstLine = null;
+        _this._history = {
+          index: 0,
+          history: [null],
+          historySelect: [null],
+          historyScroll: [null],
+          historyPos: [null]
+        };
+        _this._lastKey = null;
+        _this.editorBody$.prop('__editorCtl', _this);
+        _this.linesDiv.addEventListener('keydown', _this._keyPressListener, true);
+        _this.linesDiv.addEventListener('mouseup', function() {
+          return _this.newPosition = true;
+        }, true);
+        _this.editorBody$.on('keyup', function() {
+          return iframe$.trigger(jQuery.Event("onKeyUp"));
+        });
+        _this.editorBody$.on('click', function(event) {
+          return _this._lastKey = null;
+        });
+        _this.editorBody$.on('paste', function(event) {
+          return _this.paste(event);
+        });
+        callBack.call(_this);
+        return _this;
+      });
+      this.editorTarget.src = '';
+    }
+  }
+
+  CNeditor.prototype.setFocus = function() {
+    return this.linesDiv.focus();
+  };
+
+  CNeditor.prototype.getEditorSelection = function() {
+    return rangy.getIframeSelection(this.editorTarget);
+  };
+
+  CNeditor.prototype.saveEditorSelection = function() {
+    var sel;
+    sel = rangy.getIframeSelection(this.editorTarget);
+    return rangy.serializeSelection(sel, true, this.linesDiv);
+  };
+
+  /* ------------------------------------------------------------------------
+  # EXTENSION : _updateDeepest
+  # 
+  # Find the maximal deep (thus the deepest line) of the text
+  # TODO: improve it so it only calculates the new depth from the modified
+  #       lines (not all of them)
+  # TODO: set a class system rather than multiple CSS files. Thus titles
+  #       classes look like "Th-n depth3" for instance if max depth is 3
+  # note: These todos arent our priority for now
+  */
+
+
+  CNeditor.prototype._updateDeepest = function() {
+    var c, lines, max;
+    max = 1;
+    lines = this._lines;
+    for (c in lines) {
+      if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th" && lines[c].lineDepthAbs > max) {
+        max = this._lines[c].lineDepthAbs;
+      }
+    }
+    if (max !== this._deepest) {
+      this._deepest = max;
+      if (max < 4) {
+        return this.replaceCSS("stylesheets/app-deep-" + max + ".css");
+      } else {
+        return this.replaceCSS("stylesheets/app-deep-4.css");
+      }
+    }
+  };
+
+  /** ------------------------------------------------------------------------
+   * Initialize the editor content from a html string
+   * The html string should not been pretified because of the spaces and
+   * charriage return. 
+   * If unPretify = true then a regex tries to set up things
+  */
+
+
+  CNeditor.prototype.replaceContent = function(htmlString, unPretify) {
+    if (unPretify) {
+      htmlString = htmlString.replace(/>[\n ]*</g, "><");
+    }
+    this.linesDiv.innerHTML = htmlString;
+    return this._readHtml();
+  };
+
+  /* ------------------------------------------------------------------------
+  # Clear editor content
+  */
+
+
+  CNeditor.prototype.deleteContent = function() {
+    var emptyLine;
+    emptyLine = '<div id="CNID_1" class="Tu-1"><span></span><br></div>';
+    this.linesDiv.innerHTML = emptyLine;
+    return this._readHtml();
+  };
+
+  /* ------------------------------------------------------------------------
+  # Returns a markdown string representing the editor content
+  */
+
+
+  CNeditor.prototype.getEditorContent = function() {
+    return md2cozy.cozy2md($(this.linesDiv));
+  };
+
+  /* ------------------------------------------------------------------------
+  # Sets the editor content from a markdown string
+  */
+
+
+  CNeditor.prototype.setEditorContent = function(mdContent) {
+    var cozyContent;
+    cozyContent = md2cozy.md2cozy(mdContent);
+    this.linesDiv.innerHTML = cozyContent;
+    return this._readHtml();
+  };
+
+  /*
+      # Change the path of the css applied to the editor iframe
+  */
+
+
+  CNeditor.prototype.replaceCSS = function(path) {
+    var document, linkElm;
+    document = this.document;
+    linkElm = document.querySelector('#editorCSS');
+    linkElm.setAttribute('href', path);
+    return document.head.appendChild(linkElm);
+  };
+
+  /**
+   * Return [metaKeyCode,keyCode] corresponding to the key strike combinaison. 
+   * the string structure = [meta key]-[key]
+   *   * [metaKeyCode] : (Alt)*(Ctrl)*(Shift)*
+   *   * [keyCode] : (return|end|...|A|S|V|Y|Z)|(other) 
+   * ex : 
+   *   * "AltShift" & "up" 
+   *   * "AltCtrl" & "down" 
+   *   * "Shift" & "A"
+   *   * "Ctrl" & "S"
+   *   * "" & "other"
+   * @param  {[type]} e [description]
+   * @return {[type]}   [description]
+  */
+
+
+  CNeditor.prototype.getShortCut = function(e) {
+    var keyCode, metaKeyCode, shortcut;
+    metaKeyCode = (e.altKey ? "Alt" : "") + 
+                              (e.ctrlKey ? "Ctrl" : "") + 
+                              (e.shiftKey ? "Shift" : "");
+    switch (e.keyCode) {
+      case 13:
+        keyCode = 'return';
+        break;
+      case 35:
+        keyCode = 'end';
+        break;
+      case 36:
+        keyCode = 'home';
+        break;
+      case 33:
+        keyCode = 'pgUp';
+        break;
+      case 34:
+        keyCode = 'pgDwn';
+        break;
+      case 37:
+        keyCode = 'left';
+        break;
+      case 38:
+        keyCode = 'up';
+        break;
+      case 39:
+        keyCode = 'right';
+        break;
+      case 40:
+        keyCode = 'down';
+        break;
+      case 9:
+        keyCode = 'tab';
+        break;
+      case 8:
+        keyCode = 'backspace';
+        break;
+      case 32:
+        keyCode = 'space';
+        break;
+      case 27:
+        keyCode = 'esc';
+        break;
+      case 46:
+        keyCode = 'suppr';
+        break;
+      default:
+        switch (e.which) {
+          case 32:
+            keyCode = 'space';
+            break;
+          case 8:
+            keyCode = 'backspace';
+            break;
+          case 65:
+            keyCode = 'A';
+            break;
+          case 83:
+            keyCode = 'S';
+            break;
+          case 86:
+            keyCode = 'V';
+            break;
+          case 89:
+            keyCode = 'Y';
+            break;
+          case 90:
+            keyCode = 'Z';
+            break;
+          default:
+            keyCode = 'other';
+        }
+    }
+    shortcut = metaKeyCode + '-' + keyCode;
+    if (metaKeyCode === '' && (keyCode === 'A' || keyCode === 'S' || keyCode === 'V' || keyCode === 'Y' || keyCode === 'Z')) {
+      keyCode = 'other';
+    }
+    return [metaKeyCode, keyCode];
+  };
+
+  /* ------------------------------------------------------------------------
+  #   _keyPressListener
+  # 
+  # The listener of keyPress event on the editor's iframe... the king !
+  */
+
+
+  /*
+      # SHORTCUT
+      #
+      # Definition of a shortcut : 
+      #   a combination alt,ctrl,shift,meta
+      #   + one caracter(.which) 
+      #   or 
+      #     arrow (.keyCode=dghb:) or 
+      #     return(keyCode:13) or 
+      #     bckspace (which:8) or 
+      #     tab(keyCode:9)
+      #   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
+      #                   'Ctrl-'
+  */
+
+
+  CNeditor.prototype._keyPressListener = function(e) {
+    var keyCode, metaKeyCode, range, sel, shortcut, _ref;
+    _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
+    shortcut = metaKeyCode + '-' + keyCode;
+    switch (e.keyCode) {
+      case 16:
+        e.preventDefault();
+        return;
+      case 17:
+        e.preventDefault();
+        return;
+      case 18:
+        e.preventDefault();
+        return;
+    }
+    if (this._lastKey !== shortcut && (shortcut === '-tab' || shortcut === '-return' || shortcut === '-backspace' || shortcut === '-suppr' || shortcut === 'CtrlShift-down' || shortcut === 'CtrlShift-up' || shortcut === 'CtrlShift-left' || shortcut === 'CtrlShift-right' || shortcut === 'Ctrl-V' || shortcut === 'Shift-tab' || shortcut === '-space' || shortcut === '-other' || shortcut === 'Alt-A')) {
+      this._addHistory();
+    }
+    this._lastKey = shortcut;
+    if (this.newPosition && (shortcut === '-other' || shortcut === '-space' || shortcut === 'Ctrl-V' || shortcut === '-suppr' || shortcut === '-backspace' || shortcut === '-return')) {
+      this.newPosition = false;
+      sel = this.getEditorSelection();
+      range = sel.getRangeAt(0);
+      selection.normalize(range);
+    }
+    if ((keyCode === 'left' || keyCode === 'up' || keyCode === 'right' || keyCode === 'down' || keyCode === 'pgUp' || keyCode === 'pgDwn' || keyCode === 'end' || keyCode === 'home' || keyCode === 'return' || keyCode === 'suppr' || keyCode === 'backspace') && (shortcut !== 'CtrlShift-down' && shortcut !== 'CtrlShift-up' && shortcut !== 'CtrlShift-right' && shortcut !== 'CtrlShift-left')) {
+      this.newPosition = true;
+    }
+    this.currentSel = null;
+    switch (shortcut) {
+      case '-return':
+        this._return();
+        return e.preventDefault();
+      case '-backspace':
+        this._backspace();
+        return e.preventDefault();
+      case '-tab':
+        this.tab();
+        return e.preventDefault();
+      case 'Shift-tab':
+        this.shiftTab();
+        return e.preventDefault();
+      case '-suppr':
+        return this._suppr(e);
+      case 'CtrlShift-down':
+        this._moveLinesDown();
+        return e.preventDefault();
+      case 'CtrlShift-up':
+        this._moveLinesUp();
+        return e.preventDefault();
+      case 'Ctrl-A':
+        selection.selectAll(this);
+        return e.preventDefault();
+      case 'Alt-A':
+        this.toggleType();
+        e.preventDefault();
+        return console.log('EVENT (editor)');
+      case 'Ctrl-V':
+        return true;
+      case 'Ctrl-S':
+        $(this.editorTarget).trigger(jQuery.Event('saveRequest'));
+        return e.preventDefault();
+      case 'Ctrl-Z':
+        this.unDo();
+        return e.preventDefault();
+      case 'Ctrl-Y':
+        this.reDo();
+        return e.preventDefault();
+    }
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _suppr :
+  # 
+  # Manage deletions when suppr key is pressed
+  */
+
+
+  CNeditor.prototype._suppr = function(event) {
+    var range, startLine, startOffset, textNode, txt;
+    this._findLinesAndIsStartIsEnd();
+    startLine = this.currentSel.startLine;
+    if (this.currentSel.range.collapsed) {
+      if (this.currentSel.rangeIsEndLine) {
+        if (startLine.lineNext !== null) {
+          this.currentSel.range.setEndBefore(startLine.lineNext.line$[0].firstChild);
+          this.currentSel.endLine = startLine.lineNext;
+          this._deleteMultiLinesSelections();
+        } else {
+
+        }
+      } else {
+        textNode = this.currentSel.range.startContainer;
+        startOffset = this.currentSel.range.startOffset;
+        txt = textNode.textContent;
+        textNode.textContent = txt.substr(0, startOffset) + txt.substr(startOffset + 1);
+        range = rangy.createRange();
+        range.collapseToPoint(textNode, startOffset);
+        this.currentSel.sel.setSingleRange(range);
+      }
+    } else if (this.currentSel.endLine === startLine) {
+      this.currentSel.range.deleteContents();
+    } else {
+      this._deleteMultiLinesSelections();
+    }
+    event.preventDefault();
+    return false;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _backspace
+  # 
+  # Manage deletions when backspace key is pressed
+  */
+
+
+  CNeditor.prototype._backspace = function() {
+    var cont, offset, range, sel, startCont, startLine, startOffset, textNode, txt, _ref;
+    this._findLinesAndIsStartIsEnd();
+    sel = this.currentSel;
+    startLine = sel.startLine;
+    if (sel.range.collapsed) {
+      if (sel.rangeIsStartLine) {
+        if (startLine.linePrev !== null) {
+          sel.range.setStartBefore(startLine.linePrev.line$[0].lastChild);
+          sel.startLine = startLine.linePrev;
+          startCont = sel.range.startContainer;
+          startOffset = sel.range.startOffset;
+          _ref = selection.normalizeBP(startCont, startOffset), cont = _ref.cont, offset = _ref.offset;
+          this._deleteMultiLinesSelections();
+          range = rangy.createRange();
+          range.collapseToPoint(cont, offset);
+          this.currentSel.sel.setSingleRange(range);
+        }
+      } else {
+        textNode = sel.range.startContainer;
+        startOffset = sel.range.startOffset;
+        txt = textNode.textContent;
+        textNode.textContent = txt.substr(0, startOffset - 1) + txt.substr(startOffset);
+        range = rangy.createRange();
+        range.collapseToPoint(textNode, startOffset - 1);
+        this.currentSel.sel.setSingleRange(range);
+        this.currentSel = null;
+      }
+    } else if (sel.endLine === startLine) {
+      sel.range.deleteContents();
+    } else {
+      this._deleteMultiLinesSelections();
+    }
+    return true;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  titleList
+  # 
+  # Turn selected lines in a title List (Th)
+  */
+
+
+  CNeditor.prototype.titleList = function(l) {
+    var endDiv, endLineID, line, range, startDiv, startDivID, _results;
+    if (l != null) {
+      startDivID = l.lineID;
+      endLineID = startDivID;
+    } else {
+      range = this.getEditorSelection().getRangeAt(0);
+      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+      startDivID = startDiv.id;
+      endLineID = endDiv.id;
+    }
+    line = this._lines[startDivID];
+    _results = [];
+    while (true) {
+      switch (line.lineType) {
+        case 'Tu':
+        case 'To':
+          this._toggleLineType(line);
+          break;
+        case 'Lh':
+          line.setType('Th');
+          break;
+        case 'Lu':
+          line.setType('Tu');
+          this._toggleLineType(line);
+      }
+      if (line.lineID === endLineID) {
+        break;
+      }
+      _results.push(line = line.lineNext);
+    }
+    return _results;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  markerList
+  # 
+  #  Turn selected lines in a Marker List
+  */
+
+
+  CNeditor.prototype.markerList = function(l) {
+    var endDiv, endLineID, line, range, startDiv, startDivID, _results;
+    this._addHistory();
+    if (l != null) {
+      startDivID = l.lineID;
+      endLineID = startDivID;
+    } else {
+      range = this.getEditorSelection().getRangeAt(0);
+      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+      startDivID = startDiv.id;
+      endLineID = endDiv.id;
+    }
+    line = this._lines[startDivID];
+    _results = [];
+    while (true) {
+      switch (line.lineType) {
+        case 'Th':
+        case 'To':
+          this._toggleLineType(line);
+          break;
+        case 'Lh':
+        case 'Lo':
+          line.setTypeDepth('Tu', line.lineDepthAbs + 1);
+          break;
+        case 'Lu':
+          line.setType('Tu');
+      }
+      if (line.lineID === endLineID) {
+        break;
+      }
+      _results.push(line = line.lineNext);
+    }
+    return _results;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _findDepthRel
+  # 
+  # Calculates the relative depth of the line
+  #   usage   : cycle : Tu => To => Lx => Th
+  #   param   : line : the line we want to find the relative depth
+  #   returns : a number
+  #
+  */
+
+
+  CNeditor.prototype._findDepthRel = function(line) {
+    var linePrev;
+    if (line.lineDepthAbs === 1) {
+      if (line.lineType[1] === "h") {
+        return 0;
+      } else {
+        return 1;
+      }
+    } else {
+      linePrev = line.linePrev;
+      while (linePrev !== null && linePrev.lineDepthAbs >= line.lineDepthAbs) {
+        linePrev = linePrev.linePrev;
+      }
+      if (linePrev !== null) {
+        return linePrev.lineDepthRel + 1;
+      } else {
+        return 0;
+      }
+    }
+  };
+
+  /* ------------------------------------------------------------------------
+  # Toggle the selected lines type
+  #   cycle : Tu <=> Th
+  */
+
+
+  CNeditor.prototype.toggleType = function() {
+    var currentDepth, depthIsTreated, done, endDiv, endLineID, line, range, sel, startDiv;
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+    endLineID = endDiv.id;
+    line = this._lines[startDiv.id];
+    depthIsTreated = {};
+    currentDepth = line.lineDepthAbs;
+    depthIsTreated[currentDepth] = false;
+    while (true) {
+      if (!depthIsTreated[currentDepth]) {
+        done = this._toggleLineType(line);
+        depthIsTreated[line.lineDepthAbs] = done;
+      }
+      if (line.lineID === endDiv.id) {
+        return;
+      }
+      line = line.lineNext;
+      if (line.lineDepthAbs < currentDepth) {
+        depthIsTreated[currentDepth] = false;
+        currentDepth = line.lineDepthAbs;
+      } else {
+        currentDepth = line.lineDepthAbs;
+      }
+    }
+  };
+
+  CNeditor.prototype._toggleLineType = function(line) {
+    var l, lineTypeTarget;
+    switch (line.lineType) {
+      case 'Tu':
+        lineTypeTarget = 'Th';
+        l = line.lineNext;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Tu') {
+              l.setType('Th');
+            } else if (l.lineType === 'Lu') {
+              l.setType('Lh');
+            } else {
+              break;
+            }
+          }
+          l = l.lineNext;
+        }
+        l = line.linePrev;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Tu') {
+              l.setType('Th');
+            } else if (l.lineType === 'Lu') {
+              l.setType('Lh');
+            } else {
+              break;
+            }
+          }
+          l = l.linePrev;
+        }
+        break;
+      case 'Th':
+        lineTypeTarget = 'Tu';
+        l = line.lineNext;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Th') {
+              l.setType('Tu');
+            } else if (l.lineType === 'Lh') {
+              l.setType('Lu');
+            } else {
+              break;
+            }
+          }
+          l = l.lineNext;
+        }
+        l = line.linePrev;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Th') {
+              l.setType('Tu');
+            } else if (l.lineType === 'Lh') {
+              l.setType('Lu');
+            } else {
+              break;
+            }
+          }
+          l = l.linePrev;
+        }
+        break;
+      default:
+        return false;
+    }
+    line.setType(lineTypeTarget);
+    return true;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  tab
+  # 
+  # tab keypress
+  #   l = optional : a line to indent. If none, the selection will be indented
+  */
+
+
+  CNeditor.prototype.tab = function(l) {
+    var endDiv, endLineID, line, range, sel, startDiv, _results;
+    if (l != null) {
+      startDiv = l.line$[0];
+      endDiv = startDiv;
+    } else {
+      sel = this.getEditorSelection();
+      range = sel.getRangeAt(0);
+      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+    }
+    endLineID = endDiv.id;
+    line = this._lines[startDiv.id];
+    _results = [];
+    while (true) {
+      this._tabLine(line);
+      if (line.lineID === endLineID) {
+        break;
+      } else {
+        _results.push(line = line.lineNext);
+      }
+    }
+    return _results;
+  };
+
+  CNeditor.prototype._tabLine = function(line) {
+    var depthAbsTarget, nextSib, nextSibType, prevSib, prevSibType, prevSibling, typeTarget;
+    switch (line.lineType) {
+      case 'Tu':
+      case 'Th':
+      case 'To':
+        prevSibling = this._findPrevSibling(line);
+        if (prevSibling === null) {
+          return;
+        }
+        if (prevSibling.lineType === 'Th') {
+          typeTarget = 'Lh';
+        } else if (prevSibling.lineType === 'Tu') {
+          typeTarget = 'Lu';
+        } else {
+          typeTarget = 'Lo';
+        }
+        break;
+      case 'Lh':
+      case 'Lu':
+      case 'Lo':
+        depthAbsTarget = line.lineDepthAbs + 1;
+        nextSib = this._findNextSibling(line, depthAbsTarget);
+        nextSibType = nextSib === null ? null : nextSib.lineType;
+        prevSib = this._findPrevSibling(line, depthAbsTarget);
+        prevSibType = prevSib === null ? null : prevSib.lineType;
+        typeTarget = this._chooseTypeTarget(prevSibType, nextSibType);
+        if (typeTarget === 'Th') {
+          line.lineDepthAbs += 1;
+          line.lineDepthRel = 0;
+        } else {
+          line.lineDepthAbs += 1;
+          line.lineDepthRel += 1;
+        }
+    }
+    return line.setType(typeTarget);
+  };
+
+  CNeditor.prototype._chooseTypeTarget = function(prevSibType, nextSibType) {
+    var typeTarget;
+    if ((prevSibType === nextSibType && nextSibType === null)) {
+      typeTarget = 'Tu';
+    } else if (prevSibType === nextSibType) {
+      typeTarget = nextSibType;
+    } else if (prevSibType === null) {
+      typeTarget = nextSibType;
+    } else if (nextSibType === null) {
+      typeTarget = prevSibType;
+    } else {
+      typeTarget = 'Tu';
+    }
+    return typeTarget;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  shiftTab
+  #   param : myRange : if defined, refers to a specific region to untab
+  */
+
+
+  CNeditor.prototype.shiftTab = function(range) {
+    var endDiv, endLineID, line, sel, startDiv, _results;
+    if (range == null) {
+      sel = this.getEditorSelection();
+      range = sel.getRangeAt(0);
+    }
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+    endLineID = endDiv.id;
+    line = this._lines[startDiv.id];
+    _results = [];
+    while (true) {
+      this._shiftTabLine(line);
+      if (line.lineID === endDiv.id) {
+        break;
+      } else {
+        _results.push(line = line.lineNext);
+      }
+    }
+    return _results;
+  };
+
+  /**
+   * un-tab a single line
+   * @param  {line} line the line to un-tab
+  */
+
+
+  CNeditor.prototype._shiftTabLine = function(line) {
+    var depthAbsTarget, nextL, nextSib, nextSibType, parent, prevSib, prevSibType, typeTarget;
+    switch (line.lineType) {
+      case 'Tu':
+      case 'Th':
+      case 'To':
+        parent = line.linePrev;
+        while (parent !== null && parent.lineDepthAbs >= line.lineDepthAbs) {
+          parent = parent.linePrev;
+        }
+        if (parent === null) {
+          return;
+        }
+        if ((line.lineNext != null) && line.lineNext.lineType[0] === 'L' && line.lineNext.lineDepthAbs === line.lineDepthAbs) {
+          nextL = line.lineNext;
+          nextL.setType('T' + nextL.lineType[1]);
+        }
+        if ((line.lineNext != null) && line.lineNext.lineDepthAbs > line.lineDepthAbs) {
+          nextL = line.lineNext;
+          while (nextL.lineDepthAbs > line.lineDepthAbs) {
+            nextL.setDepthAbs(nextL.lineDepthAbs - 1);
+            nextL = nextL.lineNext;
+          }
+          if ((nextL != null) && nextL.lineType[0] === 'L') {
+            nextL.setType('T' + nextL.lineType[1]);
+          }
+        }
+        typeTarget = parent.lineType;
+        typeTarget = "L" + typeTarget.charAt(1);
+        line.lineDepthAbs -= 1;
+        line.lineDepthRel -= parent.lineDepthRel;
+        break;
+      case 'Lh':
+      case 'Lu':
+      case 'Lo':
+        depthAbsTarget = line.lineDepthAbs;
+        nextSib = this._findNextSibling(line, depthAbsTarget);
+        nextSibType = nextSib === null ? null : nextSib.lineType;
+        prevSib = this._findPrevSibling(line, depthAbsTarget);
+        prevSibType = prevSib === null ? null : prevSib.lineType;
+        typeTarget = this._chooseTypeTarget(prevSibType, nextSibType);
+    }
+    return line.setType(typeTarget);
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _return
+  # return keypress
+  #   e = event
+  */
+
+
+  CNeditor.prototype._return = function() {
+    var currSel, endLine, endOfLineFragment, newLine, range4sel, startLine;
+    this._findLinesAndIsStartIsEnd();
+    currSel = this.currentSel;
+    startLine = currSel.startLine;
+    endLine = currSel.endLine;
+    if (currSel.range.collapsed) {
+
+    } else if (endLine === startLine) {
+      currSel.range.deleteContents();
+    } else {
+      this._deleteMultiLinesSelections();
+      this._findLinesAndIsStartIsEnd();
+      currSel = this.currentSel;
+      startLine = currSel.startLine;
+    }
+    if (currSel.rangeIsEndLine) {
+      newLine = this._insertLineAfter({
+        sourceLine: startLine,
+        targetLineType: startLine.lineType,
+        targetLineDepthAbs: startLine.lineDepthAbs,
+        targetLineDepthRel: startLine.lineDepthRel
+      });
+      range4sel = rangy.createRange();
+      range4sel.collapseToPoint(newLine.line$[0].firstChild.firstChild, 0);
+      return currSel.sel.setSingleRange(range4sel);
+    } else if (currSel.rangeIsStartLine) {
+      newLine = this._insertLineBefore({
+        sourceLine: startLine,
+        targetLineType: startLine.lineType,
+        targetLineDepthAbs: startLine.lineDepthAbs,
+        targetLineDepthRel: startLine.lineDepthRel
+      });
+      range4sel = rangy.createRange();
+      range4sel.collapseToPoint(startLine.line$[0].firstChild, 0);
+      return currSel.sel.setSingleRange(range4sel);
+    } else {
+      currSel.range.setEndBefore(startLine.line$[0].lastChild);
+      endOfLineFragment = currSel.range.extractContents();
+      currSel.range.deleteContents();
+      newLine = this._insertLineAfter({
+        sourceLine: startLine,
+        targetLineType: startLine.lineType,
+        targetLineDepthAbs: startLine.lineDepthAbs,
+        targetLineDepthRel: startLine.lineDepthRel,
+        fragment: endOfLineFragment
+      });
+      range4sel = rangy.createRange();
+      range4sel.collapseToPoint(newLine.line$[0].firstChild, 0);
+      currSel.sel.setSingleRange(range4sel);
+      return this.currentSel = null;
+    }
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _findParent1stSibling
+  # 
+  # find the sibling line of the parent of line that is the first of the list
+  # ex :
+  #   . Sibling1 <= _findParent1stSibling(line)
+  #   . Sibling2
+  #   . Parent
+  #      . child1
+  #      . line     : the line in argument
+  # returns null if no previous sibling, the line otherwise
+  # the sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+  */
+
+
+  CNeditor.prototype._findParent1stSibling = function(line) {
+    var lineDepthAbs, linePrev;
+    lineDepthAbs = line.lineDepthAbs;
+    linePrev = line.linePrev;
+    if (linePrev === null) {
+      return line;
+    }
+    if (lineDepthAbs <= 2) {
+      while (linePrev.linePrev !== null) {
+        linePrev = linePrev.linePrev;
+      }
+      return linePrev;
+    } else {
+      while (linePrev !== null && linePrev.lineDepthAbs > (lineDepthAbs - 2)) {
+        linePrev = linePrev.linePrev;
+      }
+      return linePrev.lineNext;
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Find the next sibling line.
+   * Returns null if no next sibling, the line otherwise.
+   * The sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+   * @param  {line} line     The starting line for which we search a sibling
+   * @param  {number} depthAbs [optional] If the siblings we search is not
+   *                           of the same absolute depth
+   * @return {line}          The next sibling if one, null otherwise
+  */
+
+
+  CNeditor.prototype._findNextSibling = function(line, depth) {
+    var nextSib;
+    if (!(depth != null)) {
+      depth = line.lineDepthAbs;
+    }
+    nextSib = line.lineNext;
+    while (true) {
+      if (nextSib === null || nextSib.lineDepthAbs < depth) {
+        nextSib = null;
+        break;
+      } else if (nextSib.lineDepthAbs === depth && nextSib.lineType[0] === 'T') {
+        break;
+      }
+      nextSib = nextSib.lineNext;
+    }
+    return nextSib;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Find the previous sibling line.
+   * Returns null if no previous sibling, the line otherwise.
+   * The sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+   * @param  {line} line     Rhe starting line for which we search a sibling
+   * @param  {number} depthAbs [optional] If the siblings we search is not
+   *                           of the same absolute depth
+   * @return {line}          The previous sibling if one, null otherwise
+  */
+
+
+  CNeditor.prototype._findPrevSibling = function(line, depth) {
+    var prevSib;
+    if (!(depth != null)) {
+      depth = line.lineDepthAbs;
+    }
+    prevSib = line.linePrev;
+    while (true) {
+      if (prevSib === null || prevSib.lineDepthAbs < depth) {
+        prevSib = null;
+        break;
+      } else if (prevSib.lineDepthAbs === depth && prevSib.lineType[0] === 'T') {
+        break;
+      }
+      prevSib = prevSib.linePrev;
+    }
+    return prevSib;
+  };
+
+  /**
+  # Delete the user multi line selection :
+  #    * The 2 lines (selected of given in param) must be distinct
+  #    * If no params, @currentSel will be used to find the lines to delete
+  #    * Carret is positioned at the end of the line before startLine.
+  #    * startLine, endLine and lines between are deleted
+  # @param  {[line]} startLine [optional] if exists, the whole line will be deleted
+  # @param  {[line]} endLine   [optional] if exists, the whole line will be deleted
+  # @return {[none]}           [nothing]
+  */
+
+
+  CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
+    var curSel, deltaDepth, endLineDepth, endOfLineFragment, nextEndLine, prevStartLine, range, replaceCaret, startContainer, startLineDepth, startOffset;
+    if (startLine === null || endLine === null) {
+      throw new Error('CEeditor._deleteMultiLinesSelections called with a null param');
+    }
+    if (startLine != null) {
+      range = rangy.createRange();
+      selection.cleanSelection(startLine, endLine, range);
+      replaceCaret = false;
+    } else {
+      curSel = this.currentSel;
+      range = curSel.range;
+      startContainer = range.startContainer;
+      startOffset = range.startOffset;
+      startLine = curSel.startLine;
+      endLine = curSel.endLine;
+      if (startLine != null) {
+        prevStartLine = startLine.linePrev;
+      }
+      if (endLine != null) {
+        nextEndLine = endLine.lineNext;
+      }
+      replaceCaret = true;
+    }
+    startLineDepth = startLine.lineDepthAbs;
+    endLineDepth = endLine.lineDepthAbs;
+    deltaDepth = endLineDepth - startLineDepth;
+    endOfLineFragment = selection.cloneEndFragment(range, endLine);
+    this._adaptEndLineType(startLine, endLine, endLineDepth);
+    range.deleteContents();
+    this._addMissingFragment(startLine, endOfLineFragment);
+    this._removeEndLine(startLine, endLine);
+    this._adaptDepth(startLine, startLineDepth, endLineDepth, deltaDepth);
+    if (replaceCaret) {
+      return this._setCaret(startContainer, startOffset);
+    }
+  };
+
+  CNeditor.prototype._adaptDepth = function(startLine, startLineDepthAbs, endLineDepthAbs, deltaDepth) {
+    var deltaDepth1stLine, depthSibling, firstLineAfterSiblingsOfDeleted, line, newDepth, prevSiblingType;
+    line = startLine.lineNext;
+    if (line !== null) {
+      deltaDepth1stLine = line.lineDepthAbs - startLineDepthAbs;
+      if (deltaDepth1stLine > 1) {
+        while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
+          newDepth = line.lineDepthAbs - deltaDepth;
+          line.setDepthAbs(newDepth);
+          line = line.lineNext;
+        }
+      }
+    }
+    if (line !== null) {
+      if (line.lineType[0] === 'L') {
+        if (!(startLine.lineType[1] === line.lineType[1] && startLine.lineDepthAbs === line.lineDepthAbs)) {
+          line.setType('T' + line.lineType[1]);
+        }
+      }
+      firstLineAfterSiblingsOfDeleted = line;
+      depthSibling = line.lineDepthAbs;
+      while (line !== null && line.lineDepthAbs > depthSibling) {
+        line = line.linePrev;
+      }
+      if (line !== null && line !== firstLineAfterSiblingsOfDeleted) {
+        prevSiblingType = line.lineType;
+        if (firstLineAfterSiblingsOfDeleted.lineType !== prevSiblingType) {
+          if (prevSiblingType[1] === 'h') {
+            return this.titleList(firstLineAfterSiblingsOfDeleted);
+          } else {
+            return this.markerList(firstLineAfterSiblingsOfDeleted);
+          }
+        }
+      }
+    }
+  };
+
+  CNeditor.prototype._addMissingFragment = function(line, fragment) {
+    var lastNode, lineEl, newText, node, startFrag, startOffset, _ref;
+    startFrag = fragment.childNodes[0];
+    lineEl = line.line$[0];
+    if (lineEl.lastChild === null) {
+      node = document.createElement('span');
+      lineEl.insertBefore(node, lineEl.firstChild);
+    }
+    if (lineEl.lastChild.nodeName === 'BR') {
+      lineEl.removeChild(lineEl.lastChild);
+    }
+    lastNode = lineEl.lastChild;
+    if ((startFrag.tagName === (_ref = lastNode.tagName) && _ref === 'SPAN') && startFrag.className === lastNode.className) {
+      startOffset = lastNode.textContent.length;
+      newText = lastNode.textContent + startFrag.textContent;
+      lastNode.firstChild.textContent = newText;
+      fragment.removeChild(fragment.firstChild);
+      return lineEl.appendChild(fragment);
+    } else {
+      lineEl.appendChild(fragment);
+      return null;
+    }
+  };
+
+  CNeditor.prototype._removeEndLine = function(startLine, endLine) {
+    startLine.lineNext = endLine.lineNext;
+    if (endLine.lineNext !== null) {
+      endLine.lineNext.linePrev = startLine;
+    }
+    endLine.line$.remove();
+    return delete this._lines[endLine.lineID];
+  };
+
+  CNeditor.prototype._adaptEndLineType = function(startLine, endLine, endLineDepth) {
+    var endLineType, startLineType;
+    endLineType = endLine.lineType;
+    startLineType = startLine.lineType;
+    if (endLineType[1] === 'h' && startLineType[1] !== 'h') {
+      if (endLineType[0] === 'L') {
+        endLine.setType('T' + endLineType[1]);
+      }
+      return this.markerList(endLine);
+    }
+  };
+
+  CNeditor.prototype._setCaret = function(startContainer, startOffset) {
+    var range;
+    range = rangy.createRange();
+    range.collapseToPoint(startContainer, startOffset);
+    return this.currentSel.sel.setSingleRange(range);
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _insertLineAfter
+  # 
+  # Insert a line after a source line
+  # The line will be inserted in the parent of the source line (which can be 
+  # the editor or a fragment in the case of the paste for instance)
+  # p = 
+  #     sourceLine         : line after which the line will be added
+  #     fragment           : [optionnal] - an html fragment that will be added
+  #                          in the div of the line.
+  #     innerHTML          : [optionnal] - if no fragment is given, an html
+  #                          string that will be added to the new line.
+  #     targetLineType     : type of the line to add
+  #     targetLineDepthAbs : absolute depth of the line to add
+  #     targetLineDepthRel : relative depth of the line to add
+  */
+
+
+  CNeditor.prototype._insertLineAfter = function(p) {
+    var newLine;
+    newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, p.sourceLine, null, p.fragment);
+    return newLine;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _insertLineBefore
+  # 
+  # Insert a line before a source line
+  # p = 
+  #     sourceLine         : Line before which a line will be added
+  #     fragment           : [optionnal] - an html fragment that will be added
+  #                          the fragment is not supposed to end with a <br>
+  #     targetLineType     : type of the line to add
+  #     targetLineDepthAbs : absolute depth of the line to add
+  #     targetLineDepthRel : relative depth of the line to add
+  */
+
+
+  CNeditor.prototype._insertLineBefore = function(p) {
+    var newLine;
+    newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, null, p.sourceLine, p.fragment);
+    return newLine;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _endDiv
+  #  
+  # Finds :
+  #   First and last line of selection. 
+  # Remark :
+  #   Only the first range of the selections is taken into account.
+  # Returns : 
+  #   sel : the selection
+  #   range : the 1st range of the selections
+  #   startLine : the 1st line of the range
+  #   endLine : the last line of the range
+  */
+
+
+  CNeditor.prototype._findLines = function() {
+    var endLine, range, sel, startLine;
+    if (this.currentSel === null) {
+      sel = this.getEditorSelection();
+      range = sel.getRangeAt(0);
+      startLine = this._lines[selection.getLineDiv(range.startContainer).id];
+      endLine = this._lines[selection.getLineDiv(range.endContainer).id];
+      this.currentSel = {
+        sel: sel,
+        range: range,
+        startLine: startLine,
+        endLine: endLine,
+        rangeIsStartLine: null,
+        rangeIsEndLine: null
+      };
+    }
+    return this.currentSel;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _findLinesAndIsStartIsEnd
+  # 
+  # Finds :
+  #   first and last line of selection 
+  #   wheter the selection starts at the beginning of startLine or not
+  #   wheter the selection ends at the end of endLine or not
+  # 
+  # Remark :
+  #   Only the first range of the selections is taken into account.
+  #
+  # Returns : 
+  #   sel   : the selection
+  #   range : the 1st range of the selections
+  #   startLine : the 1st line of the range
+  #   endLine   : the last line of the range
+  #   rangeIsEndLine   : true if the range ends at the end of the last line
+  #   rangeIsStartLine : true if the range starts at the start of 1st line
+  */
+
+
+  CNeditor.prototype._findLinesAndIsStartIsEnd = function() {
+    var div, endContainer, endLine, initialEndOffset, initialStartOffset, isEnd, isStart, noMatter, range, sel, startContainer, startLine, _ref, _ref1;
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    startContainer = range.startContainer;
+    endContainer = range.endContainer;
+    initialStartOffset = range.startOffset;
+    initialEndOffset = range.endOffset;
+    _ref = selection.getLineDivIsStartIsEnd(startContainer, initialStartOffset), div = _ref.div, isStart = _ref.isStart, noMatter = _ref.noMatter;
+    startLine = this._lines[div.id];
+    _ref1 = selection.getLineDivIsStartIsEnd(endContainer, initialEndOffset), div = _ref1.div, noMatter = _ref1.noMatter, isEnd = _ref1.isEnd;
+    endLine = this._lines[div.id];
+    this.currentSel = {
+      sel: sel,
+      range: range,
+      startLine: startLine,
+      endLine: endLine,
+      rangeIsStartLine: isStart,
+      rangeIsEndLine: isEnd
+    };
+    return this.currrentSel;
+  };
+
+  /*  -----------------------------------------------------------------------
+  #   _readHtml
+  # 
+  # Parse a raw html inserted in the iframe in order to update the controller
+  */
+
+
+  CNeditor.prototype._readHtml = function() {
+    var deltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, _i, _len, _ref;
+    linesDiv$ = $(this.linesDiv).children();
+    lineDepthAbs = 0;
+    lineDepthRel = 0;
+    lineID = 0;
+    this._lines = {};
+    linePrev = null;
+    lineNext = null;
+    for (_i = 0, _len = linesDiv$.length; _i < _len; _i++) {
+      htmlLine = linesDiv$[_i];
+      htmlLine$ = $(htmlLine);
+      lineClass = (_ref = htmlLine$.attr('class')) != null ? _ref : "";
+      lineClass = lineClass.split('-');
+      lineType = lineClass[0];
+      if (lineType !== "") {
+        lineDepthAbs_old = lineDepthAbs;
+        lineDepthAbs = +lineClass[1];
+        deltaDepthAbs = lineDepthAbs - lineDepthAbs_old;
+        lineDepthRel_old = lineDepthRel;
+        if (lineType === "Th") {
+          lineDepthRel = 0;
+        } else {
+          lineDepthRel = lineDepthRel_old + deltaDepthAbs;
+        }
+        lineID = parseInt(lineID, 10) + 1;
+        lineID_st = "CNID_" + lineID;
+        htmlLine$.prop("id", lineID_st);
+        lineNew = new Line();
+        lineNew.line$ = htmlLine$;
+        lineNew.lineID = lineID_st;
+        lineNew.lineType = lineType;
+        lineNew.lineDepthAbs = lineDepthAbs;
+        lineNew.lineDepthRel = lineDepthRel;
+        lineNew.lineNext = null;
+        lineNew.linePrev = linePrev;
+        if (linePrev !== null) {
+          linePrev.lineNext = lineNew;
+        }
+        linePrev = lineNew;
+        this._lines[lineID_st] = lineNew;
+      }
+    }
+    return this._highestId = lineID;
+  };
+
+  /* ------------------------------------------------------------------------
+  # LINES MOTION MANAGEMENT
+  # 
+  # Functions to perform the motion of an entire block of lines
+  # BUG : when doubleclicking on an end of line then moving this line
+  #       down, selection does not behave as expected :-)
+  # TODO: correct behavior when moving the second line up
+  # TODO: correct behavior when moving the first line down
+  # TODO: improve re-insertion of the line swapped with the block
+  */
+
+
+  /* ------------------------------------------------------------------------
+  # _moveLinesDown:
+  #
+  # -variables:
+  #    linePrev                                       linePrev
+  #    lineStart__________                            lineNext
+  #    |.                 | The block                 lineStart_______
+  #    |.                 | to move down      ==>     |.              |
+  #    lineEnd____________|                           |.              |
+  #    lineNext                                       lineEnd_________|
+  #
+  # -algorithm:
+  #    1.delete lineNext with _deleteMultilinesSelections()
+  #    2.insert lineNext between linePrev and lineStart
+  #    3.if lineNext is more indented than linePrev, untab lineNext
+  #      until it is ok
+  #    4.else (lineNext less indented than linePrev), select the block
+  #      (lineStart and some lines below) that is more indented than lineNext
+  #      and untab it until it is ok
+  */
+
+
+  CNeditor.prototype._moveLinesDown = function() {
+    var cloneLine, endDiv, endLineID, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+    startLineID = startDiv.id;
+    endLineID = endDiv.id;
+    lineStart = this._lines[startLineID];
+    lineEnd = this._lines[endLineID];
+    linePrev = lineStart.linePrev;
+    lineNext = lineEnd.lineNext;
+    if (lineNext !== null) {
+      cloneLine = Line.clone(lineNext);
+      this._deleteMultiLinesSelections(lineEnd, lineNext);
+      lineNext = cloneLine;
+      this._lines[lineNext.lineID] = lineNext;
+      lineNext.linePrev = linePrev;
+      lineStart.linePrev = lineNext;
+      if (lineNext.lineNext !== null) {
+        lineNext.lineNext.linePrev = lineEnd;
+      }
+      lineEnd.lineNext = lineNext.lineNext;
+      lineNext.lineNext = lineStart;
+      if (linePrev !== null) {
+        linePrev.lineNext = lineNext;
+      }
+      lineStart.line$.before(lineNext.line$);
+      if (linePrev === null) {
+        return;
+      }
+      if (lineNext.lineDepthAbs <= linePrev.lineDepthAbs) {
+        line = lineNext;
+        while (line.lineNext !== null && line.lineNext.lineDepthAbs > lineNext.lineDepthAbs) {
+          line = line.lineNext;
+        }
+        if (line.lineNext !== null) {
+          line = line.lineNext;
+        }
+        myRange = rangy.createRange();
+        myRange.setStart(lineStart.line$[0], 0);
+        myRange.setEnd(line.line$[0], 0);
+        numOfUntab = lineStart.lineDepthAbs - lineNext.lineDepthAbs;
+        if (lineNext.lineNext.lineType[0] === 'T') {
+          if (lineStart.lineType[0] === 'T') {
+            numOfUntab -= 1;
+          } else {
+            numOfUntab += 1;
+          }
+        }
+        _results = [];
+        while (numOfUntab >= 0) {
+          this.shiftTab(myRange);
+          _results.push(numOfUntab -= 1);
+        }
+        return _results;
+      } else {
+        myRange = rangy.createRange();
+        myRange.setStart(lineNext.line$[0], 0);
+        myRange.setEnd(lineNext.line$[0], 0);
+        numOfUntab = lineNext.lineDepthAbs - linePrev.lineDepthAbs;
+        if (lineStart.lineType[0] === 'T') {
+          if (linePrev.lineType[0] === 'T') {
+            numOfUntab -= 1;
+          } else {
+            numOfUntab += 1;
+          }
+        }
+        _results1 = [];
+        while (numOfUntab >= 0) {
+          this.shiftTab(myRange);
+          _results1.push(numOfUntab -= 1);
+        }
+        return _results1;
+      }
+    }
+  };
+
+  /* ------------------------------------------------------------------------
+  # _moveLinesUp:
+  #
+  # -variables:
+  #    linePrev                                   lineStart_________
+  #    lineStart__________                        |.                |
+  #    |.                 | The block             |.                |
+  #    |.                 | to move up     ==>    lineEnd___________|
+  #    lineEnd____________|                       linePrev
+  #    lineNext                                   lineNext
+  #
+  # -algorithm:
+  #    1.delete linePrev with _deleteMultilinesSelections()
+  #    2.insert linePrev between lineEnd and lineNext
+  #    3.if linePrev is more indented than lineNext, untab linePrev
+  #      until it is ok
+  #    4.else (linePrev less indented than lineNext), select the block
+  #      (lineNext and some lines below) that is more indented than linePrev
+  #      and untab it until it is ok
+  */
+
+
+  CNeditor.prototype._moveLinesUp = function() {
+    var cloneLine, endDiv, endLineID, isSecondLine, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+    startLineID = startDiv.id;
+    endLineID = endDiv.id;
+    lineStart = this._lines[startLineID];
+    lineEnd = this._lines[endLineID];
+    linePrev = lineStart.linePrev;
+    lineNext = lineEnd.lineNext;
+    if (linePrev !== null) {
+      isSecondLine = linePrev.linePrev === null;
+      cloneLine = Line.clone(linePrev);
+      this._deleteMultiLinesSelections(linePrev.linePrev, linePrev);
+      if (isSecondLine) {
+        $(linePrev.line$[0].firstElementChild).remove();
+        linePrev.line$.append('<br>');
+        lineStart.line$ = linePrev.line$;
+        lineStart.line$.attr('id', lineStart.lineID);
+        this._lines[lineStart.lineID] = lineStart;
+      }
+      linePrev = cloneLine;
+      this._lines[linePrev.lineID] = linePrev;
+      linePrev.lineNext = lineNext;
+      lineEnd.lineNext = linePrev;
+      if (linePrev.linePrev !== null) {
+        linePrev.linePrev.lineNext = lineStart;
+      }
+      lineStart.linePrev = linePrev.linePrev;
+      linePrev.linePrev = lineEnd;
+      if (lineNext !== null) {
+        lineNext.linePrev = linePrev;
+      }
+      lineEnd.line$.after(linePrev.line$);
+      if (linePrev.lineDepthAbs <= lineEnd.lineDepthAbs && lineNext !== null) {
+        line = linePrev;
+        while (line.lineNext !== null && line.lineNext.lineDepthAbs > linePrev.lineDepthAbs) {
+          line = line.lineNext;
+        }
+        if (line.lineNext !== null) {
+          line = line.lineNext;
+        }
+        myRange = rangy.createRange();
+        myRange.setStart(lineNext.line$[0], 0);
+        myRange.setEnd(line.line$[0], 0);
+        numOfUntab = lineNext.lineDepthAbs - linePrev.lineDepthAbs;
+        if (linePrev.lineNext.lineType[0] === 'T') {
+          if (linePrev.lineType[0] === 'T') {
+            numOfUntab -= 1;
+          } else {
+            numOfUntab += 1;
+          }
+        }
+        _results = [];
+        while (numOfUntab >= 0) {
+          this.shiftTab(myRange);
+          _results.push(numOfUntab -= 1);
+        }
+        return _results;
+      } else {
+        myRange = rangy.createRange();
+        myRange.setStart(linePrev.line$[0], 0);
+        myRange.setEnd(linePrev.line$[0], 0);
+        numOfUntab = linePrev.lineDepthAbs - lineEnd.lineDepthAbs;
+        if (linePrev.lineType[0] === 'T') {
+          if (lineEnd.lineType[0] === 'T') {
+            numOfUntab -= 1;
+          } else {
+            numOfUntab += 1;
+          }
+        }
+        _results1 = [];
+        while (numOfUntab >= 0) {
+          this.shiftTab(myRange);
+          _results1.push(numOfUntab -= 1);
+        }
+        return _results1;
+      }
+    }
+  };
+
+  /*
+      #  HISTORY MANAGEMENT:
+      # 1. _addHistory (Save html code, selection markers, positions...)
+      # 2. undoPossible (Return true only if unDo can be called)
+      # 3. redoPossible (Return true only if reDo can be called)
+      # 4. unDo (Undo the previous action)
+      # 5. reDo ( Redo a undo-ed action)
+      #
+      # What is saved in the history:
+      #  - current html content
+      #  - current selection
+      #  - current scrollbar position
+      #  - the boolean newPosition
+  */
+
+
+  /*
+      #  _addHistory
+      # 
+      # Add html code and selection markers and scrollbar positions to the history
+  */
+
+
+  CNeditor.prototype._addHistory = function() {
+    var savedScroll, savedSel;
+    savedSel = this.saveEditorSelection();
+    this._history.historySelect.push(savedSel);
+    savedScroll = {
+      xcoord: this.editorBody$.scrollTop(),
+      ycoord: this.editorBody$.scrollLeft()
+    };
+    this._history.historyScroll.push(savedScroll);
+    this._history.historyPos.push(this.newPosition);
+    this._history.history.push(this.linesDiv.innerHTML);
+    return this._history.index = this._history.history.length - 1;
+  };
+
+  /* -------------------------------------------------------------------------
+  #  undoPossible
+  # Return true only if unDo can be called
+  */
+
+
+  CNeditor.prototype.undoPossible = function() {
+    return this._history.index > 0;
+  };
+
+  /* -------------------------------------------------------------------------
+  #  redoPossible
+  # Return true only if reDo can be called
+  */
+
+
+  CNeditor.prototype.redoPossible = function() {
+    return this._history.index < this._history.history.length - 2;
+  };
+
+  /* -------------------------------------------------------------------------
+  #  unDo :
+  # Undo the previous action
+  */
+
+
+  CNeditor.prototype.unDo = function() {
+    var savedSel, xcoord, ycoord;
+    if (this.undoPossible()) {
+      if (this._history.index === this._history.history.length - 1) {
+        this._addHistory();
+        this._history.index -= 1;
+      }
+      this.newPosition = this._history.historyPos[this._history.index];
+      this.linesDiv.innerHTML = this._history.history[this._history.index];
+      savedSel = this._history.historySelect[this._history.index];
+      rangy.deserializeSelection(savedSel, this.linesDiv);
+      xcoord = this._history.historyScroll[this._history.index].xcoord;
+      ycoord = this._history.historyScroll[this._history.index].ycoord;
+      this.editorBody$.scrollTop(xcoord);
+      this.editorBody$.scrollLeft(ycoord);
+      this._readHtml();
+      return this._history.index -= 1;
+    }
+  };
+
+  /* -------------------------------------------------------------------------
+  #  reDo :
+  # Redo a undo-ed action
+  */
+
+
+  CNeditor.prototype.reDo = function() {
+    var savedSel, xcoord, ycoord;
+    if (this.redoPossible()) {
+      this.newPosition = this._history.historyPos[this._history.index + 1];
+      this._history.index += 1;
+      this.linesDiv.innerHTML = this._history.history[this._history.index + 1];
+      savedSel = this._history.historySelect[this._history.index + 1];
+      savedSel.restored = false;
+      rangy.restoreSelection(savedSel);
+      xcoord = this._history.historyScroll[this._history.index + 1].xcoord;
+      ycoord = this._history.historyScroll[this._history.index + 1].ycoord;
+      this.editorBody$.scrollTop(xcoord);
+      this.editorBody$.scrollLeft(ycoord);
+      return this._readHtml();
+    }
+  };
+
+  /* ------------------------------------------------------------------------
+  # EXTENSION  :  auto-summary management and upkeep
+  # 
+  # initialization
+  # TODO: avoid updating the summary too often
+  #       it would be best to make the update faster (rather than reading
+  #       every line)
+  */
+
+
+  CNeditor.prototype._initSummary = function() {
+    var summary;
+    summary = this.editorBody$.children("#navi");
+    if (summary.length === 0) {
+      summary = $(document.createElement('div'));
+      summary.attr('id', 'navi');
+      summary.prependTo(this.editorBody$);
+    }
+    return summary;
+  };
+
+  CNeditor.prototype._buildSummary = function() {
+    var c, lines, summary, _results;
+    summary = this.initSummary();
+    this.editorBody$.children("#navi").children().remove();
+    lines = this._lines;
+    _results = [];
+    for (c in lines) {
+      if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th") {
+        _results.push(lines[c].line$.clone().appendTo(summary));
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  EXTENSION  :  DECORATION FUNCTIONS (bold/italic/underlined/quote)
+  #  TODO
+  */
+
+
+  /* ------------------------------------------------------------------------
+  #  PASTE MANAGEMENT
+  # 0 - save selection
+  # 1 - move the cursor into an invisible sandbox
+  # 2 - redirect pasted content in this sandox
+  # 3 - sanitize and adapt pasted content to the editor's format
+  # 4 - restore selection
+  # 5 - insert cleaned content is behind the cursor position
+  */
+
+
+  CNeditor.prototype.paste = function(event) {
+    var mySandBox, range, sel;
+    mySandBox = this.clipboard;
+    this._findLinesAndIsStartIsEnd();
+    range = rangy.createRange();
+    range.selectNodeContents(mySandBox);
+    sel = this.getEditorSelection();
+    sel.setSingleRange(range);
+    range.detach();
+    if (event && event.clipboardData && event.clipboardData.getData) {
+      if (event.clipboardData.types === "text/html") {
+        mySandBox.innerHTML = event.clipboardData.getData('text/html');
+      } else if (event.clipboardData.types === "text/plain") {
+        mySandBox.innerHTML = event.clipboardData.getData('text/plain');
+      } else {
+        mySandBox.innerHTML = "";
+      }
+      this._waitForPasteData(mySandBox);
+      if (event.preventDefault) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      return false;
+    } else {
+      this._waitForPasteData(mySandBox);
+      return true;
+    }
+  };
+
+  /**
+  # * init the div where the browser will actualy paste.
+  # * this method is called after each refresh of the content of the editor (
+  # * replaceContent, deleteContent, setEditorContent)
+  # * TODO : should be called just once at editor init : for this the editable
+  # * content shouldn't be directly in the body of the iframe but in a div.
+  # * @return {obj} a ref to the clipboard div
+  */
+
+
+  CNeditor.prototype._initClipBoard = function() {
+    var clipboardEl, getOffTheScreen;
+    clipboardEl = document.createElement('div');
+    clipboardEl.setAttribute('contenteditable', 'true');
+    this.clipboard$ = $(clipboardEl);
+    this.clipboard$.attr('id', 'editor-clipboard');
+    getOffTheScreen = {
+      left: -300
+    };
+    this.clipboard$.offset(getOffTheScreen);
+    this.clipboard$.prependTo(this.editorBody$);
+    this.clipboard = this.clipboard$[0];
+    this.clipboard.style.setProperty('width', '280px');
+    this.clipboard.style.setProperty('position', 'fixed');
+    this.clipboard.style.setProperty('overflow', 'hidden');
+    return this.clipboard;
+  };
+
+  /**
+   * Function that will call itself until the browser has pasted data in the
+   * clipboar div
+   * @param  {element} sandbox      the div where the browser will paste data
+   * @param  {function} processpaste the function to call back whan paste 
+   * is ok
+  */
+
+
+  CNeditor.prototype._waitForPasteData = function() {
+    if (this.clipboard.childNodes && this.clipboard.childNodes.length > 0) {
+      return this._processPaste();
+    } else {
+      return setTimeout(this._waitForPasteData, 100);
+    }
+  };
+
+  /*
+       * Called when the browser has pasted data in the clipboard div. 
+       * Its role is to insert the content of the clipboard into the editor.
+       * @param  {element} sandbox
+  */
+
+
+  CNeditor.prototype._processPaste = function() {
+    var absDepth, caretOffset, caretTextNodeTarget, currSel, currentLineFrag, domWalkContext, dummyLine, elToInsert, endLine, endOffset, endTargetLineFrag, firstAddedLine, frag, htmlStr, lineElements, lineNextStartLine, newText, parendDiv, parent, range, sandbox, secondAddedLine, startLine, startOffset, targetNode, targetText, _i, _len, _ref;
+    sandbox = this.clipboard;
+    currSel = this.currentSel;
+    sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
+    frag = document.createDocumentFragment();
+    dummyLine = {
+      lineNext: null,
+      linePrev: null,
+      line$: $("<div id='dummy' class='Tu-1'></div>")
+    };
+    frag.appendChild(dummyLine.line$[0]);
+    currentLineFrag = document.createDocumentFragment();
+    absDepth = currSel.startLine.lineDepthAbs;
+    if (currSel.startLine.lineType === 'Th') {
+      absDepth += 1;
+    }
+    domWalkContext = {
+      frag: frag,
+      lastAddedLine: dummyLine,
+      currentLineFrag: currentLineFrag,
+      currentLineEl: currentLineFrag,
+      absDepth: absDepth,
+      prevHxLevel: null,
+      prevCNLineAbsDepth: null,
+      isCurrentLineBeingPopulated: false
+    };
+    htmlStr = this._domWalk(sandbox, domWalkContext);
+    sandbox.innerHTML = "";
+    frag.removeChild(frag.firstChild);
+    /*
+            # TODO : the following steps removes all the styles of the lines in frag
+            # Later this will be removed in order to take into account styles.
+    */
+
+    /*
+            # END TODO
+    */
+
+    startLine = currSel.startLine;
+    endLine = currSel.endLine;
+    if (currSel.range.collapsed) {
+
+    } else if (endLine === startLine) {
+      currSel.range.deleteContents();
+      selection.normalize(currSel.range);
+    } else {
+      this._deleteMultiLinesSelections();
+      selection.normalize(currSel.range);
+      this._findLinesAndIsStartIsEnd();
+      currSel = this.currentSel;
+      startLine = currSel.startLine;
+    }
+    /* 5- Insert first line of the frag in the target line
+    # We assume that the structure of lines in frag and in the editor are :
+    #   <div><span>(TextNode)</span><br></div>
+    # what will be incorrect when styles will be taken into account.
+    #
+    */
+
+    targetNode = currSel.range.startContainer;
+    startOffset = currSel.range.startOffset;
+    endOffset = targetNode.length - startOffset;
+    if (frag.childNodes.length > 0) {
+      lineElements = Array.prototype.slice.call(frag.firstChild.childNodes);
+    } else {
+      lineElements = [frag];
+    }
+    for (_i = 0, _len = lineElements.length; _i < _len; _i++) {
+      elToInsert = lineElements[_i];
+      this._insertElement;
+      if (elToInsert.tagName === 'SPAN') {
+        if (targetNode.tagName === 'SPAN' || targetNode.nodeType === Node.TEXT_NODE) {
+          targetText = targetNode.textContent;
+          newText = targetText.substr(0, startOffset);
+          newText += elToInsert.textContent;
+          newText += targetText.substr(startOffset);
+          targetNode.textContent = newText;
+          startOffset += elToInsert.textContent.length;
+        } else if (targetNode.tagName === 'A') {
+          targetNode.parentElement.insertBefore(elToInsert, targetNode.nextSibling);
+          targetNode = targetNode.parentElement;
+          startOffset = $(targetNode).children().index(elToInsert) + 1;
+        } else if (targetNode.tagName === 'DIV') {
+          targetNode.insertBefore(elToInsert, targetNode[startOffset]);
+          startOffset += 1;
+        }
+      } else if (elToInsert.tagName === 'A') {
+        if (targetNode.nodeName === '#text') {
+          parent = targetNode.parentElement;
+          parent.parentElement.insertBefore(elToInsert, parent.nextSibling);
+          targetNode = parent.parentElement;
+          startOffset = $(targetNode).children().index(elToInsert) + 1;
+        } else if ((_ref = targetNode.tagName) === 'SPAN' || _ref === 'A') {
+          targetNode.parentElement.insertBefore(elToInsert, targetNode.nextSibling);
+          targetNode = targetNode.parentElement;
+          startOffset = $(targetNode).children().index(elToInsert) + 1;
+        } else if (targetNode.tagName === 'DIV') {
+          targetNode.insertBefore(elToInsert, targetNode[startOffset]);
+          startOffset += 1;
+        }
+      }
+    }
+    /*
+            # 6- If the clipboard has more than one line, insert the end of target
+            #    line in the last line of frag and delete it
+    */
+
+    if (frag.childNodes.length > 1) {
+      range = document.createRange();
+      range.setStart(targetNode, startOffset);
+      parendDiv = targetNode;
+      while (parendDiv.tagName !== 'DIV') {
+        parendDiv = parendDiv.parentElement;
+      }
+      range.setEnd(parendDiv, parendDiv.children.length - 1);
+      endTargetLineFrag = range.extractContents();
+      range.detach();
+      this._insertFrag(frag.lastChild, frag.lastChild.children.length - 1, endTargetLineFrag);
+      parendDiv = targetNode;
+      while (parendDiv.tagName !== 'DIV') {
+        parendDiv = parendDiv.parentElement;
+      }
+    }
+    /**
+     * remove the firstAddedLine from the fragment
+    */
+
+    firstAddedLine = dummyLine.lineNext;
+    secondAddedLine = firstAddedLine != null ? firstAddedLine.lineNext : void 0;
+    if (frag.firstChild != null) {
+      frag.removeChild(frag.firstChild);
+    }
+    if (firstAddedLine != null) {
+      delete this._lines[firstAddedLine.lineID];
+    }
+    /**
+     * 7- updates nextLine and prevLines, insert frag in the editor
+    */
+
+    if (secondAddedLine != null) {
+      lineNextStartLine = currSel.startLine.lineNext;
+      currSel.startLine.lineNext = secondAddedLine;
+      secondAddedLine.linePrev = currSel.startLine;
+      if (lineNextStartLine === null) {
+        this.linesDiv.appendChild(frag);
+      } else {
+        domWalkContext.lastAddedLine.lineNext = lineNextStartLine;
+        lineNextStartLine.linePrev = domWalkContext.lastAddedLine;
+        this.linesDiv.insertBefore(frag, lineNextStartLine.line$[0]);
+      }
+    }
+    /**
+     * 8- position caret
+    */
+
+    if (secondAddedLine != null) {
+      caretTextNodeTarget = lineNextStartLine.linePrev.line$[0].childNodes[0].firstChild;
+      caretOffset = caretTextNodeTarget.length - endOffset;
+      return currSel.sel.collapse(caretTextNodeTarget, caretOffset);
+    } else {
+      return currSel.sel.collapse(targetNode, startOffset);
+    }
+  };
+
+  /**
+   * Insert a frag in a node container at startOffset
+   * ASSERTION : 
+   * TODO : this method could be also used in _deleteMultiLinesSelections 
+   * especialy if _insertFrag optimizes the insertion by fusionning cleverly
+   * the elements
+   * @param  {Node} targetContainer the node where to make the insert
+   * @param  {Integer} targetOffset    the offset of insertion in targetContainer
+   * @param  {fragment} frag           the fragment to insert
+   * @return {nothing}                nothing
+  */
+
+
+  CNeditor.prototype._insertFrag = function(targetContainer, targetOffset, frag) {
+    var range, targetNode;
+    if (targetOffset === 0) {
+      range = document.createRange();
+      range.setStart(startContainer, startOffset);
+      range.setEnd(startContainer, startOffset);
+      range.insertNode(frag);
+      return range.detach();
+    } else {
+      if (frag.childNodes.length > 0) {
+        targetNode = targetContainer.childNodes[targetOffset - 1];
+        return targetNode.textContent += frag.firstChild.textContent;
+      }
+    }
+  };
+
+  /**
+   * Walks thoug an html tree in order to convert it in a strutured content
+   * that fit to a note structure.
+   * @param  {html element} elemt   Reference to an html element to be parsed
+   * @param  {object} context _domWalk is recursive and its context of execution
+   *                  is kept in this param instead of using the editor context
+   *                  (quicker and better) isolation
+  */
+
+
+  CNeditor.prototype._domWalk = function(elemt, context) {
+    var p;
+    this.__domWalk(elemt, context);
+    if (context.currentLineFrag.childNodes.length > 0) {
+      p = {
+        sourceLine: context.lastAddedLine,
+        fragment: context.currentLineFrag,
+        targetLineType: "Tu",
+        targetLineDepthAbs: context.absDepth,
+        targetLineDepthRel: context.absDepth
+      };
+      return context.lastAddedLine = this._insertLineAfter(p);
+    }
+  };
+
+  /**
+   * Walks thoug an html tree in order to convert it in a strutured content
+   * that fit to a note structure.
+   * @param  {html element} nodeToParse   Reference to an html element to 
+   *                        be parsed
+   * @param  {object} context __domWalk is recursive and its context of 
+   *                          execution is kept in this param instead of 
+   *                          using the editor context (quicker and better) 
+   *                          isolation
+  */
+
+
+  CNeditor.prototype.__domWalk = function(nodeToParse, context) {
+    var aNode, absDepth, child, deltaHxLevel, lastInsertedEl, prevHxLevel, spanEl, spanNode, txtNode, _i, _len, _ref, _ref1;
+    absDepth = context.absDepth;
+    prevHxLevel = context.prevHxLevel;
+    _ref = nodeToParse.childNodes;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      child = _ref[_i];
+      switch (child.nodeName) {
+        case '#text':
+          if ((_ref1 = context.currentLineEl.nodeName) === 'SPAN' || _ref1 === 'A') {
+            context.currentLineEl.textContent += child.textContent;
+          } else {
+            txtNode = document.createTextNode(child.textContent);
+            spanEl = document.createElement('span');
+            spanEl.appendChild(txtNode);
+            context.currentLineEl.appendChild(spanEl);
+          }
+          context.isCurrentLineBeingPopulated = true;
+          break;
+        case 'P':
+        case 'UL':
+        case 'OL':
+          context.absDepth = absDepth;
+          this.__domWalk(child, context);
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
+          }
+          break;
+        case 'H1':
+        case 'H2':
+        case 'H3':
+        case 'H4':
+        case 'H5':
+        case 'H6':
+          deltaHxLevel = 0;
+          this.__domWalk(child, context);
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, Math.min(0, deltaHxLevel) + absDepth, Math.min(0, deltaHxLevel) + absDepth);
+          }
+          break;
+        case 'LI':
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
+          }
+          this.__domWalk(child, context);
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
+          }
+          break;
+        case 'TR':
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
+          }
+          this.__domWalk(child, context);
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
+          }
+          break;
+        case 'BR':
+          this._appendCurrentLineFrag(context, absDepth, absDepth);
+          break;
+        case 'A':
+          aNode = document.createElement('a');
+          aNode.textContent = child.textContent;
+          aNode.href = child.href;
+          context.currentLineEl.appendChild(aNode);
+          break;
+        case 'DIV':
+        case 'TABLE':
+        case 'TBODY':
+          if (child.id.substr(0, 5) === 'CNID_') {
+            this._clipBoard_Insert_InternalLine(child, context);
+          } else {
+            this.__domWalk(child, context);
+          }
+          break;
+        default:
+          lastInsertedEl = context.currentLineEl.lastChild;
+          if (lastInsertedEl !== null && lastInsertedEl.nodeName === 'SPAN') {
+            lastInsertedEl.textContent += child.textContent;
+          } else {
+            spanNode = document.createElement('span');
+            spanNode.textContent = child.textContent;
+            context.currentLineEl.appendChild(spanNode);
+          }
+          context.isCurrentLineBeingPopulated = true;
+      }
+    }
+    return true;
+  };
+
+  /**
+   * Append to frag the currentLineFrag and prepare a new empty one.
+   * @param  {Object} context  [description]
+   * @param  {Number} absDepth absolute depth of the line to insert
+   * @param  {Number} relDepth relative depth of the line to insert
+  */
+
+
+  CNeditor.prototype._appendCurrentLineFrag = function(context, absDepth, relDepth) {
+    var p, spanNode;
+    if (context.currentLineFrag.childNodes.length === 0) {
+      spanNode = document.createElement('span');
+      spanNode.appendChild(document.createTextNode(''));
+      context.currentLineFrag.appendChild(spanNode);
+    }
+    p = {
+      sourceLine: context.lastAddedLine,
+      fragment: context.currentLineFrag,
+      targetLineType: "Tu",
+      targetLineDepthAbs: absDepth,
+      targetLineDepthRel: relDepth
+    };
+    context.lastAddedLine = this._insertLineAfter(p);
+    context.currentLineFrag = document.createDocumentFragment();
+    context.currentLineEl = context.currentLineFrag;
+    return context.isCurrentLineBeingPopulated = false;
+  };
+
+  /**
+   * Insert in the editor a line that was copied in a cozy note editor
+   * @param  {html element} elemt a div ex : <div id="CNID_7" class="Lu-3"> ... </div>
+   * @return {line}        a ref to the line object
+  */
+
+
+  CNeditor.prototype._clipBoard_Insert_InternalLine = function(elemt, context) {
+    var deltaDepth, elemtFrag, i, lineClass, lineDepthAbs, n, p;
+    lineClass = elemt.className.split('-');
+    lineDepthAbs = +lineClass[1];
+    lineClass = lineClass[0];
+    if (!context.prevCNLineAbsDepth) {
+      context.prevCNLineAbsDepth = lineDepthAbs;
+    }
+    deltaDepth = lineDepthAbs - context.prevCNLineAbsDepth;
+    if (deltaDepth > 0) {
+
+    } else {
+
+    }
+    elemtFrag = document.createDocumentFragment();
+    n = elemt.childNodes.length;
+    i = 0;
+    while (i < n) {
+      elemtFrag.appendChild(elemt.childNodes[0]);
+      i++;
+    }
+    p = {
+      sourceLine: context.lastAddedLine,
+      fragment: elemtFrag,
+      targetLineType: "Tu",
+      targetLineDepthAbs: context.absDepth,
+      targetLineDepthRel: context.absDepth
+    };
+    return context.lastAddedLine = this._insertLineAfter(p);
+  };
+
+  /* ------------------------------------------------------------------------
+  # EXTENSION  :  cleaned up HTML parsing
+  #
+  #  (TODO)
+  # 
+  # We suppose the html treated here has already been sanitized so the DOM
+  #  structure is coherent and not twisted
+  # 
+  # _parseHtml:
+  #  Parse an html string and return the matching html in the editor's format
+  # We try to restitute the very structure the initial fragment :
+  #   > indentation
+  #   > lists
+  #   > images, links, tables... and their specific attributes
+  #   > text
+  #   > textuals enhancements (bold, underlined, italic)
+  #   > titles
+  #   > line return
+  # 
+  # Ideas to do that :
+  #  0- textContent is always kept
+  #  1- A, IMG keep their specific attributes
+  #  2- UL, OL become divs whose class is Tu/To. LI become Lu/Lo
+  #  3- H[1-6] become divs whose class is Th. Depth is determined depending on
+  #     where the element was pasted.
+  #  4- U, B have the effect of adding to each elt they contain a class (bold
+  #     and underlined class)
+  #  5- BR delimit the different DIV that will be added
+  #  6- relative indentation preserved with imbrication of paragraphs P
+  #  7- any other elt is turned into a simple SPAN with a textContent
+  #  8- IFRAME, FRAME, SCRIPT are ignored
+  */
+
+
+  CNeditor.prototype.logKeyPress = function(e) {};
+
+  return CNeditor;
+
+})();
+
+CNeditor = exports.CNeditor;
+;
 /*
 
  Style HTML
@@ -20283,7 +23217,6 @@ function style_html(html_source, options) {
   return multi_parser.output.join('');
 }
 ;
-
 /*jslint onevar: false, plusplus: false */
 /*
 
@@ -21504,7 +24437,6 @@ function js_beautify(js_source_text, options) {
 if (typeof exports !== "undefined")
     exports.js_beautify = js_beautify;
 ;
-
 /* ===================================================
  * bootstrap-transition.js v2.1.0
  * http://twitter.github.com/bootstrap/javascript.html#transitions
@@ -23533,7 +26465,6 @@ if (typeof exports !== "undefined")
 
 }(window.jQuery);;
 
-
 jade = (function(exports){
 /*!
  * Jade - runtime
@@ -23713,7 +26644,6 @@ exports.rethrow = function rethrow(err, filename, lineno){
 
 })({});
 ;
-
 /**
  * http://github.com/Valums-File-Uploader/file-uploader
  *
@@ -25337,7 +28267,6 @@ qq.DisposeSupport = {
     }
 };
 ;
-
 /*!
  * jQuery Cookie Plugin
  * https://github.com/carhartl/jquery-cookie
@@ -25386,7 +28315,6 @@ qq.DisposeSupport = {
     };
 })(jQuery);
 ;
-
 /*
  * jQuery Hotkeys Plugin
  * Copyright 2010, John Resig
@@ -25486,7 +28414,6 @@ qq.DisposeSupport = {
 	});
 
 })( jQuery );;
-
 /*
 * This function is a plugin for jstree search method. It allows the search method
 * to make a multiple word search in jstree. The search string has to separate each
@@ -25531,7 +28458,2768 @@ qq.DisposeSupport = {
     };
 })(jQuery);
 ;
+/* jquery.nicescroll
+-- version 3.0.0
+-- copyright 2011-12 InuYaksa*2012
+-- licensed under the MIT
+--
+-- http://areaaperta.com/nicescroll
+-- https://github.com/inuyaksa/jquery.nicescroll
+--
+*/
 
+(function(jQuery){
+
+  // globals
+  var domfocus = false;
+  var mousefocus = false;
+  var zoomactive = false;
+  var tabindexcounter = 5000;
+  var ascrailcounter = 2000;
+  
+  var $ = jQuery;  // sandbox
+ 
+  // http://stackoverflow.com/questions/2161159/get-script-path
+  function getScriptPath() {
+    var scripts=document.getElementsByTagName('script');
+    var path=scripts[scripts.length-1].src.split('?')[0];
+    return (path.split('/').length>0) ? path.split('/').slice(0,-1).join('/')+'/' : '';
+  }
+  var scriptpath = getScriptPath();
+
+  // derived by http://blog.joelambert.co.uk/2011/06/01/a-better-settimeoutsetinterval/
+  var setAnimationFrame = (function(){
+    return  window.requestAnimationFrame       || 
+            window.webkitRequestAnimationFrame || 
+            window.mozRequestAnimationFrame    || 
+            window.oRequestAnimationFrame      || 
+            window.msRequestAnimationFrame     || 
+            false;
+  })();
+  var clearAnimationFrame = (function(){
+    return  window.cancelRequestAnimationFrame       || 
+            window.webkitCancelRequestAnimationFrame || 
+            window.mozCancelRequestAnimationFrame    || 
+            window.oCancelRequestAnimationFrame      || 
+            window.msCancelRequestAnimationFrame     || 
+            false;
+  })();  
+  
+  var browserdetected = false;
+  
+  var getBrowserDetection = function() {
+  
+    if (browserdetected) return browserdetected;
+  
+    var domtest = document.createElement('DIV');
+
+    var d = {};
+    
+		d.haspointerlock = "pointerLockElement" in document || "mozPointerLockElement" in document || "webkitPointerLockElement" in document;
+		
+    d.isopera = ("opera" in window);
+    d.isopera12 = (d.isopera&&("getUserMedia" in navigator));
+    
+    d.isie = (("all" in document) && ("attachEvent" in domtest) && !d.isopera);
+    d.isieold = (d.isie && !("msInterpolationMode" in domtest.style));  // IE6 and older
+    d.isie7 = d.isie&&!d.isieold&&(!("documentMode" in document)||(document.documentMode==7));
+    d.isie8 = d.isie&&("documentMode" in document)&&(document.documentMode==8);
+    d.isie9 = d.isie&&("performance" in window)&&(document.documentMode>=9);
+    d.isie10 = d.isie&&("performance" in window)&&(document.documentMode>=10);
+    
+    d.isie9mobile = /iemobile.9/i.test(navigator.userAgent);  //wp 7.1 mango
+    if (d.isie9mobile) d.isie9 = false;
+    d.isie7mobile = (!d.isie9mobile&&d.isie7) && /iemobile/i.test(navigator.userAgent);  //wp 7.0
+    
+    d.ismozilla = ("MozAppearance" in domtest.style);
+		
+    d.iswebkit = ("WebkitAppearance" in domtest.style);
+    
+    d.ischrome = ("chrome" in window);
+		d.ischrome22 = (d.ischrome&&d.haspointerlock);
+    
+    d.cantouch = ("ontouchstart" in document.documentElement);		
+    d.hasmstouch = (window.navigator.msPointerEnabled||false);  // IE10+ pointer events
+		
+    d.ismac = /^mac$/i.test(navigator.platform);
+    
+    d.isios = (d.cantouch && /iphone|ipad|ipod/i.test(navigator.platform));
+    d.isios4 = ((d.isios)&&!("seal" in Object));
+    
+    d.isandroid = (/android/i.test(navigator.userAgent));
+    
+    d.trstyle = false;
+    d.hastransform = false;
+    d.hastranslate3d = false;
+    d.transitionstyle = false;
+    d.hastransition = false;
+    d.transitionend = false;
+    
+    var check = ['transform','msTransform','webkitTransform','MozTransform','OTransform'];
+    for(var a=0;a<check.length;a++){
+      if (typeof domtest.style[check[a]] != "undefined") {
+        d.trstyle = check[a];
+        break;
+      }
+    }
+    d.hastransform = (d.trstyle != false);
+    if (d.hastransform) {
+      domtest.style[d.trstyle] = "translate3d(1px,2px,3px)";
+      d.hastranslate3d = /translate3d/.test(domtest.style[d.trstyle]);
+    }
+    
+    d.transitionstyle = false;
+    d.prefixstyle = '';
+    d.transitionend = false;
+    var check = ['transition','webkitTransition','MozTransition','OTransition','OTransition','msTransition','KhtmlTransition'];
+    var prefix = ['','-webkit-','-moz-','-o-','-o','-ms-','-khtml-'];
+    var evs = ['transitionend','webkitTransitionEnd','transitionend','otransitionend','oTransitionEnd','msTransitionEnd','KhtmlTransitionEnd'];
+    for(var a=0;a<check.length;a++) {
+      if (check[a] in domtest.style) {
+        d.transitionstyle = check[a];
+        d.prefixstyle = prefix[a];
+        d.transitionend = evs[a];
+        break;
+      }
+    }
+    d.hastransition = (d.transitionstyle);
+    
+    function detectCursorGrab() {      
+      var lst = ['-moz-grab','-webkit-grab','grab'];
+      if ((d.ischrome&&!d.ischrome22)||d.isie) lst=[];  // force setting for IE returns false positive and chrome cursor bug
+      for(var a=0;a<lst.length;a++) {
+        var p = lst[a];
+        domtest.style['cursor']=p;
+        if (domtest.style['cursor']==p) return p;
+      }
+      return 'url(http://www.google.com/intl/en_ALL/mapfiles/openhand.cur),n-resize';  // thank you google for custom cursor!
+    }
+    d.cursorgrabvalue = detectCursorGrab();
+
+    d.hasmousecapture = ("setCapture" in domtest);
+    
+    domtest = null;  //memory released
+
+    browserdetected = d;
+    
+    return d;  
+  }
+  
+  var NiceScrollClass = function(myopt,me) {
+
+    var self = this;
+
+    this.version = '3.0.0';
+    this.name = 'nicescroll';
+    
+    this.me = me;
+    
+    this.opt = {
+      doc:$("body"),
+      win:false,
+      zindex:9000,
+      cursoropacitymin:0,
+      cursoropacitymax:1,
+      cursorcolor:"#424242",
+      cursorwidth:"5px",
+      cursorborder:"1px solid #fff",
+      cursorborderradius:"5px",
+      scrollspeed:60,
+      mousescrollstep:8*3,
+      touchbehavior:false,
+      hwacceleration:true,
+      usetransition:true,
+      boxzoom:false,
+      dblclickzoom:true,
+      gesturezoom:true,
+      grabcursorenabled:true,
+      autohidemode:true,
+      background:"",
+      iframeautoresize:true,
+      cursorminheight:32,
+      preservenativescrolling:true,
+      railoffset:false,
+      bouncescroll:true,
+      spacebarenabled:true,
+      railpadding:{top:0,right:0,left:0,bottom:0},
+      disableoutline:true,
+      horizrailenabled:true,
+      railalign:"right",
+      railvalign:"bottom",
+      enabletranslate3d:true,
+      enablemousewheel:true,
+      enablekeyboard:true,
+      smoothscroll:true,
+      sensitiverail:true
+    };
+    
+// Options for internal use
+    this.opt.snapbackspeed = 80;
+    
+    if (myopt||false) {
+      for(var a in self.opt) {
+        if (typeof myopt[a] != "undefined") self.opt[a] = myopt[a];
+      }
+    }
+    
+    this.doc = self.opt.doc;
+    this.iddoc = (this.doc&&this.doc[0])?this.doc[0].id||'':'';    
+    this.ispage = /BODY|HTML/.test((self.opt.win)?self.opt.win[0].nodeName:this.doc[0].nodeName);
+    this.haswrapper = (self.opt.win!==false);
+    this.win = self.opt.win||(this.ispage?$(window):this.doc);
+    this.docscroll = (this.ispage&&!this.haswrapper)?$(window):this.win;
+    this.body = $("body");
+    
+    this.isfixed = false;
+    
+    this.iframe = false;
+    this.isiframe = ((this.doc[0].nodeName == 'IFRAME') && (this.win[0].nodeName == 'IFRAME'));
+    
+    this.istextarea = (this.win[0].nodeName == 'TEXTAREA');
+    
+    this.forcescreen = false; //force to use screen position on events
+
+    this.canshowonmouseevent = (self.opt.autohidemode!="scroll");
+    
+// Events jump table    
+    this.onmousedown = false;
+    this.onmouseup = false;
+    this.onmousemove = false;
+    this.onmousewheel = false;
+    this.onkeypress = false;
+    this.ongesturezoom = false;
+    this.onclick = false;
+    
+// Nicescroll custom events
+    this.onscrollstart = false;
+    this.onscrollend = false;
+    this.onscrollcancel = false;    
+    
+    this.onzoomin = false;
+    this.onzoomout = false;
+    
+// Let's start!  
+    this.view = false;
+    this.page = false;
+    
+    this.scroll = {x:0,y:0};
+    this.scrollratio = {x:0,y:0};    
+    this.cursorheight = 20;
+    this.scrollvaluemax = 0;
+    
+    this.scrollrunning = false;
+    
+    this.scrollmom = false;
+    
+    this.observer = false;
+    
+    do {
+      this.id = "ascrail"+(ascrailcounter++);
+    } while (document.getElementById(this.id));
+    
+    this.rail = false;
+    this.cursor = false;
+    this.cursorfreezed = false;  
+    
+    this.zoom = false;
+    this.zoomactive = false;
+    
+    this.hasfocus = false;
+    this.hasmousefocus = false;
+    
+    this.visibility = true;
+    this.locked = false;
+    this.hidden = false; // rails always hidden
+    this.cursoractive = true; // user can interact with cursors
+    
+    this.nativescrollingarea = false;
+    
+    this.events = [];  // event list for unbind
+    
+    this.saved = {};
+    
+    this.delaylist = {};
+    this.synclist = {};
+    
+    this.lastdeltax = 0;
+    this.lastdeltay = 0;
+    
+    var cap = this.detected = getBrowserDetection();    
+ 
+    this.canhwscroll = (cap.hastransform&&self.opt.hwacceleration);
+    this.ishwscroll = (this.canhwscroll&&self.haswrapper);
+    
+    this.istouchcapable = false;  // desktop devices with touch screen support
+    
+//## Check Chrome 22 bug on touch devices
+    if (cap.cantouch&&cap.ischrome&&!cap.isios&&!cap.isandroid) {
+      this.istouchcapable = true;
+      cap.cantouch = false;  // parse normal desktop events
+    }    
+
+//## Firefox 18 nightly build (desktop) false positive
+    if (cap.cantouch&&cap.ismozilla&&!cap.isios) {
+      this.istouchcapable = true;
+      cap.cantouch = false;  // parse normal desktop events
+    }    
+    
+    this.delayed = function(name,fn,tm,lazy) {
+      var dd = self.delaylist[name];
+      var nw = (new Date()).getTime();
+      if (!lazy&&dd&&dd.tt) return false;
+      if (dd&&dd.tt) clearTimeout(dd.tt);
+      if (dd&&dd.last+tm>nw&&!dd.tt) {      
+        self.delaylist[name] = {
+          last:nw+tm,
+          tt:setTimeout(function(){self.delaylist[name].tt=0;fn.call();},tm)
+        }
+      }
+      else if (!dd||!dd.tt) {
+        self.delaylist[name] = {
+          last:nw,
+          tt:0
+        }
+        setTimeout(function(){fn.call();},0);
+      }
+    };
+    
+    this.synched = function(name,fn) {
+    
+      function requestSync() {
+        if (self.onsync) return;
+        setAnimationFrame(function(){
+          self.onsync = false;
+          for(name in self.synclist){
+            var fn = self.synclist[name];
+            if (fn) fn.call(self);
+            self.synclist[name] = false;
+          }
+        });
+        self.onsync = true;
+      };    
+    
+      self.synclist[name] = fn;
+      requestSync();
+      return name;
+    };
+    
+    this.unsynched = function(name) {
+      if (self.synclist[name]) self.synclist[name] = false;
+    }
+    
+    this.css = function(el,pars) {  // save & set
+      for(var n in pars) {
+        self.saved.css.push([el,n,el.css(n)]);
+        el.css(n,pars[n]);
+      }
+    };
+    
+    this.scrollTop = function(val) {
+      return (typeof val == "undefined") ? self.getScrollTop() : self.setScrollTop(val);
+    };
+
+    this.scrollLeft = function(val) {
+      return (typeof val == "undefined") ? self.getScrollLeft() : self.setScrollLeft(val);
+    };
+    
+// derived by by Dan Pupius www.pupius.net
+    BezierClass = function(st,ed,spd,p1,p2,p3,p4) {
+      this.st = st;
+      this.ed = ed;
+      this.spd = spd;
+      
+      this.p1 = p1||0;
+      this.p2 = p2||1;
+      this.p3 = p3||0;
+      this.p4 = p4||1;
+      
+      this.ts = (new Date()).getTime();
+      this.df = this.ed-this.st;
+    };
+    BezierClass.prototype = {
+      B2:function(t){ return 3*t*t*(1-t) },
+      B3:function(t){ return 3*t*(1-t)*(1-t) },
+      B4:function(t){ return (1-t)*(1-t)*(1-t) },
+      getNow:function(){
+        var nw = (new Date()).getTime();
+        var pc = 1-((nw-this.ts)/this.spd);
+        var bz = this.B2(pc) + this.B3(pc) + this.B4(pc);
+        return (pc<0) ? this.ed : this.st+Math.round(this.df*bz);
+      },
+      update:function(ed,spd){
+        this.st = this.getNow();
+        this.ed = ed;
+        this.spd = spd;
+        this.ts = (new Date()).getTime();
+        this.df = this.ed-this.st;
+        return this;
+      }
+    };
+    
+    if (this.ishwscroll) {  
+    // hw accelerated scroll
+      this.doc.translate = {x:0,y:0,tx:"0px",ty:"0px"};
+      
+      if (cap.hastranslate3d&&cap.isios) this.doc.css("-webkit-backface-visibility","hidden");  // prevent flickering http://stackoverflow.com/questions/3461441/      
+      
+      //derived from http://stackoverflow.com/questions/11236090/
+      function getMatrixValues() {
+        var tr = self.doc.css(cap.trstyle);
+        if (tr&&(tr.substr(0,6)=="matrix")) {
+          return tr.replace(/^.*\((.*)\)$/g, "$1").replace(/px/g,'').split(/, +/);
+        }
+        return false;
+      }
+      
+      this.getScrollTop = function(last) {
+        if (!last) {
+          var mtx = getMatrixValues();
+          if (mtx) return (mtx.length==16) ? -mtx[13] : -mtx[5];  //matrix3d 16 on IE10
+          if (self.timerscroll&&self.timerscroll.bz) return self.timerscroll.bz.getNow();
+        }
+        return self.doc.translate.y;
+      };
+
+      this.getScrollLeft = function(last) {
+        if (!last) {
+          var mtx = getMatrixValues();          
+          if (mtx) return (mtx.length==16) ? -mtx[12] : -mtx[4];  //matrix3d 16 on IE10
+          if (self.timerscroll&&self.timerscroll.bh) return self.timerscroll.bh.getNow();
+        }
+        return self.doc.translate.x;
+      };
+      
+      if (document.createEvent) {
+        this.notifyScrollEvent = function(el) {
+          var e = document.createEvent("UIEvents");
+          e.initUIEvent("scroll", false, true, window, 1);
+          el.dispatchEvent(e);
+        };
+      }
+      else if (document.fireEvent) {
+        this.notifyScrollEvent = function(el) {
+          var e = document.createEventObject();
+          el.fireEvent("onscroll");
+          e.cancelBubble = true; 
+        };
+      }
+      else {
+        this.notifyScrollEvent = function(el,add) {}; //NOPE
+      }
+      
+      if (cap.hastranslate3d&&self.opt.enabletranslate3d) {
+        this.setScrollTop = function(val,silent) {
+          self.doc.translate.y = val;
+          self.doc.translate.ty = (val*-1)+"px";
+          self.doc.css(cap.trstyle,"translate3d("+self.doc.translate.tx+","+self.doc.translate.ty+",0px)");          
+          if (!silent) self.notifyScrollEvent(self.win[0]);
+        };
+        this.setScrollLeft = function(val,silent) {          
+          self.doc.translate.x = val;
+          self.doc.translate.tx = (val*-1)+"px";
+          self.doc.css(cap.trstyle,"translate3d("+self.doc.translate.tx+","+self.doc.translate.ty+",0px)");          
+          if (!silent) self.notifyScrollEvent(self.win[0]);
+        };
+      } else {
+        this.setScrollTop = function(val,silent) {
+          self.doc.translate.y = val;
+          self.doc.translate.ty = (val*-1)+"px";
+          self.doc.css(cap.trstyle,"translate("+self.doc.translate.tx+","+self.doc.translate.ty+")");
+          if (!silent) self.notifyScrollEvent(self.win[0]);          
+        };
+        this.setScrollLeft = function(val,silent) {        
+          self.doc.translate.x = val;
+          self.doc.translate.tx = (val*-1)+"px";
+          self.doc.css(cap.trstyle,"translate("+self.doc.translate.tx+","+self.doc.translate.ty+")");
+          if (!silent) self.notifyScrollEvent(self.win[0]);
+        };
+      }
+    } else {
+    // native scroll
+      this.getScrollTop = function() {
+        return self.docscroll.scrollTop();
+      };
+      this.setScrollTop = function(val) {        
+        return self.docscroll.scrollTop(val);
+      };
+      this.getScrollLeft = function() {
+        return self.docscroll.scrollLeft();
+      };
+      this.setScrollLeft = function(val) {
+        return self.docscroll.scrollLeft(val);
+      };
+    }
+    
+    this.getTarget = function(e) {
+      if (!e) return false;
+      if (e.target) return e.target;
+      if (e.srcElement) return e.srcElement;
+      return false;
+    };
+    
+    this.hasParent = function(e,id) {
+      if (!e) return false;
+      var el = e.target||e.srcElement||e||false;
+      while (el && el.id != id) {
+        el = el.parentNode||false;
+      }
+      return (el!==false);
+    };
+    
+//inspired by http://forum.jquery.com/topic/width-includes-border-width-when-set-to-thin-medium-thick-in-ie
+    var _convertBorderWidth = {"thin":1,"medium":3,"thick":5};
+    function getWidthToPixel(dom,prop,chkheight) {
+      var wd = dom.css(prop);
+      var px = parseFloat(wd);
+      if (isNaN(px)) {
+        px = _convertBorderWidth[wd]||0;
+        var brd = (px==3) ? ((chkheight)?(self.win.outerHeight() - self.win.innerHeight()):(self.win.outerWidth() - self.win.innerWidth())) : 1; //DON'T TRUST CSS
+        if (self.isie8&&px) px+=1;
+        return (brd) ? px : 0; 
+      }
+      return px;
+    };
+    
+    this.updateScrollBar = function(len) {
+      if (self.ishwscroll) {
+        self.rail.css({height:self.win.innerHeight()});
+        if (self.railh) self.railh.css({width:self.win.innerWidth()});
+      } else {
+        var wpos = (self.isfixed) ? {top:parseFloat(self.win.css('top')),left:parseFloat(self.win.css('left'))}  : self.win.offset();        
+        var pos = {top:wpos.top,left:wpos.left};
+        pos.top+= getWidthToPixel(self.win,'border-top-width',true);
+        var brd = (self.win.outerWidth() - self.win.innerWidth())/2;
+        pos.left+= (self.rail.align) ? self.win.outerWidth() - getWidthToPixel(self.win,'border-right-width') - self.rail.width : getWidthToPixel(self.win,'border-left-width');
+        
+        var off = self.opt.railoffset;
+        if (off) {
+          if (off.top) pos.top+=off.top;
+          if (self.rail.align&&off.left) pos.left+=off.left;
+        }
+        
+				if (!self.locked) self.rail.css({top:pos.top,left:pos.left,height:(len)?len.h:self.win.innerHeight()});
+				
+				if (self.zoom) {				  
+				  self.zoom.css({top:pos.top+1,left:(self.rail.align==1) ? pos.left-20 : pos.left+self.rail.width+4});
+			  }
+				
+				if (self.railh&&!self.locked) {
+					var pos = {top:wpos.top,left:wpos.left};
+					var y = (self.railh.align) ? pos.top + getWidthToPixel(self.win,'border-top-width',true) + self.win.innerHeight() - self.railh.height : pos.top + getWidthToPixel(self.win,'border-top-width',true);
+					var x = pos.left + getWidthToPixel(self.win,'border-left-width');
+					self.railh.css({top:y,left:x,width:self.railh.width});
+				}
+		
+				
+      }
+    };
+    
+    this.doRailClick = function(e,dbl,hr) {
+
+      var fn,pg,cur,pos;
+      
+      if (self.rail.drag&&self.rail.drag.pt!=1) return;
+      if (self.locked) return;
+      if (self.rail.drag) return;
+
+      self.cancelScroll();       
+      
+      self.cancelEvent(e);
+      
+      if (dbl) {
+        fn = (hr) ? self.doScrollLeft : self.doScrollTop;
+        cur = (hr) ? ((e.pageX - self.railh.offset().left - (self.cursorwidth/2)) * self.scrollratio.x) : ((e.pageY - self.rail.offset().top - (self.cursorheight/2)) * self.scrollratio.y);
+        fn(cur);
+      } else {
+        fn = (hr) ? self.doScrollLeftBy : self.doScrollBy;
+        cur = (hr) ? self.scroll.x : self.scroll.y;
+        pos = (hr) ? e.pageX - self.railh.offset().left : e.pageY - self.rail.offset().top;
+        pg = (hr) ? self.view.w : self.view.h;        
+        (cur>=pos) ? fn(pg) : fn(-pg);
+      }
+    
+    }
+    
+    self.hasanimationframe = (setAnimationFrame);
+    self.hascancelanimationframe = (clearAnimationFrame);
+    
+    if (!self.hasanimationframe) {
+      setAnimationFrame=function(fn){return setTimeout(fn,16)}; // 1000/60)};
+      clearAnimationFrame=clearInterval;
+    } 
+    else if (!self.hascancelanimationframe) clearAnimationFrame=function(){self.cancelAnimationFrame=true};
+    
+    this.init = function() {
+
+      self.saved.css = [];
+      
+      if (cap.isie7mobile) return true; // SORRY, DO NOT WORK!
+      
+      if (cap.hasmstouch) self.css((self.ispage)?$("html"):self.win,{'-ms-touch-action':'none'});
+      
+/*      
+      self.ispage = true;
+      self.haswrapper = true;
+//      self.win = $(window);
+      self.docscroll = $("body");
+//      self.doc = $("body");
+*/
+      
+      if (!self.ispage || (!cap.cantouch && !cap.isieold && !cap.isie9mobile)) {
+      
+        var cont = self.docscroll;
+        if (self.ispage) cont = (self.haswrapper)?self.win:self.doc;
+        
+        if (!cap.isie9mobile) self.css(cont,{'overflow-y':'hidden'});      
+        
+        if (self.ispage&&cap.isie7) {
+          if (self.doc[0].nodeName=='BODY') self.css($("html"),{'overflow-y':'hidden'});  //IE7 double scrollbar issue
+          else if (self.doc[0].nodeName=='HTML') self.css($("body"),{'overflow-y':'hidden'});  //IE7 double scrollbar issue
+        }
+        
+        if (cap.isios&&!self.ispage&&!self.haswrapper) self.css($("body"),{"-webkit-overflow-scrolling":"touch"});  //force hw acceleration
+        
+        var cursor = $(document.createElement('div'));
+        cursor.css({
+          position:"relative",top:0,"float":"right",width:self.opt.cursorwidth,height:"0px",
+          'background-color':self.opt.cursorcolor,
+          border:self.opt.cursorborder,
+          'background-clip':'padding-box',
+          '-webkit-border-radius':self.opt.cursorborderradius,
+          '-moz-border-radius':self.opt.cursorborderradius,
+          'border-radius':self.opt.cursorborderradius
+        });   
+        
+        cursor.hborder = parseFloat(cursor.outerHeight() - cursor.innerHeight());        
+        self.cursor = cursor;        
+        
+        var rail = $(document.createElement('div'));
+        rail.attr('id',self.id);
+        
+        var v,a,kp = ["left","right"];  //"top","bottom"
+        for(var n in kp) {
+          a=kp[n];
+          v = self.opt.railpadding[a];
+          (v) ? rail.css("padding-"+a,v+"px") : self.opt.railpadding[a] = 0;
+        }
+        
+        rail.append(cursor);
+        
+        rail.width = Math.max(parseFloat(self.opt.cursorwidth),cursor.outerWidth()) + self.opt.railpadding['left'] + self.opt.railpadding['right'];
+        rail.css({width:rail.width+"px",'zIndex':(self.ispage)?self.opt.zindex:self.opt.zindex+2,"background":self.opt.background});        
+        
+        rail.visibility = true;
+        rail.scrollable = true;
+        
+        rail.align = (self.opt.railalign=="left") ? 0 : 1;
+        
+        self.rail = rail;
+        
+        self.rail.drag = false;
+        
+        var zoom = false;
+        if (self.opt.boxzoom&&!self.ispage&&!cap.isieold) {
+          zoom = document.createElement('div');          
+          self.bind(zoom,"click",self.doZoom);
+          self.zoom = $(zoom);
+          self.zoom.css({"cursor":"pointer",'z-index':self.opt.zindex,'backgroundImage':'url('+scriptpath+'zoomico.png)','height':18,'width':18,'backgroundPosition':'0px 0px'});
+          if (self.opt.dblclickzoom) self.bind(self.win,"dblclick",self.doZoom);
+          if (cap.cantouch&&self.opt.gesturezoom) {
+            self.ongesturezoom = function(e) {
+              if (e.scale>1.5) self.doZoomIn(e);
+              if (e.scale<0.8) self.doZoomOut(e);
+              return self.cancelEvent(e);
+            };
+            self.bind(self.win,"gestureend",self.ongesturezoom);             
+          }
+        }
+        
+// init HORIZ
+
+        self.railh = false;
+
+        if (self.opt.horizrailenabled) {
+
+          self.css(cont,{'overflow-x':'hidden'});
+
+          var cursor = $(document.createElement('div'));
+          cursor.css({
+            position:"relative",top:0,height:self.opt.cursorwidth,width:"0px",
+            'background-color':self.opt.cursorcolor,
+            border:self.opt.cursorborder,
+            'background-clip':'padding-box',
+            '-webkit-border-radius':self.opt.cursorborderradius,
+            '-moz-border-radius':self.opt.cursorborderradius,
+            'border-radius':self.opt.cursorborderradius
+          });   
+          
+          cursor.wborder = parseFloat(cursor.outerWidth() - cursor.innerWidth());
+          self.cursorh = cursor;
+          
+          var railh = $(document.createElement('div'));
+          railh.attr('id',self.id+'-hr');
+          railh.height = 1+Math.max(parseFloat(self.opt.cursorwidth),cursor.outerHeight());
+          railh.css({height:railh.height+"px",'zIndex':(self.ispage)?self.opt.zindex:self.opt.zindex+2,"background":self.opt.background});
+          
+          railh.append(cursor);
+          
+          railh.visibility = true;
+          railh.scrollable = true;
+          
+          railh.align = (self.opt.railvalign=="top") ? 0 : 1;
+          
+          self.railh = railh;
+          
+          self.railh.drag = false;
+          
+        }
+        
+//        
+        
+        if (self.ispage) {
+          rail.css({position:"fixed",top:"0px",height:"100%"});
+          (rail.align) ? rail.css({right:"0px"}) : rail.css({left:"0px"});
+          self.body.append(rail);
+          if (self.railh) {
+            railh.css({position:"fixed",left:"0px",width:"100%"});
+            (railh.align) ? railh.css({bottom:"0px"}) : railh.css({top:"0px"});
+            self.body.append(railh);
+          }
+        } else {          
+          if (self.ishwscroll) {
+            if (self.win.css('position')=='static') self.css(self.win,{'position':'relative'});
+            var bd = (self.win[0].nodeName == 'HTML') ? self.body : self.win;
+            if (self.zoom) {
+              self.zoom.css({position:"absolute",top:1,right:0,"margin-right":rail.width+4});
+              bd.append(self.zoom);
+            }
+            rail.css({position:"absolute",top:0});
+            (rail.align) ? rail.css({right:0}) : rail.css({left:0});
+            bd.append(rail);
+            if (railh) {
+              railh.css({position:"absolute",left:0,bottom:0});
+              (railh.align) ? railh.css({bottom:0}) : railh.css({top:0});
+              bd.append(railh);
+            }
+          } else {
+            self.isfixed = (self.win.css("position")=="fixed");
+            var rlpos = (self.isfixed) ? "fixed" : "absolute";
+            
+            rail.css({position:rlpos});
+            if (self.zoom) self.zoom.css({position:rlpos});
+            self.updateScrollBar();
+            self.body.append(rail);           
+            if (self.zoom) self.body.append(self.zoom);
+            if (self.railh) {
+              railh.css({position:rlpos});
+              self.body.append(railh);           
+            }
+          }
+          
+          if (cap.isios) self.css(self.win,{'-webkit-tap-highlight-color':'rgba(0,0,0,0)','-webkit-touch-callout':'none'});  // prevent grey layer on click
+          
+					if (cap.isie&&self.opt.disableoutline) self.win.attr("hideFocus","true");  // IE, prevent dotted rectangle on focused div
+					if (cap.iswebkit&&self.opt.disableoutline) self.win.css({"outline":"none"});
+          
+        }
+        
+        if (self.opt.autohidemode===false) {
+          self.autohidedom = false;
+        }
+        else if (self.opt.autohidemode===true) {
+          self.autohidedom = $().add(self.rail);
+          if (self.railh) self.autohidedom=self.autohidedom.add(self.railh);
+        }
+        else if (self.opt.autohidemode=="scroll") {
+          self.autohidedom = $().add(self.rail);
+          if (self.railh) self.autohidedom=self.autohidedom.add(self.railh);
+        }
+        else if (self.opt.autohidemode=="cursor") {
+          self.autohidedom = $().add(self.cursor);
+          if (self.railh) self.autohidedom=self.autohidedom.add(self.railh.cursor);
+        }
+        else if (self.opt.autohidemode=="hidden") {
+          self.autohidedom = false;
+          self.hide();
+          self.locked = false;
+        }
+        
+        if (cap.isie9mobile) {
+
+          self.scrollmom = new ScrollMomentumClass2D(self);        
+
+          /*
+          var trace = function(msg) {
+            var db = $("#debug");
+            if (isNaN(msg)&&(typeof msg != "string")) {
+              var x = [];
+              for(var a in msg) {
+                x.push(a+":"+msg[a]);
+              }
+              msg ="{"+x.join(",")+"}";
+            }
+            if (db.children().length>0) {
+              db.children().eq(0).before("<div>"+msg+"</div>");
+            } else {
+              db.append("<div>"+msg+"</div>");
+            }
+          }
+          window.onerror = function(msg,url,ln) {
+            trace("ERR: "+msg+" at "+ln);
+          }
+*/          
+  
+          self.onmangotouch = function(e) {
+            var py = self.getScrollTop();
+            var px = self.getScrollLeft();
+            
+            if ((py == self.scrollmom.lastscrolly)&&(px == self.scrollmom.lastscrollx)) return true;
+//            $("#debug").html('DRAG:'+py);
+
+            var dfy = py-self.mangotouch.sy;
+            var dfx = px-self.mangotouch.sx;            
+            var df = Math.round(Math.sqrt(Math.pow(dfx,2)+Math.pow(dfy,2)));            
+            if (df==0) return;
+            
+            var dry = (dfy<0)?-1:1;
+            var drx = (dfx<0)?-1:1;
+            
+            var tm = +new Date();
+            if (self.mangotouch.lazy) clearTimeout(self.mangotouch.lazy);
+            
+            if (((tm-self.mangotouch.tm)>80)||(self.mangotouch.dry!=dry)||(self.mangotouch.drx!=drx)) {
+//              trace('RESET+'+(tm-self.mangotouch.tm));
+              self.scrollmom.stop();
+              self.scrollmom.reset(px,py);
+              self.mangotouch.sy = py;
+              self.mangotouch.ly = py;
+              self.mangotouch.sx = px;
+              self.mangotouch.lx = px;
+              self.mangotouch.dry = dry;
+              self.mangotouch.drx = drx;
+              self.mangotouch.tm = tm;
+            } else {
+              
+              self.scrollmom.stop();
+              self.scrollmom.update(self.mangotouch.sx-dfx,self.mangotouch.sy-dfy);
+              var gap = tm - self.mangotouch.tm;              
+              self.mangotouch.tm = tm;
+              
+//              trace('MOVE:'+df+" - "+gap);
+              
+              var ds = Math.max(Math.abs(self.mangotouch.ly-py),Math.abs(self.mangotouch.lx-px));
+              self.mangotouch.ly = py;
+              self.mangotouch.lx = px;
+              
+              if (ds>2) {
+                self.mangotouch.lazy = setTimeout(function(){
+//                  trace('END:'+ds+'+'+gap);                  
+                  self.mangotouch.lazy = false;
+                  self.mangotouch.dry = 0;
+                  self.mangotouch.drx = 0;
+                  self.mangotouch.tm = 0;                  
+                  self.scrollmom.doMomentum(30);
+                },100);
+              }
+            }
+          }
+          
+          var top = self.getScrollTop();
+          var lef = self.getScrollLeft();
+          self.mangotouch = {sy:top,ly:top,dry:0,sx:lef,lx:lef,drx:0,lazy:false,tm:0};
+          
+          self.bind(self.docscroll,"scroll",self.onmangotouch);
+        
+        } else {
+        
+          if (cap.cantouch||self.istouchcapable||self.opt.touchbehavior||cap.hasmstouch) {
+          
+            self.scrollmom = new ScrollMomentumClass2D(self);
+          
+            self.ontouchstart = function(e) {
+              if (e.pointerType&&e.pointerType!=2) return false;
+              
+              if (!self.locked) {
+              
+                if (cap.hasmstouch) {
+                  var tg = (e.target) ? e.target : false;
+                  while (tg) {
+                    var nc = $(tg).getNiceScroll();
+                    if ((nc.length>0)&&(nc[0].me == self.me)) break;
+                    if (nc.length>0) return false;
+                    if ((tg.nodeName=='DIV')&&(tg.id==self.id)) break;
+                    tg = (tg.parentNode) ? tg.parentNode : false;
+                  }
+                }
+              
+                self.cancelScroll();
+                
+                var tg = self.getTarget(e);
+                
+                if (tg) {
+                  var skp = (/INPUT/i.test(tg.nodeName))&&(/range/i.test(tg.type));
+                  if (skp) return self.stopPropagation(e);
+                }
+                
+                if (self.forcescreen) {
+                  var le = e;
+                  var e = {"original":(e.original)?e.original:e};
+                  e.clientX = le.screenX;
+                  e.clientY = le.screenY;    
+                }
+                
+                self.rail.drag = {x:e.clientX,y:e.clientY,sx:self.scroll.x,sy:self.scroll.y,st:self.getScrollTop(),sl:self.getScrollLeft(),pt:2};
+                
+                if (self.opt.touchbehavior&&self.isiframe&&cap.isie) {
+                  var wp = self.win.position();
+                  self.rail.drag.x+=wp.left;
+                  self.rail.drag.y+=wp.top;
+                }
+                
+                self.hasmoving = false;
+                self.lastmouseup = false;
+                self.scrollmom.reset(e.clientX,e.clientY);
+                if (!cap.cantouch&&!this.istouchcapable&&!cap.hasmstouch) {
+                  
+                  var ip = (tg)?/INPUT|SELECT|TEXTAREA/i.test(tg.nodeName):false;
+                  if (!ip) {
+                    if (!self.ispage&&cap.hasmousecapture) tg.setCapture();
+                    return self.cancelEvent(e);
+                  }
+                  if (/SUBMIT|CANCEL|BUTTON/i.test($(tg).attr('type'))) {
+                    pc = {"tg":tg,"click":false};
+                    self.preventclick = pc;
+                  }
+                }
+              }
+              
+            };
+            
+            self.ontouchend = function(e) {
+              if (e.pointerType&&e.pointerType!=2) return false;
+              if (self.rail.drag&&(self.rail.drag.pt==2)) {            
+                self.scrollmom.doMomentum();
+                self.rail.drag = false;
+                if (self.hasmoving) {
+                  self.hasmoving = false;
+                  self.lastmouseup = true;
+                  self.hideCursor();
+                  if (cap.hasmousecapture) document.releaseCapture();
+                  if (!cap.cantouch) return self.cancelEvent(e);
+                }                            
+              }                        
+              
+            };
+            
+            var moveneedoffset = (self.opt.touchbehavior&&self.isiframe&&!cap.hasmousecapture);
+            
+            self.ontouchmove = function(e,byiframe) {
+              
+              if (e.pointerType&&e.pointerType!=2) return false;
+    
+              if (self.rail.drag&&(self.rail.drag.pt==2)) {
+                if (cap.cantouch&&(typeof e.original == "undefined")) return true;  // prevent ios "ghost" events by clickable elements
+              
+                self.hasmoving = true;
+
+                if (self.preventclick&&!self.preventclick.click) {
+                  self.preventclick.click = self.preventclick.tg.onclick||false;                
+                  self.preventclick.tg.onclick = self.onpreventclick;
+                }
+                
+                if (self.forcescreen) {
+                  var le = e;
+                  var e = {"original":(e.original)?e.original:e};
+                  e.clientX = le.screenX;
+                  e.clientY = le.screenY;      
+                }
+                
+                var ofx = ofy = 0;
+                
+                if (moveneedoffset&&!byiframe) {
+                  var wp = self.win.position();
+                  ofx=-wp.left;
+                  ofy=-wp.top;
+                }                
+                
+                var fy = e.clientY + ofy;
+                var my = (fy-self.rail.drag.y);
+                
+                var ny = self.rail.drag.st-my;
+                
+                if (self.ishwscroll&&self.opt.bouncescroll) {
+                  if (ny<0) {
+                    ny = Math.round(ny/2);
+//                    fy = 0;
+                  }
+                  else if (ny>self.page.maxh) {
+                    ny = self.page.maxh+Math.round((ny-self.page.maxh)/2);
+//                    fy = 0;
+                  }
+                } else {
+                  if (ny<0) {ny=0;fy=0}
+                  if (ny>self.page.maxh) {ny=self.page.maxh;fy=0}
+                }
+                  
+                var fx = e.clientX + ofx;
+                  
+                if (self.railh&&self.railh.scrollable) {
+
+                  var mx = (fx-self.rail.drag.x);
+                  
+                  var nx = self.rail.drag.sl-mx;
+                  
+                  if (self.ishwscroll&&self.opt.bouncescroll) {                  
+                    if (nx<0) {
+                      nx = Math.round(nx/2);
+//                      fx = 0;
+                    }
+                    else if (nx>self.page.maxw) {
+                      nx = self.page.maxw+Math.round((nx-self.page.maxw)/2);
+//                      fx = 0;
+                    }
+                  } else {
+                    if (nx<0) {nx=0;fx=0}
+                    if (nx>self.page.maxw) {nx=self.page.maxw;fx=0}
+                  }
+                
+                }
+                              
+                self.synched("touchmove",function(){
+                  if (self.rail.drag&&(self.rail.drag.pt==2)) {
+                    if (self.prepareTransition) self.prepareTransition(0);
+                    if (self.rail.scrollable) self.setScrollTop(ny);
+                    self.scrollmom.update(fx,fy);
+                    if (self.railh&&self.railh.scrollable) {
+                      self.setScrollLeft(nx);
+                      self.showCursor(ny,nx);
+                    } else {
+                      self.showCursor(ny);
+                    }
+                    if (cap.isie10) document.selection.clear();
+                  }
+                });
+
+                return self.cancelEvent(e);
+              }
+              
+            };
+          
+          }
+         
+          if (cap.cantouch||self.opt.touchbehavior) {
+          
+            self.onpreventclick = function(e) {
+              if (self.preventclick) {
+                self.preventclick.tg.onclick = self.preventclick.click;
+                self.preventclick = false;            
+                return self.cancelEvent(e);
+              }
+            }
+          
+            self.onmousedown = self.ontouchstart;
+            
+            self.onmouseup = self.ontouchend;
+
+            self.onclick = (cap.isios) ? false : function(e) { 
+              if (self.lastmouseup) {
+                self.lastmouseup = false;
+                return self.cancelEvent(e);
+              } else {
+                return true;
+              }
+            }; 
+            
+            self.onmousemove = self.ontouchmove;
+            
+            if (cap.cursorgrabvalue) {
+              self.css((self.ispage)?self.doc:self.win,{'cursor':cap.cursorgrabvalue});            
+              self.css(self.rail,{'cursor':cap.cursorgrabvalue});
+            }
+            
+          } else {
+          
+            self.onmousedown = function(e,hronly) {            
+              if (self.rail.drag&&self.rail.drag.pt!=1) return;
+              if (self.locked) return self.cancelEvent(e);            
+              self.cancelScroll();              
+              self.rail.drag = {x:e.clientX,y:e.clientY,sx:self.scroll.x,sy:self.scroll.y,pt:1,hr:(!!hronly)};
+              var tg = self.getTarget(e);
+              if (!self.ispage&&cap.hasmousecapture) tg.setCapture();
+              if (self.isiframe&&!cap.hasmousecapture) {
+                self.saved["csspointerevents"] = self.doc.css("pointer-events");
+                self.css(self.doc,{"pointer-events":"none"});
+              }
+              return self.cancelEvent(e);
+            };
+            self.onmouseup = function(e) {
+              if (self.rail.drag) {
+                if (cap.hasmousecapture) document.releaseCapture();
+                if (self.isiframe&&!cap.hasmousecapture) self.doc.css("pointer-events",self.saved["csspointerevents"]);
+                if(self.rail.drag.pt!=1)return;
+                self.rail.drag = false;
+                //if (!self.rail.active) self.hideCursor();
+                return self.cancelEvent(e);
+              }
+            };        
+            self.onmousemove = function(e) {
+
+              if (self.rail.drag) {
+                if(self.rail.drag.pt!=1)return;
+                
+                if (cap.ischrome&&e.which==0) return self.onmouseup(e);
+                
+                self.cursorfreezed = true;
+                    
+                if (self.rail.drag.hr) {
+                  self.scroll.x = self.rail.drag.sx + (e.clientX-self.rail.drag.x);
+                  if (self.scroll.x<0) self.scroll.x=0;
+                  var mw = self.scrollvaluemaxw;
+                  if (self.scroll.x>mw) self.scroll.x=mw;
+                } else {                
+                  self.scroll.y = self.rail.drag.sy + (e.clientY-self.rail.drag.y);
+                  if (self.scroll.y<0) self.scroll.y=0;
+                  var my = self.scrollvaluemax;
+                  if (self.scroll.y>my) self.scroll.y=my;
+                }
+                
+                self.synched('mousemove',function(){
+                  if (self.rail.drag&&(self.rail.drag.pt==1)) {
+                    self.showCursor();
+                    if (self.rail.drag.hr) self.doScrollLeft(Math.round(self.scroll.x*self.scrollratio.x));
+                    else self.doScrollTop(Math.round(self.scroll.y*self.scrollratio.y));
+                  }
+                });
+                return self.cancelEvent(e);
+              } else {
+                self.checkarea = true;
+              }
+              
+            };
+          }
+
+          if (cap.cantouch||self.opt.touchbehavior) {
+            self.bind(self.win,"mousedown",self.onmousedown);
+          }
+          
+          if (cap.hasmstouch) {
+            self.css(self.rail,{'-ms-touch-action':'none'});
+            self.css(self.cursor,{'-ms-touch-action':'none'});
+            
+            self.bind(self.win,"MSPointerDown",self.ontouchstart);
+            self.bind(document,"MSPointerUp",self.ontouchend);
+            self.bind(document,"MSPointerMove",self.ontouchmove);
+            self.bind(self.cursor,"MSGestureHold",function(e){e.preventDefault();});
+            self.bind(self.cursor,"contextmenu",function(e){e.preventDefault();});
+          }
+
+          if (this.istouchcapable) {  //device with screen touch enabled
+            self.bind(self.win,"touchstart",self.ontouchstart);
+            self.bind(document,"touchend",self.ontouchend);
+            self.bind(document,"touchmove",self.ontouchmove);            
+          }
+          
+          self.bind(self.cursor,"mousedown",self.onmousedown);
+          self.bind(self.cursor,"mouseup",self.onmouseup);      
+
+          if (self.railh) {
+            self.bind(self.cursorh,"mousedown",function(e){self.onmousedown(e,true)});
+            self.bind(self.cursorh,"mouseup",function(e){
+              if (self.rail.drag&&self.rail.drag.pt==2) return;
+              self.rail.drag = false;
+              self.hasmoving = false;
+              self.hideCursor();
+              if (cap.hasmousecapture) document.releaseCapture();
+              return self.cancelEvent(e);
+            });
+          }
+          
+          self.bind(document,"mouseup",self.onmouseup);
+          if (cap.hasmousecapture) self.bind(self.win,"mouseup",self.onmouseup);
+          
+          self.bind(document,"mousemove",self.onmousemove);
+          if (self.onclick) self.bind(document,"click",self.onclick);
+		
+          if (!cap.cantouch&&!self.opt.touchbehavior) {
+					
+            self.rail.mouseenter(function() {
+              if (self.canshowonmouseevent) self.showCursor();
+              self.rail.active = true;
+            });
+            self.rail.mouseleave(function() { 
+              self.rail.active = false;
+              if (!self.rail.drag) self.hideCursor();
+            });
+            
+            if (self.opt.sensitiverail) {
+              self.rail.click(function(e){self.doRailClick(e,false,false)});
+              self.rail.dblclick(function(e){self.doRailClick(e,true,false)});
+              self.cursor.click(function(e){self.cancelEvent(e)});
+              self.cursor.dblclick(function(e){self.cancelEvent(e)});
+            }
+            
+            if (self.railh) {
+              self.railh.mouseenter(function() {
+                if (self.canshowonmouseevent) self.showCursor();
+                self.rail.active = true;
+              });          
+              self.railh.mouseleave(function() { 
+                self.rail.active = false;
+                if (!self.rail.drag) self.hideCursor();
+              });
+            }
+
+						if (self.zoom) {
+							self.zoom.mouseenter(function() {
+								if (self.canshowonmouseevent) self.showCursor();
+								self.rail.active = true;
+							});          
+							self.zoom.mouseleave(function() { 
+								self.rail.active = false;
+								if (!self.rail.drag) self.hideCursor();
+							});
+						}
+
+          }
+						
+					if (self.opt.enablemousewheel) {
+						if (!self.isiframe) self.bind((cap.isie&&self.ispage) ? document : self.docscroll,"mousewheel",self.onmousewheel);
+						self.bind(self.rail,"mousewheel",self.onmousewheel);
+						if (self.railh) self.bind(self.railh,"mousewheel",self.onmousewheelhr);
+					}						
+						
+          if (!self.ispage&&!cap.cantouch&&!(/HTML|BODY/.test(self.win[0].nodeName))) {
+            if (!self.win.attr("tabindex")) self.win.attr({"tabindex":tabindexcounter++});
+            
+            self.win.focus(function(e) {
+              domfocus = (self.getTarget(e)).id||true;
+              self.hasfocus = true;
+              if (self.canshowonmouseevent) self.noticeCursor();
+            });
+            self.win.blur(function(e) {
+              domfocus = false;
+              self.hasfocus = false;
+            });
+            
+            self.win.mouseenter(function(e) {
+              mousefocus = (self.getTarget(e)).id||true;
+              self.hasmousefocus = true;
+              if (self.canshowonmouseevent) self.noticeCursor();
+            });
+            self.win.mouseleave(function() {
+              mousefocus = false;
+              self.hasmousefocus = false;
+            });
+            
+          };
+          
+        }  // !ie9mobile
+        
+        //Thanks to http://www.quirksmode.org !!
+        self.onkeypress = function(e) {
+          if (self.locked&&self.page.maxh==0) return true;
+          
+          e = (e) ? e : window.e;
+          var tg = self.getTarget(e);
+          if (tg&&/INPUT|TEXTAREA|SELECT|OPTION/.test(tg.nodeName)) {
+            var tp = tg.getAttribute('type')||tg.type||false;            
+            if ((!tp)||!(/submit|button|cancel/i.tp)) return true;
+          }
+          
+          if (self.hasfocus||(self.hasmousefocus&&!domfocus)||(self.ispage&&!domfocus&&!mousefocus)) {
+            var key = e.keyCode;
+            var ctrl = e.ctrlKey||false;
+            
+            if (self.locked&&key!=27) return self.cancelEvent(e);
+            
+            var ret = false;
+            switch (key) {
+              case 38:
+              case 63233: //safari
+                self.doScrollBy(24*3);
+                ret = true;
+                break;
+              case 40:
+              case 63235: //safari
+                self.doScrollBy(-24*3);
+                ret = true;
+                break;
+              case 37:
+              case 63232: //safari
+                if (self.railh) {
+                  (ctrl) ? self.doScrollLeft(0) : self.doScrollLeftBy(24*3);
+                  ret = true;
+                }
+                break;
+              case 39:
+              case 63234: //safari
+                if (self.railh) {
+                  (ctrl) ? self.doScrollLeft(self.page.maxw) : self.doScrollLeftBy(-24*3);
+                  ret = true;
+                }
+                break;
+              case 33:
+              case 63276: // safari
+                self.doScrollBy(self.view.h);
+                ret = true;
+                break;
+              case 34:
+              case 63277: // safari
+                self.doScrollBy(-self.view.h);
+                ret = true;
+                break;
+              case 36:
+              case 63273: // safari                
+                (self.railh&&ctrl) ? self.doScrollPos(0,0) : self.doScrollTo(0);
+                ret = true;
+                break;
+              case 35:
+              case 63275: // safari
+                (self.railh&&ctrl) ? self.doScrollPos(self.page.maxw,self.page.maxh) : self.doScrollTo(self.page.maxh);
+                ret = true;
+                break;
+              case 32:
+                if (self.opt.spacebarenabled) {
+                  self.doScrollBy(-self.view.h);
+                  ret = true;
+                }
+                break;
+              case 27: // ESC
+                if (self.zoomactive) {
+                  self.doZoom();
+                  ret = true;
+                }
+                break;
+            }
+            if (ret) return self.cancelEvent(e);
+          }
+        };
+        
+        if (self.opt.enablekeyboard) self.bind(document,(cap.isopera&&!cap.isopera12)?"keypress":"keydown",self.onkeypress);
+        
+        self.bind(window,'resize',self.resize);
+        self.bind(window,'orientationchange',self.resize);
+        
+        self.bind(window,"load",self.resize);
+		
+        if (cap.ischrome&&!self.ispage&&!self.haswrapper) { //chrome void scrollbar bug
+          var tmp=self.win.attr("style");
+					var ww = parseFloat(self.win.css("width"))+1;
+          self.win.css('width',ww);
+          self.synched("chromefix",function(){self.win.attr("style",tmp)});
+        }
+        
+// Trying a cross-browser implementation - good luck!
+
+        self.onAttributeChange = function(e) {
+          self.lazyResize();
+        }
+        
+        if (!self.ispage&&!self.haswrapper) {
+          // thanks to Filip http://stackoverflow.com/questions/1882224/        
+          if ("WebKitMutationObserver" in window) {
+            self.observer = new WebKitMutationObserver(function(mutations) {
+              mutations.forEach(self.onAttributeChange);
+            });
+            self.observer.observe(self.win[0],{attributes:true,subtree:false});
+          } else {        
+            self.bind(self.win,(cap.isie&&!cap.isie9)?"propertychange":"DOMAttrModified",self.onAttributeChange);
+            if (cap.isie9) self.win[0].attachEvent("onpropertychange",self.onAttributeChange); //IE9 DOMAttrModified bug
+          }
+        }
+        
+//
+
+        if (!self.ispage&&self.opt.boxzoom) self.bind(window,"resize",self.resizeZoom);
+        if (self.istextarea) self.bind(self.win,"mouseup",self.resize);
+        
+        self.resize();
+        
+      }
+      
+      if (this.doc[0].nodeName == 'IFRAME') {
+        function oniframeload(e) {
+          self.iframexd = false;
+          try {
+            var doc = 'contentDocument' in this ? this.contentDocument : this.contentWindow.document;
+            var a = doc.domain;            
+          } catch(e){self.iframexd = true;doc=false};
+          
+          if (self.iframexd) {
+            if ("console" in window) console.log('NiceScroll error: policy restriced iframe');
+            return true;  //cross-domain - I can't manage this        
+          }
+          
+          self.forcescreen = true;
+          
+          if (self.isiframe) {            
+            self.iframe = {
+              "doc":$(doc),
+              "html":self.doc.contents().find('html')[0],
+              "body":self.doc.contents().find('body')[0]
+            };
+            self.getContentSize = function(){
+              return {
+                w:Math.max(self.iframe.html.scrollWidth,self.iframe.body.scrollWidth),
+                h:Math.max(self.iframe.html.scrollHeight,self.iframe.body.scrollHeight)
+              }
+            }            
+            self.docscroll = $(self.iframe.body);//$(this.contentWindow);
+          }
+          
+          if (!cap.isios&&self.opt.iframeautoresize&&!self.isiframe) {
+            self.win.scrollTop(0); // reset position
+            self.doc.height("");  //reset height to fix browser bug
+            var hh=Math.max(doc.getElementsByTagName('html')[0].scrollHeight,doc.body.scrollHeight);
+            self.doc.height(hh);          
+          }
+          self.resize();
+          
+          if (cap.isie7) self.css($(self.iframe.html),{'overflow-y':'hidden'});
+          //self.css($(doc.body),{'overflow-y':'hidden'});
+          self.css($(self.iframe.body),{'overflow-y':'hidden'});
+          
+          if ('contentWindow' in this) {
+            self.bind(this.contentWindow,"scroll",self.onscroll);  //IE8 & minor
+          } else {          
+            self.bind(doc,"scroll",self.onscroll);
+          }                    
+          
+          if (self.opt.enablemousewheel) {
+            self.bind(doc,"mousewheel",self.onmousewheel);
+          }
+          
+          if (self.opt.enablekeyboard) self.bind(doc,(cap.isopera)?"keypress":"keydown",self.onkeypress);
+          
+          if (cap.cantouch||self.opt.touchbehavior) {
+            self.bind(doc,"mousedown",self.onmousedown);
+            self.bind(doc,"mousemove",function(e){self.onmousemove(e,true)});
+            if (cap.cursorgrabvalue) self.css($(doc.body),{'cursor':cap.cursorgrabvalue});
+          }
+          
+          self.bind(doc,"mouseup",self.onmouseup);
+          
+          if (self.zoom) {
+            if (self.opt.dblclickzoom) self.bind(doc,'dblclick',self.doZoom);
+            if (self.ongesturezoom) self.bind(doc,"gestureend",self.ongesturezoom);             
+          }
+        };
+        
+        if (this.doc[0].readyState&&this.doc[0].readyState=="complete"){
+          setTimeout(function(){oniframeload.call(self.doc[0],false)},500);
+        }
+        self.bind(this.doc,"load",oniframeload);
+        
+      }
+      
+    };
+    
+    this.showCursor = function(py,px) {
+      if (self.cursortimeout) {
+        clearTimeout(self.cursortimeout);
+        self.cursortimeout = 0;
+      }
+      if (!self.rail) return;
+      if (self.autohidedom) {
+        self.autohidedom.stop().css({opacity:self.opt.cursoropacitymax});
+        self.cursoractive = true;
+      }
+      
+      if ((typeof py != "undefined")&&(py!==false)) {
+        self.scroll.y = Math.round(py * 1/self.scrollratio.y);
+      }
+      if (typeof px != "undefined") {
+        self.scroll.x = Math.round(px * 1/self.scrollratio.x);
+      }
+
+      self.cursor.css({height:self.cursorheight,top:self.scroll.y}); 
+      if (self.cursorh) {
+        (!self.rail.align&&self.rail.visibility) ? self.cursorh.css({width:self.cursorwidth,left:self.scroll.x+self.rail.width}) : self.cursorh.css({width:self.cursorwidth,left:self.scroll.x});
+        self.cursoractive = true;
+      }
+      
+      if (self.zoom) self.zoom.stop().css({opacity:self.opt.cursoropacitymax});      
+    };
+    
+    this.hideCursor = function(tm) {
+      if (self.cursortimeout) return;
+      if (!self.rail) return;
+      if (!self.autohidedom) return;
+      self.cursortimeout = setTimeout(function() {
+         if (!self.rail.active||!self.showonmouseevent) {
+           self.autohidedom.stop().animate({opacity:self.opt.cursoropacitymin});
+           if (self.zoom) self.zoom.stop().animate({opacity:self.opt.cursoropacitymin});
+           self.cursoractive = false;
+         }
+         self.cursortimeout = 0;
+      },tm||400);
+    };
+    
+    this.noticeCursor = function(tm,py,px) {
+      self.showCursor(py,px);
+      if (!self.rail.active) self.hideCursor(tm);
+    };
+        
+    this.getContentSize = 
+      (self.ispage) ?
+        function(){
+          return {
+            w:Math.max(document.body.scrollWidth,document.documentElement.scrollWidth),
+            h:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)
+          }
+        }
+      : (self.haswrapper) ?
+        function(){
+          return {
+            w:self.doc.outerWidth()+parseInt(self.win.css('paddingLeft'))+parseInt(self.win.css('paddingRight')),
+            h:self.doc.outerHeight()+parseInt(self.win.css('paddingTop'))+parseInt(self.win.css('paddingBottom'))
+          }
+        }
+      : function() {        
+        return {
+          w:self.docscroll[0].scrollWidth,
+          h:self.docscroll[0].scrollHeight
+        }
+      };
+  
+    this.onResize = function(e,page) {
+    
+	  if (!self.win) return false;
+	
+      if (!self.haswrapper&&!self.ispage) {        
+        if (self.win.css('display')=='none') {
+          if (self.visibility) self.hideRail().hideRailHr();
+          return false;
+        } else {          
+          if (!self.hidden&&!self.visibility) self.showRail().showRailHr();
+        }        
+      }
+    
+      var premaxh = self.page.maxh;
+      var premaxw = self.page.maxw;
+
+      var preview = {h:self.view.h,w:self.view.w};   
+      
+      self.view = {
+        w:(self.ispage) ? self.win.width() : parseInt(self.win[0].clientWidth),
+        h:(self.ispage) ? self.win.height() : parseInt(self.win[0].clientHeight)
+      };
+      
+      self.page = (page) ? page : self.getContentSize();
+      
+      self.page.maxh = Math.max(0,self.page.h - self.view.h);
+      self.page.maxw = Math.max(0,self.page.w - self.view.w);
+      
+      if ((self.page.maxh==premaxh)&&(self.page.maxw==premaxw)&&(self.view.w==preview.w)) {
+        // test position        
+        if (!self.ispage) {
+          var pos = self.win.offset();
+          if (self.lastposition) {
+            var lst = self.lastposition;
+            if ((lst.top==pos.top)&&(lst.left==pos.left)) return self; //nothing to do            
+          }
+          self.lastposition = pos;
+        } else {
+          return self; //nothing to do
+        }
+      }
+      
+      if (self.page.maxh==0) {
+        self.hideRail();        
+        self.scrollvaluemax = 0;
+        self.scroll.y = 0;
+        self.scrollratio.y = 0;
+        self.cursorheight = 0;
+        self.setScrollTop(0);
+        self.rail.scrollable = false;
+      } else {       
+        self.rail.scrollable = true;
+      }
+      
+      if (self.page.maxw==0) {
+        self.hideRailHr();
+        self.scrollvaluemaxw = 0;
+        self.scroll.x = 0;
+        self.scrollratio.x = 0;
+        self.cursorwidth = 0;
+        self.setScrollLeft(0);
+        self.railh.scrollable = false;
+      } else {        
+        self.railh.scrollable = true;
+      }
+  
+      self.locked = (self.page.maxh==0)&&(self.page.maxw==0);
+      if (self.locked) {
+				if (!self.ispage) self.updateScrollBar(self.view);
+			  return false;
+		  }
+
+      if (!self.hidden&&!self.visibility) {
+        self.showRail().showRailHr();
+      }      
+      else if (!self.hidden&&!self.railh.visibility) self.showRailHr();
+      
+      if (self.istextarea&&self.win.css('resize')&&self.win.css('resize')!='none') self.view.h-=20;      
+      if (!self.ispage) self.updateScrollBar(self.view);
+
+      self.cursorheight = Math.min(self.view.h,Math.round(self.view.h * (self.view.h / self.page.h)));
+      self.cursorheight = Math.max(self.opt.cursorminheight,self.cursorheight);
+
+      self.cursorwidth = Math.min(self.view.w,Math.round(self.view.w * (self.view.w / self.page.w)));
+      self.cursorwidth = Math.max(self.opt.cursorminheight,self.cursorwidth);
+      
+      self.scrollvaluemax = self.view.h-self.cursorheight-self.cursor.hborder;
+      
+      if (self.railh) {
+        self.railh.width = (self.page.maxh>0) ? (self.view.w-self.rail.width) : self.view.w;
+        self.scrollvaluemaxw = self.railh.width-self.cursorwidth-self.cursorh.wborder;
+      }
+      
+      self.scrollratio = {
+        x:(self.page.maxw/self.scrollvaluemaxw),
+        y:(self.page.maxh/self.scrollvaluemax)
+      };
+     
+      var sy = self.getScrollTop();
+      if (sy>self.page.maxh) {
+        self.doScroll(self.page.maxh);
+      } else {     
+        self.scroll.y = Math.round(self.getScrollTop() * (1/self.scrollratio.y));
+        self.scroll.x = Math.round(self.getScrollLeft() * (1/self.scrollratio.x));
+        if (self.cursoractive) self.noticeCursor();     
+      }      
+      
+      if (self.scroll.y&&(self.getScrollTop()==0)) self.doScrollTo(Math.floor(self.scroll.y*self.scrollratio.y));
+      
+      return self;
+    };
+    
+    this.resize = function(){self.delayed('resize',self.onResize,30);return self;} // event debounce
+    
+    this.lazyResize = function() {
+      self.delayed('resize',self.resize,250);
+    }
+   
+    this._bind = function(el,name,fn,bubble) {  // primitive bind
+      self.events.push({e:el,n:name,f:fn,b:bubble});
+      if (el.addEventListener) {
+        el.addEventListener(name,fn,bubble||false);
+      }
+      else if (el.attachEvent) {
+        el.attachEvent("on"+name,fn);
+      }
+      else {
+        el["on"+name] = fn;        
+      }        
+    };
+   
+    this.bind = function(dom,name,fn,bubble) {  // touch-oriented & fixing jquery bind
+      var el = ("jquery" in dom) ? dom[0] : dom;
+      if (el.addEventListener) {
+        if (cap.cantouch && /mouseup|mousedown|mousemove/.test(name)) {  // touch device support
+          var tt=(name=='mousedown')?'touchstart':(name=='mouseup')?'touchend':'touchmove';
+          self._bind(el,tt,function(e){
+            if (e.touches) {
+              if (e.touches.length<2) {var ev=(e.touches.length)?e.touches[0]:e;ev.original=e;fn.call(this,ev);}
+            } 
+            else if (e.changedTouches) {var ev=e.changedTouches[0];ev.original=e;fn.call(this,ev);}  //blackberry
+          },bubble||false);
+        }
+        self._bind(el,name,fn,bubble||false);
+        if (name=='mousewheel') self._bind(el,"DOMMouseScroll",fn,bubble||false);
+        if (cap.cantouch && name=="mouseup") self._bind(el,"touchcancel",fn,bubble||false);
+      }
+      else {
+        self._bind(el,name,function(e) {
+          e = e||window.event||false;
+          if (e) {
+            if (e.srcElement) e.target=e.srcElement;
+          }
+          return ((fn.call(el,e)===false)||bubble===false) ? self.cancelEvent(e) : true;
+        });
+      } 
+    };
+    
+    this._unbind = function(el,name,fn,bub) {  // primitive unbind
+      if (el.removeEventListener) {
+        el.removeEventListener(name,fn,bub);
+      }
+      else if (el.detachEvent) {
+        el.detachEvent('on'+name,fn);
+      } else {
+        el['on'+name] = false;
+      }
+    };
+    
+    this.unbindAll = function() {
+      for(var a=0;a<self.events.length;a++) {
+        var r = self.events[a];        
+        self._unbind(r.e,r.n,r.f,r.b);
+      }
+    };
+    
+    // Thanks to http://www.switchonthecode.com !!
+    this.cancelEvent = function(e) {
+      var e = (e.original) ? e.original : (e) ? e : window.event||false;
+      if (!e) return false;      
+      if(e.preventDefault) e.preventDefault();
+      if(e.stopPropagation) e.stopPropagation();
+      if(e.preventManipulation) e.preventManipulation();  //IE10
+      e.cancelBubble = true;
+      e.cancel = true;
+      e.returnValue = false;
+      return false;
+    };
+
+    this.stopPropagation = function(e) {
+      var e = (e.original) ? e.original : (e) ? e : window.event||false;
+      if (!e) return false;
+      if (e.stopPropagation) return e.stopPropagation();
+      if (e.cancelBubble) e.cancelBubble=true;
+      return false;
+    }
+    
+    this.showRail = function() {
+      if ((self.page.maxh!=0)&&(self.ispage||self.win.css('display')!='none')) {
+        self.visibility = true;
+        self.rail.visibility = true;
+        self.rail.css('display','block');
+      }
+      return self;
+    };
+
+    this.showRailHr = function() {
+      if (!self.railh) return self;
+      if ((self.page.maxw!=0)&&(self.ispage||self.win.css('display')!='none')) {
+        self.railh.visibility = true;
+        self.railh.css('display','block');
+      }
+      return self;
+    };
+    
+    this.hideRail = function() {
+      self.visibility = false;
+      self.rail.visibility = false;
+      self.rail.css('display','none');
+      return self;
+    };
+
+    this.hideRailHr = function() {
+      if (!self.railh) return self;
+      self.railh.visibility = false;
+      self.railh.css('display','none');
+      return self;
+    };
+    
+    this.show = function() {
+      self.hidden = false;
+      self.locked = false;
+      return self.showRail().showRailHr();
+    };
+
+    this.hide = function() {
+      self.hidden = true;
+      self.locked = true;
+      return self.hideRail().hideRailHr();
+    };
+    
+    this.remove = function() {
+      self.doZoomOut();
+      self.unbindAll();      
+      if (self.observer !== false) self.observer.disconnect();      
+      self.events = [];
+      if (self.cursor) {
+        self.cursor.remove();
+        self.cursor = null;
+      }
+      if (self.cursorh) {
+        self.cursorh.remove();
+        self.cursorh = null;
+      }
+      if (self.rail) {
+        self.rail.remove();
+        self.rail = null;
+      }
+      if (self.railh) {
+        self.railh.remove();
+        self.railh = null;
+      }
+      if (self.zoom) {
+        self.zoom.remove();
+        self.zoom = null;
+      }
+      for(var a=0;a<self.saved.css.length;a++) {
+        var d=self.saved.css[a];
+        d[0].css(d[1],(typeof d[2]=="undefined") ? '' : d[2]);
+      }
+      self.saved = false;      
+      self.me.data('__nicescroll',''); //erase all traces
+	  self.me = null;
+	  self.doc = null;
+	  self.docscroll = null;
+	  self.win = null;
+      return self;
+    };
+    
+    this.scrollstart = function(fn) {
+      this.onscrollstart = fn;
+      return self;
+    }
+    this.scrollend = function(fn) {
+      this.onscrollend = fn;
+      return self;
+    }
+    this.scrollcancel = function(fn) {
+      this.onscrollcancel = fn;
+      return self;
+    }
+    
+    this.zoomin = function(fn) {
+      this.onzoomin = fn;
+      return self;
+    }
+    this.zoomout = function(fn) {
+      this.onzoomout = fn;
+      return self;
+    }
+    
+    this.isScrollable = function(e) {      
+      var dom = (e.target) ? e.target : e;
+      while (dom&&(dom.nodeType==1)&&!(/BODY|HTML/.test(dom.nodeName))) {
+        var dd = $(dom);
+        var ov = dd.css('overflowY')||dd.css('overflowX')||dd.css('overflow')||'';
+        if (/scroll|auto/.test(ov)) return (dom.clientHeight!=dom.scrollHeight);
+        dom = (dom.parentNode) ? dom.parentNode : false;        
+      }
+      return false;
+    };
+    
+    function execScrollWheel(e,hr) {
+      var px = 0;
+      var py = 0;
+      if ("wheelDeltaY" in e) {
+        px = Math.floor(e.wheelDeltaX/2);
+        py = Math.floor(e.wheelDeltaY/2);
+      } else {
+        var delta = e.detail ? e.detail * -1 : e.wheelDelta / 40;
+        if (delta) {
+          (hr) ? px = Math.floor(delta*self.opt.mousescrollstep) : py = Math.floor(delta*self.opt.mousescrollstep);
+        }
+      }      
+      if (px) {
+        if (self.scrollmom) {self.scrollmom.stop()}
+        self.lastdeltax+=px;
+        self.synched("mousewheelx",function(){var dt=self.lastdeltax;self.lastdeltax=0;if(!self.rail.drag){self.doScrollLeftBy(dt)}});
+      }
+      if (py) {
+        if (self.scrollmom) {self.scrollmom.stop()}
+        self.lastdeltay+=py;
+        self.synched("mousewheely",function(){var dt=self.lastdeltay;self.lastdeltay=0;if(!self.rail.drag){self.doScrollBy(dt)}});
+      }          
+    };
+    
+    this.onmousewheel = function(e) {
+      if (self.locked) return true;
+      if (!self.rail.scrollable) {
+        if (self.railh&&self.railh.scrollable) {
+          return self.onmousewheelhr(e);
+        } else {
+          return true;
+        }
+      }
+      if (self.opt.preservenativescrolling&&self.checkarea) {
+        self.checkarea = false;
+        self.nativescrollingarea = self.isScrollable(e); 
+      }
+      if (self.nativescrollingarea) return true; // this isn't my business
+      if (self.locked) return self.cancelEvent(e);
+      if (self.rail.drag) return self.cancelEvent(e);
+      
+      execScrollWheel(e,false);
+      
+      return self.cancelEvent(e);
+    };
+
+    this.onmousewheelhr = function(e) {
+      if (self.locked||!self.railh.scrollable) return true;
+      if (self.opt.preservenativescrolling&&self.checkarea) {
+        self.checkarea = false;
+        self.nativescrollingarea = self.isScrollable(e); 
+      }
+      if (self.nativescrollingarea) return true; // this isn't my business
+      if (self.locked) return self.cancelEvent(e);
+      if (self.rail.drag) return self.cancelEvent(e);
+
+      execScrollWheel(e,true);
+      
+      return self.cancelEvent(e);
+    };
+    
+    this.stop = function() {
+      self.cancelScroll();
+      if (self.scrollmon) self.scrollmon.stop();
+      self.cursorfreezed = false;
+      self.scroll.y = Math.round(self.getScrollTop() * (1/self.scrollratio.y));      
+      self.noticeCursor();
+      return self;
+    };
+    
+    this.getTransitionSpeed = function(dif) {
+      var sp = Math.round(self.opt.scrollspeed*10);
+      var ex = Math.min(sp,Math.round((dif / 20) * self.opt.scrollspeed));
+      return (ex>20) ? ex : 0;
+    }
+    
+    if (!self.opt.smoothscroll) {
+      this.doScrollLeft = function(x,spd) {  //direct
+        var y = self.getScrollTop();
+        self.doScrollPos(x,y,spd);
+      }      
+      this.doScrollTop = function(y,spd) {   //direct
+        var x = self.getScrollLeft();
+        self.doScrollPos(x,y,spd);
+      }
+      this.doScrollPos = function(x,y,spd) {  //direct
+        var nx = (x>self.page.maxw) ? self.page.maxw : x;
+        if (nx<0) nx=0;
+        var ny = (y>self.page.maxh) ? self.page.maxh : y;
+        if (ny<0) ny=0;
+        self.synched('scroll',function(){
+          self.setScrollTop(ny);
+          self.setScrollLeft(nx);
+        });
+      }
+      this.cancelScroll = function() {}; // direct
+    } 
+    else if (self.ishwscroll&&cap.hastransition&&self.opt.usetransition) {
+      this.prepareTransition = function(dif,istime) {
+        var ex = (istime) ? ((dif>20)?dif:0) : self.getTransitionSpeed(dif);        
+        var trans = (ex) ? cap.prefixstyle+'transform '+ex+'ms ease-out' : '';
+        if (!self.lasttransitionstyle||self.lasttransitionstyle!=trans) {
+          self.lasttransitionstyle = trans;
+          self.doc.css(cap.transitionstyle,trans);
+        }
+        return ex;
+      };
+      
+      this.doScrollLeft = function(x,spd) {  //trans
+        var y = (self.scrollrunning) ? self.newscrolly : self.getScrollTop();
+        self.doScrollPos(x,y,spd);
+      }      
+      
+      this.doScrollTop = function(y,spd) {   //trans
+        var x = (self.scrollrunning) ? self.newscrollx : self.getScrollLeft();
+        self.doScrollPos(x,y,spd);
+      }
+      
+      this.doScrollPos = function(x,y,spd) {  //trans
+   
+        var py = self.getScrollTop();
+        var px = self.getScrollLeft();        
+      
+        if (((self.newscrolly-py)*(y-py)<0)||((self.newscrollx-px)*(x-px)<0)) self.cancelScroll();  //inverted movement detection      
+        
+        self.newscrolly = y;
+        self.newscrollx = x;
+        
+        self.newscrollspeed = spd||false;
+        
+        if (self.timer) return false;
+        
+        self.timer = setTimeout(function(){
+        
+          var top = self.getScrollTop();
+          var lft = self.getScrollLeft();
+          
+          var dst = {};
+          dst.x = x-lft;
+          dst.y = y-top;
+          dst.px = lft;
+          dst.py = top;
+          
+          var dd = Math.round(Math.sqrt(Math.pow(dst.x,2)+Math.pow(dst.y,2)));          
+          
+          var df = (self.newscrollspeed) ? self.newscrollspeed : dd;          
+          var ms = self.prepareTransition(df);
+          
+          if (self.timerscroll&&self.timerscroll.tm) clearInterval(self.timerscroll.tm);    
+          
+          if (ms>0) {
+          
+            if (!self.scrollrunning&&self.onscrollstart) {
+              var info = {"type":"scrollstart","current":{"x":lft,"y":top},"request":{"x":x,"y":y},"end":{"x":self.newscrollx,"y":self.newscrolly},"speed":ms};
+              self.onscrollstart.call(self,info);
+            }
+            
+            if (cap.transitionend) {
+              if (!self.scrollendtrapped) {
+                self.scrollendtrapped = true;
+                self.bind(self.doc,cap.transitionend,self.onScrollEnd,false); //I have got to do something usefull!!
+              }
+            } else {              
+              if (self.scrollendtrapped) clearTimeout(self.scrollendtrapped);
+              self.scrollendtrapped = setTimeout(self.onScrollEnd,ms);  // simulate transitionend event
+            }
+            
+            var py = top;
+            var px = lft;
+            self.timerscroll = {
+              bz: new BezierClass(py,self.newscrolly,ms,0,0,0.58,1),
+              bh: new BezierClass(px,self.newscrollx,ms,0,0,0.58,1)
+            };            
+            if (!self.cursorfreezed) self.timerscroll.tm=setInterval(function(){self.showCursor(self.getScrollTop(),self.getScrollLeft())},60);
+            
+          }
+          
+          self.synched("doScroll-set",function(){
+            self.timer = 0;
+            if (self.scrollendtrapped) self.scrollrunning = true;
+            self.setScrollTop(self.newscrolly);
+            self.setScrollLeft(self.newscrollx);
+            if (!self.scrollendtrapped) self.onScrollEnd();
+          });
+          
+          
+        },50);
+        
+      };
+      
+      this.cancelScroll = function() {
+        if (!self.scrollendtrapped) return true;        
+        var py = self.getScrollTop();
+        var px = self.getScrollLeft();
+        self.scrollrunning = false;
+        if (!cap.transitionend) clearTimeout(cap.transitionend);
+        self.scrollendtrapped = false;
+        self._unbind(self.doc,cap.transitionend,self.onScrollEnd);        
+        self.prepareTransition(0);
+        self.setScrollTop(py); // fire event onscroll
+        if (self.railh) self.setScrollLeft(px);
+        if (self.timerscroll&&self.timerscroll.tm) clearInterval(self.timerscroll.tm);
+        self.timerscroll = false;
+        
+        self.cursorfreezed = false;
+
+        //self.noticeCursor(false,py,px);
+        self.showCursor(py,px);
+        return self;
+      };
+      this.onScrollEnd = function() {                
+        if (self.scrollendtrapped) self._unbind(self.doc,cap.transitionend,self.onScrollEnd);
+        self.scrollendtrapped = false;        
+        self.prepareTransition(0);
+        if (self.timerscroll&&self.timerscroll.tm) clearInterval(self.timerscroll.tm);
+        self.timerscroll = false;        
+        var py = self.getScrollTop();
+        var px = self.getScrollLeft();
+        self.setScrollTop(py);  // fire event onscroll        
+        if (self.railh) self.setScrollLeft(px);  // fire event onscroll left
+        
+        self.noticeCursor(false,py,px);     
+        
+        self.cursorfreezed = false;
+        
+        if (py<0) py=0
+        else if (py>self.page.maxh) py=self.page.maxh;
+        if (px<0) px=0
+        else if (px>self.page.maxw) px=self.page.maxw;
+        if((py!=self.newscrolly)||(px!=self.newscrollx)) return self.doScrollPos(px,py,self.opt.snapbackspeed);
+        
+        if (self.onscrollend&&self.scrollrunning) {
+          var info = {"type":"scrollend","current":{"x":px,"y":py},"end":{"x":self.newscrollx,"y":self.newscrolly}};
+          self.onscrollend.call(self,info);
+        } 
+        self.scrollrunning = false;
+        
+      };
+
+    } else {
+
+      this.doScrollLeft = function(x) {  //no-trans
+        var y = (self.scrollrunning) ? self.newscrolly : self.getScrollTop();
+        self.doScrollPos(x,y);
+      }
+
+      this.doScrollTop = function(y) {  //no-trans
+        var x = (self.scrollrunning) ? self.newscrollx : self.getScrollLeft();
+        self.doScrollPos(x,y);
+      }
+
+      this.doScrollPos = function(x,y) {  //no-trans
+        var y = ((typeof y == "undefined")||(y===false)) ? self.getScrollTop(true) : y;
+      
+        if  ((self.timer)&&(self.newscrolly==y)&&(self.newscrollx==x)) return true;
+      
+        if (self.timer) clearAnimationFrame(self.timer);
+        self.timer = 0;      
+
+        var py = self.getScrollTop();
+        var px = self.getScrollLeft();
+        
+        if (((self.newscrolly-py)*(y-py)<0)||((self.newscrollx-px)*(x-px)<0)) self.cancelScroll();  //inverted movement detection
+        
+        self.newscrolly = y;
+        self.newscrollx = x;
+        
+        if (!self.bouncescroll||!self.rail.visibility) {
+          if (self.newscrolly<0) {
+            self.newscrolly = 0;
+          }
+          else if (self.newscrolly>self.page.maxh) {
+            self.newscrolly = self.page.maxh;
+          }
+        }
+        if (!self.bouncescroll||!self.railh.visibility) {
+          if (self.newscrollx<0) {
+            self.newscrollx = 0;
+          }
+          else if (self.newscrollx>self.page.maxw) {
+            self.newscrollx = self.page.maxw;
+          }
+        }
+
+        self.dst = {};
+        self.dst.x = x-px;
+        self.dst.y = y-py;
+        self.dst.px = px;
+        self.dst.py = py;
+        
+        var dst = Math.round(Math.sqrt(Math.pow(self.dst.x,2)+Math.pow(self.dst.y,2)));
+        
+        self.dst.ax = self.dst.x / dst;
+        self.dst.ay = self.dst.y / dst;
+        
+        var pa = 0;
+        var pe = dst;
+        
+        if (self.dst.x==0) {
+          pa = py;
+          pe = y;
+          self.dst.ay = 1;
+          self.dst.py = 0;
+        } else if (self.dst.y==0) {
+          pa = px;
+          pe = x;
+          self.dst.ax = 1;
+          self.dst.px = 0;
+        }
+
+        var ms = self.getTransitionSpeed(dst);
+        if (ms>0) {
+          self.bzscroll = (self.bzscroll) ? self.bzscroll.update(pe,ms) : new BezierClass(pa,pe,ms,0,1,0,1);
+        } else {
+          self.bzscroll = false;
+        }
+        
+        if (self.timer) return;
+        
+        if ((py==self.page.maxh&&y>=self.page.maxh)||(px==self.page.maxw&&x>=self.page.maxw)) self.checkContentSize();
+        
+        var sync = 1;
+        
+        function scrolling() {          
+          if (self.cancelAnimationFrame) return true;
+          
+          self.scrollrunning = true;
+          
+          sync = 1-sync;
+          if (sync) return (self.timer = setAnimationFrame(scrolling)||1);
+
+          var done = 0;
+          
+          var sc = sy = self.getScrollTop();
+          if (self.dst.ay) {            
+            sc = (self.bzscroll) ? self.dst.py + (self.bzscroll.getNow()*self.dst.ay) : self.newscrolly;
+            var dr=sc-sy;          
+            if ((dr<0&&sc<self.newscrolly)||(dr>0&&sc>self.newscrolly)) sc = self.newscrolly;
+            self.setScrollTop(sc);
+            if (sc == self.newscrolly) done=1;
+          } else {
+            done=1;
+          }
+          
+          var scx = sx = self.getScrollLeft();
+          if (self.dst.ax) {            
+            scx = (self.bzscroll) ? self.dst.px + (self.bzscroll.getNow()*self.dst.ax) : self.newscrollx;            
+            var dr=scx-sx;
+            if ((dr<0&&scx<self.newscrollx)||(dr>0&&scx>self.newscrollx)) scx = self.newscrollx;
+            self.setScrollLeft(scx);
+            if (scx == self.newscrollx) done+=1;
+          } else {
+            done+=1;
+          }
+          
+          if (done==2) {
+            self.timer = 0;
+            self.cursorfreezed = false;
+            self.bzscroll = false;
+            self.scrollrunning = false;
+            if (sc<0) sc=0;
+            else if (sc>self.page.maxh) sc=self.page.maxh;
+            if (scx<0) scx=0;
+            else if (scx>self.page.maxw) scx=self.page.maxw;
+            if ((scx!=self.newscrollx)||(sc!=self.newscrolly)) self.doScrollPos(scx,sc);
+            else {
+              if (self.onscrollend) {
+                var info = {"type":"scrollend","current":{"x":sx,"y":sy},"end":{"x":self.newscrollx,"y":self.newscrolly}};
+                self.onscrollend.call(self,info);
+              }             
+            } 
+          } else {
+            self.timer = setAnimationFrame(scrolling)||1;
+          }
+        };
+        self.cancelAnimationFrame=false;
+        self.timer = 1;
+
+        if (self.onscrollstart&&!self.scrollrunning) {
+          var info = {"type":"scrollstart","current":{"x":px,"y":py},"request":{"x":x,"y":y},"end":{"x":self.newscrollx,"y":self.newscrolly},"speed":ms};
+          self.onscrollstart.call(self,info);
+        }        
+
+        scrolling();
+        
+        if ((py==self.page.maxh&&y>=py)||(px==self.page.maxw&&x>=px)) self.checkContentSize();
+        
+        self.noticeCursor();
+      };
+  
+      this.cancelScroll = function() {        
+        if (self.timer) clearAnimationFrame(self.timer);
+        self.timer = 0;
+        self.bzscroll = false;
+        self.scrollrunning = false;
+        return self;
+      };
+      
+    }
+    
+    this.doScrollBy = function(stp,relative) {
+      var ny = 0;
+      if (relative) {
+        ny = Math.floor((self.scroll.y-stp)*self.scrollratio.y)
+      } else {        
+        var sy = (self.timer) ? self.newscrolly : self.getScrollTop(true);
+        ny = sy-stp;
+      }
+      if (self.bouncescroll) {
+        var haf = Math.round(self.view.h/2);
+        if (ny<-haf) ny=-haf
+        else if (ny>(self.page.maxh+haf)) ny = (self.page.maxh+haf);
+      }
+      self.cursorfreezed = false;      
+
+      py = self.getScrollTop(true);
+      if (ny<0&&py<=0) return self.noticeCursor();      
+      else if (ny>self.page.maxh&&py>=self.page.maxh) {
+        self.checkContentSize();
+        return self.noticeCursor();
+      }
+      
+      self.doScrollTop(ny);
+    };
+
+    this.doScrollLeftBy = function(stp,relative) {
+      var nx = 0;
+      if (relative) {
+        nx = Math.floor((self.scroll.x-stp)*self.scrollratio.x)
+      } else {
+        var sx = (self.timer) ? self.newscrollx : self.getScrollLeft(true);
+        nx = sx-stp;
+      }
+      if (self.bouncescroll) {
+        var haf = Math.round(self.view.w/2);
+        if (nx<-haf) nx=-haf
+        else if (nx>(self.page.maxw+haf)) nx = (self.page.maxw+haf);
+      }
+      self.cursorfreezed = false;    
+
+      px = self.getScrollLeft(true);
+      if (nx<0&&px<=0) return self.noticeCursor();      
+      else if (nx>self.page.maxw&&px>=self.page.maxw) return self.noticeCursor();
+      
+      self.doScrollLeft(nx);
+    };
+    
+    this.doScrollTo = function(pos,relative) {
+      var ny = (relative) ? Math.round(pos*self.scrollratio.y) : pos;
+      if (ny<0) ny=0
+      else if (ny>self.page.maxh) ny = self.page.maxh;
+      self.cursorfreezed = false;
+      self.doScrollTop(pos);
+    };
+    
+    this.checkContentSize = function() {      
+      var pg = self.getContentSize();
+      if ((pg.h!=self.page.h)||(pg.w!=self.page.w)) self.resize(false,pg);
+    };
+    
+    self.onscroll = function(e) {    
+      if (self.rail.drag) return;
+      if (!self.cursorfreezed) {
+        self.synched('scroll',function(){
+          self.scroll.y = Math.round(self.getScrollTop() * (1/self.scrollratio.y));
+          if (self.railh) self.scroll.x = Math.round(self.getScrollLeft() * (1/self.scrollratio.x));
+          self.noticeCursor();
+        });
+      }
+    };
+    self.bind(self.docscroll,"scroll",self.onscroll);
+    
+    this.doZoomIn = function(e) {
+      if (self.zoomactive) return;
+      self.zoomactive = true;
+      
+      self.zoomrestore = {
+        style:{}
+      };
+      var lst = ['position','top','left','zIndex','backgroundColor','marginTop','marginBottom','marginLeft','marginRight'];
+      var win = self.win[0].style;
+      for(var a in lst) {
+        var pp = lst[a];
+        self.zoomrestore.style[pp] = (typeof win[pp]!='undefined') ? win[pp] : '';
+      }
+      
+      self.zoomrestore.style.width = self.win.css('width');
+      self.zoomrestore.style.height = self.win.css('height');
+      
+      self.zoomrestore.padding = {
+        w:self.win.outerWidth()-self.win.width(),
+        h:self.win.outerHeight()-self.win.height()
+      };
+      
+      if (cap.isios4) {
+        self.zoomrestore.scrollTop = $(window).scrollTop();
+        $(window).scrollTop(0);
+      }
+      
+      self.win.css({
+        "position":(cap.isios4)?"absolute":"fixed",
+        "top":0,
+        "left":0,
+        "z-index":self.opt.zindex+100,
+        "margin":"0px"
+      });
+      var bkg = self.win.css("backgroundColor");      
+      if (bkg==""||/transparent|rgba\(0, 0, 0, 0\)|rgba\(0,0,0,0\)/.test(bkg)) self.win.css("backgroundColor","#fff");
+      self.rail.css({"z-index":self.opt.zindex+110});
+      self.zoom.css({"z-index":self.opt.zindex+112});      
+      self.zoom.css('backgroundPosition','0px -18px');
+      self.resizeZoom();
+      
+      if (self.onzoomin) self.onzoomin.call(self);
+      
+      return self.cancelEvent(e);
+    };
+
+    this.doZoomOut = function(e) {
+      if (!self.zoomactive) return;
+      self.zoomactive = false;
+      
+      self.win.css("margin","");
+      self.win.css(self.zoomrestore.style);
+      
+      if (cap.isios4) {
+        $(window).scrollTop(self.zoomrestore.scrollTop);
+      }
+      
+      self.rail.css({"z-index":(self.ispage)?self.opt.zindex:self.opt.zindex+2});
+      self.zoom.css({"z-index":self.opt.zindex});
+      self.zoomrestore = false;
+      self.zoom.css('backgroundPosition','0px 0px');
+      self.onResize();
+      
+      if (self.onzoomout) self.onzoomout.call(self);
+      
+      return self.cancelEvent(e);
+    };
+    
+    this.doZoom = function(e) {
+      return (self.zoomactive) ? self.doZoomOut(e) : self.doZoomIn(e);
+    };
+    
+    this.resizeZoom = function() {
+      if (!self.zoomactive) return;
+
+      var py = self.getScrollTop(); //preserve scrolling position
+      self.win.css({
+        width:$(window).width()-self.zoomrestore.padding.w+"px",
+        height:$(window).height()-self.zoomrestore.padding.h+"px"
+      });
+      self.onResize();
+      self.setScrollTop(Math.min(self.page.maxh,py));
+    };
+   
+    this.init();
+    
+    $.nicescroll.push(this);
+
+  };
+  
+// Inspired by the work of Kin Blas
+// http://webpro.host.adobe.com/people/jblas/momentum/includes/jquery.momentum.0.7.js  
+  
+  
+  var ScrollMomentumClass2D = function(nc) {
+    var self = this;
+    this.nc = nc;
+    
+    this.lastx = 0;
+    this.lasty = 0;
+    this.speedx = 0;
+    this.speedy = 0;
+    this.lasttime = 0;
+    this.steptime = 0;
+    this.snapx = false;
+    this.snapy = false;
+    this.demulx = 0;
+    this.demuly = 0;
+    
+    this.lastscrollx = -1;
+    this.lastscrolly = -1;
+    
+    this.chkx = 0;
+    this.chky = 0;
+    
+    this.timer = 0;
+    
+    this.time = function() {
+      return +new Date();//beautifull hack
+    };
+    
+    this.reset = function(px,py) {
+      self.stop();
+      var now = self.time();
+      self.steptime = 0;
+      self.lasttime = now;
+      self.speedx = 0;
+      self.speedy = 0;
+      self.lastx = px;
+      self.lasty = py;
+      self.lastscrollx = -1;
+      self.lastscrolly = -1;
+    };
+    
+    this.update = function(px,py) {
+      var now = self.time();
+      self.steptime = now - self.lasttime;
+      self.lasttime = now;      
+      var dy = py - self.lasty;
+      var dx = px - self.lastx;
+      var sy = self.nc.getScrollTop();
+      var sx = self.nc.getScrollLeft();
+      var newy = sy + dy;
+      var newx = sx + dx;
+      self.snapx = (newx<0)||(newx>self.nc.page.maxw);
+      self.snapy = (newy<0)||(newy>self.nc.page.maxh);
+      self.speedx = dx;
+      self.speedy = dy;
+      self.lastx = px;
+      self.lasty = py;
+    };
+    
+    this.stop = function() {
+      self.nc.unsynched("domomentum2d");
+      if (self.timer) clearTimeout(self.timer);
+      self.timer = 0;
+      self.lastscrollx = -1;
+      self.lastscrolly = -1;
+    };
+    
+    this.doSnapy = function(nx,ny) {
+      var snap = false;
+      
+      if (ny<0) {
+        ny=0;
+        snap=true;        
+      } 
+      else if (ny>self.nc.page.maxh) {
+        ny=self.nc.page.maxh;
+        snap=true;
+      }
+
+      if (nx<0) {
+        nx=0;
+        snap=true;        
+      } 
+      else if (nx>self.nc.page.maxw) {
+        nx=self.nc.page.maxw;
+        snap=true;
+      }
+      
+      if (snap) self.nc.doScrollPos(nx,ny,self.nc.opt.snapbackspeed);
+    };
+    
+    this.doMomentum = function(gp) {
+      var t = self.time();
+      var l = (gp) ? t+gp : self.lasttime;
+
+      var sl = self.nc.getScrollLeft();
+      var st = self.nc.getScrollTop();
+      
+      var pageh = self.nc.page.maxh;
+      var pagew = self.nc.page.maxw;
+      
+      self.speedx = (pagew>0) ? Math.min(60,self.speedx) : 0;
+      self.speedy = (pageh>0) ? Math.min(60,self.speedy) : 0;
+      
+      var chk = l && (t - l) <= 50;
+      
+      if ((st<0)||(st>pageh)||(sl<0)||(sl>pagew)) chk = false;
+      
+      var sy = (self.speedy && chk) ? self.speedy : false;
+      var sx = (self.speedx && chk) ? self.speedx : false;
+      
+      if (sy||sx) {
+        var tm = Math.max(16,self.steptime); //timeout granularity
+        
+        if (tm>50) {  // do smooth
+          var xm = tm/50;
+          self.speedx*=xm;
+          self.speedy*=xm;
+          tm = 50;
+        }
+        
+        self.demulxy = 0;
+
+        self.lastscrollx = self.nc.getScrollLeft();
+        self.chkx = self.lastscrollx;
+        self.lastscrolly = self.nc.getScrollTop();
+        self.chky = self.lastscrolly;
+        
+        var nx = self.lastscrollx;
+        var ny = self.lastscrolly;
+        
+        var onscroll = function(){
+          var df = ((self.time()-t)>600) ? 0.04 : 0.02;
+        
+          if (self.speedx) {
+            nx = Math.floor(self.lastscrollx - (self.speedx*(1-self.demulxy)));
+            self.lastscrollx = nx;
+            if ((nx<0)||(nx>pagew)) df=0.10;
+          }
+
+          if (self.speedy) {
+            ny = Math.floor(self.lastscrolly - (self.speedy*(1-self.demulxy)));
+            self.lastscrolly = ny;
+            if ((ny<0)||(ny>pageh)) df=0.10;
+          }
+          
+          self.demulxy = Math.min(1,self.demulxy+df);
+          
+          self.nc.synched("domomentum2d",function(){
+
+            if (self.speedx) {
+              var scx = self.nc.getScrollLeft();
+              if (scx!=self.chkx) self.stop();
+              self.chkx=nx;
+              self.nc.setScrollLeft(nx);
+            }
+          
+            if (self.speedy) {
+              var scy = self.nc.getScrollTop();
+              if (scy!=self.chky) self.stop();          
+              self.chky=ny;
+              self.nc.setScrollTop(ny);
+            }
+            
+            if(!self.timer) {
+              self.nc.hideCursor();
+              self.doSnapy(nx,ny);
+            }
+            
+          });
+          
+          if (self.demulxy<1) {            
+            self.timer = setTimeout(onscroll,tm);
+          } else {
+            self.stop();
+            self.nc.hideCursor();
+            self.doSnapy(nx,ny);
+          }
+        };
+        
+        onscroll();
+        
+      } else {
+        self.doSnapy(self.nc.getScrollLeft(),self.nc.getScrollTop());
+      }      
+      
+    }
+    
+  };
+
+  
+// override jQuery scrollTop
+ 
+  var _scrollTop = jQuery.fn.scrollTop; // preserve original function
+   
+  $.cssHooks["pageYOffset"] = {
+    get: function(elem,computed,extra) {      
+      var nice = $.data(elem,'__nicescroll')||false;
+      return (nice&&nice.ishwscroll) ? nice.getScrollTop() : _scrollTop.call(elem);
+    },
+    set: function(elem,value) {
+      var nice = $.data(elem,'__nicescroll')||false;    
+      (nice&&nice.ishwscroll) ? nice.setScrollTop(parseInt(value)) : _scrollTop.call(elem,value);
+      return this;
+    }
+  };
+
+/*  
+  $.fx.step["scrollTop"] = function(fx){    
+    $.cssHooks["scrollTop"].set( fx.elem, fx.now + fx.unit );
+  };
+*/  
+  
+  jQuery.fn.scrollTop = function(value) {
+    if (typeof value == "undefined") {
+      var nice = (this[0]) ? $.data(this[0],'__nicescroll')||false : false;
+      return (nice&&nice.ishwscroll) ? nice.getScrollTop() : _scrollTop.call(this);
+    } else {      
+      return this.each(function() {
+        var nice = $.data(this,'__nicescroll')||false;
+        (nice&&nice.ishwscroll) ? nice.setScrollTop(parseInt(value)) : _scrollTop.call($(this),value);
+      });
+    }
+  }
+
+// override jQuery scrollLeft
+ 
+  var _scrollLeft = jQuery.fn.scrollLeft; // preserve original function
+   
+  $.cssHooks.pageXOffset = {
+    get: function(elem,computed,extra) {
+      var nice = $.data(elem,'__nicescroll')||false;
+      return (nice&&nice.ishwscroll) ? nice.getScrollLeft() : _scrollLeft.call(elem);
+    },
+    set: function(elem,value) {
+      var nice = $.data(elem,'__nicescroll')||false;    
+      (nice&&nice.ishwscroll) ? nice.setScrollLeft(parseInt(value)) : _scrollLeft.call(elem,value);
+      return this;
+    }
+  };
+  
+/*  
+  $.fx.step["scrollLeft"] = function(fx){
+    $.cssHooks["scrollLeft"].set( fx.elem, fx.now + fx.unit );
+  };  
+*/  
+ 
+  jQuery.fn.scrollLeft = function(value) {    
+    if (typeof value == "undefined") {
+      var nice = (this[0]) ? $.data(this[0],'__nicescroll')||false : false;
+      return (nice&&nice.ishwscroll) ? nice.getScrollLeft() : _scrollLeft.call(this);
+    } else {
+      return this.each(function() {     
+        var nice = $.data(this,'__nicescroll')||false;
+        (nice&&nice.ishwscroll) ? nice.setScrollLeft(parseInt(value)) : _scrollLeft.call($(this),value);
+      });
+    }
+  }
+  
+  var NiceScrollArray = function(doms) {
+    var self = this;
+    this.length = 0;
+    this.name = "nicescrollarray";
+  
+    this.each = function(fn) {
+      for(var a=0;a<self.length;a++) fn.call(self[a]);
+      return self;
+    };
+    
+    this.push = function(nice) {
+      self[self.length]=nice;
+      self.length++;
+    };
+    
+    this.eq = function(idx) {
+      return self[idx];
+    };
+    
+    if (doms) {
+      for(a=0;a<doms.length;a++) {
+        var nice = $.data(doms[a],'__nicescroll')||false;
+        if (nice) {
+          this[this.length]=nice;
+          this.length++;
+        }
+      };
+    }
+    
+    return this;
+  };
+  
+  function mplex(el,lst,fn) {
+    for(var a=0;a<lst.length;a++) fn(el,lst[a]);
+  };  
+  mplex(
+    NiceScrollArray.prototype,
+    ['show','hide','onResize','resize','remove','stop','doScrollPos'],
+    function(e,n) {
+      e[n] = function(){
+        var args = arguments;
+        return this.each(function(){          
+          this[n].apply(this,args);
+        });
+      };
+    }
+  );  
+  
+  jQuery.fn.getNiceScroll = function(index) {
+    if (typeof index == "undefined") {
+      return new NiceScrollArray(this);
+    } else {
+      var nice = $.data(this[index],'__nicescroll')||false;
+      return nice;
+    }
+  };
+  
+  jQuery.extend(jQuery.expr[':'], {
+    nicescroll: function(a) {
+      return ($.data(a,'__nicescroll'))?true:false;
+    }
+  });  
+  
+  $.fn.niceScroll = function(wrapper,opt) {        
+    if (typeof opt=="undefined") {
+      if ((typeof wrapper=="object")&&!("jquery" in wrapper)) {
+        opt = wrapper;
+        wrapper = false;        
+      }
+    }
+    var ret = new NiceScrollArray();
+    if (typeof opt=="undefined") opt = {};
+    
+    if (wrapper||false) {      
+      opt.doc = $(wrapper);
+      opt.win = $(this);
+    }    
+    var docundef = !("doc" in opt);   
+    if (!docundef&&!("win" in opt)) opt.win = $(this);    
+    
+    this.each(function() {
+      var nice = $(this).data('__nicescroll')||false;
+      if (!nice) {
+        opt.doc = (docundef) ? $(this) : opt.doc;
+        nice = new NiceScrollClass(opt,$(this));        
+        $(this).data('__nicescroll',nice);
+      }
+      ret.push(nice);
+    });
+    return (ret.length==1) ? ret[0] : ret;
+  };
+  
+  window.NiceScroll = {
+    getjQuery:function(){return jQuery}
+  };
+  
+  if (!$.nicescroll) {
+   $.nicescroll = new NiceScrollArray();
+  }
+  
+})( jQuery );
+  ;
 /**
  * jQuery TextExt Plugin
  * http://textextjs.com
@@ -25542,7 +31230,29 @@ qq.DisposeSupport = {
  */
 ;(function(a,b){function c(){}function d(){}function e(){}function x(a,b){typeof b=="string"&&(b=b.split("."));var c=b.join(".").replace(/\.(\w)/g,function(a,b){return b.toUpperCase()}),d=b.shift(),e;return typeof (e=a[c])!=h?e=e:typeof (e=a[d])!=h&&b.length>0&&(e=x(e,b)),e}function y(){function e(a,d){c.bind(a,function(){return d.apply(b,arguments)})}var a=g.apply(arguments),b=this,c=a.length===1?b:a.shift(),d;a=a[0]||{};for(d in a)e(d,a[d])}function z(a,b){return{input:a,form:b}}var f=(JSON||{}).stringify,g=Array.prototype.slice,h="undefined",i="item.manager",j="plugins",k="ext",l="html.wrap",m="html.hidden",n="keys",o="preInvalidate",q="postInvalidate",r="getFormData",s="setFormData",t="setInputData",u="postInit",v="ready",w={itemManager:d,plugins:[],ext:{},html:{wrap:'<div class="text-core"><div class="text-wrap"/></div>',hidden:'<input type="hidden" />'},keys:{8:"backspace",9:"tab",13:"enter!",27:"escape!",37:"left",38:"up!",39:"right",40:"down!",46:"delete",108:"numpadEnter"}};if(!f)throw new Error("JSON.stringify() not found");p=d.prototype,p.init=function(a){},p.filter=function(a,b){var c=[],d,e;for(d=0;d<a.length;d++)e=a[d],this.itemContains(e,b)&&c.push(e);return c},p.itemContains=function(a,b){return this.itemToString(a).toLowerCase().indexOf(b.toLowerCase())==0},p.stringToItem=function(a){return a},p.itemToString=function(a){return a},p.compareItems=function(a,b){return a==b},p=c.prototype,p.init=function(b,c){var d=this,e,f,g;d._defaults=a.extend({},w),d._opts=c||{},d._plugins={},d._itemManager=f=new(d.opts(i)),b=a(b),g=a(d.opts(l)),e=a(d.opts(m)),b.wrap(g).keydown(function(a){return d.onKeyDown(a)}).keyup(function(a){return d.onKeyUp(a)}).data("textext",d),a(d).data({hiddenInput:e,wrapElement:b.parents(".text-wrap").first(),input:b}),e.attr("name",b.attr("name")),b.attr("name",null),e.insertAfter(b),a.extend(!0,f,d.opts(k+".item.manager")),a.extend(!0,d,d.opts(k+".*"),d.opts(k+".core")),d.originalWidth=b.outerWidth(),d.invalidateBounds(),f.init(d),d.initPatches(),d.initPlugins(d.opts(j),a.fn.textext.plugins),d.on({setFormData:d.onSetFormData,getFormData:d.onGetFormData,setInputData:d.onSetInputData,anyKeyUp:d.onAnyKeyUp}),d.trigger(u),d.trigger(v),d.getFormData(0)},p.initPatches=function(){var b=[],c=a.fn.textext.patches,d;for(d in c)b.push(d);this.initPlugins(b,c)},p.initPlugins=function(b,c){var d=this,e,f,g,h=[],i;typeof b=="string"&&(b=b.split(/\s*,\s*|\s+/g));for(i=0;i<b.length;i++)f=b[i],g=c[f],g&&(d._plugins[f]=g=new g,d[f]=function(a){return function(){return a}}(g),h.push(g),a.extend(!0,g,d.opts(k+".*"),d.opts(k+"."+f)));h.sort(function(a,b){return a=a.initPriority(),b=b.initPriority(),a===b?0:a<b?1:-1});for(i=0;i<h.length;i++)h[i].init(d)},p.hasPlugin=function(a){return!!this._plugins[a]},p.on=y,p.bind=function(a,b){this.input().bind(a,b)},p.trigger=function(){var a=arguments;this.input().trigger(a[0],g.call(a,1))},p.itemManager=function(){return this._itemManager},p.input=function(){return a(this).data("input")},p.opts=function(a){var b=x(this._opts,a);return typeof b=="undefined"?x(this._defaults,a):b},p.wrapElement=function(){return a(this).data("wrapElement")},p.invalidateBounds=function(){var a=this,b=a.input(),c=a.wrapElement(),d=c.parent(),e=a.originalWidth,f;a.trigger(o),f=b.outerHeight(),b.width(e),c.width(e).height(f),d.height(f),a.trigger(q)},p.focusInput=function(){this.input()[0].focus()},p.serializeData=f,p.hiddenInput=function(b){return a(this).data("hiddenInput")},p.getWeightedEventResponse=function(a,b){var c=this,d={},e=0;c.trigger(a,d,b);for(var f in d)e=Math.max(e,f);return d[e]},p.getFormData=function(a){var b=this,c=b.getWeightedEventResponse(r,a||0);b.trigger(s,c.form),b.trigger(t,c.input)},p.onAnyKeyUp=function(a,b){this.getFormData(b)},p.onSetInputData=function(a,b){this.input().val(b)},p.onSetFormData=function(a,b){var c=this;c.hiddenInput().val(c.serializeData(b))},p.onGetFormData=function(a,b){var c=this.input().val();b[0]=z(c,c)},a(["Down","Up"]).each(function(){var a=this.toString();p["onKey"+a]=function(b){var c=this,d=c.opts(n)[b.keyCode],e=!0;return d&&(e=d.substr(-1)!="!",d=d.replace("!",""),c.trigger(d+"Key"+a),a=="Up"&&c._lastKeyDown==b.keyCode&&(c._lastKeyDown=null,c.trigger(d+"KeyPress")),a=="Down"&&(c._lastKeyDown=b.keyCode)),c.trigger("anyKey"+a,b.keyCode),e}}),p=e.prototype,p.on=y,p.formDataObject=z,p.init=function(a){throw new Error("Not implemented")},p.baseInit=function(b,c){var d=this;b._defaults=a.extend(!0,b._defaults,c),d._core=b,d._timers={}},p.startTimer=function(a,b,c){var d=this;d.stopTimer(a),d._timers[a]=setTimeout(function(){delete d._timers[a],c.apply(d)},b*1e3)},p.stopTimer=function(a){clearTimeout(this._timers[a])},p.core=function(){return this._core},p.opts=function(a){return this.core().opts(a)},p.itemManager=function(){return this.core().itemManager()},p.input=function(){return this.core().input()},p.val=function(a){var b=this.input();if(typeof a===h)return b.val();b.val(a)},p.trigger=function(){var a=this.core();a.trigger.apply(a,arguments)},p.bind=function(a,b){this.core().bind(a,b)},p.initPriority=function(){return 0};var A=!1,B=a.fn.textext=function(b){var d;return!A&&(d=a.fn.textext.css)!=null&&(a("head").append("<style>"+d+"</style>"),A=!0),this.map(function(){var d=a(this);if(b==null)return d.data("textext");var e=new c;return e.init(d,b),d.data("textext",e),e.input()[0]})};B.addPlugin=function(a,b){B.plugins[a]=b,b.prototype=new B.TextExtPlugin},B.addPatch=function(a,b){B.patches[a]=b,b.prototype=new B.TextExtPlugin},B.TextExt=c,B.TextExtPlugin=e,B.ItemManager=d,B.plugins={},B.patches={}})(jQuery),function(a){function b(){}a.fn.textext.TextExtIE9Patches=b,a.fn.textext.addPatch("ie9",b);var c=b.prototype;c.init=function(a){if(navigator.userAgent.indexOf("MSIE 9")==-1)return;var b=this;a.on({postInvalidate:b.onPostInvalidate})},c.onPostInvalidate=function(){var a=this,b=a.input(),c=b.val();b.val(Math.random()),b.val(c)}}(jQuery);(function(a){function b(){}a.fn.textext.TextExtAjax=b,a.fn.textext.addPlugin("ajax",b);var c=b.prototype,d="ajax.data.callback",e="ajax.cache.results",f="ajax.loading.delay",g="ajax.loading.message",h="ajax.type.delay",i="setSuggestions",j="showDropdown",k="loading",l={ajax:{typeDelay:.5,loadingMessage:"Loading...",loadingDelay:.5,cacheResults:!1,dataCallback:null}};c.init=function(a){var b=this;b.baseInit(a,l),b.on({getSuggestions:b.onGetSuggestions}),b._suggestions=null},c.load=function(b){var c=this,e=c.opts(d)||function(a){return{q:a}},f;f=a.extend(!0,{data:e(b),success:function(a){c.onComplete(a,b)},error:function(a,c){console.error(c,b)}},c.opts("ajax")),a.ajax(f)},c.onComplete=function(a,b){var c=this,d=a;c.dontShowLoading(),c.opts(e)==1&&(c._suggestions=a,d=c.itemManager().filter(a,b)),c.trigger(i,{result:d})},c.dontShowLoading=function(){this.stopTimer(k)},c.showLoading=function(){var a=this;a.dontShowLoading(),a.startTimer(k,a.opts(f),function(){a.trigger(j,function(b){b.clearItems();var c=b.addDropdownItem(a.opts(g));c.addClass("text-loading")})})},c.onGetSuggestions=function(a,b){var c=this,d=c._suggestions,f=(b||{}).query||"";if(d&&c.opts(e)===!0)return c.onComplete(d,f);c.startTimer("ajax",c.opts(h),function(){c.showLoading(),c.load(f)})}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtArrow=b,a.fn.textext.addPlugin("arrow",b);var c=b.prototype,d="html.arrow",e={html:{arrow:'<div class="text-arrow"/>'}};c.init=function(b){var c=this,f;c.baseInit(b,e),c._arrow=f=a(c.opts(d)),c.core().wrapElement().append(f),f.bind("click",function(a){c.onArrowClick(a)})},c.onArrowClick=function(a){this.trigger("toggleDropdown"),this.core().focusInput()}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtAutocomplete=b,a.fn.textext.addPlugin("autocomplete",b);var c=b.prototype,d=".",e="text-selected",f=d+e,g="text-suggestion",h=d+g,i="text-label",j=d+i,k="autocomplete.enabled",l="autocomplete.dropdown.position",m="autocomplete.dropdown.maxHeight",n="autocomplete.render",o="html.dropdown",p="html.suggestion",q="hideDropdown",r="showDropdown",s="getSuggestions",t="getFormData",u="toggleDropdown",v="above",w="below",x="mousedownOnAutocomplete",y={autocomplete:{enabled:!0,dropdown:{position:w,maxHeight:"100px"}},html:{dropdown:'<div class="text-dropdown"><div class="text-list"/></div>',suggestion:'<div class="text-suggestion"><span class="text-label"/></div>'}};c.init=function(b){var c=this;c.baseInit(b,y);var d=c.input(),e;c.opts(k)===!0&&(c.on({blur:c.onBlur,anyKeyUp:c.onAnyKeyUp,deleteKeyUp:c.onAnyKeyUp,backspaceKeyPress:c.onBackspaceKeyPress,enterKeyPress:c.onEnterKeyPress,escapeKeyPress:c.onEscapeKeyPress,setSuggestions:c.onSetSuggestions,showDropdown:c.onShowDropdown,hideDropdown:c.onHideDropdown,toggleDropdown:c.onToggleDropdown,postInvalidate:c.positionDropdown,getFormData:c.onGetFormData,downKeyDown:c.onDownKeyDown,upKeyDown:c.onUpKeyDown}),e=a(c.opts(o)),e.insertAfter(d),c.on(e,{mouseover:c.onMouseOver,mousedown:c.onMouseDown,click:c.onClick}),e.css("maxHeight",c.opts(m)).addClass("text-position-"+c.opts(l)),a(c).data("container",e),a(document.body).click(function(a){c.isDropdownVisible()&&!c.withinWrapElement(a.target)&&c.trigger(q)}),c.positionDropdown())},c.containerElement=function(){return a(this).data("container")},c.onMouseOver=function(b){var c=this,d=a(b.target);d.is(h)&&(c.clearSelected(),d.addClass(e))},c.onMouseDown=function(a){this.containerElement().data(x,!0)},c.onClick=function(b){var c=this,d=a(b.target);(d.is(h)||d.is(j))&&c.trigger("enterKeyPress"),c.core().hasPlugin("tags")&&c.val("")},c.onBlur=function(a){var b=this,c=b.containerElement(),d=c.data(x)===!0;b.isDropdownVisible()&&(d?b.core().focusInput():b.trigger(q)),c.removeData(x)},c.onBackspaceKeyPress=function(a){var b=this,c=b.val().length>0;(c||b.isDropdownVisible())&&b.getSuggestions()},c.onAnyKeyUp=function(a,b){var c=this,d=c.opts("keys."+b)!=null;c.val().length>0&&!d&&c.getSuggestions()},c.onDownKeyDown=function(a){var b=this;b.isDropdownVisible()?b.toggleNextSuggestion():b.getSuggestions()},c.onUpKeyDown=function(a){this.togglePreviousSuggestion()},c.onEnterKeyPress=function(a){var b=this;b.isDropdownVisible()&&b.selectFromDropdown()},c.onEscapeKeyPress=function(a){var b=this;b.isDropdownVisible()&&b.trigger(q)},c.positionDropdown=function(){var a=this,b=a.containerElement(),c=a.opts(l),d=a.core().wrapElement().outerHeight(),e={};e[c===v?"bottom":"top"]=d+"px",b.css(e)},c.suggestionElements=function(){return this.containerElement().find(h)},c.setSelectedSuggestion=function(b){if(!b)return;var c=this,d=c.suggestionElements(),f=d.first(),h,i;c.clearSelected();for(i=0;i<d.length;i++){h=a(d[i]);if(c.itemManager().compareItems(h.data(g),b)){f=h.addClass(e);break}}f.addClass(e),c.scrollSuggestionIntoView(f)},c.selectedSuggestionElement=function(){return this.suggestionElements().filter(f).first()},c.isDropdownVisible=function(){return this.containerElement().is(":visible")===!0},c.onGetFormData=function(a,b,c){var d=this,e=d.val(),f=e,g=e;b[100]=d.formDataObject(f,g)},c.initPriority=function(){return 200},c.onHideDropdown=function(a){this.hideDropdown()},c.onToggleDropdown=function(a){var b=this;b.trigger(b.containerElement().is(":visible")?q:r)},c.onShowDropdown=function(b,c){var d=this,e=d.selectedSuggestionElement().data(g),f=d._suggestions;if(!f)return d.trigger(s);a.isFunction(c)?c(d):(d.renderSuggestions(d._suggestions),d.toggleNextSuggestion()),d.showDropdown(d.containerElement()),d.setSelectedSuggestion(e)},c.onSetSuggestions=function(a,b){var c=this,d=c._suggestions=b.result;b.showHideDropdown!==!1&&c.trigger(d===null||d.length===0?q:r)},c.getSuggestions=function(){var a=this,b=a.val();if(a._previousInputValue==b)return;b==""&&(current=null),a._previousInputValue=b,a.trigger(s,{query:b})},c.clearItems=function(){this.containerElement().find(".text-list").children().remove()},c.renderSuggestions=function(b){var c=this;c.clearItems(),a.each(b||[],function(a,b){c.addSuggestion(b)})},c.showDropdown=function(){this.containerElement().show()},c.hideDropdown=function(){var a=this,b=a.containerElement();a._previousInputValue=null,b.hide()},c.addSuggestion=function(a){var b=this,c=b.opts(n),d=b.addDropdownItem(c?c.call(b,a):b.itemManager().itemToString(a));d.data(g,a)},c.addDropdownItem=function(b){var c=this,d=c.containerElement().find(".text-list"),e=a(c.opts(p));return e.find(".text-label").html(b),d.append(e),e},c.clearSelected=function(){this.suggestionElements().removeClass(e)},c.toggleNextSuggestion=function(){var a=this,b=a.selectedSuggestionElement(),c;b.length>0?(c=b.next(),c.length>0&&b.removeClass(e)):c=a.suggestionElements().first(),c.addClass(e),a.scrollSuggestionIntoView(c)},c.togglePreviousSuggestion=function(){var a=this,b=a.selectedSuggestionElement(),c=b.prev();if(c.length==0)return;a.clearSelected(),c.addClass(e),a.scrollSuggestionIntoView(c)},c.scrollSuggestionIntoView=function(a){var b=a.outerHeight(),c=this.containerElement(),d=c.innerHeight(),e=c.scrollTop(),f=(a.position()||{}).top,g=null,h=parseInt(c.css("paddingTop"));if(f==null)return;f+b>d&&(g=f+e+b-d+h),f<0&&(g=f+e-h),g!=null&&c.scrollTop(g)},c.selectFromDropdown=function(){var a=this,b=a.selectedSuggestionElement().data(g);b&&(a.val(a.itemManager().itemToString(b)),a.core().getFormData()),a.trigger(q)},c.withinWrapElement=function(a){return this.core().wrapElement().find(a).size()>0}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtFilter=b,a.fn.textext.addPlugin("filter",b);var c=b.prototype,d="filter.enabled",e="filter.items",f={filter:{enabled:!0,items:null}};c.init=function(a){var b=this;b.baseInit(a,f),b.on({getFormData:b.onGetFormData,isTagAllowed:b.onIsTagAllowed,setSuggestions:b.onSetSuggestions}),b._suggestions=null},c.onGetFormData=function(a,b,c){var d=this,e=d.val(),f=e,g="";d.core().hasPlugin("tags")||(d.isValueAllowed(f)&&(g=e),b[300]=d.formDataObject(f,g))},c.isValueAllowed=function(a){var b=this,c=b.opts("filterItems")||b._suggestions||[],e=b.itemManager(),f=!b.opts(d),g;for(g=0;g<c.length&&!f;g++)e.compareItems(a,c[g])&&(f=!0);return f},c.onIsTagAllowed=function(a,b){b.result=this.isValueAllowed(b.tag)},c.onSetSuggestions=function(a,b){this._suggestions=b.result}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtFocus=b,a.fn.textext.addPlugin("focus",b);var c=b.prototype,d="html.focus",e={html:{focus:'<div class="text-focus"/>'}};c.init=function(a){var b=this;b.baseInit(a,e),b.core().wrapElement().append(b.opts(d)),b.on({blur:b.onBlur,focus:b.onFocus}),b._timeoutId=0},c.onBlur=function(a){var b=this;clearTimeout(b._timeoutId),b._timeoutId=setTimeout(function(){b.getFocus().hide()},100)},c.onFocus=function(a){var b=this;clearTimeout(b._timeoutId),b.getFocus().show()},c.getFocus=function(){return this.core().wrapElement().find(".text-focus")}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtPrompt=b,a.fn.textext.addPlugin("prompt",b);var c=b.prototype,d="text-hide-prompt",e="prompt",f="html.prompt",g={prompt:"Awaiting input...",html:{prompt:'<div class="text-prompt"/>'}};c.init=function(b){var c=this,d="placeholder",h,i;c.baseInit(b,g),h=a(c.opts(f)),a(c).data("container",h),c.core().wrapElement().append(h),c.setPrompt(c.opts(e)),i=b.input().attr(d),i||(i=c.opts(e)),b.input().attr(d,""),i&&c.setPrompt(i),a.trim(c.val()).length>0&&c.hidePrompt(),c.on({blur:c.onBlur,focus:c.onFocus,postInvalidate:c.onPostInvalidate,postInit:c.onPostInit})},c.onPostInit=function(a){this.invalidateBounds()},c.onPostInvalidate=function(a){this.invalidateBounds()},c.invalidateBounds=function(){var a=this,b=a.input();a.containerElement().css({paddingLeft:b.css("paddingLeft"),paddingTop:b.css("paddingTop")})},c.onBlur=function(a){var b=this;b.startTimer("prompt",.1,function(){b.showPrompt()})},c.showPrompt=function(){var b=this,c=b.input();a.trim(b.val()).length===0&&!c.is(":focus")&&b.containerElement().removeClass(d)},c.hidePrompt=function(){this.stopTimer("prompt"),this.containerElement().addClass(d)},c.onFocus=function(a){this.hidePrompt()},c.setPrompt=function(a){this.containerElement().text(a)},c.containerElement=function(){return a(this).data("container")}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtSuggestions=b,a.fn.textext.addPlugin("suggestions",b);var c=b.prototype,d="suggestions",e={suggestions:null};c.init=function(a){var b=this;b.baseInit(a,e),b.on({getSuggestions:b.onGetSuggestions,postInit:b.onPostInit})},c.setSuggestions=function(a,b){this.trigger("setSuggestions",{result:a,showHideDropdown:b!=0})},c.onPostInit=function(a){var b=this;b.setSuggestions(b.opts(d),!1)},c.onGetSuggestions=function(a,b){var c=this,e=c.opts(d);e.sort(),c.setSuggestions(c.itemManager().filter(e,b.query))}})(jQuery);(function(a){function b(){}a.fn.textext.TextExtTags=b,a.fn.textext.addPlugin("tags",b);var c=b.prototype,d=".",e="text-tags-on-top",f=d+e,g="text-tag",h=d+g,i="text-tags",j=d+i,k="text-label",l=d+k,m="text-remove",n=d+m,o="tags.enabled",p="tags.items",q="html.tag",r="html.tags",s="isTagAllowed",t="tagClick",u={tags:{enabled:!0,items:null},html:{tags:'<div class="text-tags"/>',tag:'<div class="text-tag"><div class="text-button"><span class="text-label"/><a class="text-remove"/></div></div>'}};c.init=function(b){this.baseInit(b,u);var c=this,d=c.input(),e;c.opts(o)&&(e=a(c.opts(r)),d.after(e),a(c).data("container",e),c.on({enterKeyPress:c.onEnterKeyPress,backspaceKeyDown:c.onBackspaceKeyDown,preInvalidate:c.onPreInvalidate,postInit:c.onPostInit,getFormData:c.onGetFormData}),c.on(e,{click:c.onClick,mousemove:c.onContainerMouseMove}),c.on(d,{mousemove:c.onInputMouseMove})),c._originalPadding={left:parseInt(d.css("paddingLeft")||0),top:parseInt(d.css("paddingTop")||0)},c._paddingBox={left:0,top:0},c.updateFormCache()},c.containerElement=function(){return a(this).data("container")},c.onPostInit=function(a){var b=this;b.addTags(b.opts(p))},c.onGetFormData=function(a,b,c){var d=this,e=c===13?"":d.val(),f=d._formData;b[200]=d.formDataObject(e,f)},c.initPriority=function(){return 100},c.onInputMouseMove=function(a){this.toggleZIndex(a)},c.onContainerMouseMove=function(a){this.toggleZIndex(a)},c.onBackspaceKeyDown=function(a){var b=this,c=b.tagElements().last();b.val().length==0&&b.removeTag(c)},c.onPreInvalidate=function(a){var b=this,c=b.tagElements().last(),d=c.position();c.length>0?d.left+=c.innerWidth():d=b._originalPadding,b._paddingBox=d,b.input().css({paddingLeft:d.left,paddingTop:d.top})},c.onClick=function(b){function k(a,b){i.data(g,a),i.find(l).text(c.itemManager().itemToString(a)),c.updateFormCache(),d.getFormData(),d.invalidateBounds(),b&&d.focusInput()}var c=this,d=c.core(),e=a(b.target),f=0,i;e.is(j)?f=1:e.is(n)?(c.removeTag(e.parents(h+":first")),f=1):e.is(l)&&(i=e.parents(h+":first"),c.trigger(t,i,i.data(g),k)),f&&d.focusInput()},c.onEnterKeyPress=function(a){var b=this,c=b.val(),d=b.itemManager().stringToItem(c);b.isTagAllowed(d)&&(b.addTags([d]),b.core().focusInput())},c.updateFormCache=function(){var b=this,c=[];b.tagElements().each(function(){c.push(a(this).data(g))}),b._formData=c},c.toggleZIndex=function(a){var b=this,c=b.input().offset(),d=a.clientX-c.left,g=a.clientY-c.top,h=b._paddingBox,i=b.containerElement(),j=i.is(f),k=d>h.left&&g>h.top;(!j&&!k||j&&k)&&i[(j?"remove":"add")+"Class"](e)},c.tagElements=function(){return this.containerElement().find(h)},c.isTagAllowed=function(a){var b={tag:a,result:!0};return this.trigger(s,b),b.result===!0},c.addTags=function(a){if(!a||a.length==0)return;var b=this,c=b.core(),d=b.containerElement(),e,f;for(e=0;e<a.length;e++)f=a[e],f&&b.isTagAllowed(f)&&d.append(b.renderTag(f));b.updateFormCache(),c.getFormData(),c.invalidateBounds()},c.getTagElement=function(b){var c=this,d=c.tagElements(),e,f;for(e=0;e<d.length,f=a(d[e]);e++)if(c.itemManager().compareItems(f.data(g),b))return f},c.removeTag=function(b){var c=this,d=c.core(),e;b instanceof a?(e=b,b=b.data(g)):e=c.getTagElement(b),e.remove(),c.updateFormCache(),d.getFormData(),d.invalidateBounds()},c.renderTag=function(b){var c=this,d=a(c.opts(q));return d.find(".text-label").text(c.itemManager().itemToString(b)),d.data(g,b),d}})(jQuery);(function(a){var b=document,c="getElementsByTagName",d=b[c]("head")[0]||b[c]("body")[0],e=b.createElement("style");e.innerHTML=a,d.appendChild(e)})('\n.text-core{position:relative;}\n.text-core .text-wrap{background:#fff;position:absolute;}\n.text-core .text-wrap textarea,.text-core .text-wrap input{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;-webkit-border-radius:0px;-moz-border-radius:0px;border-radius:0px;border:1px solid #9daccc;outline:none;resize:none;position:absolute;z-index:1;background:none;overflow:hidden;margin:0;padding:3px 5px 4px 5px;white-space:nowrap;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;line-height:13px;height:auto;}\n\n.text-core .text-wrap .text-arrow{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:absolute;top:0;right:0;width:22px;height:22px;background:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAOAQMAAADHWqTrAAAAA3NCSVQICAjb4U/gAAAABlBMVEX///8yXJnt8Ns4AAAACXBIWXMAAAsSAAALEgHS3X78AAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1MzmNZGAwAAABpJREFUCJljYEAF/xsY6hkY7BgYZBgYOFBkADkdAmFDagYFAAAAAElFTkSuQmCC") 50% 50% no-repeat;cursor:pointer;z-index:2;}\n\n.text-core .text-wrap .text-dropdown{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;padding:0;position:absolute;z-index:3;background:#fff;border:1px solid #9daccc;width:100%;max-height:100px;padding:1px;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;display:none;overflow-x:hidden;overflow-y:auto;}\n.text-core .text-wrap .text-dropdown.text-position-below{margin-top:1px;}\n.text-core .text-wrap .text-dropdown.text-position-above{margin-bottom:1px;}\n.text-core .text-wrap .text-dropdown .text-list .text-suggestion{padding:3px 5px;cursor:pointer;}\n.text-core .text-wrap .text-dropdown .text-list .text-suggestion em{font-style:normal;text-decoration:underline;}\n.text-core .text-wrap .text-dropdown .text-list .text-suggestion.text-selected{color:#fff;background:#6d84b4;}\n\n.text-core .text-wrap .text-focus{-webkit-box-shadow:0px 0px 6px #6d84b4;-moz-box-shadow:0px 0px 6px #6d84b4;box-shadow:0px 0px 6px #6d84b4;position:absolute;width:100%;height:100%;display:none;}\n.text-core .text-wrap .text-focus.text-show-focus{display:block;}\n\n.text-core .text-wrap .text-prompt{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:absolute;width:100%;height:100%;margin:1px 0 0 2px;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;color:#c0c0c0;overflow:hidden;white-space:pre;}\n.text-core .text-wrap .text-prompt.text-hide-prompt{display:none;}\n\n.text-core .text-wrap .text-tags{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:absolute;width:100%;height:100%;padding:3px 35px 3px 3px;cursor:text;}\n.text-core .text-wrap .text-tags.text-tags-on-top{z-index:2;}\n.text-core .text-wrap .text-tags .text-tag{float:left;}\n.text-core .text-wrap .text-tags .text-tag .text-button{-webkit-border-radius:2px;-moz-border-radius:2px;border-radius:2px;-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;position:relative;float:left;border:1px solid #9daccc;background:#e2e6f0;color:#000;padding:0px 17px 0px 3px;margin:0 2px 2px 0;cursor:pointer;height:16px;font:11px "lucida grande",tahoma,verdana,arial,sans-serif;}\n.text-core .text-wrap .text-tags .text-tag .text-button a.text-remove{position:absolute;right:3px;top:2px;display:block;width:11px;height:11px;background:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAhCAYAAAAPm1F2AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAAB50RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNS4xqx9I6wAAAQ5JREFUOI2dlD0WwiAQhCc8L6HHgAPoASwtSYvX8BrQxtIyveYA8RppLO1jE+LwE8lzms2yH8MCj1QoaBzH+VuUYNYMS213UlvDRamtUbXb5ZyPHuDoxwGgip3ipfvGuGzPz+vZ/coDONdzFuYCO6ramQQG0DJIE1oPBBvM6e9LqaS2FwD7FWwnVoIAsOc2Xn1jDlyd8pfPBRVOBHA8cc/3yCmQqt0jcY4LuTyAF3pOYS6wI48LAm4MUrx5JthgSQJAt5LtNgAUgEMBBIC3AL2xgo58dEPfhE9wygef89FtCeC49UwltR1pQrK2qr9vNr7uRTCBF3pOYS6wI4/zdQ8MUpxPI9hgSQL0Xyio/QBt54DzsHQx6gAAAABJRU5ErkJggg==") 0 0 no-repeat;}\n.text-core .text-wrap .text-tags .text-tag .text-button a.text-remove:hover{background-position:0 -11px;}\n.text-core .text-wrap .text-tags .text-tag .text-button a.text-remove:active{background-position:0 -22px;}\n');
 ;
+/*
+ Serializer module for Rangy.
+ Serializes Ranges and Selections. An example use would be to store a user's selection on a particular page in a
+ cookie or local storage and restore it on the user's next visit to the same page.
 
+ Part of Rangy, a cross-browser JavaScript range and selection library
+ http://code.google.com/p/rangy/
+
+ Depends on Rangy core.
+
+ Copyright 2012, Tim Down
+ Licensed under the MIT license.
+ Version: 1.2.3
+ Build date: 26 February 2012
+*/
+rangy.createModule("Serializer",function(g,n){function o(c,a){a=a||[];var b=c.nodeType,e=c.childNodes,d=e.length,f=[b,c.nodeName,d].join(":"),h="",k="";switch(b){case 3:h=c.nodeValue.replace(/</g,"&lt;").replace(/>/g,"&gt;");break;case 8:h="<!--"+c.nodeValue.replace(/</g,"&lt;").replace(/>/g,"&gt;")+"--\>";break;default:h="<"+f+">";k="</>";break}h&&a.push(h);for(b=0;b<d;++b)o(e[b],a);k&&a.push(k);return a}function j(c){c=o(c).join("");return u(c).toString(16)}function l(c,a,b){var e=[],d=c;for(b=
+b||i.getDocument(c).documentElement;d&&d!=b;){e.push(i.getNodeIndex(d,true));d=d.parentNode}return e.join("/")+":"+a}function m(c,a,b){if(a)b||i.getDocument(a);else{b=b||document;a=b.documentElement}c=c.split(":");a=a;b=c[0]?c[0].split("/"):[];for(var e=b.length,d;e--;){d=parseInt(b[e],10);if(d<a.childNodes.length)a=a.childNodes[parseInt(b[e],10)];else throw n.createError("deserializePosition failed: node "+i.inspectNode(a)+" has no child with index "+d+", "+e);}return new i.DomPosition(a,parseInt(c[1],
+10))}function p(c,a,b){b=b||g.DomRange.getRangeDocument(c).documentElement;if(!i.isAncestorOf(b,c.commonAncestorContainer,true))throw Error("serializeRange: range is not wholly contained within specified root node");c=l(c.startContainer,c.startOffset,b)+","+l(c.endContainer,c.endOffset,b);a||(c+="{"+j(b)+"}");return c}function q(c,a,b){if(a)b=b||i.getDocument(a);else{b=b||document;a=b.documentElement}c=/^([^,]+),([^,\{]+)({([^}]+)})?$/.exec(c);var e=c[4],d=j(a);if(e&&e!==j(a))throw Error("deserializeRange: checksums of serialized range root node ("+
+e+") and target root node ("+d+") do not match");e=m(c[1],a,b);a=m(c[2],a,b);b=g.createRange(b);b.setStart(e.node,e.offset);b.setEnd(a.node,a.offset);return b}function r(c,a,b){if(a)b||i.getDocument(a);else{b=b||document;a=b.documentElement}c=/^([^,]+),([^,]+)({([^}]+)})?$/.exec(c)[3];return!c||c===j(a)}function s(c,a,b){c=c||g.getSelection();c=c.getAllRanges();for(var e=[],d=0,f=c.length;d<f;++d)e[d]=p(c[d],a,b);return e.join("|")}function t(c,a,b){if(a)b=b||i.getWindow(a);else{b=b||window;a=b.document.documentElement}c=
+c.split("|");for(var e=g.getSelection(b),d=[],f=0,h=c.length;f<h;++f)d[f]=q(c[f],a,b.document);e.setRanges(d);return e}g.requireModules(["WrappedSelection","WrappedRange"]);if(typeof encodeURIComponent=="undefined"||typeof decodeURIComponent=="undefined")n.fail("Global object is missing encodeURIComponent and/or decodeURIComponent method");var u=function(){var c=null;return function(a){for(var b=[],e=0,d=a.length,f;e<d;++e){f=a.charCodeAt(e);if(f<128)b.push(f);else f<2048?b.push(f>>6|192,f&63|128):
+b.push(f>>12|224,f>>6&63|128,f&63|128)}a=-1;if(!c){e=[];d=0;for(var h;d<256;++d){h=d;for(f=8;f--;)if((h&1)==1)h=h>>>1^3988292384;else h>>>=1;e[d]=h>>>0}c=e}e=c;d=0;for(f=b.length;d<f;++d){h=(a^b[d])&255;a=a>>>8^e[h]}return(a^-1)>>>0}}(),i=g.dom;g.serializePosition=l;g.deserializePosition=m;g.serializeRange=p;g.deserializeRange=q;g.canDeserializeRange=r;g.serializeSelection=s;g.deserializeSelection=t;g.canDeserializeSelection=function(c,a,b){var e;if(a)e=b?b.document:i.getDocument(a);else{b=b||window;
+a=b.document.documentElement}c=c.split("|");b=0;for(var d=c.length;b<d;++b)if(!r(c[b],a,e))return false;return true};g.restoreSelectionFromCookie=function(c){c=c||window;var a;a:{a=c.document.cookie.split(/[;,]/);for(var b=0,e=a.length,d;b<e;++b){d=a[b].split("=");if(d[0].replace(/^\s+/,"")=="rangySerializedSelection")if(d=d[1]){a=decodeURIComponent(d.replace(/\s+$/,""));break a}}a=null}a&&t(a,c.doc)};g.saveSelectionCookie=function(c,a){c=c||window;a=typeof a=="object"?a:{};var b=a.expires?";expires="+
+a.expires.toUTCString():"",e=a.path?";path="+a.path:"",d=a.domain?";domain="+a.domain:"",f=a.secure?";secure":"",h=s(g.getSelection(c));c.document.cookie=encodeURIComponent("rangySerializedSelection")+"="+encodeURIComponent(h)+b+e+d+f};g.getElementChecksum=j});;
 //fgnass.github.com/spin.js#v1.2.5
 (function(window, document, undefined) {
 
@@ -25850,9 +31560,7 @@ qq.DisposeSupport = {
 
 })(window, document);
 ;
-
 /*	SWFObject v2.2 <http://code.google.com/p/swfobject/> 
 	is released under the MIT License <http://www.opensource.org/licenses/mit-license.php> 
 */
 var swfobject=function(){var D="undefined",r="object",S="Shockwave Flash",W="ShockwaveFlash.ShockwaveFlash",q="application/x-shockwave-flash",R="SWFObjectExprInst",x="onreadystatechange",O=window,j=document,t=navigator,T=false,U=[h],o=[],N=[],I=[],l,Q,E,B,J=false,a=false,n,G,m=true,M=function(){var aa=typeof j.getElementById!=D&&typeof j.getElementsByTagName!=D&&typeof j.createElement!=D,ah=t.userAgent.toLowerCase(),Y=t.platform.toLowerCase(),ae=Y?/win/.test(Y):/win/.test(ah),ac=Y?/mac/.test(Y):/mac/.test(ah),af=/webkit/.test(ah)?parseFloat(ah.replace(/^.*webkit\/(\d+(\.\d+)?).*$/,"$1")):false,X=!+"\v1",ag=[0,0,0],ab=null;if(typeof t.plugins!=D&&typeof t.plugins[S]==r){ab=t.plugins[S].description;if(ab&&!(typeof t.mimeTypes!=D&&t.mimeTypes[q]&&!t.mimeTypes[q].enabledPlugin)){T=true;X=false;ab=ab.replace(/^.*\s+(\S+\s+\S+$)/,"$1");ag[0]=parseInt(ab.replace(/^(.*)\..*$/,"$1"),10);ag[1]=parseInt(ab.replace(/^.*\.(.*)\s.*$/,"$1"),10);ag[2]=/[a-zA-Z]/.test(ab)?parseInt(ab.replace(/^.*[a-zA-Z]+(.*)$/,"$1"),10):0}}else{if(typeof O.ActiveXObject!=D){try{var ad=new ActiveXObject(W);if(ad){ab=ad.GetVariable("$version");if(ab){X=true;ab=ab.split(" ")[1].split(",");ag=[parseInt(ab[0],10),parseInt(ab[1],10),parseInt(ab[2],10)]}}}catch(Z){}}}return{w3:aa,pv:ag,wk:af,ie:X,win:ae,mac:ac}}(),k=function(){if(!M.w3){return}if((typeof j.readyState!=D&&j.readyState=="complete")||(typeof j.readyState==D&&(j.getElementsByTagName("body")[0]||j.body))){f()}if(!J){if(typeof j.addEventListener!=D){j.addEventListener("DOMContentLoaded",f,false)}if(M.ie&&M.win){j.attachEvent(x,function(){if(j.readyState=="complete"){j.detachEvent(x,arguments.callee);f()}});if(O==top){(function(){if(J){return}try{j.documentElement.doScroll("left")}catch(X){setTimeout(arguments.callee,0);return}f()})()}}if(M.wk){(function(){if(J){return}if(!/loaded|complete/.test(j.readyState)){setTimeout(arguments.callee,0);return}f()})()}s(f)}}();function f(){if(J){return}try{var Z=j.getElementsByTagName("body")[0].appendChild(C("span"));Z.parentNode.removeChild(Z)}catch(aa){return}J=true;var X=U.length;for(var Y=0;Y<X;Y++){U[Y]()}}function K(X){if(J){X()}else{U[U.length]=X}}function s(Y){if(typeof O.addEventListener!=D){O.addEventListener("load",Y,false)}else{if(typeof j.addEventListener!=D){j.addEventListener("load",Y,false)}else{if(typeof O.attachEvent!=D){i(O,"onload",Y)}else{if(typeof O.onload=="function"){var X=O.onload;O.onload=function(){X();Y()}}else{O.onload=Y}}}}}function h(){if(T){V()}else{H()}}function V(){var X=j.getElementsByTagName("body")[0];var aa=C(r);aa.setAttribute("type",q);var Z=X.appendChild(aa);if(Z){var Y=0;(function(){if(typeof Z.GetVariable!=D){var ab=Z.GetVariable("$version");if(ab){ab=ab.split(" ")[1].split(",");M.pv=[parseInt(ab[0],10),parseInt(ab[1],10),parseInt(ab[2],10)]}}else{if(Y<10){Y++;setTimeout(arguments.callee,10);return}}X.removeChild(aa);Z=null;H()})()}else{H()}}function H(){var ag=o.length;if(ag>0){for(var af=0;af<ag;af++){var Y=o[af].id;var ab=o[af].callbackFn;var aa={success:false,id:Y};if(M.pv[0]>0){var ae=c(Y);if(ae){if(F(o[af].swfVersion)&&!(M.wk&&M.wk<312)){w(Y,true);if(ab){aa.success=true;aa.ref=z(Y);ab(aa)}}else{if(o[af].expressInstall&&A()){var ai={};ai.data=o[af].expressInstall;ai.width=ae.getAttribute("width")||"0";ai.height=ae.getAttribute("height")||"0";if(ae.getAttribute("class")){ai.styleclass=ae.getAttribute("class")}if(ae.getAttribute("align")){ai.align=ae.getAttribute("align")}var ah={};var X=ae.getElementsByTagName("param");var ac=X.length;for(var ad=0;ad<ac;ad++){if(X[ad].getAttribute("name").toLowerCase()!="movie"){ah[X[ad].getAttribute("name")]=X[ad].getAttribute("value")}}P(ai,ah,Y,ab)}else{p(ae);if(ab){ab(aa)}}}}}else{w(Y,true);if(ab){var Z=z(Y);if(Z&&typeof Z.SetVariable!=D){aa.success=true;aa.ref=Z}ab(aa)}}}}}function z(aa){var X=null;var Y=c(aa);if(Y&&Y.nodeName=="OBJECT"){if(typeof Y.SetVariable!=D){X=Y}else{var Z=Y.getElementsByTagName(r)[0];if(Z){X=Z}}}return X}function A(){return !a&&F("6.0.65")&&(M.win||M.mac)&&!(M.wk&&M.wk<312)}function P(aa,ab,X,Z){a=true;E=Z||null;B={success:false,id:X};var ae=c(X);if(ae){if(ae.nodeName=="OBJECT"){l=g(ae);Q=null}else{l=ae;Q=X}aa.id=R;if(typeof aa.width==D||(!/%$/.test(aa.width)&&parseInt(aa.width,10)<310)){aa.width="310"}if(typeof aa.height==D||(!/%$/.test(aa.height)&&parseInt(aa.height,10)<137)){aa.height="137"}j.title=j.title.slice(0,47)+" - Flash Player Installation";var ad=M.ie&&M.win?"ActiveX":"PlugIn",ac="MMredirectURL="+O.location.toString().replace(/&/g,"%26")+"&MMplayerType="+ad+"&MMdoctitle="+j.title;if(typeof ab.flashvars!=D){ab.flashvars+="&"+ac}else{ab.flashvars=ac}if(M.ie&&M.win&&ae.readyState!=4){var Y=C("div");X+="SWFObjectNew";Y.setAttribute("id",X);ae.parentNode.insertBefore(Y,ae);ae.style.display="none";(function(){if(ae.readyState==4){ae.parentNode.removeChild(ae)}else{setTimeout(arguments.callee,10)}})()}u(aa,ab,X)}}function p(Y){if(M.ie&&M.win&&Y.readyState!=4){var X=C("div");Y.parentNode.insertBefore(X,Y);X.parentNode.replaceChild(g(Y),X);Y.style.display="none";(function(){if(Y.readyState==4){Y.parentNode.removeChild(Y)}else{setTimeout(arguments.callee,10)}})()}else{Y.parentNode.replaceChild(g(Y),Y)}}function g(ab){var aa=C("div");if(M.win&&M.ie){aa.innerHTML=ab.innerHTML}else{var Y=ab.getElementsByTagName(r)[0];if(Y){var ad=Y.childNodes;if(ad){var X=ad.length;for(var Z=0;Z<X;Z++){if(!(ad[Z].nodeType==1&&ad[Z].nodeName=="PARAM")&&!(ad[Z].nodeType==8)){aa.appendChild(ad[Z].cloneNode(true))}}}}}return aa}function u(ai,ag,Y){var X,aa=c(Y);if(M.wk&&M.wk<312){return X}if(aa){if(typeof ai.id==D){ai.id=Y}if(M.ie&&M.win){var ah="";for(var ae in ai){if(ai[ae]!=Object.prototype[ae]){if(ae.toLowerCase()=="data"){ag.movie=ai[ae]}else{if(ae.toLowerCase()=="styleclass"){ah+=' class="'+ai[ae]+'"'}else{if(ae.toLowerCase()!="classid"){ah+=" "+ae+'="'+ai[ae]+'"'}}}}}var af="";for(var ad in ag){if(ag[ad]!=Object.prototype[ad]){af+='<param name="'+ad+'" value="'+ag[ad]+'" />'}}aa.outerHTML='<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000"'+ah+">"+af+"</object>";N[N.length]=ai.id;X=c(ai.id)}else{var Z=C(r);Z.setAttribute("type",q);for(var ac in ai){if(ai[ac]!=Object.prototype[ac]){if(ac.toLowerCase()=="styleclass"){Z.setAttribute("class",ai[ac])}else{if(ac.toLowerCase()!="classid"){Z.setAttribute(ac,ai[ac])}}}}for(var ab in ag){if(ag[ab]!=Object.prototype[ab]&&ab.toLowerCase()!="movie"){e(Z,ab,ag[ab])}}aa.parentNode.replaceChild(Z,aa);X=Z}}return X}function e(Z,X,Y){var aa=C("param");aa.setAttribute("name",X);aa.setAttribute("value",Y);Z.appendChild(aa)}function y(Y){var X=c(Y);if(X&&X.nodeName=="OBJECT"){if(M.ie&&M.win){X.style.display="none";(function(){if(X.readyState==4){b(Y)}else{setTimeout(arguments.callee,10)}})()}else{X.parentNode.removeChild(X)}}}function b(Z){var Y=c(Z);if(Y){for(var X in Y){if(typeof Y[X]=="function"){Y[X]=null}}Y.parentNode.removeChild(Y)}}function c(Z){var X=null;try{X=j.getElementById(Z)}catch(Y){}return X}function C(X){return j.createElement(X)}function i(Z,X,Y){Z.attachEvent(X,Y);I[I.length]=[Z,X,Y]}function F(Z){var Y=M.pv,X=Z.split(".");X[0]=parseInt(X[0],10);X[1]=parseInt(X[1],10)||0;X[2]=parseInt(X[2],10)||0;return(Y[0]>X[0]||(Y[0]==X[0]&&Y[1]>X[1])||(Y[0]==X[0]&&Y[1]==X[1]&&Y[2]>=X[2]))?true:false}function v(ac,Y,ad,ab){if(M.ie&&M.mac){return}var aa=j.getElementsByTagName("head")[0];if(!aa){return}var X=(ad&&typeof ad=="string")?ad:"screen";if(ab){n=null;G=null}if(!n||G!=X){var Z=C("style");Z.setAttribute("type","text/css");Z.setAttribute("media",X);n=aa.appendChild(Z);if(M.ie&&M.win&&typeof j.styleSheets!=D&&j.styleSheets.length>0){n=j.styleSheets[j.styleSheets.length-1]}G=X}if(M.ie&&M.win){if(n&&typeof n.addRule==r){n.addRule(ac,Y)}}else{if(n&&typeof j.createTextNode!=D){n.appendChild(j.createTextNode(ac+" {"+Y+"}"))}}}function w(Z,X){if(!m){return}var Y=X?"visible":"hidden";if(J&&c(Z)){c(Z).style.visibility=Y}else{v("#"+Z,"visibility:"+Y)}}function L(Y){var Z=/[\\\"<>\.;]/;var X=Z.exec(Y)!=null;return X&&typeof encodeURIComponent!=D?encodeURIComponent(Y):Y}var d=function(){if(M.ie&&M.win){window.attachEvent("onunload",function(){var ac=I.length;for(var ab=0;ab<ac;ab++){I[ab][0].detachEvent(I[ab][1],I[ab][2])}var Z=N.length;for(var aa=0;aa<Z;aa++){y(N[aa])}for(var Y in M){M[Y]=null}M=null;for(var X in swfobject){swfobject[X]=null}swfobject=null})}}();return{registerObject:function(ab,X,aa,Z){if(M.w3&&ab&&X){var Y={};Y.id=ab;Y.swfVersion=X;Y.expressInstall=aa;Y.callbackFn=Z;o[o.length]=Y;w(ab,false)}else{if(Z){Z({success:false,id:ab})}}},getObjectById:function(X){if(M.w3){return z(X)}},embedSWF:function(ab,ah,ae,ag,Y,aa,Z,ad,af,ac){var X={success:false,id:ah};if(M.w3&&!(M.wk&&M.wk<312)&&ab&&ah&&ae&&ag&&Y){w(ah,false);K(function(){ae+="";ag+="";var aj={};if(af&&typeof af===r){for(var al in af){aj[al]=af[al]}}aj.data=ab;aj.width=ae;aj.height=ag;var am={};if(ad&&typeof ad===r){for(var ak in ad){am[ak]=ad[ak]}}if(Z&&typeof Z===r){for(var ai in Z){if(typeof am.flashvars!=D){am.flashvars+="&"+ai+"="+Z[ai]}else{am.flashvars=ai+"="+Z[ai]}}}if(F(Y)){var an=u(aj,am,ah);if(aj.id==ah){w(ah,true)}X.success=true;X.ref=an}else{if(aa&&A()){aj.data=aa;P(aj,am,ah,ac);return}else{w(ah,true)}}if(ac){ac(X)}})}else{if(ac){ac(X)}}},switchOffAutoHideShow:function(){m=false},ua:M,getFlashPlayerVersion:function(){return{major:M.pv[0],minor:M.pv[1],release:M.pv[2]}},hasFlashPlayerVersion:F,createSWF:function(Z,Y,X){if(M.w3){return u(Z,Y,X)}else{return undefined}},showExpressInstall:function(Z,aa,X,Y){if(M.w3&&A()){P(Z,aa,X,Y)}},removeSWF:function(X){if(M.w3){y(X)}},createCSS:function(aa,Z,Y,X){if(M.w3){v(aa,Z,Y,X)}},addDomLoadEvent:K,addLoadEvent:s,getQueryParamValue:function(aa){var Z=j.location.search||j.location.hash;if(Z){if(/\?/.test(Z)){Z=Z.split("?")[1]}if(aa==null){return L(Z)}var Y=Z.split("&");for(var X=0;X<Y.length;X++){if(Y[X].substring(0,Y[X].indexOf("="))==aa){return L(Y[X].substring((Y[X].indexOf("=")+1)))}}}return""},expressInstallCallback:function(){if(a){var X=c(R);if(X&&l){X.parentNode.replaceChild(l,X);if(Q){w(Q,true);if(M.ie&&M.win){l.style.display="block"}}if(E){E(B)}}a=false}}}}();;
-

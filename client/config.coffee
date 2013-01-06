@@ -1,6 +1,8 @@
 exports.config =
   # Edit the next line to change default build path.
-  buildPath: 'public'
+  config:
+      paths:
+          public: 'public'
 
 
   files:
@@ -30,6 +32,7 @@ exports.config =
           'vendor/scripts/ckeditor.js'
           'vendor/scripts/rangy-core.js'
           'vendor/scripts/rangy-selectionsaverestore-uncompressed.js'
+          'vendor/scripts/validator.js'
         ]
 
     stylesheets:

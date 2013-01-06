@@ -1,29 +1,24 @@
 BaseModel = require("models/models").BaseModel
-
-
-request = (type, url, data, callback) ->
-    $.ajax
-        type: type
-        url: url
-        data: data
-        success: callback
-        error: (data) ->
-            if data and data.msg
-                alert data.msg
-            else
-                alert "Server error occured."
+request = require("lib/request")
+slugify = require("lib/slug")
 
 
 # Model that describes a single note.
 class exports.Note extends BaseModel
 
-    url: 'notes/'
+    rootUrl: 'notes/'
 
     # Copy note properties to current model.
     constructor: (note) ->
         super()
         for property of note
             @[property] = note[property]
+
+        @path = JSON.parse @path if typeof @path is "string"
+        slugs = []
+        slugs.push slugify dir for dir in @path
+        @slugPath = "all/" + slugs.join("/")
+        
 
     # Set right url then send save request to server.
     saveContent: (content) ->
@@ -32,16 +27,13 @@ class exports.Note extends BaseModel
         @save content: @content
 
     @createNote = (data, callback) ->
-        request "POST", "notes", data, callback
+        request.post "notes", data, callback
 
     @updateNote = (id, data, callback) ->
-        request "PUT", "notes/#{id}", data, callback
+        request.put "notes/#{id}", data, callback
 
     @deleteNote = (id, callback) ->
-        request "DELETE", "notes/#{id}", callback
-
-    @moveNote = (data, callback) ->
-        request "POST", "tree/path/move", data, callback
+        request.del "notes/#{id}", callback
 
     @getNote = (id, callback) ->
         $.get "notes/#{id}", (data) =>
