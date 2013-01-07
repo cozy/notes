@@ -1,11 +1,15 @@
-#nav1.ui-layout-west
-    #nav.well
-        #tree(tabIndex='2')
+#nav.ui-layout-west
+    #tree
+
 #note-area.ui-layout-center
-    #note-full.well.note-full
+    #search-view
+    #help-info
+        | You don't have any note selected yet. To select a note use the tree
+        | on your left.
+    #note-full.note-full
         div#note-full-breadcrumb /
         div#note-style
-            div
+            div.no-padding
                 input#note-full-title
             div#editor
 

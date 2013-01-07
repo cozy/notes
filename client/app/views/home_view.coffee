@@ -1,16 +1,13 @@
 Tree = require("./widgets/tree").Tree
 NoteView = require("./note_view").NoteView
 Note = require("../models/note").Note
+NotesCollection = require("../collections/notes")
+SearchView = require './search_view'
+slugify = require '../lib/slug'
+
 
 ###*
 # Main view that manages interaction between toolprogressBar, navigation and notes
-    id : ='home-view'
-    @treeCreationCallback 
-    @noteFull
-    @tree
-    @noteView
-    @treeLoaded
-    @iframeLoaded
 ###
 
 class exports.HomeView extends Backbone.View
@@ -20,41 +17,28 @@ class exports.HomeView extends Backbone.View
     # Load the home view and the tree
     # Called once by the main_router
     ###
-    initContent: (note_uuid) -> 
-        
-        console.log "HomeView.initContent(#{note_uuid})"
+    initContent: (note_uuid, callback) ->
+        @note_uuid = note_uuid
+        @iframeLoaded = false
+        @treeLoaded = false
 
-        # vars
-        @progressBar = $(".bar")
-        progressBar = @progressBar
+        @buildViews()
+        @configureLayoutDrag()
+        @loadTree callback
+        @configureResize()
+        @configureSaving()
 
-        # when the tree and iframe of the editor are loaded : select the note
-        hv = this
-        iframeLoaded = false
-        treeLoaded = false
-        onTreeLoaded = ->
-            console.log "event HomeView.onTreeLoaded #{iframeLoaded}"
-            progressBar.css("width","30%")
-            treeLoaded = true
-            if iframeLoaded
-                app.homeView.selectNote note_uuid
-        onIFrameLoaded = ->
-            console.log "event HomeView.onIFrameLoaded #{iframeLoaded}"
-            progressBar.css("width","10%")
-            iframeLoaded = true
-            if treeLoaded
-                hv.selectNote note_uuid
-
-        # add the html in the element of the view
-        $(@el).html require('./templates/home')
-        @noteView = new NoteView(onIFrameLoaded)
-        @noteView.homeView = this
-        @noteFull = $("#note-full")
+    # Build main view and layout, create note view and integrate it inside home
+    # view.
+    buildViews: ->
+        @$el.html require('./templates/home')
+        @noteView = new NoteView @, @onIFrameLoaded
+        @noteFull = @$ "#note-full"
         @noteFull.hide()
-        drag = $("#drag")
+        @helpInfo = @$ "#help-info"
+        @searchView = new SearchView @$("#search-view")
 
-        # Use jquery layout to set main layout of current window.
-        $('#home-view').layout
+        @$el.layout
             size: "250"
             minSize: "250"
             resizable: true
@@ -62,71 +46,98 @@ class exports.HomeView extends Backbone.View
             spacing_closed: 10
             togglerLength_closed: "100%"
             onresize_end: ->
-                console.log "resize end"
-                drag.css("z-index","-1")
+                drag.css "z-index","-1"
 
-        # we detect the start of resize with the on mousedown instead of 
-        # the onresize_start because this one happens a bit latter what may be a pb.
-        $(".ui-layout-resizer").bind 'mousedown', (e)->
-            console.log "resize start"
-            drag.css("z-index","1")
-        
-        #Progress bar
-        $(".ui-layout-center").append(
-            "<div class='progress progress-striped active'>
-                <div class='bar' style='width: 0%;'></div>
-            </div>")
-        @progress = $(".progress")
-        progressBarLeftPosition = $(".ui-layout-center").width()/3-77
-        progressBarTopPosition = $(".ui-layout-center").height()/2
-        @progress.css("left", progressBarLeftPosition)
-        @progress.css("top", progressBarTopPosition)
-        
-        # creation of the tree
+    # Load data for tree and render it.
+    loadTree: (callback) ->
         $.get "tree/", (data) =>
-            console.log data
             window.tree = data
-            @tree = new Tree( @.$("#nav"), data, 
-                    onCreate: @createFolder
-                    onRename: @onTreeRename
-                    onRemove: @onTreeRemove
-                    onSelect: @onTreeSelectionChg
-                    onLoaded: onTreeLoaded
-                    onDrop  : @onNoteDropped
-                )
+            @tree = new Tree @$("#nav"), data,
+                onCreate: @onCreateFolder
+                onRename: @onTreeRename
+                onRemove: @onTreeRemove
+                onSelect: @onTreeSelectionChg
+                onLoaded: callback
+                onDrop  : @onNoteDropped
+                onSearch: @onSearch
 
-        # Resize editor
-        @resizeNoteView()
-        $(window).resize @resizeNoteView
+            @$("#create-note").click =>
+                @tree.widget.jstree(
+                    "create","#tree-node-all","first","A New Note")
 
-        # Save data when user leaves page.
+    # Detect the start of resize with the on mousedown instead of 
+    # the onresize_start because this one happens a bit latter what may be a pb.
+    configureLayoutDrag: ->
+        drag = $("#drag")
+        $(".ui-layout-resizer").bind 'mousedown', (e)->
+            drag.css("z-index","1")
+
+    # Resize editor and register resize listener.
+    configureResize: ->
+        @onWindowResized()
+        $(window).resize @onWindowResized
+
+    # Save data when user leaves page.
+    configureSaving: ->
         $(window).unload =>
             @noteView.saveEditorContent()
-        
-    resizeNoteView: ->
-        windowHeight = $(window).height()
-        $("#note-style").height(windowHeight - 80)
-        $("#editor").height(windowHeight - 180)
 
+    ### Listeners ###
+    
+    # If editor iframe is loaded after tree, it displays the note that should be 
+    # loaded first.
+    onIFrameLoaded: =>
+        @iframeLoaded = true
+        @selectNote note_uuid if @treeLoaded
+        @treeLoaded = true
+        @iframe = $ "iframe"
+
+    # If tree is loaded after iframe, it displays the note that should be
+    # loaded first.
+    selectNoteIfIframeLoaded: =>
+        @treeLoaded = true
+        @selectNote(@note_uuid) if @iframeLoaded
+        
+    # Small trick to adapt editor size when window is resized.
+    onWindowResized: ->
+        windowHeight = $(window).height()
+        @$("#note-style").height(windowHeight - 140)
+        @$("#editor").height(windowHeight - 240)
+
+    onSearch: (query) =>
+        if query.length > 0
+            app.router.navigate "search/#{slugify query}", trigger: true
+        else
+            if @treeLoaded
+                app.router.navigate "note/all", trigger: true
+
+    search: (query) =>
+        if @tree?
+            @helpInfo.hide()
+            @tree.widget.jstree "search", query
+            NotesCollection.search query, (notes) =>
+                @searchView.fill notes, query
+                @noteFull.fadeOut =>
+                    @searchView.fadeIn()
 
     ###*
-    Create a new folder of path : 
+    Create a new folder.
     Params :
         fullPath : path of the folder
         newName : name of the folder
     ###
-    createFolder: (parentId, newName, data) ->
-        console.log "HomeView.createFolder()"
-        # if parentId == null
-        #     parentId = "tree-node-all"
+    onCreateFolder: (parentId, newName, data) ->
         Note.createNote
             title: newName
             parent_id:parentId
-            , (note) ->
-                data.rslt.obj.data("id", note.id) # TODO BJA : use case ?
-                data.rslt.obj.prop("id", note.id)
-                data.inst.deselect_all()
-                data.inst.select_node data.rslt.obj
+            , (err, note) ->
+                if err
+                    alert "Server error occured."
+                else
+                    data.rslt.obj.data("id", note.id)
+                    data.rslt.obj.prop("id", note.id)
+                    data.inst.deselect_all()
+                    data.inst.select_node data.rslt.obj
 
     ###*
     # Only called by jsTree event "rename.jstree" trigered when a node
@@ -134,38 +145,33 @@ class exports.HomeView extends Backbone.View
     # May be called by another note than the currently selected node.
     ###
     onTreeRename: (uuid, newName) =>
-        console.log "HomeView.onTreeRename()"
         if newName?
-            if @tree.currentNote_uuid == uuid
-                @noteView.setTitle(newName)
-                @noteView.updateBreadcrumbOnTitleChange(newName)
-            Note.updateNote uuid,
-                title: newName
-            , () =>
-    
+            if @tree.currentNote_uuid is uuid
+                @noteView.setTitle newName
+                @noteView.updateBreadcrumbOnTitleChange newName
+            Note.updateNote uuid, title: newName, (err) ->
+                alert "Server error occured" if err
 
+    ###*
+    # When note title is changed, the changement is send to backend for
+    # persistence. 
+    ###
     onNoteTitleChange:(uuid, newName) =>
-        console.log "HomeView.onNoteTitleChange()"
         if newName?
-            @tree.jstreeEl.jstree("rename_node", "##{uuid}", newName)
-            Note.updateNote uuid,
-                title: newName
-            , () =>
+            @tree.jstreeEl.jstree "rename_node", "##{uuid}", newName
+            Note.updateNote uuid, title: newName, (err) ->
+                alert "Server error occured" if err
 
     ###*
     # Only called by jsTree event "select_node.jstree"
     # Delete currently selected node.
     ###
     onTreeRemove: (note_uuid) =>
-        console.log "HomeView.onTreeRemove(#{note_uuid})"
-        if @currentNote and @currentNote.id == note_uuid
-            console.log "indirect deletion"
+        if @currentNote and @currentNote.id is note_uuid
             @currentNote.destroy()
         else
-            console.log "direct request for deletion on server"
-            Note.deleteNote(note_uuid , ->
-                console.log arguments
-            )
+            Note.deleteNote note_uuid, (err) ->
+                alert "Server error occured" if err
 
     ###*
     # Only called by jsTree event "select_node"
@@ -173,66 +179,48 @@ class exports.HomeView extends Backbone.View
     # note data.
     ###
     onTreeSelectionChg: (path, id, data) =>
+        @tree.widget.jstree "search", ""
+        @searchView.hide()
         @noteView.saveEditorContent()
 
-        progressBar = @progressBar
-        console.log "HomeView.selectFolder( path:#{path} - id:#{id})"
-        if id is undefined
-            #removing progress bar
-            @progress.remove()
-        else
-            progressBar.css("width", "70%")
-        path = "/#{path}" if path.indexOf("/")
+        path = "/#{path}" if path.indexOf "/"
         app.router.navigate "note#{path}", trigger: false
-        if id?
-            if id == "tree-node-all"
-                @progress.remove()
-                @noteFull.hide()
-            else
-                Note.getNote id, (note) =>
-                    @renderNote note, data
-                    @noteFull.show()
-        else
-            @progress.remove()
+
+        if not id? or id is "tree-node-all"
+            @helpInfo.show()
             @noteFull.hide()
-
-    ###*
-    # Force selection inside tree of note of a given uuid.
-    ###
-    selectNote: (note_uuid) =>
-        progressBar = @progressBar
-        console.log "HomeView.selectNote(#{note_uuid})"
-        progressBar.css("width","40%")
-        if note_uuid=="all"
-           note_uuid = 'tree-node-all'
-        @tree.selectNode note_uuid
-
-    ###*
-    # Fill note widget with note data.
-    ###
-    renderNote: (note, data) ->
-        progressBar = @progressBar
-        console.log "HomeView.renderNote()"
-        progressBar.css("width","90%")
-        note.url = "notes/#{note.id}"
-        @currentNote = note
-        # noteWidget = new NoteWidget note
-        # noteWidget.render()
-        @noteView.setModel(note, data)
-        #removing progress bar
-        @progress.remove()
-
+        else
+            @helpInfo.hide()
+            Note.getNote id, (note) =>
+                @renderNote note, data
+                @noteFull.show()
 
     ###*
     # When note is dropped, its old path and its new path are sent to server
     # for persistence.
     ###
-    # onNoteDropped: (newPath, oldPath, noteTitle, data) =>
     onNoteDropped: (nodeId, targetNodeId) ->
-        console.log "HomeView.onNoteDropped() id=" + nodeId + " targetNodeId=" + targetNodeId
         Note.updateNote nodeId, {parent_id:targetNodeId} , () ->
-                # @tree.deselect_all()
-                # @tree.select_node "##{targetNodeId}"
+            
 
+    ### Functions ###
 
+    ###*
+    # Force selection inside tree of note of a given uuid.
+    ###
+    selectNote: (noteId) =>
+        if not noteId? or noteId in ["all", 'tree-node-all'] or noteId.length is 0
+            @helpInfo.show()
+            @noteFull.hide()
+            @tree?.widget.jstree "search", ""
+            @searchView.hide()
+        else
+            @tree.selectNode noteId
 
+    ###*
+    # Fill note widget with note data.
+    ###
+    renderNote: (note, data) =>
+        note.url = "notes/#{note.id}"
+        @currentNote = note
+        @noteView.setModel(note, data)
