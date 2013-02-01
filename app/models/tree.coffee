@@ -64,7 +64,6 @@ Tree.moveOrRenameNode = (noteId, newTitle, newParentId, cbk) ->
 # USE FOR INIT DATABASE ONLY
 ###
 Tree.destroyAll = (callback) ->
-    console.log "test BJA"
     Tree.requestDestroy "all", callback
 
 
@@ -79,8 +78,6 @@ Tree.getOrCreate = (callback) ->
         if err
             send error: 'An error occured', 500
         else if trees.length == 0
-            console.log "create tree"
-            
             newDataTree =  new DataTree()
             Tree.create { struct: newDataTree.toJson(), type: "Note" }, (err,tree)->
                 Tree.dataTree = newDataTree
