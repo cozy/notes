@@ -403,6 +403,5 @@ describe "/notes/:id/attachments", ->
         it "Then you can't download it", (done) ->
             client.saveFile "notes/#{note6.id}/files/test.png", \
                              './test/test-get.png', (err, res) =>
-                should.exist err
-                
+                res.statusCode.should.equal 404
                 done()
