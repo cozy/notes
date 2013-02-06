@@ -45,9 +45,6 @@ note = new Note
     * One in your index to extract all note relevant to your search.
 """
 
-
-
-
 Note.create note, (err, finalNote) ->
     if err
         console.log err
@@ -66,4 +63,3 @@ Note.create note, (err, finalNote) ->
             tree.updateAttributes struct: dataTree.toJson(), (err) ->
                 console.log "Initialization succeeds."
                 process.exit(0)
-
