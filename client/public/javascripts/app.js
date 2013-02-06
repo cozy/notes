@@ -726,10 +726,12 @@ window.require.register("models/note", function(exports, require, module) {
         this.path = JSON.parse(this.path);
       }
       slugs = [];
-      _ref = this.path;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        dir = _ref[_i];
-        slugs.push(slugify(dir));
+      if (this.path != null) {
+        _ref = this.path;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          dir = _ref[_i];
+          slugs.push(slugify(dir));
+        }
       }
       this.slugPath = "all/" + slugs.join("/");
     }
@@ -1317,7 +1319,7 @@ window.require.register("views/note_view", function(exports, require, module) {
       });
       this.indentBtn.on("click", function() {
         _this.editor._addHistory();
-        return _this.editor.tab();
+        return _this.editor.shiftTab();
       });
       this.unIndentBtn.tooltip({
         placement: "right",
@@ -1325,7 +1327,7 @@ window.require.register("views/note_view", function(exports, require, module) {
       });
       this.unIndentBtn.on("click", function() {
         _this.editor._addHistory();
-        return _this.editor.shiftTab();
+        return _this.editor.tab();
       });
       this.markerListBtn.tooltip({
         placement: "right",
