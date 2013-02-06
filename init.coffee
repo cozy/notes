@@ -9,7 +9,7 @@ note = new Note
     title: "Tutorial"
     path: "[\"Tutorial\"]"
     content: """
-# Navigations Buttons
+# Navigation Buttons
 
 * plus button will create a new note as a child of currenlty selected note.
 * x button will delete currenlty selected note.
