@@ -52,17 +52,18 @@ Note.create note, (err, finalNote) ->
     if err
         console.log err
         console.log "Initialization failed (can't save note)"
-        process.exit(0)
+        process.exit 0
 
-    Tree.getOrCreate (err, tree) ->
-        if err
-            console.log err
-            console.log "Initialization failed (cannot update tree)"
-            process.exit(0)
-        dataTree = new DataTree tree.struct
-        dataTree.addNode finalNote
+    finalNote.index ["title", "content"], (err) ->
+        Tree.getOrCreate (err, tree) ->
+            if err
+                console.log err
+                console.log "Initialization failed (cannot update tree)"
+                process.exit(0)
+            dataTree = new DataTree tree.struct
+            dataTree.addNode finalNote
 
-        tree.updateAttributes struct: dataTree.toJson(), (err) ->
-            console.log "Initialization succeeds."
-            process.exit(0)
+            tree.updateAttributes struct: dataTree.toJson(), (err) ->
+                console.log "Initialization succeeds."
+                process.exit(0)
 
