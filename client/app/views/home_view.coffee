@@ -46,7 +46,7 @@ class exports.HomeView extends Backbone.View
             spacing_closed: 10
             togglerLength_closed: "100%"
             onresize_end: ->
-                drag.css "z-index","-1"
+                #drag.css "z-index","-1"
 
     # Load data for tree and render it.
     loadTree: (callback) ->
@@ -69,8 +69,8 @@ class exports.HomeView extends Backbone.View
     # the onresize_start because this one happens a bit latter what may be a pb.
     configureLayoutDrag: ->
         drag = $("#drag")
-        $(".ui-layout-resizer").bind 'mousedown', (e)->
-            drag.css("z-index","1")
+        $(".ui-layout-resizer").bind 'mousedown', (e) ->
+            #drag.css("z-index","1")
 
     # Resize editor and register resize listener.
     configureResize: ->
@@ -103,6 +103,11 @@ class exports.HomeView extends Backbone.View
         windowHeight = $(window).height()
         @$("#note-style").height(windowHeight - 140)
         @$("#editor").height(windowHeight - 240)
+        if windowHeight < 500
+            @$("#editor-button-bar").css "top", "80px"
+        else
+            @$("#editor-button-bar").css "top", "200px"
+            
 
     onSearch: (query) =>
         if query.length > 0
@@ -223,4 +228,4 @@ class exports.HomeView extends Backbone.View
     renderNote: (note, data) =>
         note.url = "notes/#{note.id}"
         @currentNote = note
-        @noteView.setModel(note, data)
+        @noteView.setModel note, data

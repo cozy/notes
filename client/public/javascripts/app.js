@@ -939,9 +939,7 @@ window.require.register("views/home_view", function(exports, require, module) {
         spacing_open: 10,
         spacing_closed: 10,
         togglerLength_closed: "100%",
-        onresize_end: function() {
-          return drag.css("z-index", "-1");
-        }
+        onresize_end: function() {}
       });
     };
 
@@ -967,9 +965,7 @@ window.require.register("views/home_view", function(exports, require, module) {
     HomeView.prototype.configureLayoutDrag = function() {
       var drag;
       drag = $("#drag");
-      return $(".ui-layout-resizer").bind('mousedown', function(e) {
-        return drag.css("z-index", "1");
-      });
+      return $(".ui-layout-resizer").bind('mousedown', function(e) {});
     };
 
     HomeView.prototype.configureResize = function() {
@@ -1008,7 +1004,12 @@ window.require.register("views/home_view", function(exports, require, module) {
       var windowHeight;
       windowHeight = $(window).height();
       this.$("#note-style").height(windowHeight - 140);
-      return this.$("#editor").height(windowHeight - 240);
+      this.$("#editor").height(windowHeight - 240);
+      if (windowHeight < 500) {
+        return this.$("#editor-button-bar").css("top", "80px");
+      } else {
+        return this.$("#editor-button-bar").css("top", "200px");
+      }
     };
 
     HomeView.prototype.onSearch = function(query) {
