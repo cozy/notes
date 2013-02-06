@@ -16,7 +16,8 @@ class exports.Note extends BaseModel
 
         @path = JSON.parse @path if typeof @path is "string"
         slugs = []
-        slugs.push slugify dir for dir in @path
+        if @path?
+            slugs.push slugify dir for dir in @path
         @slugPath = "all/" + slugs.join("/")
         
 
