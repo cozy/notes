@@ -11,13 +11,12 @@ load 'application'
 ###
 returnNotes = (err, notes) ->
     if err
-        console.log "retun ???????"
         console.log err
         send error: "Retrieve notes failed.", 500
     else
         # due to jugglingdb pb, arrays are stored as json
-        notes.forEach (nt)->
-            nt.path = JSON.parse nt.path
+        notes.forEach (note) ->
+            note.path = JSON.parse note.path
         send length: notes.length, rows: notes
 
 ###
