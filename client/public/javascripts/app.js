@@ -975,9 +975,11 @@ window.require.register("views/home_view", function(exports, require, module) {
 
     HomeView.prototype.configureSaving = function() {
       var _this = this;
-      return $(window).unload(function() {
-        return _this.noteView.saveEditorContent();
-      });
+      return $(window).unload = function() {
+        return _this.noteView.saveEditorContent(function() {
+          return console.log("note saved on closing");
+        });
+      };
     };
 
     /* Listeners
@@ -1147,7 +1149,9 @@ window.require.register("views/home_view", function(exports, require, module) {
         return this.noteFull.hide();
       } else {
         this.helpInfo.hide();
+        this.noteView.showLoading();
         return Note.getNote(id, function(note) {
+          _this.noteView.hideLoading();
           _this.renderNote(note, data);
           return _this.noteFull.show();
         });
@@ -1366,6 +1370,18 @@ window.require.register("views/note_view", function(exports, require, module) {
       return this.fileList.render();
     };
 
+    NoteView.prototype.showLoading = function() {
+      this.noteFullTitle.hide();
+      this.$('#editorIframe').hide();
+      return this.$("#note-style").spin();
+    };
+
+    NoteView.prototype.hideLoading = function() {
+      this.noteFullTitle.show();
+      this.$('#editorIframe').show();
+      return this.$("#note-style").spin();
+    };
+
     /**
     #  Display note title
     */
@@ -1380,7 +1396,7 @@ window.require.register("views/note_view", function(exports, require, module) {
     */
 
 
-    NoteView.prototype.saveEditorContent = function() {
+    NoteView.prototype.saveEditorContent = function(callback) {
       var _this = this;
       if ((this.model != null) && (this.editor != null) && (this.saveTimer != null)) {
         clearTimeout(this.saveTimer);
@@ -1390,7 +1406,10 @@ window.require.register("views/note_view", function(exports, require, module) {
           content: this.editor.getEditorContent()
         }, function() {
           _this.saveButton.addClass("active");
-          return _this.saveButton.spin();
+          _this.saveButton.spin();
+          if (callback != null) {
+            return callback();
+          }
         });
       }
     };

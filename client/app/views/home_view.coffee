@@ -79,8 +79,9 @@ class exports.HomeView extends Backbone.View
 
     # Save data when user leaves page.
     configureSaving: ->
-        $(window).unload =>
-            @noteView.saveEditorContent()
+        $(window).unload = =>
+            @noteView.saveEditorContent =>
+                console.log "note saved on closing"
 
     ### Listeners ###
     
@@ -196,7 +197,9 @@ class exports.HomeView extends Backbone.View
             @noteFull.hide()
         else
             @helpInfo.hide()
+            @noteView.showLoading()
             Note.getNote id, (note) =>
+                @noteView.hideLoading()
                 @renderNote note, data
                 @noteFull.show()
 
@@ -229,3 +232,4 @@ class exports.HomeView extends Backbone.View
         note.url = "notes/#{note.id}"
         @currentNote = note
         @noteView.setModel note, data
+

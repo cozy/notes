@@ -121,6 +121,19 @@ class exports.NoteView extends Backbone.View
         @fileList.configure @model
         @fileList.render()
         
+
+    # Hide title and editor, show spinner
+    showLoading: ->
+        @noteFullTitle.hide()
+        @$('#editorIframe').hide()
+        @$("#note-style").spin()
+
+    # Show title and editor, hide spinner
+    hideLoading: ->
+        @noteFullTitle.show()
+        @$('#editorIframe').show()
+        @$("#note-style").spin()
+
     ###*
     #  Display note title
     ###
@@ -130,14 +143,15 @@ class exports.NoteView extends Backbone.View
     ###*
     # Stop saving timer if any and force saving of editor content. 
     ###
-    saveEditorContent: =>
+    saveEditorContent: (callback) =>
         if @model? and @editor? and @saveTimer?
             clearTimeout @saveTimer
             @saveTimer = null
             @saveButton.spin 'small'
             Note.updateNote @model.id, content: @editor.getEditorContent(), =>
-                @saveButton.addClass("active")
+                @saveButton.addClass "active"
                 @saveButton.spin()
+                callback() if callback?
 
     # Display given content inside editor.
     # If no content is given, editor is cleared.
