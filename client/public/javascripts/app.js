@@ -1601,7 +1601,7 @@ window.require.register("views/templates/tree_buttons", function(exports, requir
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="tree-buttons"><div id="tree-create" class="button"><i class="icon-plus"></i></div><div id="tree-remove" class="button"><i class="icon-remove"></i></div><div id="tree-rename" class="button"><i class="icon-pencil"></i></div></div><div id="tree-top-buttons"><input id="tree-search-field" type="text" class="span2"/><i id="suppr-button" style="display: none" class="icon-remove-circle"></i></div><div id="my-notes"><img id="my-notes-pic" src="img/my-notes.png"/><div id="create-note"></div></div>');
+  buf.push('<div id="tree-buttons"><div id="tree-create" class="button"><i class="icon-plus"></i></div><div id="tree-rename" class="button"><i class="icon-pencil"></i></div><div id="tree-remove" class="button"><i class="icon-remove"></i></div></div><div id="tree-top-buttons"><input id="tree-search-field" type="text" class="span2"/><i id="suppr-button" style="display: none" class="icon-remove-circle"></i></div><div id="my-notes"><img id="my-notes-pic" src="img/my-notes.png"/><div id="create-note"></div></div>');
   }
   return buf.join("");
   };
