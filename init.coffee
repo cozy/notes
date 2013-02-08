@@ -9,40 +9,30 @@ note = new Note
     title: "Tutorial"
     path: "[\"Tutorial\"]"
     content: """
-# Navigation Buttons
+Cozy Notes is a simple yet powerful note manager. You structure efficiently your notes by easily toggling between titles and bullet points, formatting becomes incredibly fast. You also can search and attach files to your notes. 
 
-* plus button will create a new note as a child of currenlty selected note.
-* x button will delete currenlty selected note.
-* pencil button will allow you to rename currently selected note.
+# Navigation
 
-# Text structure
+Your notes can be organized following a tree structure. To create a “daughter” note simply hover over a note and press the “+” button. You can also alternate the tree structure by dragging and dropping notes in the tree. The “pencil” button allows you to rename the note while the “x” lets you delete it.
 
-* You can write bullet point paragraph (default).
-* You can write classic paragraph (indent backward).
-* You can write titles (indent forward).
-* There is the notion of level, levels are represented by identations.
-* Lines at one level are all bullet points or all titles, they can't be both.
-* Just type enter to add a new bullet point, a new line or a new title  of wich level of identation you set.
+To attach a file, simply click the paper clip in the top right corner.
 
-# Note Buttons
+# Formating your text:
 
-* First button on the left indents backward.
-* Second button indents forward.
-* Third button makes your current level becomes bullet points.
-* Fourth button makes your current level becomes titles.
-* Fifth button saves your note.
-* The trombon on the upper-right is there for file attachment, just click on it to attach a file to your note.
+* When you create a note, by default you are writing bullet point list.
+* Indenting a bullet point line makes it successively a classic paragraph, then a sub-level bullet. You can similarly un-indent.
+* You can indent successively a selection of several lines to implement a decreasing-level bullet list. 
+* Titles are created using the "change selection to title" button. This action makes every line of similar indent level a title within the same sub-section (under the previous title).
+* Indenting a title line makes it successively a simple text and a title of a different level. 
+* No line can be indented more than one level than the previous one.
+
+That covers pretty much it. Once used to it, I bet you will no longer want to use any other note editor ;-)
 
 # Keyboard shortcuts
 
-* Tab makes your bullet points becoming titles, your title becoming natural paragraph and your natural paragraph becoming bullet points.
-* Shift + tab makes the opposite.
+* Tab = indent
+* Shift + Tab = un-indent
 
-# Search field
-
-* Type keywords in search field, it will perform a double search:
-    * One in the tree, focusing on titles
-    * One in your index to extract all note relevant to your search.
 """
 
 Note.create note, (err, finalNote) ->
