@@ -9,6 +9,8 @@ note = new Note
     title: "Tutorial"
     path: "[\"Tutorial\"]"
     content: """
+# What is Cozy Notes ?
+
 Cozy Notes is a simple yet powerful note manager. You structure efficiently your notes by easily toggling between titles and bullet points, formatting becomes incredibly fast. You also can search and attach files to your notes. 
 
 # Navigation
