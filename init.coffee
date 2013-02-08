@@ -19,7 +19,7 @@ To attach a file, simply click the paper clip in the top right corner.
 
 # Formating your text:
 
-* When you create a note, by default you are writing a bullet point list.
+* When you create a note, by default you are writing bullet points.
 * Indenting a bullet point line makes it successively a classic paragraph, then a sub-level bullet. You can similarly un-indent.
 * You can indent successively a selection of several lines to implement a decreasing-level bullet point list. 
 * Titles are created using the "change selection to title" button. This action makes every line of similar indent level a title within the same sub-section (under the previous title).
