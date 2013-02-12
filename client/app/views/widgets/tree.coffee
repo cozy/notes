@@ -443,6 +443,23 @@ class exports.Tree
         else if !this.widget.jstree("get_selected")[0]
             tree = @jstreeEl.jstree("select_node", "#tree-node-all")
 
+
+    ###*
+     * Disable the hot key in jsTree, important when it is no longer the editor 
+     * which listen to the keystokes
+    ###
+    disable_hotkeys: () ->
+        @jstreeEl.jstree("disable_hotkeys")
+
+    ###*
+     * Enable the hot key in jsTree, important when it is the editor which
+     * listen to the keystokes
+    ###
+    enable_hotkeys: () ->
+        @jstreeEl.jstree("enable_hotkeys")
+
+    
+
     ###*
     # used by the .sort() method to be efficient with our structure
     ###
