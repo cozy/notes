@@ -34,6 +34,7 @@ class exports.NoteView extends Backbone.View
             #enablekeyboard: false
         @configureButtons()
         @setTitleListeners()
+        @setEditorFocusListener()
         @setSaveListeners()
 
         @fileList = new FileList @model, '#file-list'
@@ -43,7 +44,7 @@ class exports.NoteView extends Backbone.View
     # 3s and if the user didn't type anything, the content will be saved
     ###
     setSaveListeners: ->
-        @$("iframe").on "onKeyUp", () =>
+        @$("#editorIframe").on "onKeyUp", () =>
             id = @model.id
 
             clearTimeout @saveTimer
@@ -70,7 +71,13 @@ class exports.NoteView extends Backbone.View
                 @homeView.onNoteTitleChange @model.id, newName
                 @homeView.tree._updateSuggestionList "rename", newName, oldName
                 @updateBreadcrumbOnTitleChange newName
-        
+    
+    setEditorFocusListener : () ->
+        editorEl = document.getElementById('editorIframe')
+        editorEl.addEventListener('focus', @homeView.disableTreeHotkey, true)
+        editorEl.addEventListener('blur' , @homeView.enableTreeHotkey , true)
+        # $(editorEl).on 'focus', @homeView.disableTreeHotkey
+
     configureButtons: ->
         @indentBtn = @$("#indentBtn")
         @unIndentBtn = @$("#unIndentBtn")
@@ -160,6 +167,8 @@ class exports.NoteView extends Backbone.View
             @editor.setEditorContent(content)
         else
             @editor.deleteContent()
+
+
 
     ###*
     # create a breadcrumb showing a clickable way from the root to the current note

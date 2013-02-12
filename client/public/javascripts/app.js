@@ -906,6 +906,8 @@ window.require.define({"views/home_view": function(exports, require, module) {
         this.selectNote = __bind(this.selectNote, this);
         this.onTreeSelectionChg = __bind(this.onTreeSelectionChg, this);
         this.onTreeRemove = __bind(this.onTreeRemove, this);
+        this.enableTreeHotkey = __bind(this.enableTreeHotkey, this);
+        this.disableTreeHotkey = __bind(this.disableTreeHotkey, this);
         this.onNoteTitleChange = __bind(this.onNoteTitleChange, this);
         this.onTreeRename = __bind(this.onTreeRename, this);
         this.search = __bind(this.search, this);
@@ -1104,6 +1106,14 @@ window.require.define({"views/home_view": function(exports, require, module) {
         }
       };
 
+      HomeView.prototype.disableTreeHotkey = function() {
+        return this.tree.disable_hotkeys();
+      };
+
+      HomeView.prototype.enableTreeHotkey = function() {
+        return this.tree.enable_hotkeys();
+      };
+
       /**
       # Only called by jsTree event "select_node.jstree"
       # Delete currently selected node.
@@ -1244,6 +1254,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         this.editor = new CNeditor(this.$('#editorIframe')[0], this.onIFrameLoaded);
         this.configureButtons();
         this.setTitleListeners();
+        this.setEditorFocusListener();
         this.setSaveListeners();
         this.fileList = new FileList(this.model, '#file-list');
       }
@@ -1255,7 +1266,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
       NoteView.prototype.setSaveListeners = function() {
         var _this = this;
-        this.$("iframe").on("onKeyUp", function() {
+        this.$("#editorIframe").on("onKeyUp", function() {
           var id;
           id = _this.model.id;
           clearTimeout(_this.saveTimer);
@@ -1292,6 +1303,13 @@ window.require.define({"views/note_view": function(exports, require, module) {
             return _this.updateBreadcrumbOnTitleChange(newName);
           }
         });
+      };
+
+      NoteView.prototype.setEditorFocusListener = function() {
+        var editorEl;
+        editorEl = document.getElementById('editorIframe');
+        editorEl.addEventListener('focus', this.homeView.disableTreeHotkey, true);
+        return editorEl.addEventListener('blur', this.homeView.enableTreeHotkey, true);
       };
 
       NoteView.prototype.configureButtons = function() {
@@ -1566,9 +1584,9 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   buf.push(attrs({ 'id':('file-list') }));
   buf.push('></div></div><div');
   buf.push(attrs({ 'id':('editor-container') }));
-  buf.push('><iframe');
+  buf.push('><div');
   buf.push(attrs({ 'id':('editorIframe') }));
-  buf.push('></iframe></div>');
+  buf.push('></div></div>');
   }
   return buf.join("");
   };
@@ -2321,6 +2339,24 @@ window.require.define({"views/widgets/tree": function(exports, require, module) 
         } else if (!this.widget.jstree("get_selected")[0]) {
           return tree = this.jstreeEl.jstree("select_node", "#tree-node-all");
         }
+      };
+
+      /**
+       * Disable the hot key in jsTree, important when it is no longer the editor 
+       * which listen to the keystokes
+      */
+
+      Tree.prototype.disable_hotkeys = function() {
+        return this.jstreeEl.jstree("disable_hotkeys");
+      };
+
+      /**
+       * Enable the hot key in jsTree, important when it is the editor which
+       * listen to the keystokes
+      */
+
+      Tree.prototype.enable_hotkeys = function() {
+        return this.jstreeEl.jstree("enable_hotkeys");
       };
 
       /**

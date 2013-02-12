@@ -168,6 +168,14 @@ class exports.HomeView extends Backbone.View
             Note.updateNote uuid, title: newName, (err) ->
                 alert "Server error occured" if err
 
+
+    disableTreeHotkey: () =>
+        @tree.disable_hotkeys()
+
+
+    enableTreeHotkey: () =>
+        @tree.enable_hotkeys()
+
     ###*
     # Only called by jsTree event "select_node.jstree"
     # Delete currently selected node.
