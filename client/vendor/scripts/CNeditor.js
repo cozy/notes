@@ -396,11 +396,12 @@ selection.normalize = function(range) {
   range.setStart(newStartBP.cont, newStartBP.offset);
   if (isCollapsed) {
     range.collapse(true);
+    newEndBP = newStartBP;
   } else {
     newEndBP = selection.normalizeBP(range.endContainer, range.endOffset);
     range.setEnd(newEndBP.cont, newEndBP.offset);
   }
-  return range;
+  return [newStartBP, newEndBP];
 };
 
 /**
@@ -572,6 +573,10 @@ selection.getLineDiv = function(cont, offset) {
   return startDiv;
 };
 
+selection.findClosestTextNode = function(targetNode) {
+  return [node, offset];
+};
+
 exports.selection = selection;
 /* ------------------------------------------------------------------------
 # CLASS FOR THE COZY NOTE EDITOR
@@ -584,7 +589,7 @@ exports.selection = selection;
 #                  is set to the editorCtrl (callBack.call(this))
 # properties & methods :
 #   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
-#   _keyPressListener : (e) =>
+#   _keyDownCallBack : (e) =>
 #   _insertLineAfter  : (param) ->
 #   _insertLineBefore : (param) ->
 #   
@@ -731,14 +736,16 @@ exports.CNeditor = (function() {
   */
 
   function CNeditor(editorTarget, callBack) {
-    var iframe$,
+    var cssEl, cssLink, editor_head$, iframe$,
       _this = this;
     this.editorTarget = editorTarget;
     this._processPaste = __bind(this._processPaste, this);
 
     this._waitForPasteData = __bind(this._waitForPasteData, this);
 
-    this._keyPressListener = __bind(this._keyPressListener, this);
+    this._keyUpCorrection = __bind(this._keyUpCorrection, this);
+
+    this._keyDownCallBack = __bind(this._keyDownCallBack, this);
 
     if (this.editorTarget.nodeName === "IFRAME") {
       iframe$ = $(this.editorTarget);
@@ -772,7 +779,14 @@ exports.CNeditor = (function() {
         };
         _this._lastKey = null;
         _this.editorBody$.prop('__editorCtl', _this);
-        _this.linesDiv.addEventListener('keydown', _this._keyPressListener, true);
+        _this.linesDiv.addEventListener('keydown', _this._keyDownCallBack, true);
+        _this.isSafari = Object.prototype.toString.call(window.HTMLElement);
+        _this.isSafari = _this.isSafari.indexOf('Constructor') > 0;
+        _this.isChrome = !_this.isSafari && 'WebkitTransform' in document.documentElement.style;
+        _this.isChromeOrSafari = _this.isChrome || _this.isSafari;
+        if (_this.isChromeOrSafari) {
+          _this.linesDiv.addEventListener('keyup', _this._keyUpCorrection, false);
+        }
         _this.linesDiv.addEventListener('mouseup', function() {
           return _this.newPosition = true;
         }, true);
@@ -789,6 +803,64 @@ exports.CNeditor = (function() {
         return _this;
       });
       this.editorTarget.src = '';
+    } else if (this.editorTarget.nodeName === "DIV") {
+      iframe$ = $(this.editorTarget);
+      this.editorBody$ = iframe$;
+      this.document = $(document);
+      editor_head$ = $(document).find("head");
+      cssLink = '<link id="editorCSS" ';
+      cssLink += 'href="stylesheets/CNeditor.css" rel="stylesheet">';
+      cssEl = $(cssLink);
+      editor_head$.append(cssEl);
+      this.linesDiv = document.createElement('div');
+      this.linesDiv.setAttribute('id', 'editor-lines');
+      this.linesDiv.setAttribute('contenteditable', 'true');
+      this.editorBody$.append(this.linesDiv);
+      this.getEditorSelection = function() {
+        return rangy.getSelection();
+      };
+      this.saveEditorSelection = function() {
+        var sel;
+        sel = rangy.getSelection();
+        return rangy.serializeSelection(sel, true, this.linesDiv);
+      };
+      this._initClipBoard();
+      this._lines = {};
+      this.newPosition = true;
+      this._highestId = 0;
+      this._deepest = 1;
+      this._firstLine = null;
+      this._history = {
+        index: 0,
+        history: [null],
+        historySelect: [null],
+        historyScroll: [null],
+        historyPos: [null]
+      };
+      this._lastKey = null;
+      this.editorBody$.prop('__editorCtl', this);
+      this.linesDiv.addEventListener('keydown', this._keyDownCallBack, true);
+      this.isSafari = Object.prototype.toString.call(window.HTMLElement);
+      this.isSafari = this.isSafari.indexOf('Constructor') > 0;
+      this.isChrome = !this.isSafari && 'WebkitTransform' in document.documentElement.style;
+      this.isChromeOrSafari = this.isChrome || this.isSafari;
+      if (this.isChromeOrSafari) {
+        this.linesDiv.addEventListener('keyup', this._keyUpCorrection, false);
+      }
+      this.linesDiv.addEventListener('mouseup', function() {
+        return _this.newPosition = true;
+      }, true);
+      this.editorBody$.on('keyup', function() {
+        return iframe$.trigger(jQuery.Event("onKeyUp"));
+      });
+      this.editorBody$.on('click', function(event) {
+        return _this._lastKey = null;
+      });
+      this.editorBody$.on('paste', function(event) {
+        return _this.paste(event);
+      });
+      callBack.call(this);
+      return this;
     }
   }
 
@@ -998,7 +1070,7 @@ exports.CNeditor = (function() {
   };
 
   /* ------------------------------------------------------------------------
-  #   _keyPressListener
+  #   _keyDownCallBack
   # 
   # The listener of keyPress event on the editor's iframe... the king !
   */
@@ -1020,8 +1092,8 @@ exports.CNeditor = (function() {
   */
 
 
-  CNeditor.prototype._keyPressListener = function(e) {
-    var keyCode, metaKeyCode, range, sel, shortcut, _ref;
+  CNeditor.prototype._keyDownCallBack = function(e) {
+    var keyCode, metaKeyCode, shortcut, _ref;
     _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
     shortcut = metaKeyCode + '-' + keyCode;
     switch (e.keyCode) {
@@ -1039,22 +1111,29 @@ exports.CNeditor = (function() {
       this._addHistory();
     }
     this._lastKey = shortcut;
-    if (this.newPosition && (shortcut === '-other' || shortcut === '-space' || shortcut === 'Ctrl-V' || shortcut === '-suppr' || shortcut === '-backspace' || shortcut === '-return')) {
-      this.newPosition = false;
-      sel = this.getEditorSelection();
-      range = sel.getRangeAt(0);
-      selection.normalize(range);
-    }
+    this.currentSel = {
+      sel: null,
+      range: null,
+      startLine: null,
+      endLine: null,
+      rangeIsStartLine: null,
+      rangeIsEndLine: null,
+      startBP: null,
+      endBP: null
+    };
     if ((keyCode === 'left' || keyCode === 'up' || keyCode === 'right' || keyCode === 'down' || keyCode === 'pgUp' || keyCode === 'pgDwn' || keyCode === 'end' || keyCode === 'home' || keyCode === 'return' || keyCode === 'suppr' || keyCode === 'backspace') && (shortcut !== 'CtrlShift-down' && shortcut !== 'CtrlShift-up' && shortcut !== 'CtrlShift-right' && shortcut !== 'CtrlShift-left')) {
       this.newPosition = true;
     }
-    this.currentSel = null;
     switch (shortcut) {
       case '-return':
+        this.updateCurrentSelIsStartIsEnd();
         this._return();
+        this.newPosition = false;
         return e.preventDefault();
       case '-backspace':
+        this.updateCurrentSelIsStartIsEnd();
         this._backspace();
+        this.newPosition = false;
         return e.preventDefault();
       case '-tab':
         this.tab();
@@ -1063,7 +1142,9 @@ exports.CNeditor = (function() {
         this.shiftTab();
         return e.preventDefault();
       case '-suppr':
-        return this._suppr(e);
+        this.updateCurrentSelIsStartIsEnd();
+        this._suppr(e);
+        return this.newPosition = false;
       case 'CtrlShift-down':
         this._moveLinesDown();
         return e.preventDefault();
@@ -1077,6 +1158,12 @@ exports.CNeditor = (function() {
         this.toggleType();
         e.preventDefault();
         return console.log('EVENT (editor)');
+      case '-other':
+      case '-space':
+        if (this.newPosition) {
+          this.updateCurrentSel();
+        }
+        return this.newPosition = false;
       case 'Ctrl-V':
         return true;
       case 'Ctrl-S':
@@ -1091,6 +1178,178 @@ exports.CNeditor = (function() {
     }
   };
 
+  /**
+   * updates @currentSel =
+          sel              : {Selection} of the editor's document
+          range            : sel.getRangeAt(0)
+          startLine        : the 1st line of the current selection
+          endLine          : the last line of the current selection
+          rangeIsStartLine : {boolean} true if the selection ends at 
+                             the end of its line : NOT UPDATE HERE - see
+                             updateCurrentSelIsStartIsEnd
+          rangeIsEndLine   : {boolean} true if the selection starts at 
+                             the start of its line : NOT UPDATE HERE - see
+                             updateCurrentSelIsStartIsEnd
+          theoricalRange   : theoricalRange : normalization of the selection 
+                             should put each break points in a node text. It 
+                             doesn't work in chrome due to a bug. We therefore
+                             store here the "theorical range" that the
+                             selection should match. It means that if you are
+                             not in chrome this is equal to range.
+     If the caret position has just changed (@newPosition == true) then we
+     normalise the selection (put its break points in text nodes)
+     We also normalize if in Chrome because in order to have a range wit
+     break points in text nodes.
+   * @return {object} @currentSel
+  */
+
+
+  CNeditor.prototype.updateCurrentSel = function() {
+    var endLine, newEndBP, newStartBP, range, sel, startLine, theoricalRange, _ref;
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    if (this.newPosition || this.isChromeOrSafari) {
+      _ref = selection.normalize(range), newStartBP = _ref[0], newEndBP = _ref[1];
+      theoricalRange = document.createRange();
+      theoricalRange.setStart(newStartBP.cont, newStartBP.offset);
+      theoricalRange.setEnd(newEndBP.cont, newEndBP.offset);
+    } else {
+      theoricalRange = range;
+    }
+    startLine = this._lines[selection.getLineDiv(range.startContainer).id];
+    endLine = this._lines[selection.getLineDiv(range.endContainer).id];
+    this.currentSel = {
+      sel: sel,
+      range: range,
+      startLine: startLine,
+      endLine: endLine,
+      rangeIsStartLine: null,
+      rangeIsEndLine: null,
+      theoricalRange: theoricalRange
+    };
+    return this.currentSel;
+  };
+
+  /**
+   * updates @currentSel and check if range is at the start of begin of the
+   * corresponding line. 
+   * @currentSel =
+          sel              : {Selection} of the editor's document
+          range            : sel.getRangeAt(0)
+          startLine        : the 1st line of the current selection
+          endLine          : the last line of the current selection
+          rangeIsStartLine : {boolean} true if the selection ends at 
+                             the end of its line.
+          rangeIsEndLine   : {boolean} true if the selection starts at 
+                             the start of its line.
+          theoricalRange   : theoricalRange : normalization of the selection 
+                             should put each break points in a node text. It 
+                             doesn't work in chrome due to a bug. We therefore
+                             store here the "theorical range" that the
+                             selection should match. It means that if you are
+                             not in chrome this is equal to range.
+     If the caret position has just changed (@newPosition == true) then we
+     normalise the selection (put its break points in text nodes)
+     We also normalize if in Chrome because in order to have a range wit
+     break points in text nodes.
+   * @return {object} @currentSel
+  */
+
+
+  CNeditor.prototype.updateCurrentSelIsStartIsEnd = function() {
+    var div, endContainer, endLine, initialEndOffset, initialStartOffset, isEnd, isStart, newEndBP, newStartBP, noMatter, range, sel, startContainer, startLine, theoricalRange, _ref, _ref1, _ref2;
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    if (this.newPosition || this.isChromeOrSafari) {
+      _ref = selection.normalize(range), newStartBP = _ref[0], newEndBP = _ref[1];
+      theoricalRange = document.createRange();
+      theoricalRange.setStart(newStartBP.cont, newStartBP.offset);
+      theoricalRange.setEnd(newEndBP.cont, newEndBP.offset);
+    } else {
+      theoricalRange = range;
+    }
+    startContainer = range.startContainer;
+    endContainer = range.endContainer;
+    initialStartOffset = range.startOffset;
+    initialEndOffset = range.endOffset;
+    _ref1 = selection.getLineDivIsStartIsEnd(startContainer, initialStartOffset), div = _ref1.div, isStart = _ref1.isStart, noMatter = _ref1.noMatter;
+    startLine = this._lines[div.id];
+    _ref2 = selection.getLineDivIsStartIsEnd(endContainer, initialEndOffset), div = _ref2.div, noMatter = _ref2.noMatter, isEnd = _ref2.isEnd;
+    endLine = this._lines[div.id];
+    this.currentSel = {
+      sel: sel,
+      range: range,
+      startLine: startLine,
+      endLine: endLine,
+      rangeIsStartLine: isStart,
+      rangeIsEndLine: isEnd,
+      theoricalRange: theoricalRange
+    };
+    return this.currentSel;
+  };
+
+  /**
+   * This function is called only if in Chrome, because the insertion of a caracter
+   * by the browser may out of a span. 
+   * This is du to a bug in Chrome : you can create a range with its start 
+   * break point in an empty span. But if you add this range to the selection,
+   * then this latter will not respect your range and its start break point 
+   * will be outside the range. When a key is pressed to insert a caracter,
+   * the browser inserts it at the start break point, ie outside the span...
+   * this function detects after each keyup is there is a text node outside a
+   * span and move its content and the carret.
+   * @param  {Event} e The key event
+  */
+
+
+  CNeditor.prototype._keyUpCorrection = function(e) {
+    var brNode, curSel, i, l, line, newSpan, node, nodes, t, _ref, _ref1, _ref2;
+    curSel = this.updateCurrentSel();
+    line = curSel.startLine.line$[0];
+    nodes = line.childNodes;
+    l = nodes.length;
+    i = 0;
+    while (i < l) {
+      node = nodes[i];
+      if (node.nodeName === '#text') {
+        t = node.textContent;
+        if (node.previousSibling) {
+          if ((_ref = node.previousSibling.nodeName) === 'SPAN' || _ref === 'A') {
+            node.previousSibling.textContent += t;
+          } else {
+            throw new Error('A line should be constituted of \
+                            only <span> and <a>');
+          }
+        } else if (node.nextSibling) {
+          if ((_ref1 = node.nextSibling.nodeName) === 'SPAN' || _ref1 === 'A') {
+            node.nextSibling.textContent = t + node.nextSibling.textContent;
+          } else if ((_ref2 = node.nextSibling.nodeName) === 'BR') {
+            newSpan = document.createElement('span');
+            newSpan.textContent = t;
+            line.replaceChild(newSpan, node);
+            l += 1;
+            i += 1;
+          } else {
+            throw new Error('A line should be constituted of \
+                            only <span> and <a>');
+          }
+        } else {
+          throw new Error('A line should be constituted of a final\
+                            <br/>');
+        }
+        line.removeChild(node);
+        l -= 1;
+      } else {
+        i += 1;
+      }
+    }
+    if (nodes[l - 1].nodeName !== 'BR') {
+      brNode = document.createElement('br');
+      line.appendChild(brNode);
+    }
+    return true;
+  };
+
   /* ------------------------------------------------------------------------
   #  _suppr :
   # 
@@ -1100,12 +1359,12 @@ exports.CNeditor = (function() {
 
   CNeditor.prototype._suppr = function(event) {
     var range, startLine, startOffset, textNode, txt;
-    this._findLinesAndIsStartIsEnd();
     startLine = this.currentSel.startLine;
     if (this.currentSel.range.collapsed) {
       if (this.currentSel.rangeIsEndLine) {
         if (startLine.lineNext !== null) {
           this.currentSel.range.setEndBefore(startLine.lineNext.line$[0].firstChild);
+          this.currentSel.theoricalRange = this.currentSel.range;
           this.currentSel.endLine = startLine.lineNext;
           this._deleteMultiLinesSelections();
         } else {
@@ -1137,22 +1396,18 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._backspace = function() {
-    var cont, offset, range, sel, startCont, startLine, startOffset, textNode, txt, _ref;
-    this._findLinesAndIsStartIsEnd();
+    var cloneRg, range, sel, startLine, startOffset, textNode, txt;
     sel = this.currentSel;
     startLine = sel.startLine;
     if (sel.range.collapsed) {
       if (sel.rangeIsStartLine) {
         if (startLine.linePrev !== null) {
-          sel.range.setStartBefore(startLine.linePrev.line$[0].lastChild);
+          cloneRg = sel.range.cloneRange();
+          cloneRg.setStartBefore(startLine.linePrev.line$[0].lastChild);
+          selection.normalize(cloneRg);
+          this.currentSel.theoricalRange = cloneRg;
           sel.startLine = startLine.linePrev;
-          startCont = sel.range.startContainer;
-          startOffset = sel.range.startOffset;
-          _ref = selection.normalizeBP(startCont, startOffset), cont = _ref.cont, offset = _ref.offset;
           this._deleteMultiLinesSelections();
-          range = rangy.createRange();
-          range.collapseToPoint(cont, offset);
-          this.currentSel.sel.setSingleRange(range);
         }
       } else {
         textNode = sel.range.startContainer;
@@ -1567,7 +1822,6 @@ exports.CNeditor = (function() {
 
   CNeditor.prototype._return = function() {
     var currSel, endLine, endOfLineFragment, newLine, range4sel, startLine;
-    this._findLinesAndIsStartIsEnd();
     currSel = this.currentSel;
     startLine = currSel.startLine;
     endLine = currSel.endLine;
@@ -1577,8 +1831,7 @@ exports.CNeditor = (function() {
       currSel.range.deleteContents();
     } else {
       this._deleteMultiLinesSelections();
-      this._findLinesAndIsStartIsEnd();
-      currSel = this.currentSel;
+      currSel = this.updateCurrentSelIsStartIsEnd();
       startLine = currSel.startLine;
     }
     if (currSel.rangeIsEndLine) {
@@ -1599,7 +1852,7 @@ exports.CNeditor = (function() {
         targetLineDepthRel: startLine.lineDepthRel
       });
       range4sel = rangy.createRange();
-      range4sel.collapseToPoint(startLine.line$[0].firstChild, 0);
+      range4sel.collapseToPoint(startLine.line$[0].firstChild.firstChild, 0);
       return currSel.sel.setSingleRange(range4sel);
     } else {
       currSel.range.setEndBefore(startLine.line$[0].lastChild);
@@ -1613,7 +1866,7 @@ exports.CNeditor = (function() {
         fragment: endOfLineFragment
       });
       range4sel = rangy.createRange();
-      range4sel.collapseToPoint(newLine.line$[0].firstChild, 0);
+      range4sel.collapseToPoint(newLine.line$[0].firstChild.firstChild, 0);
       currSel.sel.setSingleRange(range4sel);
       return this.currentSel = null;
     }
@@ -1715,9 +1968,15 @@ exports.CNeditor = (function() {
   /**
   # Delete the user multi line selection :
   #    * The 2 lines (selected of given in param) must be distinct
-  #    * If no params, @currentSel will be used to find the lines to delete
-  #    * Carret is positioned at the end of the line before startLine.
-  #    * startLine, endLine and lines between are deleted
+  #    * If no params :
+  #        - @currentSel.theoricalRange will the range used to find the  
+  #          lines to delete. 
+  #        - Only the range is deleted, not the beginning of startline nor the
+  #          end of endLine
+  #        - the caret is positionned at the firts break point of range.
+  #    * if startLine and endLine is given
+  #       - the whole lines from start and endLine are deleted, both included.
+  #       - the caret position is not modified
   # @param  {[line]} startLine [optional] if exists, the whole line will be deleted
   # @param  {[line]} endLine   [optional] if exists, the whole line will be deleted
   # @return {[none]}           [nothing]
@@ -1725,7 +1984,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
-    var curSel, deltaDepth, endLineDepth, endOfLineFragment, nextEndLine, prevStartLine, range, replaceCaret, startContainer, startLineDepth, startOffset;
+    var deltaDepth, endLineDepth, endOfLineFragment, range, replaceCaret, startContainer, startLineDepth, startOffset;
     if (startLine === null || endLine === null) {
       throw new Error('CEeditor._deleteMultiLinesSelections called with a null param');
     }
@@ -1734,18 +1993,11 @@ exports.CNeditor = (function() {
       selection.cleanSelection(startLine, endLine, range);
       replaceCaret = false;
     } else {
-      curSel = this.currentSel;
-      range = curSel.range;
+      range = this.currentSel.theoricalRange;
       startContainer = range.startContainer;
       startOffset = range.startOffset;
-      startLine = curSel.startLine;
-      endLine = curSel.endLine;
-      if (startLine != null) {
-        prevStartLine = startLine.linePrev;
-      }
-      if (endLine != null) {
-        nextEndLine = endLine.lineNext;
-      }
+      startLine = this.currentSel.startLine;
+      endLine = this.currentSel.endLine;
       replaceCaret = true;
     }
     startLineDepth = startLine.lineDepthAbs;
@@ -1893,84 +2145,6 @@ exports.CNeditor = (function() {
     var newLine;
     newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, null, p.sourceLine, p.fragment);
     return newLine;
-  };
-
-  /* ------------------------------------------------------------------------
-  #  _endDiv
-  #  
-  # Finds :
-  #   First and last line of selection. 
-  # Remark :
-  #   Only the first range of the selections is taken into account.
-  # Returns : 
-  #   sel : the selection
-  #   range : the 1st range of the selections
-  #   startLine : the 1st line of the range
-  #   endLine : the last line of the range
-  */
-
-
-  CNeditor.prototype._findLines = function() {
-    var endLine, range, sel, startLine;
-    if (this.currentSel === null) {
-      sel = this.getEditorSelection();
-      range = sel.getRangeAt(0);
-      startLine = this._lines[selection.getLineDiv(range.startContainer).id];
-      endLine = this._lines[selection.getLineDiv(range.endContainer).id];
-      this.currentSel = {
-        sel: sel,
-        range: range,
-        startLine: startLine,
-        endLine: endLine,
-        rangeIsStartLine: null,
-        rangeIsEndLine: null
-      };
-    }
-    return this.currentSel;
-  };
-
-  /* ------------------------------------------------------------------------
-  #  _findLinesAndIsStartIsEnd
-  # 
-  # Finds :
-  #   first and last line of selection 
-  #   wheter the selection starts at the beginning of startLine or not
-  #   wheter the selection ends at the end of endLine or not
-  # 
-  # Remark :
-  #   Only the first range of the selections is taken into account.
-  #
-  # Returns : 
-  #   sel   : the selection
-  #   range : the 1st range of the selections
-  #   startLine : the 1st line of the range
-  #   endLine   : the last line of the range
-  #   rangeIsEndLine   : true if the range ends at the end of the last line
-  #   rangeIsStartLine : true if the range starts at the start of 1st line
-  */
-
-
-  CNeditor.prototype._findLinesAndIsStartIsEnd = function() {
-    var div, endContainer, endLine, initialEndOffset, initialStartOffset, isEnd, isStart, noMatter, range, sel, startContainer, startLine, _ref, _ref1;
-    sel = this.getEditorSelection();
-    range = sel.getRangeAt(0);
-    startContainer = range.startContainer;
-    endContainer = range.endContainer;
-    initialStartOffset = range.startOffset;
-    initialEndOffset = range.endOffset;
-    _ref = selection.getLineDivIsStartIsEnd(startContainer, initialStartOffset), div = _ref.div, isStart = _ref.isStart, noMatter = _ref.noMatter;
-    startLine = this._lines[div.id];
-    _ref1 = selection.getLineDivIsStartIsEnd(endContainer, initialEndOffset), div = _ref1.div, noMatter = _ref1.noMatter, isEnd = _ref1.isEnd;
-    endLine = this._lines[div.id];
-    this.currentSel = {
-      sel: sel,
-      range: range,
-      startLine: startLine,
-      endLine: endLine,
-      rangeIsStartLine: isStart,
-      rangeIsEndLine: isEnd
-    };
-    return this.currrentSel;
   };
 
   /*  -----------------------------------------------------------------------
@@ -2406,7 +2580,7 @@ exports.CNeditor = (function() {
   CNeditor.prototype.paste = function(event) {
     var mySandBox, range, sel;
     mySandBox = this.clipboard;
-    this._findLinesAndIsStartIsEnd();
+    this.updateCurrentSelIsStartIsEnd();
     range = rangy.createRange();
     range.selectNodeContents(mySandBox);
     sel = this.getEditorSelection();
@@ -2485,7 +2659,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._processPaste = function() {
-    var absDepth, caretOffset, caretTextNodeTarget, currSel, currentLineFrag, domWalkContext, dummyLine, elToInsert, endLine, endOffset, endTargetLineFrag, firstAddedLine, frag, htmlStr, lineElements, lineNextStartLine, newText, parendDiv, parent, range, sandbox, secondAddedLine, startLine, startOffset, targetNode, targetText, _i, _len, _ref;
+    var absDepth, breakPoint, caretOffset, caretTextNodeTarget, currSel, currentLineFrag, domWalkContext, dummyLine, elToInsert, endLine, endOffset, endTargetLineFrag, firstAddedLine, frag, htmlStr, lineElements, lineNextStartLine, newText, parendDiv, parent, range, sandbox, secondAddedLine, startLine, startOffset, targetNode, targetText, _i, _len, _ref;
     sandbox = this.clipboard;
     currSel = this.currentSel;
     sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
@@ -2533,8 +2707,9 @@ exports.CNeditor = (function() {
     } else {
       this._deleteMultiLinesSelections();
       selection.normalize(currSel.range);
-      this._findLinesAndIsStartIsEnd();
-      currSel = this.currentSel;
+      this.newPosition = true;
+      currSel = this.updateCurrentSelIsStartIsEnd();
+      this.newPosition = false;
       startLine = currSel.startLine;
     }
     /* 5- Insert first line of the frag in the target line
@@ -2546,6 +2721,11 @@ exports.CNeditor = (function() {
 
     targetNode = currSel.range.startContainer;
     startOffset = currSel.range.startOffset;
+    if (this.isChromeOrSafari && targetNode.nodeName !== '#text') {
+      breakPoint = selection.normalizeBP(targetNode, startOffset);
+      targetNode = breakPoint.cont;
+      startOffset = breakPoint.offset;
+    }
     endOffset = targetNode.length - startOffset;
     if (frag.childNodes.length > 0) {
       lineElements = Array.prototype.slice.call(frag.firstChild.childNodes);

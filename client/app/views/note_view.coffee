@@ -151,7 +151,7 @@ class exports.NoteView extends Backbone.View
             Note.updateNote @model.id, content: @editor.getEditorContent(), =>
                 @saveButton.addClass "active"
                 @saveButton.spin()
-                callback() if callback?
+                callback() if typeof(callback) == 'function'
 
     # Display given content inside editor.
     # If no content is given, editor is cleared.
