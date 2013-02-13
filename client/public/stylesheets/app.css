@@ -6360,543 +6360,6 @@ p {
 
 
 
-@font-face {
-  font-family: main;
-  src: url("../fonts/signika-regular.ttf");
-}
-#__ed-iframe-html {
-  background-color: #fafafa;
-}
-#__ed-iframe-body {
-  font-family: main;
-  overflow: auto;
-  box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  position: relative;
-  left: 0px;
-  top: 0px;
-  color: #525252;
-  background-color: #fafafa;
-  line-height: 18px;
-  font: normal 13px/18px main, "Helvetica Neue", Arial, Helvetica, sans-serif;
-  font-family: main;
-}
-p {
-  margin-top: 0px;
-  margin-bottom: 0px;
-  margin-left: 0px;
-  margin-right: 0px;
-  color: #333055;
-}
-dl {
-  margin: 0;
-  padding: 0;
-}
-dt {
-  margin: 0;
-  padding: 0;
-}
-ul,
-ol {
-  margin: 3px 0 0 0;
-  padding: 0;
-  list-style-type: none;
-}
-li {
-  margin: 0;
-  padding: 0;
-  list-style-type: circle;
-}
-dd {
-  margin-left: 32px;
-}
-.Th-1 {
-  padding-left: 5px;
-  margin-left: 0px;
-  width: 100%;
-  box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  -webkit-box-sizing: border-box;
-  font-weight: bold;
-  font-variant: small-caps;
-  font-size: 16px;
-  color: #329ef7;
-  border-bottom: 1px solid #dadada;
-  margin-top: 30px;
-  margin-bottom: 5px;
-  padding-bottom: 8px;
-  counter-reset: section4;
-  counter-reset: section3;
-  counter-reset: section2;
-  counter-increment: section1;
-}
-.To-1 {
-  margin-left: 20px;
-  counter-increment: list1;
-}
-.Tu-1 {
-  margin-left: 20px;
-  margin-top: 2px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-1,
-.Lo-1 {
-  padding-left: 22px;
-}
-.Lh-1 {
-  padding-left: 5px;
-}
-.Th-2 {
-  padding-left: 20px;
-  margin-left: 0px;
-  margin-top: 20px;
-  font-weight: bold;
-  font-size: 15px;
-  color: #3a3a3a;
-  padding-bottom: 6px;
-  counter-reset: section4;
-  counter-reset: section3;
-  counter-increment: section2;
-}
-.To-2 {
-  margin-left: 40px;
-  counter-increment: list1;
-}
-.Tu-2 {
-  margin-left: 40px;
-  margin-top: 2px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-2,
-.Lo-2 {
-  padding-left: 40px;
-}
-.Lh-2 {
-  padding-left: 20px;
-}
-.Th-3 {
-  padding-left: 40px;
-  margin-left: 0px;
-  margin-top: 10px;
-  font-weight: bold;
-  font-size: 13px;
-  padding-bottom: 4px;
-  counter-reset: section4;
-  counter-increment: section3;
-}
-.To-3 {
-  margin-left: 60px;
-  counter-increment: list1;
-}
-.Tu-3 {
-  margin-left: 60px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-3,
-.Lo-3 {
-  padding-left: 60px;
-}
-.Lh-3 {
-  padding-left: 40px;
-}
-.Th-4 {
-  padding-left: 60px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-  counter-increment: section4;
-}
-.To-4 {
-  margin-left: 80px;
-  counter-increment: list1;
-}
-.Tu-4 {
-  margin-left: 80px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-4,
-.Lo-4 {
-  padding-left: 80px;
-}
-.Lh-4 {
-  padding-left: 60px;
-}
-.Th-5 {
-  padding-left: 80px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-5 {
-  margin-left: 100px;
-  counter-increment: list1;
-}
-.Tu-5 {
-  margin-left: 100px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-5,
-.Lo-5 {
-  padding-left: 100px;
-}
-.Lh-5 {
-  padding-left: 80px;
-}
-.Th-6 {
-  padding-left: 100px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-6 {
-  margin-left: 120px;
-  counter-increment: list1;
-}
-.Tu-6 {
-  margin-left: 120px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-6,
-.Lo-6 {
-  padding-left: 120px;
-}
-.Lh-6 {
-  padding-left: 100px;
-}
-.Th-7 {
-  padding-left: 120px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-7 {
-  margin-left: 140px;
-  counter-increment: list1;
-}
-.Tu-7 {
-  margin-left: 140px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-7,
-.Lo-7 {
-  padding-left: 140px;
-}
-.Lh-7 {
-  padding-left: 120px;
-}
-.Th-8 {
-  padding-left: 140px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-8 {
-  margin-left: 160px;
-  counter-increment: list1;
-}
-.Tu-8 {
-  margin-left: 160px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-8,
-.Lo-8 {
-  padding-left: 160px;
-}
-.Lh-8 {
-  padding-left: 140px;
-}
-.Th-9 {
-  padding-left: 160px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-9 {
-  margin-left: 180px;
-  counter-increment: list1;
-}
-.Tu-9 {
-  margin-left: 180px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-9,
-.Lo-9 {
-  padding-left: 180px;
-}
-.Lh-9 {
-  padding-left: 160px;
-}
-.Th-10 {
-  padding-left: 180px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-10 {
-  margin-left: 200px;
-  counter-increment: list1;
-}
-.Tu-10 {
-  margin-left: 200px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-10,
-.Lo-10 {
-  padding-left: 200px;
-}
-.Lh-10 {
-  padding-left: 180px;
-}
-.Th-11 {
-  padding-left: 200px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-11 {
-  margin-left: 220px;
-  counter-increment: list1;
-}
-.Tu-11 {
-  margin-left: 220px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-11,
-.Lo-11 {
-  padding-left: 220px;
-}
-.Lh-11 {
-  padding-left: 200px;
-}
-.Th-12 {
-  padding-left: 220px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-12 {
-  margin-left: 240px;
-  counter-increment: list1;
-}
-.Tu-12 {
-  margin-left: 240px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-12,
-.Lo-12 {
-  padding-left: 240px;
-}
-.Lh-12 {
-  padding-left: 220px;
-}
-.Th-13 {
-  padding-left: 240px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-13 {
-  margin-left: 260px;
-  counter-increment: list1;
-}
-.Tu-13 {
-  margin-left: 260px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-13,
-.Lo-13 {
-  padding-left: 260px;
-}
-.Lh-13 {
-  padding-left: 240px;
-}
-.Th-14 {
-  padding-left: 260px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-14 {
-  margin-left: 280px;
-  counter-increment: list1;
-}
-.Tu-14 {
-  margin-left: 280px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-14,
-.Lo-14 {
-  padding-left: 280px;
-}
-.Lh-14 {
-  padding-left: 260px;
-}
-.Th-15 {
-  padding-left: 280px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-15 {
-  margin-left: 300px;
-  counter-increment: list1;
-}
-.Tu-15 {
-  margin-left: 300px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-15,
-.Lo-15 {
-  padding-left: 300px;
-}
-.Lh-15 {
-  padding-left: 280px;
-}
-.Th-16 {
-  padding-left: 300px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-16 {
-  margin-left: 320px;
-  counter-increment: list1;
-}
-.Tu-16 {
-  margin-left: 320px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-16,
-.Lo-16 {
-  padding-left: 320px;
-}
-.Lh-16 {
-  padding-left: 300px;
-}
-.Th-17 {
-  padding-left: 320px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-17 {
-  margin-left: 340px;
-  counter-increment: list1;
-}
-.Tu-17 {
-  margin-left: 340px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-17,
-.Lo-17 {
-  padding-left: 340px;
-}
-.Lh-17 {
-  padding-left: 320px;
-}
-.Th-18 {
-  padding-left: 340px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-18 {
-  margin-left: 360px;
-  counter-increment: list1;
-}
-.Tu-18 {
-  margin-left: 360px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-18,
-.Lo-18 {
-  padding-left: 360px;
-}
-.Lh-18 {
-  padding-left: 340px;
-}
-.Th-19 {
-  padding-left: 360px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-19 {
-  margin-left: 380px;
-  counter-increment: list1;
-}
-.Tu-19 {
-  margin-left: 380px;
-  display: list-item;
-  list-style-type: disc;
-}
-.Lu-19,
-.Lo-19 {
-  padding-left: 380px;
-}
-.Lh-19 {
-  padding-left: 360px;
-}
-.Th-20 {
-  padding-left: 380px;
-  margin-left: 0px;
-  margin-top: 5px;
-  font-weight: bold;
-}
-.To-20 {
-  margin-left: 400px;
-  counter-increment: list1;
-}
-.Tu-20 {
-  margin-left: 400px;
-  display: list-item;
-  list-style-type: square;
-}
-.Lu-20,
-.Lo-20 {
-  padding-left: 400px;
-}
-.Lh-20 {
-  padding-left: 380px;
-}
-/*
-if Debug == 1
-    .Th-1:before
-        content: counter(section1) " " attr(toDisplay)
-    .Th-2:before
-        content: counter(section1) "." counter(section2) " " attr(toDisplay)
-    .Th-3:before
-        content: counter(section1) "." counter(section2) "." counter(section3) " " attr(toDisplay)
-    .Th-4:before
-        content: counter(section1) "." counter(section2) "." counter(section3) "." counter(section4) " " attr(toDisplay)
-else
-    .Th-1:before
-        content: counter(section1) " "
-    .Th-2:before
-        content: counter(section1) "." counter(section2) " "
-    .Th-3:before
-        content: counter(section1) "." counter(section2) "." counter(section3) " "
-    .Th-4:before
-        content: counter(section1) "." counter(section2) "." counter(section3) "." counter(section4) " "
-*/
 /*!
  * jQuery UI CSS Framework 1.8.21
  *
@@ -7473,6 +6936,116 @@ h1,h2,h3,h4,h5{font-weight:normal;color:#333;clear:left}
 .tooltip.right .tooltip-arrow{border-right-color:#3997ee}
 .tooltip.left .tooltip-arrow{border-left-color:#3997ee}
 .tooltip.bottom .tooltip-arrow{border-bottom-color:#3997ee}
+@font-face{font-family:main;src:url("../fonts/signika-regular.ttf")}
+#__ed-iframe-html{background-color:#fdfdfd}
+#editor-frame{font-family:main;position:absolute;margin:0;top:0;right:0;left:0;bottom:0;color:#525252;background-color:#fdfdfd;font:normal 13px/19px main,"Helvetica Neue",Arial,Helvetica,sans-serif;font-family:main;-moz-box-sizing:border-box;box-sizing:border-box}
+#editor-lines{-moz-box-sizing:border-box;box-sizing:border-box;font:normal 13px/18px main,"Helvetica Neue",Arial,Helvetica,sans-serif;font-family:main;color:#525252;overflow-y:auto;padding-left:8px;padding-right:8px;position:absolute;margin:0;top:0;right:0;left:0;bottom:0}
+p{margin-top:0;margin-bottom:0;margin-left:0;margin-right:0;color:#333055}
+dl{margin:0;padding:0}
+dt{margin:0;padding:0}
+ul,ol{margin:3px 0 0 0;padding:0;list-style-type:none}
+li{margin:0;padding:0;list-style-type:circle}
+dd{margin-left:32px}
+.Th-1{padding-left:5px;margin-left:0;width:100%;box-sizing:border-box;-moz-box-sizing:border-box;-webkit-box-sizing:border-box;font-weight:bold;font-variant:small-caps;font-size:16px;color:#329ef7;border-bottom:1px solid #dadada;margin-top:4px;margin-bottom:5px;padding-bottom:0;counter-reset:section4;counter-reset:section3;counter-reset:section2;counter-increment:section1}
+.To-1{margin-left:20px;counter-increment:list1}
+.Tu-1{margin-left:20px;margin-top:2px;display:list-item;list-style-type:disc}
+.Lu-1,.Lo-1{padding-left:22px}
+.Lh-1{padding-left:5px}
+.Th-2{padding-left:25px;margin-left:0;margin-top:0;font-weight:bold;font-variant:small-caps;font-size:15px;color:#329ef7;padding-bottom:0;counter-reset:section4;counter-reset:section3;counter-increment:section2}
+.To-2{margin-left:40px;counter-increment:list1}
+.Tu-2{margin-left:40px;margin-top:2px;display:list-item;list-style-type:square}
+.Lu-2,.Lo-2{padding-left:40px}
+.Lh-2{padding-left:25px}
+.Th-3{padding-left:45px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;counter-reset:section4;counter-increment:section3}
+.To-3{margin-left:60px;counter-increment:list1}
+.Tu-3{margin-left:60px;display:list-item;list-style-type:disc}
+.Lu-3,.Lo-3{padding-left:60px}
+.Lh-3{padding-left:45px}
+.Th-4{padding-left:65px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;counter-increment:section4}
+.To-4{margin-left:80px;counter-increment:list1}
+.Tu-4{margin-left:80px;display:list-item;list-style-type:square}
+.Lu-4,.Lo-4{padding-left:80px}
+.Lh-4{padding-left:65px}
+.Th-5{padding-left:85px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-5{margin-left:100px;counter-increment:list1}
+.Tu-5{margin-left:100px;display:list-item;list-style-type:disc}
+.Lu-5,.Lo-5{padding-left:100px}
+.Lh-5{padding-left:85px}
+.Th-6{padding-left:105px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-6{margin-left:120px;counter-increment:list1}
+.Tu-6{margin-left:120px;display:list-item;list-style-type:square}
+.Lu-6,.Lo-6{padding-left:120px}
+.Lh-6{padding-left:105px}
+.Th-7{padding-left:125px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-7{margin-left:140px;counter-increment:list1}
+.Tu-7{margin-left:140px;display:list-item;list-style-type:disc}
+.Lu-7,.Lo-7{padding-left:140px}
+.Lh-7{padding-left:125px}
+.Th-8{padding-left:145px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-8{margin-left:160px;counter-increment:list1}
+.Tu-8{margin-left:160px;display:list-item;list-style-type:square}
+.Lu-8,.Lo-8{padding-left:160px}
+.Lh-8{padding-left:145px}
+.Th-9{padding-left:165px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-9{margin-left:180px;counter-increment:list1}
+.Tu-9{margin-left:180px;display:list-item;list-style-type:disc}
+.Lu-9,.Lo-9{padding-left:180px}
+.Lh-9{padding-left:165px}
+.Th-10{padding-left:185px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-10{margin-left:200px;counter-increment:list1}
+.Tu-10{margin-left:200px;display:list-item;list-style-type:square}
+.Lu-10,.Lo-10{padding-left:200px}
+.Lh-10{padding-left:185px}
+.Th-11{padding-left:205px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-11{margin-left:220px;counter-increment:list1}
+.Tu-11{margin-left:220px;display:list-item;list-style-type:disc}
+.Lu-11,.Lo-11{padding-left:220px}
+.Lh-11{padding-left:205px}
+.Th-12{padding-left:225px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-12{margin-left:240px;counter-increment:list1}
+.Tu-12{margin-left:240px;display:list-item;list-style-type:square}
+.Lu-12,.Lo-12{padding-left:240px}
+.Lh-12{padding-left:225px}
+.Th-13{padding-left:245px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-13{margin-left:260px;counter-increment:list1}
+.Tu-13{margin-left:260px;display:list-item;list-style-type:disc}
+.Lu-13,.Lo-13{padding-left:260px}
+.Lh-13{padding-left:245px}
+.Th-14{padding-left:265px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-14{margin-left:280px;counter-increment:list1}
+.Tu-14{margin-left:280px;display:list-item;list-style-type:square}
+.Lu-14,.Lo-14{padding-left:280px}
+.Lh-14{padding-left:265px}
+.Th-15{padding-left:285px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-15{margin-left:300px;counter-increment:list1}
+.Tu-15{margin-left:300px;display:list-item;list-style-type:disc}
+.Lu-15,.Lo-15{padding-left:300px}
+.Lh-15{padding-left:285px}
+.Th-16{padding-left:305px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-16{margin-left:320px;counter-increment:list1}
+.Tu-16{margin-left:320px;display:list-item;list-style-type:square}
+.Lu-16,.Lo-16{padding-left:320px}
+.Lh-16{padding-left:305px}
+.Th-17{padding-left:325px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-17{margin-left:340px;counter-increment:list1}
+.Tu-17{margin-left:340px;display:list-item;list-style-type:disc}
+.Lu-17,.Lo-17{padding-left:340px}
+.Lh-17{padding-left:325px}
+.Th-18{padding-left:345px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-18{margin-left:360px;counter-increment:list1}
+.Tu-18{margin-left:360px;display:list-item;list-style-type:square}
+.Lu-18,.Lo-18{padding-left:360px}
+.Lh-18{padding-left:345px}
+.Th-19{padding-left:365px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-19{margin-left:380px;counter-increment:list1}
+.Tu-19{margin-left:380px;display:list-item;list-style-type:disc}
+.Lu-19,.Lo-19{padding-left:380px}
+.Lh-19{padding-left:365px}
+.Th-20{padding-left:385px;margin-left:0;margin-top:0;font-variant:small-caps;color:#329ef7;font-style:italic;font-weight:normal;font-size:15px;padding-bottom:0;}
+.To-20{margin-left:400px;counter-increment:list1}
+.Tu-20{margin-left:400px;display:list-item;list-style-type:square}
+.Lu-20,.Lo-20{padding-left:400px}
+.Lh-20{padding-left:385px}
 #nav{padding:0;background:#f4f4f4;color:#333;font-family:main,helvetica}
 #my-notes{padding-left:18px;border-top:1px solid #fcfcfc;}
 #my-notes #my-notes-pic{margin-top:15px}
@@ -7527,8 +7100,7 @@ iframe{border:0}
 #editor{padding:0;margin:0;width:100%;height:70%}
 #note-area{height:100%;margin:0;background:#f5f5f5;background-image:url("../img/background-note.jpg")}
 #note-style{padding:20px 50px;margin-left:2%;margin-right:2%;border:1px solid #e0e0e0;background:#fdfdfd;background-position:right top;background-repeat:no-repeat;box-shadow:1px 1px 2px #ddd}
-#editor-container{margin-left:0;margin-right:0;height:100%;width:100%}
-#editorIframe{width:100%;height:100%;overflow:auto}
+#editor-container{margin-left:0;margin-right:0;height:100%;width:100%;position:relative}
 #note-full-title{height:35px;margin:40px 0 5px 10px;width:92%;color:#222;border:0;background:none repeat scroll 0 0 transparent;font-family:main;font-size:30px;letter-spacing:-2px}
 #note-full-title:focus{outline:0 none;border-color:rgba(82,168,236,0.80);background-color:#fff;box-shadow:inset 0 1px 1px rgba(0,0,0,0.07),0 0 8px rgba(82,168,236,0.60)}
 #editor-button-bar{position:absolute;opacity:1;left:3.5%;top:200px;}

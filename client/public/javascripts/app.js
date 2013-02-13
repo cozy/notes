@@ -1251,7 +1251,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         this.saveButton = this.$('#save-editor-content');
         this.noteFullTitle = this.$('#note-full-title');
         this.breadcrumb = this.$('#note-full-breadcrumb');
-        this.editor = new CNeditor(this.$('#editorIframe')[0], this.onIFrameLoaded);
+        this.editor = new CNeditor(this.$('#editor-container')[0], this.onIFrameLoaded);
         this.configureButtons();
         this.setTitleListeners();
         this.setEditorFocusListener();
@@ -1266,7 +1266,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
       NoteView.prototype.setSaveListeners = function() {
         var _this = this;
-        this.$("#editorIframe").on("onKeyUp", function() {
+        this.$("#editor-container").on("onKeyUp", function() {
           var id;
           id = _this.model.id;
           clearTimeout(_this.saveTimer);
@@ -1307,7 +1307,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
       NoteView.prototype.setEditorFocusListener = function() {
         var editorEl;
-        editorEl = document.getElementById('editorIframe');
+        editorEl = document.getElementById('editor-container');
         editorEl.addEventListener('focus', this.homeView.disableTreeHotkey, true);
         return editorEl.addEventListener('blur', this.homeView.enableTreeHotkey, true);
       };
@@ -1321,7 +1321,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         this.titleBtn = this.$("#titleBtn");
         this.indentBtn.tooltip({
           placement: "right",
-          title: "Indent the selection"
+          title: "Indent (Tab)"
         });
         this.indentBtn.on("click", function() {
           _this.editor._addHistory();
@@ -1329,7 +1329,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         });
         this.unIndentBtn.tooltip({
           placement: "right",
-          title: "Unindent the selection"
+          title: "Unindent (Shift + Tab)"
         });
         this.unIndentBtn.on("click", function() {
           _this.editor._addHistory();
@@ -1372,13 +1372,13 @@ window.require.define({"views/note_view": function(exports, require, module) {
 
       NoteView.prototype.showLoading = function() {
         this.noteFullTitle.hide();
-        this.$('#editorIframe').hide();
+        this.$('#editor-container').hide();
         return this.$("#note-style").spin();
       };
 
       NoteView.prototype.hideLoading = function() {
         this.noteFullTitle.show();
-        this.$('#editorIframe').show();
+        this.$('#editor-container').show();
         return this.$("#note-style").spin();
       };
 
@@ -1584,9 +1584,7 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   buf.push(attrs({ 'id':('file-list') }));
   buf.push('></div></div><div');
   buf.push(attrs({ 'id':('editor-container') }));
-  buf.push('><div');
-  buf.push(attrs({ 'id':('editorIframe') }));
-  buf.push('></div></div>');
+  buf.push('></div>');
   }
   return buf.join("");
   };

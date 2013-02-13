@@ -736,7 +736,7 @@ exports.CNeditor = (function() {
   */
 
   function CNeditor(editorTarget, callBack) {
-    var cssEl, cssLink, editor_head$, iframe$,
+    var iframe$,
       _this = this;
     this.editorTarget = editorTarget;
     this._processPaste = __bind(this._processPaste, this);
@@ -762,6 +762,7 @@ exports.CNeditor = (function() {
         editor_head$.html(cssLink);
         _this.linesDiv = document.createElement('div');
         _this.linesDiv.setAttribute('id', 'editor-lines');
+        _this.linesDiv.setAttribute('class', 'editor-frame');
         _this.linesDiv.setAttribute('contenteditable', 'true');
         _this.editorBody$.append(_this.linesDiv);
         _this._initClipBoard();
@@ -806,14 +807,9 @@ exports.CNeditor = (function() {
     } else if (this.editorTarget.nodeName === "DIV") {
       iframe$ = $(this.editorTarget);
       this.editorBody$ = iframe$;
-      this.document = $(document);
-      editor_head$ = $(document).find("head");
-      cssLink = '<link id="editorCSS" ';
-      cssLink += 'href="stylesheets/CNeditor.css" rel="stylesheet">';
-      cssEl = $(cssLink);
-      editor_head$.append(cssEl);
       this.linesDiv = document.createElement('div');
       this.linesDiv.setAttribute('id', 'editor-lines');
+      this.linesDiv.setAttribute('class', 'editor-frame');
       this.linesDiv.setAttribute('contenteditable', 'true');
       this.editorBody$.append(this.linesDiv);
       this.getEditorSelection = function() {
@@ -1046,6 +1042,9 @@ exports.CNeditor = (function() {
           case 65:
             keyCode = 'A';
             break;
+          case 76:
+            keyCode = 'L';
+            break;
           case 83:
             keyCode = 'S';
             break;
@@ -1063,7 +1062,7 @@ exports.CNeditor = (function() {
         }
     }
     shortcut = metaKeyCode + '-' + keyCode;
-    if (metaKeyCode === '' && (keyCode === 'A' || keyCode === 'S' || keyCode === 'V' || keyCode === 'Y' || keyCode === 'Z')) {
+    if (metaKeyCode === '' && (keyCode === 'A' || keyCode === 'L' || keyCode === 'S' || keyCode === 'V' || keyCode === 'Y' || keyCode === 'Z')) {
       keyCode = 'other';
     }
     return [metaKeyCode, keyCode];
@@ -1154,10 +1153,12 @@ exports.CNeditor = (function() {
       case 'Ctrl-A':
         selection.selectAll(this);
         return e.preventDefault();
+      case 'Alt-L':
+        this.markerList();
+        return e.preventDefault();
       case 'Alt-A':
         this.toggleType();
-        e.preventDefault();
-        return console.log('EVENT (editor)');
+        return e.preventDefault();
       case '-other':
       case '-space':
         if (this.newPosition) {

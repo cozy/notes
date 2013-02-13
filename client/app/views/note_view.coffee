@@ -28,8 +28,8 @@ class exports.NoteView extends Backbone.View
         @noteFullTitle = @$ '#note-full-title'
         @breadcrumb = @$ '#note-full-breadcrumb'
 
-        @editor = new CNeditor(@$('#editorIframe')[0], @onIFrameLoaded)
-        #@$('#editorIframe').niceScroll
+        @editor = new CNeditor(@$('#editor-container')[0], @onIFrameLoaded)
+        #@$('#editor-container').niceScroll
             #cursorcolor: "#CCC"
             #enablekeyboard: false
         @configureButtons()
@@ -44,7 +44,7 @@ class exports.NoteView extends Backbone.View
     # 3s and if the user didn't type anything, the content will be saved
     ###
     setSaveListeners: ->
-        @$("#editorIframe").on "onKeyUp", () =>
+        @$("#editor-container").on "onKeyUp", () =>
             id = @model.id
 
             clearTimeout @saveTimer
@@ -73,10 +73,9 @@ class exports.NoteView extends Backbone.View
                 @updateBreadcrumbOnTitleChange newName
     
     setEditorFocusListener : () ->
-        editorEl = document.getElementById('editorIframe')
+        editorEl = document.getElementById('editor-container')
         editorEl.addEventListener('focus', @homeView.disableTreeHotkey, true)
         editorEl.addEventListener('blur' , @homeView.enableTreeHotkey , true)
-        # $(editorEl).on 'focus', @homeView.disableTreeHotkey
 
     configureButtons: ->
         @indentBtn = @$("#indentBtn")
@@ -87,14 +86,14 @@ class exports.NoteView extends Backbone.View
 
         @indentBtn.tooltip
             placement: "right"
-            title: "Indent the selection"
+            title: "Indent (Tab)"
         @indentBtn.on "click", () =>
             @editor._addHistory()
             @editor.shiftTab()
 
         @unIndentBtn.tooltip
             placement: "right"
-            title: "Unindent the selection"
+            title: "Unindent (Shift + Tab)"
         @unIndentBtn.on "click", () =>
             @editor._addHistory()
             @editor.tab()
@@ -132,13 +131,13 @@ class exports.NoteView extends Backbone.View
     # Hide title and editor, show spinner
     showLoading: ->
         @noteFullTitle.hide()
-        @$('#editorIframe').hide()
+        @$('#editor-container').hide()
         @$("#note-style").spin()
 
     # Show title and editor, hide spinner
     hideLoading: ->
         @noteFullTitle.show()
-        @$('#editorIframe').show()
+        @$('#editor-container').show()
         @$("#note-style").spin()
 
     ###*
