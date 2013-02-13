@@ -31,23 +31,32 @@ titleMixin(rank, type)
         font-size: 16px
         color: blue
         border-bottom: 1px solid softgrey
-        margin-top: 30px
+        margin-top: 4px
         margin-bottom: 5px
-        padding-bottom: 8px
+        padding-bottom: 0px
     else if type == 2
-        margin-top 20px 
+        margin-top 0px 
         font-weight: bold
+        font-variant: small-caps
         font-size: 15px
-        color: middlegrey
-        padding-bottom: 6px
+        color: blue
+        padding-bottom: 0px
     else if type == 3
-        margin-top 10px 
-        font-weight: bold
-        font-size: 13px
-        padding-bottom: 4px
+        margin-top 0px 
+        font-variant: small-caps
+        color: blue
+        font-style:italic
+        font-weight: normal
+        font-size: 15px
+        padding-bottom: 0px
     else
-        margin-top unit(5, px)
-        font-weight: bold
+        margin-top 0px 
+        font-variant: small-caps
+        color: blue
+        font-style:italic
+        font-weight: normal
+        font-size: 15px
+        padding-bottom: 0px
     if rank == 1
         counter-reset: section4
         counter-reset: section3
@@ -58,7 +67,7 @@ titleMixin(rank, type)
         counter-reset: section3
         counter-increment: section2
     else if rank == 3
-        counter-reset        : section4
+        counter-reset    : section4
         counter-increment: section3
     else if rank == 4
         counter-increment: section4
@@ -85,7 +94,21 @@ lineMixin(rank)
 #__ed-iframe-html
     background-color: lightgrey
 
-#__ed-iframe-body
+// #editor-frame {
+//   font-family: main;
+//   overflow: auto;
+//   box-sizing: border-box;
+//   -moz-box-sizing: border-box;
+//   position: relative;
+//   left: 0px;
+//   top: 0px;
+//   color: #525252;
+//   background-color: #fdfdfd;
+//   line-height: 18px;
+//   font: normal 13px/18px main, "Helvetica Neue", Arial, Helvetica, sans-serif;
+//   font-family: main;
+
+#editor-frame
     font-family: main
     position: absolute
     margin:0
@@ -95,8 +118,8 @@ lineMixin(rank)
     bottom:0
     color: darkgrey
     background-color: lightgrey
-    line-height: 18px
-    font: normal 13px/18px main, "Helvetica Neue", Arial, Helvetica, sans-serif
+    // line-height: 18px
+    font: normal 13px/19px main, "Helvetica Neue", Arial, Helvetica, sans-serif
     font-family: main
     -moz-box-sizing : border-box
     box-sizing: border-box
@@ -104,6 +127,9 @@ lineMixin(rank)
 #editor-lines
     -moz-box-sizing : border-box
     box-sizing: border-box
+    font: normal 13px/18px main, "Helvetica Neue", Arial, Helvetica, sans-serif
+    font-family: main
+    color: darkgrey
     overflow-y: auto
     padding-left:8px
     padding-right:8px
