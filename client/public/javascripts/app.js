@@ -1321,7 +1321,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         this.titleBtn = this.$("#titleBtn");
         this.indentBtn.tooltip({
           placement: "right",
-          title: "Indent the selection"
+          title: "Indent (Tab)"
         });
         this.indentBtn.on("click", function() {
           _this.editor._addHistory();
@@ -1329,7 +1329,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         });
         this.unIndentBtn.tooltip({
           placement: "right",
-          title: "Unindent the selection"
+          title: "Unindent (Shift + Tab)"
         });
         this.unIndentBtn.on("click", function() {
           _this.editor._addHistory();

@@ -86,14 +86,14 @@ class exports.NoteView extends Backbone.View
 
         @indentBtn.tooltip
             placement: "right"
-            title: "Indent the selection"
+            title: "Indent (Tab)"
         @indentBtn.on "click", () =>
             @editor._addHistory()
             @editor.shiftTab()
 
         @unIndentBtn.tooltip
             placement: "right"
-            title: "Unindent the selection"
+            title: "Unindent (Shift + Tab)"
         @unIndentBtn.on "click", () =>
             @editor._addHistory()
             @editor.tab()

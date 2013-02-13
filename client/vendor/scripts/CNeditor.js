@@ -1042,6 +1042,9 @@ exports.CNeditor = (function() {
           case 65:
             keyCode = 'A';
             break;
+          case 76:
+            keyCode = 'L';
+            break;
           case 83:
             keyCode = 'S';
             break;
@@ -1059,7 +1062,7 @@ exports.CNeditor = (function() {
         }
     }
     shortcut = metaKeyCode + '-' + keyCode;
-    if (metaKeyCode === '' && (keyCode === 'A' || keyCode === 'S' || keyCode === 'V' || keyCode === 'Y' || keyCode === 'Z')) {
+    if (metaKeyCode === '' && (keyCode === 'A' || keyCode === 'L' || keyCode === 'S' || keyCode === 'V' || keyCode === 'Y' || keyCode === 'Z')) {
       keyCode = 'other';
     }
     return [metaKeyCode, keyCode];
@@ -1150,10 +1153,12 @@ exports.CNeditor = (function() {
       case 'Ctrl-A':
         selection.selectAll(this);
         return e.preventDefault();
+      case 'Alt-L':
+        this.markerList();
+        return e.preventDefault();
       case 'Alt-A':
         this.toggleType();
-        e.preventDefault();
-        return console.log('EVENT (editor)');
+        return e.preventDefault();
       case '-other':
       case '-space':
         if (this.newPosition) {
