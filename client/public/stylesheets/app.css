@@ -7111,11 +7111,13 @@ iframe{border:0}
 #editor-button-bar .btn i.icon-indent-right{background-image:url("../img/menu-indent-right.png")}
 #editor-button-bar .btn i.icon-th-list{background-image:url("../img/menu-bullet-point.png")}
 #editor-button-bar .btn i.icon-text-height{background-image:url("../img/menu-title.png")}
+#editor-button-bar .btn i.icon-toggle{background-image:url("../img/02-menu-Toggle-light.png")}
 #editor-button-bar .btn i.icon-download-alt{background-image:url("../img/menu-save.png")}
 #editor-button-bar .btn:hover i.icon-indent-left{background-image:url("../img/menu-indent-left-over.png")}
 #editor-button-bar .btn:hover i.icon-indent-right{background-image:url("../img/menu-indent-right-over.png")}
 #editor-button-bar .btn:hover i.icon-th-list{background-image:url("../img/menu-bullet-point-over.png")}
 #editor-button-bar .btn:hover i.icon-text-height{background-image:url("../img/menu-title-over.png")}
+#editor-button-bar .btn:hover i.icon-toggle{background-image:url("../img/02-menu-Toggle-rollover.png")}
 #editor-button-bar .btn:hover i.icon-download-alt{background-image:url("../img/menu-save-over.png")}
 #editor-button-bar .btn:active,#editor-button-bar .active{background-color:#eaeaea;box-shadow:inset 4px 0 3px #d3d3d3}
 #editor-button-bar:hover .btn{box-shadow:inset -4px 0 3px #f5f5f5;border:1px solid #ddd;}

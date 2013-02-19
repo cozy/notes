@@ -81,6 +81,7 @@ class exports.NoteView extends Backbone.View
         @indentBtn = @$("#indentBtn")
         @unIndentBtn = @$("#unIndentBtn")
         @markerListBtn = @$("#markerListBtn")
+        @toggleBtn = @$("#toggleBtn")
         @saveEditorBtn = @$("#save-editor-content")
         @titleBtn = @$("#titleBtn")
 
@@ -98,20 +99,27 @@ class exports.NoteView extends Backbone.View
             @editor._addHistory()
             @editor.shiftTab()
 
-        @markerListBtn.tooltip
-            placement: "right"
-            title: "Change selection from titles to marker list"
-        @markerListBtn.on "click", () =>
-            @editor._addHistory()
-            @editor.markerList()
+        # @markerListBtn.tooltip
+        #     placement: "right"
+        #     title: "Change selection from titles to marker list"
+        # @markerListBtn.on "click", () =>
+        #     @editor._addHistory()
+        #     @editor.markerList()
 
-        @titleBtn.tooltip
+        # @titleBtn.tooltip
+        #     placement: "right"
+        #     title: "Change selection from marker list to titles"
+        # @titleBtn.on "click", () =>
+        #     @editor._addHistory()
+        #     @editor.titleList()
+        
+        @toggleBtn.tooltip
             placement: "right"
-            title: "Change selection from marker list to titles"
-        @titleBtn.on "click", () =>
+            title: "Toggle line type (Alt + A)"
+        @toggleBtn.on "click", () =>
             @editor._addHistory()
-            @editor.titleList()
-            
+            @editor.toggleType()
+
         @saveEditorBtn.tooltip
             placement: "right"
             title: "Save the current content"

@@ -1317,6 +1317,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         this.indentBtn = this.$("#indentBtn");
         this.unIndentBtn = this.$("#unIndentBtn");
         this.markerListBtn = this.$("#markerListBtn");
+        this.toggleBtn = this.$("#toggleBtn");
         this.saveEditorBtn = this.$("#save-editor-content");
         this.titleBtn = this.$("#titleBtn");
         this.indentBtn.tooltip({
@@ -1335,21 +1336,13 @@ window.require.define({"views/note_view": function(exports, require, module) {
           _this.editor._addHistory();
           return _this.editor.shiftTab();
         });
-        this.markerListBtn.tooltip({
+        this.toggleBtn.tooltip({
           placement: "right",
-          title: "Change selection from titles to marker list"
+          title: "Toggle line type (Alt + A)"
         });
-        this.markerListBtn.on("click", function() {
+        this.toggleBtn.on("click", function() {
           _this.editor._addHistory();
-          return _this.editor.markerList();
-        });
-        this.titleBtn.tooltip({
-          placement: "right",
-          title: "Change selection from marker list to titles"
-        });
-        this.titleBtn.on("click", function() {
-          _this.editor._addHistory();
-          return _this.editor.titleList();
+          return _this.editor.toggleType();
         });
         return this.saveEditorBtn.tooltip({
           placement: "right",
@@ -1561,13 +1554,9 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   buf.push('><i');
   buf.push(attrs({ "class": ('icon-indent-left') }));
   buf.push('></i></button><button');
-  buf.push(attrs({ 'id':('markerListBtn'), "class": ('btn') + ' ' + ('btn-small') }));
+  buf.push(attrs({ 'id':('toggleBtn'), "class": ('btn') + ' ' + ('btn-small') }));
   buf.push('><i');
-  buf.push(attrs({ "class": ('icon-th-list') }));
-  buf.push('></i></button><button');
-  buf.push(attrs({ 'id':('titleBtn'), "class": ('btn') + ' ' + ('btn-small') }));
-  buf.push('><i');
-  buf.push(attrs({ "class": ('icon-text-height') }));
+  buf.push(attrs({ "class": ('icon-toggle') }));
   buf.push('></i></button><button');
   buf.push(attrs({ 'id':('save-editor-content'), "class": ('btn') + ' ' + ('active') + ' ' + ('btn-small') }));
   buf.push('><i');
