@@ -1325,7 +1325,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         });
         this.indentBtn.on("click", function() {
           _this.editor._addHistory();
-          return _this.editor.shiftTab();
+          return _this.editor.tab();
         });
         this.unIndentBtn.tooltip({
           placement: "right",
@@ -1333,7 +1333,7 @@ window.require.define({"views/note_view": function(exports, require, module) {
         });
         this.unIndentBtn.on("click", function() {
           _this.editor._addHistory();
-          return _this.editor.tab();
+          return _this.editor.shiftTab();
         });
         this.markerListBtn.tooltip({
           placement: "right",
@@ -1555,11 +1555,11 @@ window.require.define({"views/templates/editor": function(exports, require, modu
   buf.push('><button');
   buf.push(attrs({ 'id':('indentBtn'), "class": ('btn') + ' ' + ('btn-small') }));
   buf.push('><i');
-  buf.push(attrs({ "class": ('icon-indent-left') }));
+  buf.push(attrs({ "class": ('icon-indent-right') }));
   buf.push('></i></button><button');
   buf.push(attrs({ 'id':('unIndentBtn'), "class": ('btn') + ' ' + ('btn-small') }));
   buf.push('><i');
-  buf.push(attrs({ "class": ('icon-indent-right') }));
+  buf.push(attrs({ "class": ('icon-indent-left') }));
   buf.push('></i></button><button');
   buf.push(attrs({ 'id':('markerListBtn'), "class": ('btn') + ' ' + ('btn-small') }));
   buf.push('><i');

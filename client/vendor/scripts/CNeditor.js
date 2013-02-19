@@ -1641,6 +1641,12 @@ exports.CNeditor = (function() {
           l = l.linePrev;
         }
         break;
+      case 'Lu':
+        lineTypeTarget = 'Tu';
+        break;
+      case 'Lh':
+        lineTypeTarget = 'Th';
+        break;
       default:
         return false;
     }
