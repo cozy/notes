@@ -98,20 +98,6 @@ class exports.NoteView extends Backbone.View
         @unIndentBtn.on "click", () =>
             @editor._addHistory()
             @editor.shiftTab()
-
-        # @markerListBtn.tooltip
-        #     placement: "right"
-        #     title: "Change selection from titles to marker list"
-        # @markerListBtn.on "click", () =>
-        #     @editor._addHistory()
-        #     @editor.markerList()
-
-        # @titleBtn.tooltip
-        #     placement: "right"
-        #     title: "Change selection from marker list to titles"
-        # @titleBtn.on "click", () =>
-        #     @editor._addHistory()
-        #     @editor.titleList()
         
         @toggleBtn.tooltip
             placement: "right"
