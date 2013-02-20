@@ -1322,7 +1322,11 @@ window.require.define({"views/note_view": function(exports, require, module) {
         this.titleBtn = this.$("#titleBtn");
         this.indentBtn.tooltip({
           placement: "right",
-          title: "Indent (Tab)"
+          title: "Indent (Tab)",
+          delay: {
+            show: 400,
+            hide: 100
+          }
         });
         this.indentBtn.on("click", function() {
           _this.editor._addHistory();
@@ -1330,7 +1334,11 @@ window.require.define({"views/note_view": function(exports, require, module) {
         });
         this.unIndentBtn.tooltip({
           placement: "right",
-          title: "Unindent (Shift + Tab)"
+          title: "Unindent (Shift + Tab)",
+          delay: {
+            show: 400,
+            hide: 100
+          }
         });
         this.unIndentBtn.on("click", function() {
           _this.editor._addHistory();
@@ -1338,7 +1346,11 @@ window.require.define({"views/note_view": function(exports, require, module) {
         });
         this.toggleBtn.tooltip({
           placement: "right",
-          title: "Toggle line type (Alt + A)"
+          title: "Toggle line type (Alt + A)",
+          delay: {
+            show: 400,
+            hide: 100
+          }
         });
         this.toggleBtn.on("click", function() {
           _this.editor._addHistory();
@@ -1346,7 +1358,11 @@ window.require.define({"views/note_view": function(exports, require, module) {
         });
         return this.saveEditorBtn.tooltip({
           placement: "right",
-          title: "Save the current content"
+          title: "Save the current content",
+          delay: {
+            show: 400,
+            hide: 100
+          }
         });
       };
 
