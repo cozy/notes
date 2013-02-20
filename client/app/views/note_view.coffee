@@ -86,29 +86,33 @@ class exports.NoteView extends Backbone.View
         @titleBtn = @$("#titleBtn")
 
         @indentBtn.tooltip
-            placement: "right"
-            title: "Indent (Tab)"
+            placement : "right"
+            title     : "Indent (Tab)"
+            delay     : { show:400, hide: 100 }
         @indentBtn.on "click", () =>
             @editor._addHistory()
             @editor.tab()
 
         @unIndentBtn.tooltip
-            placement: "right"
-            title: "Unindent (Shift + Tab)"
+            placement : "right"
+            title     : "Unindent (Shift + Tab)"
+            delay     : { show:400, hide: 100 }
         @unIndentBtn.on "click", () =>
             @editor._addHistory()
             @editor.shiftTab()
         
         @toggleBtn.tooltip
-            placement: "right"
-            title: "Toggle line type (Alt + A)"
+            placement : "right"
+            title     : "Toggle line type (Alt + A)"
+            delay     : { show:400, hide: 100 }
         @toggleBtn.on "click", () =>
             @editor._addHistory()
             @editor.toggleType()
 
         @saveEditorBtn.tooltip
-            placement: "right"
-            title: "Save the current content"
+            placement : "right"
+            title     : "Save the current content"
+            delay     : { show:400, hide: 100 }
         
     ###*
     # 
