@@ -23,7 +23,6 @@ Thumbs.db
 node_modules/
 
 # public directrory
-public/
 
 # Brunch folder for temporary files.
 tmp/
