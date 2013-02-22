@@ -5,19 +5,22 @@ class exports.FileList extends Backbone.View
     constructor: (@model, @id) ->
         @$el = $ @id
 
-        @uploadButton = @$("#file-pic")
+        @uploadButton = $("#file-pic")
         @uploader = new qq.FileUploaderBasic
             button: document.getElementById('file-pic')
-            mutliple: false
+            multiple: false
             forceMultipart: true
             onComplete: @onUploadComplete
-            onSubmit: @submitComplete
+            onSubmit: @onSubmit
 
         @widget = $("#note-file-list")
         @widget.mouseenter @onMouseEnter
         @widget.mouseleave @onMouseLeave
 
-    onSubmit: =>
+    onSubmit: (id, filename) =>
+        if @model._attachments[filename]?
+            #should notify user somehow
+            return false 
         @uploadButton.spin 'small'
 
     onUploadComplete: (id, filename, response) =>
@@ -26,7 +29,7 @@ class exports.FileList extends Backbone.View
         @addFileLine filename
         @setFileNumber()
 
-        @fileList.slideDown =>
+        @$el.slideDown =>
             @uploadButton.spin()
 
     onMouseEnter: =>
