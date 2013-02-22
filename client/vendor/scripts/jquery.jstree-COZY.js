@@ -3673,6 +3673,13 @@
 						e.preventDefault();
 					} 
 				})
+/* Modification for Cozy :
+BJA 13/02/2013
+The following code put a listner on document for space and esc keystrokes. When
+it is triggered, the code preventDefault action of browser : space and esc no
+longer have their normal behaviour (you can not put a space caracter in an editable div
+for instance)
+
 				.bind("keydown", "esc", function (e) { 
 					$.vakata.context.hide(); 
 					e.preventDefault();
@@ -3681,8 +3688,29 @@
 					$.vakata.context.cnt.find(".vakata-hover").last().children("a").click();
 					e.preventDefault();
 				});
+
+ */
+
+				.bind("keydown", "esc", function (e) { 
+					if($.vakata.context.vis) {
+						$.vakata.context.hide(); 
+						e.preventDefault();
+					}
+				})
+				.bind("keydown", "space", function (e) { 
+					if($.vakata.context.vis) {
+						$.vakata.context.cnt.find(".vakata-hover").last().children("a").click();
+						e.preventDefault();
+					}
+				});
+/*
+END OF COZY MODIFICATION
+ */
 		}
 	});
+
+
+
 
 	$.jstree.plugin("contextmenu", {
 		__init : function () {

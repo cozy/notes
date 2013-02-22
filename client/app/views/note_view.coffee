@@ -28,12 +28,13 @@ class exports.NoteView extends Backbone.View
         @noteFullTitle = @$ '#note-full-title'
         @breadcrumb = @$ '#note-full-breadcrumb'
 
-        @editor = new CNeditor(@$('#editorIframe')[0], @onIFrameLoaded)
-        #@$('#editorIframe').niceScroll
+        @editor = new CNeditor(@$('#editor-container')[0], @onIFrameLoaded)
+        #@$('#editor-container').niceScroll
             #cursorcolor: "#CCC"
             #enablekeyboard: false
         @configureButtons()
         @setTitleListeners()
+        @setEditorFocusListener()
         @setSaveListeners()
 
         @fileList = new FileList @model, '#file-list'
@@ -43,7 +44,7 @@ class exports.NoteView extends Backbone.View
     # 3s and if the user didn't type anything, the content will be saved
     ###
     setSaveListeners: ->
-        @$("iframe").on "onKeyUp", () =>
+        @$("#editor-container").on "onKeyUp", () =>
             id = @model.id
 
             clearTimeout @saveTimer
@@ -70,45 +71,48 @@ class exports.NoteView extends Backbone.View
                 @homeView.onNoteTitleChange @model.id, newName
                 @homeView.tree._updateSuggestionList "rename", newName, oldName
                 @updateBreadcrumbOnTitleChange newName
-        
+    
+    setEditorFocusListener : () ->
+        editorEl = document.getElementById('editor-container')
+        editorEl.addEventListener('focus', @homeView.disableTreeHotkey, true)
+        editorEl.addEventListener('blur' , @homeView.enableTreeHotkey , true)
+
     configureButtons: ->
         @indentBtn = @$("#indentBtn")
         @unIndentBtn = @$("#unIndentBtn")
         @markerListBtn = @$("#markerListBtn")
+        @toggleBtn = @$("#toggleBtn")
         @saveEditorBtn = @$("#save-editor-content")
         @titleBtn = @$("#titleBtn")
 
         @indentBtn.tooltip
-            placement: "right"
-            title: "Indent the selection"
+            placement : "right"
+            title     : "Indent (Tab)"
+            delay     : { show:400, hide: 100 }
         @indentBtn.on "click", () =>
-            @editor._addHistory()
-            @editor.shiftTab()
-
-        @unIndentBtn.tooltip
-            placement: "right"
-            title: "Unindent the selection"
-        @unIndentBtn.on "click", () =>
             @editor._addHistory()
             @editor.tab()
 
-        @markerListBtn.tooltip
-            placement: "right"
-            title: "Change selection from titles to marker list"
-        @markerListBtn.on "click", () =>
+        @unIndentBtn.tooltip
+            placement : "right"
+            title     : "Unindent (Shift + Tab)"
+            delay     : { show:400, hide: 100 }
+        @unIndentBtn.on "click", () =>
             @editor._addHistory()
-            @editor.markerList()
+            @editor.shiftTab()
+        
+        @toggleBtn.tooltip
+            placement : "right"
+            title     : "Toggle line type (Alt + A)"
+            delay     : { show:400, hide: 100 }
+        @toggleBtn.on "click", () =>
+            @editor._addHistory()
+            @editor.toggleType()
 
-        @titleBtn.tooltip
-            placement: "right"
-            title: "Change selection from marker list to titles"
-        @titleBtn.on "click", () =>
-            @editor._addHistory()
-            @editor.titleList()
-            
         @saveEditorBtn.tooltip
-            placement: "right"
-            title: "Save the current content"
+            placement : "right"
+            title     : "Save the current content"
+            delay     : { show:400, hide: 100 }
         
     ###*
     # 
@@ -125,13 +129,13 @@ class exports.NoteView extends Backbone.View
     # Hide title and editor, show spinner
     showLoading: ->
         @noteFullTitle.hide()
-        @$('#editorIframe').hide()
+        @$('#editor-container').hide()
         @$("#note-style").spin()
 
     # Show title and editor, hide spinner
     hideLoading: ->
         @noteFullTitle.show()
-        @$('#editorIframe').show()
+        @$('#editor-container').show()
         @$("#note-style").spin()
 
     ###*
@@ -151,7 +155,7 @@ class exports.NoteView extends Backbone.View
             Note.updateNote @model.id, content: @editor.getEditorContent(), =>
                 @saveButton.addClass "active"
                 @saveButton.spin()
-                callback() if callback?
+                callback() if typeof(callback) == 'function'
 
     # Display given content inside editor.
     # If no content is given, editor is cleared.
@@ -160,6 +164,8 @@ class exports.NoteView extends Backbone.View
             @editor.setEditorContent(content)
         else
             @editor.deleteContent()
+
+
 
     ###*
     # create a breadcrumb showing a clickable way from the root to the current note

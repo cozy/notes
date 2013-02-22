@@ -892,6 +892,10 @@ window.require.register("views/home_view", function(exports, require, module) {
 
       this.onTreeRemove = __bind(this.onTreeRemove, this);
 
+      this.enableTreeHotkey = __bind(this.enableTreeHotkey, this);
+
+      this.disableTreeHotkey = __bind(this.disableTreeHotkey, this);
+
       this.onNoteTitleChange = __bind(this.onNoteTitleChange, this);
 
       this.onTreeRename = __bind(this.onTreeRename, this);
@@ -1108,6 +1112,14 @@ window.require.register("views/home_view", function(exports, require, module) {
       }
     };
 
+    HomeView.prototype.disableTreeHotkey = function() {
+      return this.tree.disable_hotkeys();
+    };
+
+    HomeView.prototype.enableTreeHotkey = function() {
+      return this.tree.enable_hotkeys();
+    };
+
     /**
     # Only called by jsTree event "select_node.jstree"
     # Delete currently selected node.
@@ -1255,9 +1267,10 @@ window.require.register("views/note_view", function(exports, require, module) {
       this.saveButton = this.$('#save-editor-content');
       this.noteFullTitle = this.$('#note-full-title');
       this.breadcrumb = this.$('#note-full-breadcrumb');
-      this.editor = new CNeditor(this.$('#editorIframe')[0], this.onIFrameLoaded);
+      this.editor = new CNeditor(this.$('#editor-container')[0], this.onIFrameLoaded);
       this.configureButtons();
       this.setTitleListeners();
+      this.setEditorFocusListener();
       this.setSaveListeners();
       this.fileList = new FileList(this.model, '#file-list');
     }
@@ -1270,7 +1283,7 @@ window.require.register("views/note_view", function(exports, require, module) {
 
     NoteView.prototype.setSaveListeners = function() {
       var _this = this;
-      this.$("iframe").on("onKeyUp", function() {
+      this.$("#editor-container").on("onKeyUp", function() {
         var id;
         id = _this.model.id;
         clearTimeout(_this.saveTimer);
@@ -1311,48 +1324,64 @@ window.require.register("views/note_view", function(exports, require, module) {
       });
     };
 
+    NoteView.prototype.setEditorFocusListener = function() {
+      var editorEl;
+      editorEl = document.getElementById('editor-container');
+      editorEl.addEventListener('focus', this.homeView.disableTreeHotkey, true);
+      return editorEl.addEventListener('blur', this.homeView.enableTreeHotkey, true);
+    };
+
     NoteView.prototype.configureButtons = function() {
       var _this = this;
       this.indentBtn = this.$("#indentBtn");
       this.unIndentBtn = this.$("#unIndentBtn");
       this.markerListBtn = this.$("#markerListBtn");
+      this.toggleBtn = this.$("#toggleBtn");
       this.saveEditorBtn = this.$("#save-editor-content");
       this.titleBtn = this.$("#titleBtn");
       this.indentBtn.tooltip({
         placement: "right",
-        title: "Indent the selection"
+        title: "Indent (Tab)",
+        delay: {
+          show: 400,
+          hide: 100
+        }
       });
       this.indentBtn.on("click", function() {
         _this.editor._addHistory();
-        return _this.editor.shiftTab();
+        return _this.editor.tab();
       });
       this.unIndentBtn.tooltip({
         placement: "right",
-        title: "Unindent the selection"
+        title: "Unindent (Shift + Tab)",
+        delay: {
+          show: 400,
+          hide: 100
+        }
       });
       this.unIndentBtn.on("click", function() {
         _this.editor._addHistory();
-        return _this.editor.tab();
+        return _this.editor.shiftTab();
       });
-      this.markerListBtn.tooltip({
+      this.toggleBtn.tooltip({
         placement: "right",
-        title: "Change selection from titles to marker list"
+        title: "Toggle line type (Alt + A)",
+        delay: {
+          show: 400,
+          hide: 100
+        }
       });
-      this.markerListBtn.on("click", function() {
+      this.toggleBtn.on("click", function() {
         _this.editor._addHistory();
-        return _this.editor.markerList();
-      });
-      this.titleBtn.tooltip({
-        placement: "right",
-        title: "Change selection from marker list to titles"
-      });
-      this.titleBtn.on("click", function() {
-        _this.editor._addHistory();
-        return _this.editor.titleList();
+        return _this.editor.toggleType();
       });
       return this.saveEditorBtn.tooltip({
         placement: "right",
-        title: "Save the current content"
+        title: "Save the current content",
+        delay: {
+          show: 400,
+          hide: 100
+        }
       });
     };
 
@@ -1372,13 +1401,13 @@ window.require.register("views/note_view", function(exports, require, module) {
 
     NoteView.prototype.showLoading = function() {
       this.noteFullTitle.hide();
-      this.$('#editorIframe').hide();
+      this.$('#editor-container').hide();
       return this.$("#note-style").spin();
     };
 
     NoteView.prototype.hideLoading = function() {
       this.noteFullTitle.show();
-      this.$('#editorIframe').show();
+      this.$('#editor-container').show();
       return this.$("#note-style").spin();
     };
 
@@ -1407,7 +1436,7 @@ window.require.register("views/note_view", function(exports, require, module) {
         }, function() {
           _this.saveButton.addClass("active");
           _this.saveButton.spin();
-          if (callback != null) {
+          if (typeof callback === 'function') {
             return callback();
           }
         });
@@ -1544,7 +1573,7 @@ window.require.register("views/templates/editor", function(exports, require, mod
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="editor-button-bar" class="btn-group btn-group-vertical clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="markerListBtn" class="btn btn-small"><i class="icon-th-list"></i></button><button id="titleBtn" class="btn btn-small"><i class="icon-text-height"></i></button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"><div id="file-number">0 files</div><div id="file-pic"></div><div id="file-list"></div></div><div id="editor-container"><iframe id="editorIframe"></iframe></div>');
+  buf.push('<div id="editor-button-bar" class="btn-group btn-group-vertical clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="toggleBtn" class="btn btn-small"><i class="icon-toggle"></i></button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"><div id="file-number">0 files</div><div id="file-pic"></div><div id="file-list"></div></div><div id="editor-container"></div>');
   }
   return buf.join("");
   };
@@ -1630,20 +1659,23 @@ window.require.register("views/widgets/file_list", function(exports, require, mo
       this.onSubmit = __bind(this.onSubmit, this);
 
       this.$el = $(this.id);
-      this.uploadButton = this.$("#file-pic");
+      this.uploadButton = $("#file-pic");
       this.uploader = new qq.FileUploaderBasic({
         button: document.getElementById('file-pic'),
-        mutliple: false,
+        multiple: false,
         forceMultipart: true,
         onComplete: this.onUploadComplete,
-        onSubmit: this.submitComplete
+        onSubmit: this.onSubmit
       });
       this.widget = $("#note-file-list");
       this.widget.mouseenter(this.onMouseEnter);
       this.widget.mouseleave(this.onMouseLeave);
     }
 
-    FileList.prototype.onSubmit = function() {
+    FileList.prototype.onSubmit = function(id, filename) {
+      if (this.model._attachments[filename] != null) {
+        return false;
+      }
       return this.uploadButton.spin('small');
     };
 
@@ -1655,7 +1687,7 @@ window.require.register("views/widgets/file_list", function(exports, require, mo
       this.model._attachments[filename] = {};
       this.addFileLine(filename);
       this.setFileNumber();
-      return this.fileList.slideDown(function() {
+      return this.$el.slideDown(function() {
         return _this.uploadButton.spin();
       });
     };
@@ -2250,6 +2282,26 @@ window.require.register("views/widgets/tree", function(exports, require, module)
       } else if (!this.widget.jstree("get_selected")[0]) {
         return tree = this.jstreeEl.jstree("select_node", "#tree-node-all");
       }
+    };
+
+    /**
+     * Disable the hot key in jsTree, important when it is no longer the editor 
+     * which listen to the keystokes
+    */
+
+
+    Tree.prototype.disable_hotkeys = function() {
+      return this.jstreeEl.jstree("disable_hotkeys");
+    };
+
+    /**
+     * Enable the hot key in jsTree, important when it is the editor which
+     * listen to the keystokes
+    */
+
+
+    Tree.prototype.enable_hotkeys = function() {
+      return this.jstreeEl.jstree("enable_hotkeys");
     };
 
     /**
