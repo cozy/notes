@@ -1673,7 +1673,7 @@ window.require.register("views/widgets/file_list", function(exports, require, mo
     }
 
     FileList.prototype.onSubmit = function(id, filename) {
-      if (this.model._attachments[filename] != null) {
+      if ((this.model._attachments != null) && (this.model._attachments[filename] != null)) {
         return false;
       }
       return this.uploadButton.spin('small');
