@@ -18,7 +18,7 @@ class exports.FileList extends Backbone.View
         @widget.mouseleave @onMouseLeave
 
     onSubmit: (id, filename) =>
-        if @model._attachments[filename]?
+        if @model._attachments? and @model._attachments[filename]?
             #should notify user somehow
             return false 
         @uploadButton.spin 'small'
