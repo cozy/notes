@@ -27,6 +27,7 @@ class exports.HomeView extends Backbone.View
         @loadTree callback
         @configureResize()
         @configureSaving()
+        @configureScrolling()
 
     # Build main view and layout, create note view and integrate it inside home
     # view.
@@ -45,8 +46,8 @@ class exports.HomeView extends Backbone.View
             spacing_open: 10
             spacing_closed: 10
             togglerLength_closed: "100%"
-            onresize_end: ->
-                #drag.css "z-index","-1"
+            onresize_end: =>
+                @onWindowResized()
 
     # Load data for tree and render it.
     loadTree: (callback) ->
@@ -76,6 +77,16 @@ class exports.HomeView extends Backbone.View
     configureResize: ->
         @onWindowResized()
         $(window).resize @onWindowResized
+        
+
+    configureScrolling: ->
+        @faketop = $('
+            <div id="faketop">
+                <div id="faketop-grad"></div>
+            </div>')
+        @faketop.prependTo $('#note-full')
+        $('#note-area').scroll @onWindowScrolled
+
 
     # Save data when user leaves page.
     configureSaving: ->
@@ -100,15 +111,42 @@ class exports.HomeView extends Backbone.View
         @selectNote(@note_uuid) if @iframeLoaded
         
     # Small trick to adapt editor size when window is resized.
-    onWindowResized: ->
+    onWindowResized: =>
+        windowWidth = $(window).width()
         windowHeight = $(window).height()
-        @$("#note-style").height(windowHeight - 140)
-        @$("#editor").height(windowHeight - 240)
-        if windowHeight < 500
-            @$("#editor-button-bar").css "top", "80px"
+        ns = $('#note-style')
+        nsLeft = ns.offset().left
+
+        if @faketop? 
+            @faketop.width ns.width()
+            @faketop.offset 'left':nsLeft
+
+        fileList = $('#note-file-list')
+
+        editorBB = $('#editor-button-bar')
+        editorBB.css 
+            'left': nsLeft - 0.5 * editorBB.width()
+            'top' : if windowHeight < 500 then 80 else 200
+
+        title = $('#note-full-title')
+        title.width(0.9*(fileList.offset().left - title.offset().left))
+
+    onWindowScrolled: =>
+        scrollTop = $('#note-area').scrollTop()
+
+        @handleAffix $('#note-full-breadcrumb'), scrollTop, 30
+        @handleAffix $('#note-file-list'), scrollTop, 38
+        @handleAffix $('#note-full-title'), scrollTop, 80
+        @handleAffix $('#faketop'), scrollTop, 55
+        @handleAffix $('#faketop-grad'), scrollTop, 80
+        
+    handleAffix: (el, scrollTop, limit) ->
+        if scrollTop > limit
+            if not el.hasClass('topaffix')
+                el.addClass('topaffix')
         else
-            @$("#editor-button-bar").css "top", "200px"
-            
+            if el.hasClass('topaffix')
+                el.removeClass('topaffix')
 
     onSearch: (query) =>
         if query.length > 0
@@ -210,6 +248,7 @@ class exports.HomeView extends Backbone.View
                 @noteView.hideLoading()
                 @renderNote note, data
                 @noteFull.show()
+                @onWindowResized()
 
     ###*
     # When note is dropped, its old path and its new path are sent to server

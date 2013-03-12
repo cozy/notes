@@ -61,8 +61,8 @@ class exports.NoteView extends Backbone.View
         @saveButton.click @saveEditorContent
 
     setTitleListeners: ->
-        @noteFullTitle.live "keypress", (event) ->
-            noteFullTitle.trigger "blur" if event.keyCode is 13
+        @noteFullTitle.live "keypress", (event) =>
+            @noteFullTitle.trigger "blur" if event.keyCode is 13
 
         @noteFullTitle.blur =>
             newName = @noteFullTitle.val()
