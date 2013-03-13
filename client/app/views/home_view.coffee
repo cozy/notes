@@ -128,7 +128,6 @@ class exports.HomeView extends Backbone.View
         editorBB = $('#editor-button-bar')
         editorBB.css 
             'left': nsLeft - 0.5 * editorBB.width()
-            'top' : if windowHeight < 500 then 80 else 200
 
         title = $('#note-full-title')
         title.width(0.9*(fileList.offset().left - title.offset().left))
