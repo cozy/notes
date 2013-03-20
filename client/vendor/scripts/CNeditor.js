@@ -943,7 +943,7 @@ exports.CNeditor = (function() {
     this._highestId = 0;
     this._deepest = 1;
     this._firstLine = null;
-    HISTORY_SIZE = 5;
+    HISTORY_SIZE = 100;
     this.HISTORY_SIZE = HISTORY_SIZE;
     this._history = {
       index: HISTORY_SIZE - 1,
@@ -976,6 +976,7 @@ exports.CNeditor = (function() {
   CNeditor.prototype._clickCB = function(e) {
     var segments;
     this._lastKey = null;
+    this.updateCurrentSel();
     segments = this._getLinkSegments();
     if (segments) {
       this._showUrlPopover(segments, false);
@@ -1091,7 +1092,7 @@ exports.CNeditor = (function() {
     }
   };
 
-  /** ------------------------------------------------------------------------
+  /** -----------------------------------------------------------------------
    * Initialize the editor content from a html string
    * The html string should not been pretified because of the spaces and
    * charriage return. 
@@ -1104,7 +1105,7 @@ exports.CNeditor = (function() {
       htmlString = htmlString.replace(/>[\n ]*</g, "><");
     }
     if (this.isUrlPopoverOn) {
-      this._cancelUrlPopover();
+      this._cancelUrlPopover(false);
     }
     this.linesDiv.innerHTML = htmlString;
     this._readHtml();
@@ -1334,7 +1335,7 @@ exports.CNeditor = (function() {
         e.preventDefault();
         return;
     }
-    if (shortcut === '-return' || shortcut === '-backspace' || shortcut === '-suppr' || shortcut === 'CtrlShift-down' || shortcut === 'CtrlShift-up' || shortcut === 'CtrlShift-left' || shortcut === 'CtrlShift-right' || shortcut === 'Ctrl-V' || shortcut === '-space' || shortcut === '-other') {
+    if (this._lastKey !== shortcut && (shortcut === '-return' || shortcut === '-backspace' || shortcut === '-suppr' || shortcut === 'CtrlShift-down' || shortcut === 'CtrlShift-up' || shortcut === 'CtrlShift-left' || shortcut === 'CtrlShift-right' || shortcut === 'Ctrl-V' || shortcut === '-space' || shortcut === '-other')) {
       this._addHistory();
     }
     this._lastKey = shortcut;
@@ -1531,8 +1532,8 @@ exports.CNeditor = (function() {
   };
 
   /**
-   * This function is called only if in Chrome, because the insertion of a caracter
-   * by the browser may be out of a span. 
+   * This function is called only if in Chrome, because the insertion of a 
+   * caracter by the browser may be out of a span. 
    * This is du to a bug in Chrome : you can create a range with its start 
    * break point in an empty span. But if you add this range to the selection,
    * then this latter will not respect your range and its start break point 
@@ -1642,11 +1643,15 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype.strong = function() {
+    var rg;
     if (!this.isEnabled || this.hasNoSelection(true)) {
       return true;
     }
     this._addHistory();
-    return this._applyMetaDataOnSelection('CNE_strong');
+    rg = this._applyMetaDataOnSelection('CNE_strong');
+    if (!rg) {
+      return this._removeLastHistoryStep();
+    }
   };
 
   CNeditor.prototype.underline = function() {
@@ -1658,7 +1663,7 @@ exports.CNeditor = (function() {
   };
 
   CNeditor.prototype.linkifySelection = function() {
-    var currentSel, range, segments;
+    var currentSel, range, rg, segments;
     if (!this.isEnabled || this.hasNoSelection()) {
       return true;
     }
@@ -1675,9 +1680,11 @@ exports.CNeditor = (function() {
         this._showUrlPopover(segments, false);
       } else {
         this._addHistory();
-        this._applyMetaDataOnSelection('A', 'http://');
-        segments = this._getLinkSegments();
-        this._showUrlPopover(segments, true);
+        rg = this._applyMetaDataOnSelection('A', 'http://');
+        if (rg) {
+          segments = this._getLinkSegments(rg);
+          this._showUrlPopover(segments, true);
+        }
       }
     }
     return true;
@@ -1696,7 +1703,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._showUrlPopover = function(segments, isLinkCreation) {
-    var d, href, pop, seg, txt, _i, _j, _len, _len1;
+    var href, pop, seg, txt, _i, _j, _len, _len1;
     pop = this.urlPopover;
     this.disable();
     this.isUrlPopoverOn = true;
@@ -1704,14 +1711,14 @@ exports.CNeditor = (function() {
     pop.initialSelRg = this.currentSel.theoricalRange.cloneRange();
     pop.segments = segments;
     seg = segments[0];
-    d = this.linesDiv.getBoundingClientRect();
-    pop.style.left = Math.round((d.width - 300) / 2) + 'px';
+    pop.style.left = seg.offsetLeft + 'px';
     pop.style.top = seg.offsetTop + 20 + 'px';
     href = seg.href;
     if (href === '' || href === 'http:///') {
       href = 'http://';
     }
     pop.urlInput.value = href;
+    pop.link.href = href;
     txt = '';
     for (_i = 0, _len = segments.length; _i < _len; _i++) {
       seg = segments[_i];
@@ -1720,7 +1727,7 @@ exports.CNeditor = (function() {
     pop.textInput.value = txt;
     pop.initialTxt = txt;
     seg.parentElement.parentElement.appendChild(pop);
-    pop.evt = this.editorBody$[0].addEventListener('click', this._detectClickOutUrlPopover);
+    pop.evt = this.editorBody$[0].addEventListener('mouseup', this._detectClickOutUrlPopover);
     pop.urlInput.select();
     pop.urlInput.focus();
     for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
@@ -1753,28 +1760,30 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._cancelUrlPopover = function(doNotRestoreOginalSel) {
-    var pop, seg, serial, _i, _len, _ref;
+    var pop, seg, segments, sel, serial, _i, _len;
     pop = this.urlPopover;
-    this.editorBody$[0].removeEventListener('click', this._detectClickOutUrlPopover);
+    segments = pop.segments;
+    this.editorBody$[0].removeEventListener('mouseup', this._detectClickOutUrlPopover);
     pop.parentElement.removeChild(pop);
-    _ref = pop.segments;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      seg = _ref[_i];
+    this.isUrlPopoverOn = false;
+    for (_i = 0, _len = segments.length; _i < _len; _i++) {
+      seg = segments[_i];
       seg.style.removeProperty('background-color');
     }
     if (pop.isLinkCreation) {
       if (doNotRestoreOginalSel) {
-        serial = this.serializeSelection();
-        this.unDo();
+        serial = this.serializeSel();
+        this._forceUndo();
         if (serial) {
           this.deSerializeSelection(serial);
         }
       } else {
-        this.unDo();
+        this._forceUndo();
       }
     } else if (!doNotRestoreOginalSel) {
-      this.currentSel.sel.removeAllRanges();
-      this.currentSel.sel.addRange(pop.initialSelRg);
+      sel = this.document.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(pop.initialSelRg);
     }
     this.setFocus();
     this.enable();
@@ -1804,8 +1813,9 @@ exports.CNeditor = (function() {
       this._cancelUrlPopover(false);
       return true;
     }
-    this.editorBody$[0].removeEventListener('click', this._detectClickOutUrlPopover);
+    this.editorBody$[0].removeEventListener('mouseup', this._detectClickOutUrlPopover);
     pop.parentElement.removeChild(pop);
+    this.isUrlPopoverOn = false;
     for (_i = 0, _len = segments.length; _i < _len; _i++) {
       seg = segments[_i];
       seg.style.removeProperty('background-color');
@@ -1877,7 +1887,8 @@ exports.CNeditor = (function() {
     pop.className = 'CNE_urlpop';
     pop.setAttribute('contenteditable', 'false');
     frag.appendChild(pop);
-    pop.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span>(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a>Accéder au lien (Ctrl+click)</a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button>ok</button>\n    <button>Cancel</button>\n    <button>Delete</button>\n</div>";
+    pop.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">(Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button>ok</button>\n    <button>Cancel</button>\n    <button>Delete</button>\n</div>";
+    pop.link = pop.getElementsByTagName('A')[0];
     b = document.querySelector('body');
     _ref = pop.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
     btnOK.addEventListener('click', this._validateUrlPopover);
@@ -1901,18 +1912,23 @@ exports.CNeditor = (function() {
   };
 
   /**
-   * Tests if a the start break point of the selection is in a segment being 
-   * a link. If yes returns the array of the segments corresponding to the
-   * link, false otherwise.
+   * Tests if a the start break point of the selection or of a range is in a 
+   * segment being a link. If yes returns the array of the segments 
+   * corresponding to the link starting in this bp, false otherwise.
    * The link can be composed of several segments, but they are on a single
-   * line.
+   * line. Only the start break point is taken into account, not the end bp.
+   * Prerequisite : thit.currentSel must havec been updated before calling
+   * this function.
+   * @param {Range} rg [optionnal] The range to use instead of selection.
    * @return {Boolean} The segment if in a link, false otherwise
   */
 
 
-  CNeditor.prototype._getLinkSegments = function() {
-    var rg, segment1, segments, sibling;
-    rg = this.updateCurrentSel().theoricalRange;
+  CNeditor.prototype._getLinkSegments = function(rg) {
+    var segment1, segments, sibling;
+    if (!rg) {
+      rg = this.currentSel.theoricalRange;
+    }
     segment1 = selection.getSegment(rg.startContainer, rg.startOffset);
     segments = [segment1];
     if (segment1.nodeName === 'A') {
@@ -1944,10 +1960,13 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._applyMetaDataOnSelection = function() {
-    var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, others, range, rg, rgEnd, sel, _i, _j, _len, _len1;
+    var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, others, range, rg, rgEnd, rgStart, sel, _i, _j, _len, _len1;
     metaData = arguments[0], others = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
     currentSel = this.updateCurrentSelIsStartIsEnd();
     range = currentSel.theoricalRange;
+    if (range.collapsed) {
+      return;
+    }
     line = currentSel.startLine;
     endLine = currentSel.endLine;
     if (currentSel.firstLineIsEnd) {
@@ -1958,36 +1977,42 @@ exports.CNeditor = (function() {
         }
         range.setStartBefore(line.line$[0].firstChild);
         selection.normalize(range);
+        if (range.collapsed) {
+          return;
+        }
       }
     }
     if (currentSel.lastLineIsStart) {
-      if (line.line$[0].textContent !== '') {
+      if (endLine.line$[0].textContent !== '') {
         endLine = endLine.linePrev;
-        if (line === null) {
+        if (endLine === null) {
           return;
         }
         range.setEndBefore(endLine.line$[0].lastChild);
         selection.normalize(range);
+        if (range.collapsed) {
+          return;
+        }
       }
     }
     if (metaData === 'A' && line !== endLine) {
       range.setEndBefore(line.line$[0].lastChild);
       selection.normalize(range);
       endLine = line;
-    }
-    if (range.collapsed) {
-      return;
+      if (range.collapsed) {
+        return;
+      }
     }
     if (line === endLine) {
       linesRanges = [range];
     } else {
-      rg = range.cloneRange();
-      rg.setEndBefore(line.line$[0].lastChild);
-      selection.normalize(rg);
-      linesRanges = [rg];
+      rgStart = range.cloneRange();
+      rgStart.setEndBefore(line.line$[0].lastChild);
+      selection.normalize(rgStart);
+      linesRanges = [rgStart];
       line = line.lineNext;
       while (line !== endLine) {
-        rg = document.createRange();
+        rg = this.document.createRange();
         rg.selectNodeContents(line.line$[0]);
         selection.normalize(rg);
         linesRanges.push(rg);
@@ -2007,7 +2032,7 @@ exports.CNeditor = (function() {
     bps = [];
     for (_j = 0, _len1 = linesRanges.length; _j < _len1; _j++) {
       range = linesRanges[_j];
-      bps.push(this._applyMetaData(range, addMeta, metaData, others));
+      bps.push(this._applyMetaOnLineRange(range, addMeta, metaData, others));
     }
     rg = this.document.createRange();
     bp1 = bps[0][0];
@@ -2104,7 +2129,7 @@ exports.CNeditor = (function() {
   */
 
 
-  CNeditor.prototype._applyMetaData = function(range, addMeta, metaData, others) {
+  CNeditor.prototype._applyMetaOnLineRange = function(range, addMeta, metaData, others) {
     var bp1, bp2, bps, breakPoints, endSegment, frag1, frag2, isAlreadyMeta, lineDiv, rg, span, startSegment;
     lineDiv = selection.getLineDiv(range.startContainer, range.startOffset);
     startSegment = range.startContainer.parentNode;
@@ -3841,6 +3866,18 @@ exports.CNeditor = (function() {
     h.historyScroll = new Array(HISTORY_SIZE);
     h.historyPos = new Array(HISTORY_SIZE);
     return this._addHistory();
+  };
+
+  CNeditor.prototype._removeLastHistoryStep = function() {
+    this._history.historySelect.pop();
+    this._history.historyScroll.pop();
+    this._history.historyPos.pop();
+    this._history.history.pop();
+    this._history.historySelect.unshift(void 0);
+    this._history.historyScroll.unshift(void 0);
+    this._history.historyPos.unshift(void 0);
+    this._history.history.unshift(void 0);
+    return this._history.index = this.HISTORY_SIZE - 1;
   };
 
   /* ------------------------------------------------------------------------
