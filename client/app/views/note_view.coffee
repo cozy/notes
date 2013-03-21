@@ -125,9 +125,9 @@ class exports.NoteView extends Backbone.View
             placement : "right"
             title     : "Create or edit a link (Ctrl + K)"
             delay     : delay
-        @linkBtn.on "click", () =>
+        @linkBtn.on "click", (e) =>
+            console.log 'click'
             @editor.linkifySelection()
-            @editor.setFocus()
 
         @saveEditorBtn.tooltip
             placement : "right"
