@@ -82,37 +82,57 @@ class exports.NoteView extends Backbone.View
         @unIndentBtn = @$("#unIndentBtn")
         @markerListBtn = @$("#markerListBtn")
         @toggleBtn = @$("#toggleBtn")
+        @boldBtn = @$("#boldBtn")
+        @linkBtn = @$("#linkBtn")
         @saveEditorBtn = @$("#save-editor-content")
         @titleBtn = @$("#titleBtn")
+
+        delay = { show:400, hide: 100 }
 
         @indentBtn.tooltip
             placement : "right"
             title     : "Indent (Tab)"
-            delay     : { show:400, hide: 100 }
+            delay     : delay
         @indentBtn.on "click", () =>
-            @editor._addHistory()
             @editor.tab()
+            @editor.setFocus()
 
         @unIndentBtn.tooltip
             placement : "right"
             title     : "Unindent (Shift + Tab)"
-            delay     : { show:400, hide: 100 }
+            delay     : delay
         @unIndentBtn.on "click", () =>
-            @editor._addHistory()
             @editor.shiftTab()
+            @editor.setFocus()
         
         @toggleBtn.tooltip
             placement : "right"
             title     : "Toggle line type (Alt + A)"
-            delay     : { show:400, hide: 100 }
+            delay     : delay
         @toggleBtn.on "click", () =>
-            @editor._addHistory()
             @editor.toggleType()
+            @editor.setFocus()
+
+        @boldBtn.tooltip
+            placement : "right"
+            title     : "Bold (Ctrl + B)"
+            delay     : delay
+        @boldBtn.on "click", () =>
+            @editor.strong()
+            @editor.setFocus()
+
+        @linkBtn.tooltip
+            placement : "right"
+            title     : "Create or edit a link (Ctrl + K)"
+            delay     : delay
+        @linkBtn.on "click", () =>
+            @editor.linkifySelection()
+            @editor.setFocus()
 
         @saveEditorBtn.tooltip
             placement : "right"
             title     : "Save the current content"
-            delay     : { show:400, hide: 100 }
+            delay     : delay
         
     ###*
     # 
