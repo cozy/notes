@@ -46,6 +46,8 @@ class exports.HomeView extends Backbone.View
             spacing_open: 10
             spacing_closed: 10
             togglerLength_closed: "100%"
+            defaults: 
+                enableCursorHotkey: false
             onresize_end: =>
                 @onWindowResized()
 

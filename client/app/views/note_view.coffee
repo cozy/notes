@@ -44,7 +44,7 @@ class exports.NoteView extends Backbone.View
     # 3s and if the user didn't type anything, the content will be saved
     ###
     setSaveListeners: ->
-        @$("#editor-container").on "onKeyUp", () =>
+        @$("#editor-container").on "onChange", () =>
             id = @model.id
 
             clearTimeout @saveTimer
@@ -59,6 +59,7 @@ class exports.NoteView extends Backbone.View
                     @saveButton.addClass "active"
             , 3000)
         @saveButton.click @saveEditorContent
+        @$('#editor-container').on 'saveRequest', @saveEditorContent
 
     setTitleListeners: ->
         @noteFullTitle.live "keypress", (event) =>
@@ -78,14 +79,14 @@ class exports.NoteView extends Backbone.View
         editorEl.addEventListener('blur' , @homeView.enableTreeHotkey , true)
 
     configureButtons: ->
-        @indentBtn = @$("#indentBtn")
-        @unIndentBtn = @$("#unIndentBtn")
+        @indentBtn     = @$("#indentBtn")
+        @unIndentBtn   = @$("#unIndentBtn")
         @markerListBtn = @$("#markerListBtn")
-        @toggleBtn = @$("#toggleBtn")
-        @boldBtn = @$("#boldBtn")
-        @linkBtn = @$("#linkBtn")
+        @toggleBtn     = @$("#toggleBtn")
+        @boldBtn       = @$("#boldBtn")
+        @linkBtn       = @$("#linkBtn")
         @saveEditorBtn = @$("#save-editor-content")
-        @titleBtn = @$("#titleBtn")
+        @titleBtn      = @$("#titleBtn")
 
         delay = { show:400, hide: 100 }
 
@@ -113,13 +114,13 @@ class exports.NoteView extends Backbone.View
             @editor.toggleType()
             @editor.setFocus()
 
-        @boldBtn.tooltip
-            placement : "right"
-            title     : "Bold (Ctrl + B)"
-            delay     : delay
-        @boldBtn.on "click", () =>
-            @editor.strong()
-            @editor.setFocus()
+        # @boldBtn.tooltip
+        #     placement : "right"
+        #     title     : "Bold (Ctrl + B)"
+        #     delay     : delay
+        # @boldBtn.on "click", () =>
+        #     @editor.strong()
+        #     @editor.setFocus()
 
         @linkBtn.tooltip
             placement : "right"

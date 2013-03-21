@@ -23,7 +23,7 @@ if (!String.prototype.trim) {
 
 
 md2cozy.cozy2md = function(linesDiv) {
-  var line, lineElt, lineMetaData, lines, markCode, prevLineMetaData, _i, _j, _len, _len1, _ref, _ref1;
+  var line, lineMetaData, lines, markCode, prevLineMetaData, segment, _i, _j, _len, _len1, _ref, _ref1;
   md2cozy.currentDepth = 0;
   lines = [];
   prevLineMetaData = null;
@@ -39,11 +39,11 @@ md2cozy.cozy2md = function(linesDiv) {
     prevLineMetaData = lineMetaData;
     _ref1 = line.children();
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-      lineElt = _ref1[_j];
-      if (lineElt.nodeType === 1) {
-        markCode += md2cozy.convertInlineEltToMarkdown($(lineElt));
+      segment = _ref1[_j];
+      if (segment.nodeType === 1) {
+        markCode += md2cozy.convertInlineEltToMarkdown($(segment));
       } else {
-        markCode += $(lineElt).text();
+        markCode += $(segment).text();
       }
     }
     lines.push(markCode);
@@ -969,7 +969,15 @@ exports.CNeditor = (function() {
     return this.newPosition = true;
   };
 
-  CNeditor.prototype._keyupCast = function() {
+  CNeditor.prototype._keyupCast = function(e) {
+    var keyCode, metaKeyCode, shortcut, _ref;
+    _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
+    shortcut = metaKeyCode + '-' + keyCode;
+    switch (shortcut) {
+      case 'Ctrl-S':
+      case 'Ctrl-other':
+        return;
+    }
     return this.editorTarget$.trigger(jQuery.Event("onKeyUp"));
   };
 
@@ -1012,11 +1020,13 @@ exports.CNeditor = (function() {
   };
 
   CNeditor.prototype.disable = function() {
+    console.log('== DISABLE');
     this.isEnabled = false;
     return this._unRegisterEventListeners();
   };
 
   CNeditor.prototype.enable = function() {
+    console.log('== ENABLE');
     this.isEnabled = true;
     return this._registerEventListeners();
   };
@@ -1294,7 +1304,8 @@ exports.CNeditor = (function() {
 
   CNeditor.prototype.registerKeyDownCbForTest = function() {
     this.linesDiv.removeEventListener('keydown', this._keyDownCallBackTry, true);
-    return this.linesDiv.addEventListener('keydown', this._keyDownCallBack, true);
+    this._keyDownCallBackTry = this._keyDownCallBack;
+    return this.linesDiv.addEventListener('keydown', this._keyDownCallBackTry, true);
   };
 
   /* ------------------------------------------------------------------------
@@ -1322,6 +1333,9 @@ exports.CNeditor = (function() {
 
   CNeditor.prototype._keyDownCallBack = function(e) {
     var keyCode, metaKeyCode, sel, shortcut, _ref;
+    if (!this.isEnabled) {
+      return true;
+    }
     _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
     shortcut = metaKeyCode + '-' + keyCode;
     switch (e.keyCode) {
@@ -1357,31 +1371,38 @@ exports.CNeditor = (function() {
         this.updateCurrentSelIsStartIsEnd();
         this._return();
         this.newPosition = false;
-        return e.preventDefault();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case '-backspace':
         this.updateCurrentSelIsStartIsEnd();
         this._backspace();
         this.newPosition = true;
-        return e.preventDefault();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case '-tab':
         this.tab();
-        return e.preventDefault();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case 'Shift-tab':
         this.shiftTab();
-        return e.preventDefault();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case '-suppr':
         this.updateCurrentSelIsStartIsEnd();
         this._suppr(e);
-        return this.newPosition = true;
+        this.newPosition = true;
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case 'Ctrl-A':
         selection.selectAll(this);
         return e.preventDefault();
       case 'Alt-L':
         this.markerList();
-        return e.preventDefault();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case 'Alt-A':
         this.toggleType();
-        return e.preventDefault();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case '-other':
       case '-space':
         if (this.newPosition) {
@@ -1389,29 +1410,30 @@ exports.CNeditor = (function() {
           if (!sel.theoricalRange.collapsed) {
             this._backspace();
           }
-          return this.newPosition = false;
+          this.newPosition = false;
         }
-        break;
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case 'Ctrl-V':
+        this.editorTarget$.trigger(jQuery.Event('onChange'));
         return true;
       case 'Ctrl-B':
-        this.strong();
-        return e.preventDefault();
-      case 'Ctrl-U':
-        this.underline();
-        return e.preventDefault();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case 'Ctrl-K':
         this.linkifySelection();
         return e.preventDefault();
       case 'Ctrl-S':
-        $(this.editorTarget).trigger(jQuery.Event('saveRequest'));
-        return e.preventDefault();
+        this.editorTarget$.trigger(jQuery.Event('saveRequest'));
+        e.preventDefault();
+        return e.stopPropagation();
       case 'Ctrl-Z':
         this.unDo();
-        return e.preventDefault();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case 'Ctrl-Y':
         this.reDo();
-        return e.preventDefault();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
     }
   };
 
@@ -1718,7 +1740,6 @@ exports.CNeditor = (function() {
       href = 'http://';
     }
     pop.urlInput.value = href;
-    pop.link.href = href;
     txt = '';
     for (_i = 0, _len = segments.length; _i < _len; _i++) {
       seg = segments[_i];
@@ -1726,6 +1747,14 @@ exports.CNeditor = (function() {
     }
     pop.textInput.value = txt;
     pop.initialTxt = txt;
+    if (isLinkCreation) {
+      pop.titleElt.textContent = 'Create Link';
+      pop.link.style.display = 'none';
+    } else {
+      pop.titleElt.textContent = 'Edit Link';
+      pop.link.style.display = 'inline-block';
+      pop.link.href = href;
+    }
     seg.parentElement.parentElement.appendChild(pop);
     pop.evt = this.editorBody$[0].addEventListener('mouseup', this._detectClickOutUrlPopover);
     pop.urlInput.select();
@@ -1805,8 +1834,11 @@ exports.CNeditor = (function() {
   */
 
 
-  CNeditor.prototype._validateUrlPopover = function() {
+  CNeditor.prototype._validateUrlPopover = function(event) {
     var bp1, bp2, bps, i, l, lastSeg, parent, pop, rg, seg, segments, sel, _i, _j, _k, _len, _len1, _ref;
+    if (event) {
+      event.stopPropagation();
+    }
     pop = this.urlPopover;
     segments = pop.segments;
     if (pop.urlInput.value === '' && pop.isLinkCreation) {
@@ -1867,7 +1899,8 @@ exports.CNeditor = (function() {
     }
     this._setCaretAfter(lastSeg);
     this.setFocus();
-    return this.enable();
+    this.enable();
+    return this.editorTarget$.trigger(jQuery.Event('onChange'));
   };
 
   /**
@@ -1885,6 +1918,7 @@ exports.CNeditor = (function() {
     pop.setAttribute('contenteditable', 'false');
     frag.appendChild(pop);
     pop.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">(Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button>ok</button>\n    <button>Cancel</button>\n    <button>Delete</button>\n</div>";
+    pop.titleElt = pop.firstChild;
     pop.link = pop.getElementsByTagName('A')[0];
     b = document.querySelector('body');
     _ref = pop.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
@@ -1899,10 +1933,12 @@ exports.CNeditor = (function() {
     pop.textInput = textInput;
     pop.addEventListener('keypress', function(e) {
       if (e.keyCode === 13) {
-        return _this._validateUrlPopover();
+        _this._validateUrlPopover();
+        e.stopPropagation();
       } else if (e.keyCode === 27) {
-        return _this._cancelUrlPopover(false);
+        _this._cancelUrlPopover(false);
       }
+      return false;
     });
     this.urlPopover = pop;
     return true;
@@ -2157,6 +2193,9 @@ exports.CNeditor = (function() {
           if (startSegment.className !== '') {
             span.className = startSegment.className;
           }
+          if (startSegment.nodeName === 'A') {
+            span.href = startSegment.href;
+          }
           span = frag1.appendChild(span);
           span.appendChild(frag1.firstChild);
           rg.setEndAfter(startSegment);
@@ -2348,7 +2387,7 @@ exports.CNeditor = (function() {
     segment = lineDiv.firstChild;
     nextSegment = segment.nextSibling;
     if (nextSegment.nodeName === 'BR') {
-      return;
+      return breakPoints;
     }
     while (nextSegment.nodeName !== 'BR') {
       if (segment.textContent === '') {
@@ -2517,7 +2556,7 @@ exports.CNeditor = (function() {
       sel.range.deleteContents();
       bp = {
         cont: sel.range.startContainer,
-        offset: sel.range.offset
+        offset: sel.range.startOffset
       };
       this._fusionSimilarSegments(sel.startLine.line$[0], [bp]);
       this._setCaret(bp.cont, bp.offset);
@@ -2572,7 +2611,7 @@ exports.CNeditor = (function() {
       sel.range.deleteContents();
       bp = {
         cont: sel.range.startContainer,
-        offset: sel.range.offset
+        offset: sel.range.startOffset
       };
       this._fusionSimilarSegments(sel.startLine.line$[0], [bp]);
       this._setCaret(bp.cont, bp.offset);
@@ -3919,7 +3958,7 @@ exports.CNeditor = (function() {
     stepIndex = this._history.index;
     this.newPosition = this._history.historyPos[stepIndex];
     if (this.isUrlPopoverOn) {
-      this._cancelUrlPopover();
+      this._cancelUrlPopover(false);
     }
     this.linesDiv.innerHTML = this._history.history[stepIndex];
     savedSel = this._history.historySelect[stepIndex];
@@ -3946,7 +3985,7 @@ exports.CNeditor = (function() {
       i = index + 1;
       this.newPosition = this._history.historyPos[i];
       if (this.isUrlPopoverOn) {
-        this._cancelUrlPopover();
+        this._cancelUrlPopover(false);
       }
       this.linesDiv.innerHTML = this._history.history[i];
       savedSel = this._history.historySelect[i];
