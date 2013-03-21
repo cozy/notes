@@ -1821,8 +1821,9 @@ exports.CNeditor = (function() {
       seg.style.removeProperty('background-color');
     }
     if (!pop.isLinkCreation) {
-      this.currentSel.sel.removeAllRanges();
-      this.currentSel.sel.addRange(pop.initialSelRg);
+      sel = this.document.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(pop.initialSelRg);
       this._addHistory();
     }
     if (pop.urlInput.value === '') {
@@ -1842,11 +1843,7 @@ exports.CNeditor = (function() {
       bp2 = bps[1];
       rg.setStart(bp1.cont, bp1.offset);
       rg.setEnd(bp2.cont, bp2.offset);
-      if (this.isFirefox) {
-        sel = this.currentSel.sel;
-      } else {
-        sel = document.getSelection();
-      }
+      sel = this.document.getSelection();
       sel.removeAllRanges();
       sel.addRange(rg);
       this.setFocus();
