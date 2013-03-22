@@ -1,8 +1,5 @@
 exports.routes = (map) ->
     
-    # route for the application    
-    map.get  '/'          , 'notes#index'
-
     # routes for notes interactions
     map.get  '/notes'     , 'notes#all'
     map.post '/notes'     , 'notes#create'

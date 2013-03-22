@@ -30,7 +30,8 @@ before 'load note', ->
         else if note is null
             send error: 'Note not found', 404
         else
-            note.path = JSON.parse note.path # due to jugglingdb pb, arrays are stored as json
+            # due to jugglingdb pb, arrays are stored as json
+            note.path = JSON.parse note.path 
             @note = note
             next()
 , only: ['destroy', 'show', 'addFile', 'getFile', 'delFile']
@@ -80,7 +81,8 @@ action 'create', ->
     parent_id = body.parent_id
     path = Tree.getPath parent_id
     path.push body.title
-    body.path = JSON.stringify(path) # due to jugglingdb pb, arrays are stored as json
+    # due to jugglingdb pb, arrays are stored as json
+    body.path = JSON.stringify(path) 
     Note.create body, (err, note) ->
         if err
             # TODO : roll back the creation of the note.
@@ -92,7 +94,8 @@ action 'create', ->
                     send error: 'Tree error: Note can not be created'
                 else
                     note.index ["title", "content"], (err) ->
-                        note.path = JSON.parse(note.path) # due to jugglingdb pb, arrays are stored as json
+                        # due to jugglingdb pb, arrays are stored as json
+                        note.path = JSON.parse(note.path) 
                         send note, 201
 
 ###
