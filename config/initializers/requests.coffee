@@ -1,6 +1,9 @@
-requests = require "../../common/requests"
+module.exports = (compound) ->
+    requests = require "../../common/requests"
 
-Note.defineRequest "all", requests.all, requests.checkError
+    {Note,Tree} = compound.models
 
-allType = -> emit doc.type, doc
-Tree.defineRequest "all", allType, requests.checkError
+    Note.defineRequest "all", requests.all, requests.checkError
+
+    allType = -> emit doc.type, doc
+    Tree.defineRequest "all", allType, requests.checkError
