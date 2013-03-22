@@ -173,21 +173,21 @@ window.require.register("helpers", function(exports, require, module) {
             radius: 3
           },
           small: {
-            lines: 10,
+            lines: 8,
             length: 2,
-            width: 3,
+            width: 1,
             radius: 5
           },
-          large: {
+          normal: {
             lines: 10,
-            length: 8,
-            width: 4,
+            length: 2,
+            width: 2,
             radius: 8
           }
         };
         if (Spinner) {
           return this.each(function() {
-            var $this, spinner;
+            var $this, colorObj, spinner;
             $this = $(this);
             spinner = $this.data("spinner");
             if (spinner != null) {
@@ -204,9 +204,10 @@ window.require.register("helpers", function(exports, require, module) {
                   opts.color = color;
                 }
               }
-              spinner = new Spinner($.extend({
+              colorObj = {
                 color: $this.css("color")
-              }, opts));
+              };
+              spinner = new Spinner($.extend(colorObj, opts));
               spinner.spin(this);
               return $this.data("spinner", spinner);
             }
@@ -1462,7 +1463,7 @@ window.require.register("views/note_view", function(exports, require, module) {
     NoteView.prototype.showLoading = function() {
       this.noteFullTitle.hide();
       this.$('#editor-container').hide();
-      return this.$("#note-style").spin();
+      return this.$("#note-style").spin('normal');
     };
 
     NoteView.prototype.hideLoading = function() {

@@ -151,7 +151,7 @@ class exports.NoteView extends Backbone.View
     showLoading: ->
         @noteFullTitle.hide()
         @$('#editor-container').hide()
-        @$("#note-style").spin()
+        @$("#note-style").spin 'normal'
 
     # Show title and editor, hide spinner
     hideLoading: ->
