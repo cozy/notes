@@ -25,9 +25,9 @@ class exports.HomeView extends Backbone.View
         @buildViews()
         @configureLayoutDrag()
         @loadTree callback
+        @configureScrolling()
         @configureResize()
         @configureSaving()
-        @configureScrolling()
 
     # Build main view and layout, create note view and integrate it inside home
     # view.
@@ -79,7 +79,8 @@ class exports.HomeView extends Backbone.View
     configureResize: ->
         @onWindowResized()
         $(window).resize @onWindowResized
-        
+        @faketop.on 'topaffix', @onWindowResized
+
 
     configureScrolling: ->
         @faketop = $('
@@ -116,6 +117,7 @@ class exports.HomeView extends Backbone.View
     onWindowResized: =>
         windowWidth = $(window).width()
         windowHeight = $(window).height()
+
         ns = $('#note-style')
         nsLeft = ns.offset().left
 
@@ -128,7 +130,6 @@ class exports.HomeView extends Backbone.View
         editorBB = $('#editor-button-bar')
         editorBB.css 
             'left': nsLeft - 0.5 * editorBB.width()
-            'top' : if windowHeight < 500 then 80 else 200
 
         title = $('#note-full-title')
         title.width(0.9*(fileList.offset().left - title.offset().left))
@@ -146,9 +147,11 @@ class exports.HomeView extends Backbone.View
         if scrollTop > limit
             if not el.hasClass('topaffix')
                 el.addClass('topaffix')
+                el.trigger('topaffix')
         else
             if el.hasClass('topaffix')
                 el.removeClass('topaffix')
+                el.trigger('topaffix')
 
     onSearch: (query) =>
         if query.length > 0
