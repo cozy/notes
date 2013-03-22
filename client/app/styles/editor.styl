@@ -134,15 +134,66 @@ lineMixin(rank)
     font: normal 13px/18px main, "Helvetica Neue", Arial, Helvetica, sans-serif
     font-family: main
     color: darkgrey
-    overflow-y: auto
+    // overflow-y: auto
+    padding-top:4px
+    padding-bottom:8px
     padding-left:8px
     padding-right:8px
+    // position: absolute
+    // margin:0
+    // top:0
+    // right:0
+    // left:0
+    // bottom:0
+
+#editor-lines:focus
+    outline: 0px
+    // outline: 1px solid red
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.07),0 0 8px rgba(82, 168, 236, 0.60)
+
+
+.CNE_urlpop
+    // z-index:2500
+    display:block
     position: absolute
-    margin:0
-    top:0
-    right:0
-    left:0
-    bottom:0
+    _moz_resizing:false
+    contenteditable:false
+    font-size:14px
+    background-color:whiteSmoke
+    border-radius:5px
+    border-color:#CDCDD6
+    border-style:solid
+    border-width:1px
+    padding:5px
+
+
+.CNE_urlpop_head
+    font-weight:bold
+
+.CNE_urlpop a
+    display: inline-block
+    margin-top:9px
+    margin-bottom:9px
+    margin-left:40px
+
+.CNE_urlpop_shortcuts
+    font-size:10px
+    opacity:0.5
+
+.CNE_urlpop-content > span
+    display: inline-block
+    width:33px
+    text-align: right
+
+.CNE_urlpop input
+    margin-left:7px
+    font-size:13px
+    width:250px
+
+
+.CNE_strong
+    font-weight : bold
+    color: #303030
 
 p
     margin-top: 0px
