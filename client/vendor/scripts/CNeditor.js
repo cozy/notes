@@ -982,14 +982,20 @@ exports.CNeditor = (function() {
   };
 
   CNeditor.prototype._clickCB = function(e) {
-    var segments;
+    var segments, url;
     this._lastKey = null;
     this.updateCurrentSel();
     segments = this._getLinkSegments();
     if (segments) {
-      this._showUrlPopover(segments, false);
-      e.stopPropagation();
-      return e.preventDefault();
+      if (e.ctrlKey) {
+        url = segments[0].href;
+        window.open(url, '_blank');
+        return e.preventDefault();
+      } else {
+        this._showUrlPopover(segments, false);
+        e.stopPropagation();
+        return e.preventDefault();
+      }
     }
   };
 
@@ -1020,13 +1026,11 @@ exports.CNeditor = (function() {
   };
 
   CNeditor.prototype.disable = function() {
-    console.log('== DISABLE');
     this.isEnabled = false;
     return this._unRegisterEventListeners();
   };
 
   CNeditor.prototype.enable = function() {
-    console.log('== ENABLE');
     this.isEnabled = true;
     return this._registerEventListeners();
   };
@@ -1417,6 +1421,7 @@ exports.CNeditor = (function() {
         this.editorTarget$.trigger(jQuery.Event('onChange'));
         return true;
       case 'Ctrl-B':
+        this.strong();
         e.preventDefault();
         return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case 'Ctrl-K':
@@ -2402,6 +2407,10 @@ exports.CNeditor = (function() {
         nextSegment = nextSegment.nextSibling;
       }
     }
+    if (segment.textContent === '' && segment.previousSibling !== null) {
+      segment = this._removeSegment(segment, breakPoints);
+      selection.normalizeBPs(breakPoints);
+    }
     return breakPoints;
   };
 
@@ -3061,15 +3070,19 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._return = function() {
-    var currSel, dh, endLine, endOfLineFragment, l, newLine, p, startLine, _ref;
+    var bp1, currSel, dh, endLine, endOfLineFragment, l, newLine, p, rg, startLine, testFrag, _ref;
     currSel = this.currentSel;
     startLine = currSel.startLine;
     endLine = currSel.endLine;
     if (currSel.range.collapsed) {
 
     } else if (endLine === startLine) {
-      currSel.range.deleteContents();
-      this._fusionSimilarSegments(startLine.line$[0], []);
+      rg = currSel.range;
+      rg.deleteContents();
+      bp1 = selection.normalizeBP(rg.startContainer, rg.startOffset);
+      this._fusionSimilarSegments(startLine.line$[0], [bp1]);
+      rg.setStart(bp1.cont, bp1.offset);
+      rg.collapse(true);
     } else {
       this._deleteMultiLinesSelections();
       currSel = this.updateCurrentSelIsStartIsEnd();
@@ -3093,8 +3106,8 @@ exports.CNeditor = (function() {
       this._setCaret(startLine.line$[0].firstChild.firstChild, 0);
     } else {
       currSel.range.setEndBefore(startLine.line$[0].lastChild);
+      testFrag = currSel.range.cloneContents();
       endOfLineFragment = currSel.range.extractContents();
-      currSel.range.deleteContents();
       newLine = this._insertLineAfter({
         sourceLine: startLine,
         targetLineType: startLine.lineType,
