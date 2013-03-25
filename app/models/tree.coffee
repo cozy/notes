@@ -1,5 +1,7 @@
 module.exports = (compound, Tree) ->
 
+    Note = compound.models.Note
+
     async = require 'async'
     DataTree = require('../../common/data-tree').DataTree
     requests = require '../../common/requests'

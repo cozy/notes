@@ -223,7 +223,7 @@ action 'getFile', ->
             send 500
         else
             send 200
-    .pipe(response)
+    .pipe(res) # this is compound "magic" res = response variable
 
 
 ###

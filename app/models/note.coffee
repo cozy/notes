@@ -1,5 +1,7 @@
 module.exports = (compound, Note) ->
 
+    Tree = compound.models.Tree
+
     async = require 'async'
     requests = require '../../common/requests'
 
