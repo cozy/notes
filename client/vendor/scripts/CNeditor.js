@@ -1421,7 +1421,6 @@ exports.CNeditor = (function() {
         this.editorTarget$.trigger(jQuery.Event('onChange'));
         return true;
       case 'Ctrl-B':
-        this.strong();
         e.preventDefault();
         return this.editorTarget$.trigger(jQuery.Event('onChange'));
       case 'Ctrl-K':
@@ -3270,7 +3269,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
-    var bp, deltaDepth, endLineDepth, endOfLineFragment, range, replaceCaret, startContainer, startLineDepth, startOffset;
+    var bp, currentDelta, deltaInserted, endLineDepth, endOfLineFragment, firstNextLine, firstNextLineDepth, range, replaceCaret, startContainer, startLineDepth, startOffset;
     if (startLine === null || endLine === null) {
       throw new Error('CEeditor._deleteMultiLinesSelections called with a null param');
     }
@@ -3286,14 +3285,20 @@ exports.CNeditor = (function() {
       endLine = this.currentSel.endLine;
       replaceCaret = true;
     }
-    startLineDepth = startLine.lineDepthAbs;
     endLineDepth = endLine.lineDepthAbs;
-    deltaDepth = endLineDepth - startLineDepth;
     endOfLineFragment = selection.cloneEndFragment(range, endLine);
     range.deleteContents();
     this._addMissingFragment(startLine, endOfLineFragment);
     this._removeEndLine(startLine, endLine);
-    this._adaptDepth(startLine, startLineDepth, endLineDepth, deltaDepth);
+    startLineDepth = startLine.lineDepthAbs;
+    firstNextLine = startLine.lineNext;
+    if (firstNextLine) {
+      firstNextLineDepth = firstNextLine.lineDepthAbs;
+      currentDelta = firstNextLine.lineDepthAbs - startLineDepth;
+      deltaInserted = endLineDepth - startLineDepth;
+      this._adaptDepth(startLine, deltaInserted, currentDelta, startLineDepth);
+      this._adaptType(startLine);
+    }
     if (replaceCaret) {
       bp = {
         cont: startContainer,
@@ -3306,22 +3311,25 @@ exports.CNeditor = (function() {
     }
   };
 
-  CNeditor.prototype._adaptDepth = function(startLine, startLineDepth, endLineDepth, deltaDepth) {
-    var delta, delta1, firstNextLine, firstNextLineDepth, lineIt, prev;
+  CNeditor.prototype._adaptDepth = function(startLine, deltaInserted, currentDelta, minDepth) {
+    var firstNextLine, lineIt;
     if (startLine.lineNext === null) {
       return;
     }
     firstNextLine = startLine.lineNext;
-    firstNextLineDepth = firstNextLine.lineDepthAbs;
-    delta1 = firstNextLine.lineDepthAbs - startLineDepth;
-    delta = endLineDepth - startLineDepth;
-    lineIt = firstNextLine;
-    if (delta1 > 1) {
-      while (lineIt !== null && lineIt.lineDepthAbs > startLineDepth) {
-        lineIt = this._unIndentBlock(lineIt, delta);
+    if (currentDelta > 1) {
+      lineIt = firstNextLine;
+      lineIt = this._unIndentBlock(lineIt, deltaInserted);
+      while (lineIt !== null && lineIt.lineDepthAbs > minDepth) {
+        lineIt = this._unIndentBlock(lineIt, deltaInserted);
       }
     }
-    lineIt = firstNextLine;
+    return true;
+  };
+
+  CNeditor.prototype._adaptType = function(startLine) {
+    var lineIt, prev;
+    lineIt = startLine.lineNext;
     while (lineIt !== null) {
       prev = this._findPrevSibling(lineIt);
       if (prev === null) {
@@ -4292,7 +4300,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype._processPaste = function() {
-    var absDepth, bp, br, childNodes, currSel, currentLineFrag, domWalkContext, dummyLine, endLine, endTargetLineFrag, firstAddedLine, frag, htmlStr, l, lastFragLine, lineElements, lineNextStartLine, n, parendDiv, range, sandbox, secondAddedLine, segToInsert, startLine, startOffset, targetNode, _i, _j, _len;
+    var absDepth, bp, br, childNodes, currSel, currentDelta, currentLineFrag, deltaInserted, domWalkContext, dummyLine, endLine, endTargetLineFrag, firstAddedLine, frag, htmlStr, l, lastAdded, lastAddedDepth, lastFragLine, lineElements, lineNextStartLine, n, parendDiv, range, sandbox, secondAddedLine, segToInsert, startLine, startLineDepth, startOffset, targetNode, _i, _j, _len;
     sandbox = this.clipboard;
     currSel = this.currentSel;
     sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
@@ -4433,7 +4441,20 @@ exports.CNeditor = (function() {
       }
     }
     /**
-     * 8- position caret
+     * 8- Adapt lines type.
+    */
+
+    lastAdded = domWalkContext.lastAddedLine;
+    if (lastAdded.lineNext) {
+      lastAddedDepth = lastAdded.lineDepthAbs;
+      startLineDepth = startLine.lineDepthAbs;
+      deltaInserted = startLineDepth - lastAddedDepth;
+      currentDelta = lastAdded.lineNext.lineDepthAbs - lastAddedDepth;
+      this._adaptDepth(domWalkContext.lastAddedLine, deltaInserted, currentDelta, lastAddedDepth);
+      this._adaptType(currSel.startLine);
+    }
+    /**
+     * 9- position caret
     */
 
     return bp = this._setCaret(bp.cont, bp.offset);
@@ -4479,6 +4500,9 @@ exports.CNeditor = (function() {
 
   CNeditor.prototype._insertTextInSegment = function(txt, bp, targetSeg) {
     var newText, offset, targetText;
+    if (txt === '') {
+      return true;
+    }
     if (!targetSeg) {
       targetSeg = selection.getSegment(bp.cont);
     }
@@ -4552,7 +4576,7 @@ exports.CNeditor = (function() {
 
 
   CNeditor.prototype.__domWalk = function(nodeToParse, context) {
-    var aNode, absDepth, child, deltaHxLevel, lastInsertedEl, prevHxLevel, spanEl, spanNode, txtNode, _i, _len, _ref, _ref1;
+    var aNode, absDepth, child, clas, classes, deltaHxLevel, lastInsertedEl, newClass, prevHxLevel, spanEl, spanNode, txtNode, _i, _j, _len, _len1, _ref, _ref1;
     absDepth = context.absDepth;
     prevHxLevel = context.prevHxLevel;
     _ref = nodeToParse.childNodes;
@@ -4634,6 +4658,15 @@ exports.CNeditor = (function() {
           } else {
             spanNode = document.createElement('span');
             spanNode.textContent = child.textContent;
+            classes = child.classList;
+            newClass = '';
+            for (_j = 0, _len1 = classes.length; _j < _len1; _j++) {
+              clas = classes[_j];
+              if (clas.slice(0, 3) === 'CNE') {
+                newClass += ' ' + clas;
+              }
+            }
+            spanNode.className = newClass;
             context.currentLineEl.appendChild(spanNode);
           }
           context.isCurrentLineBeingPopulated = true;
@@ -4687,10 +4720,12 @@ exports.CNeditor = (function() {
     }
     deltaDepth = lineDepthAbs - context.prevCNLineAbsDepth;
     if (deltaDepth > 0) {
-
+      context.absDepth += 1;
     } else {
-
+      context.absDepth += deltaDepth;
+      context.absDepth = Math.max(1, context.absDepth);
     }
+    context.prevCNLineAbsDepth = lineDepthAbs;
     elemtFrag = document.createDocumentFragment();
     n = elemt.childNodes.length;
     i = 0;
@@ -4708,7 +4743,7 @@ exports.CNeditor = (function() {
     p = {
       sourceLine: context.lastAddedLine,
       fragment: elemtFrag,
-      targetLineType: "Tu",
+      targetLineType: lineClass,
       targetLineDepthAbs: context.absDepth,
       targetLineDepthRel: context.absDepth
     };
