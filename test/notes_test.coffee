@@ -1,6 +1,10 @@
 should = require 'should'
 async = require 'async'
 fs = require 'fs'
+compoundInstantiator = require('../server')
+helpers = require('./helpers')
+
+
 Client = require('request-json').JsonClient
 
 URL = require 'url'
@@ -44,12 +48,18 @@ createNoteFunction = (title, parentNote_id, content, creationCbk) ->
             creationCbk(error, response, body)
             syncCallback()
 
+before helpers.init(compoundInstantiator)
+
+Tree = null
+Note = null
+
 before (done) ->
-    app.listen(8888)
+    @app.listen(8888)
+    {Tree, Note} = @app.compound.models
     helpers.cleanDb done
 
 after (done) ->
-    app.close()
+    @app.compound.server.close()
     # helpers.cleanDb done
     done()
 
