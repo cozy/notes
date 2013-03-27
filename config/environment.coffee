@@ -1,15 +1,9 @@
 express = require 'express'
-
-app.configure ->
-    cwd = process.cwd()
-    
-    app.set 'views', cwd + '/app/views'
-    app.set 'view engine', 'jade'
-    app.set 'view options', complexNames: true
+module.exports = (compound) ->
+    app = compound.app
     app.enable 'coffee'
 
-    app.use express.static(cwd + '/client/public', maxAge: 86400000)
+    app.use express.static  "#{app.root}/client/public", maxAge: 86400000
     app.use express.bodyParser(keepExtensions: true)
     app.use express.methodOverride()
     app.use app.router
-

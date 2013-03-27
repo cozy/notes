@@ -1,3 +1,7 @@
+# path should be a [String], but didn't work with mongo
+# For the moment the array is jsonified before storage...
+# @TODO remove serialization
+
 Note = define 'Note', ->
     property 'title'                , String , index: true
     property 'content'              , String
@@ -5,7 +9,7 @@ Note = define 'Note', ->
     property 'lastModificationDate' , Date   , default: Date
     property 'tags'                 , [String]
     property 'parent_id'            , String
-    property 'path'                 , String  #  should be [String], but doesn't work. For the moment the array is jsonified before storage...
+    property 'path'                 , String  
     property 'humanPath'            , [String]
     property '_attachments'          , Object
 
@@ -21,12 +25,3 @@ User = define 'User', ->
     property 'owner'     , Boolean, default: false
     property 'activated' , Boolean, default: false
 
-
-###
-    For the test of array storage in mongo - 
-    remove only when the corresponding test ... fails
-    cf /cozy-note/test/array-storage_test.coffee
-###
-TestArrayObj = define 'TestArrayObj', ->
-    property 'title'      , String
-    property 'myArrayProp', [String]
