@@ -7,7 +7,6 @@ module.exports = class Task extends Backbone.Model
     url: -> 
       if @isNew() then "/apps/todos/todolists/#{Task.todolistId}/tasks"
       else "/apps/todos/todolists/#{Task.todolistId}/tasks/#{@id}"
-      # else "/apps/todos/tasks/#{@id}"
 
     defaults: ->
         done:false
@@ -15,11 +14,14 @@ module.exports = class Task extends Backbone.Model
         previousTask:null   #needed ?
 
 
+doNothing = ->
+isTodo = (app) -> app.name is 'todos'
+isFromNote = (todolist) -> todolist.title is 'from notes'
 
 # Initialization
 todoIsInstalled = (callback) ->
     request.get '/api/applications', (err, apps) ->
-        if !err and apps.rows.some((app) -> app.name is 'todos')
+        if not err and apps.rows.some isTodo
             callback(true)
         else
             callback(false)
@@ -29,7 +31,7 @@ findInboxTodoList = (callback) ->
         if err
             callback(null)
         else
-            inboxList = _.find lists.rows, (list) -> list.title is'from notes'
+            inboxList = _.find lists.rows, isFromNote
             callback(inboxList)
 
 createInboxTodoList = (callback) ->
@@ -40,8 +42,7 @@ createInboxTodoList = (callback) ->
         else
             callback(inboxList)
 
-Task.initialize = (callback) ->
-    callback ?= ->
+Task.initialize = (callback=doNothing) ->
     todoIsInstalled (installed) ->
         if not installed
             callback(Task.canBeUsed = false)
