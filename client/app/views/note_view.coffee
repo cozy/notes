@@ -2,6 +2,7 @@ template = require('./templates/note')
 Note = require('../models/note').Note
 TreeInst = require('./widgets/tree')
 FileList = require('./widgets/file_list').FileList
+CNeditor = require('CNeditor/editor')
 
 helpers = require '../helpers'
 
