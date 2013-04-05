@@ -12,13 +12,14 @@ module.exports = class Task extends Backbone.Model
         nextTask:null       #needed ?
         previousTask:null   #needed ?
 
+    parse: (data) -> if data.rows then data.rows[0] else data
 
     # Private static methods
     doNothing = ->
     isTodo = (app) -> app.name is 'todos'
     isFromNote = (todolist) -> todolist.title is 'from notes'
 
-    
+
     todoIsInstalled = (callback) ->
         request.get '/api/applications', (err, apps) ->
             if not err and apps.rows.some isTodo
