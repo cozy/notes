@@ -8,7 +8,10 @@ module.exports = (compound) ->
 
     redis = require 'redis'
     client = redis.createClient()
+    console.log ' socket.io initialized !'
     client.on 'pmessage', (pat, ch, msg) ->
+        console.log ' ====== !'
+        console.log ' ====== >  pmessage !'
         compound.logger.write "redis #{ch} #{msg}"
         compound.io.sockets.emit ch, msg
 

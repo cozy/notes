@@ -951,6 +951,73 @@ window.require.define({"CNeditor/task": function(exports, require, module) {
   
 }});
 
+window.require.define({"CNeditor/realtimer": function(exports, require, module) {
+  var RealTimer;
+
+  RealTimer = (function() {
+
+    RealTimer.prototype.events = ['note.create', 'note.update', 'note.delete', 'task.update', 'task.delete'];
+
+    RealTimer.prototype.url = window.location.origin;
+
+    RealTimer.prototype.params = {
+      resource: "" + (window.location.pathname.substring(1)) + "socket.io"
+    };
+
+    RealTimer.prototype.watched = {};
+
+    function RealTimer() {
+      var event, socket, _i, _len, _ref;
+      socket = io.connect(this.url, this.params);
+      _ref = this.events;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        event = _ref[_i];
+        socket.on(event, this.callbackFactory(event));
+      }
+    }
+
+    RealTimer.prototype.callbackFactory = function(event) {
+      var _this = this;
+      return function(id) {
+        var doctype, operation, _ref;
+        _ref = event.split('.'), doctype = _ref[0], operation = _ref[1];
+        return _this.callback(doctype, operation, id);
+      };
+    };
+
+    RealTimer.prototype.callback = function(doctype, operation, id) {
+      var method;
+      console.log(doctype, operation, id);
+      if (doctype === 'note') {
+
+      } else if (doctype === 'task' && (this.watched[id] != null)) {
+        method = operation === 'update' ? 'fetch' : 'destroy';
+        return this.watched[id][method]();
+      }
+    };
+
+    RealTimer.prototype.watch = function(model) {
+      var _this = this;
+      this.watched[model.id] = model;
+      return model.on('destroy', function() {
+        return _this.stopWatching(model);
+      });
+    };
+
+    RealTimer.prototype.stopWatching = function(model) {
+      if (this.watched[model.id] === model) {
+        return delete this.watched[model.id];
+      }
+    };
+
+    return RealTimer;
+
+  })();
+
+  module.exports = new RealTimer();
+  
+}});
+
 window.require.define({"CNeditor/autocomplete": function(exports, require, module) {
   var AutoComplete,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
@@ -1272,7 +1339,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
   #   _firstLine        : points the first line : TODO : not taken into account
   */
 
-  var AutoComplete, CNeditor, Line, Task, md2cozy, selection,
+  var AutoComplete, CNeditor, Line, Task, md2cozy, realtimer, selection,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __slice = [].slice;
 
@@ -1283,6 +1350,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
   Task = require('./task');
 
   AutoComplete = require('./autocomplete').AutoComplete;
+
+  try {
+    realtimer = require('./realtimer');
+  } catch (e) {
+    realtimer = {
+      watch: function() {}
+    };
+  }
 
   /**
    * line$        : 
@@ -1486,6 +1561,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       linesDiv.setAttribute('class', 'editor-frame');
       linesDiv.setAttribute('contenteditable', 'true');
       this.editorBody$.append(linesDiv);
+      if (this.isInIframe) {
+        linesDiv.style.overflowY = 'auto';
+        linesDiv.style.position = 'absolute';
+        linesDiv.style.top = 0;
+        linesDiv.style.bottom = 0;
+        linesDiv.style.right = 0;
+        linesDiv.style.left = 0;
+      }
       this._initClipBoard();
       this._initUrlPopover();
       this._auto = new AutoComplete(linesDiv, this);
@@ -1816,7 +1899,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       lineDiv.task = t;
       t.save().done(function() {
         console.log(" t.save.done()", t.id);
+        realtimer.watch(t);
         return lineDiv.dataset.id = t.id;
+      });
+      t.on('change', function(t) {
+        return console.log('change detected !', t.id);
       });
       this._internalTaskCounter += 1;
       t.internalId = 'CNE_task_id_' + this._internalTaskCounter;
@@ -1850,7 +1937,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         lineDiv.task = t;
         t.lineDiv = lineDiv;
         t.fetch().done(function() {
-          return console.log(" t.fetch.done()", t.id);
+          console.log(" t.fetch.done()", t.id);
+          return realtimer.watch(t);
+        });
+        t.on('change', function(t) {
+          return console.log('change detected !', t.id);
         });
         this._taskList.push(t);
       }
@@ -1862,19 +1953,22 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       switch (action) {
         case 'done':
           task.set({
-            done: true,
+            done: true
+          }, {
             silent: true
           });
           break;
         case 'undone':
           task.set({
-            done: false,
+            done: false
+          }, {
             silent: true
           });
           break;
         case 'modified':
           task.set({
-            description: task.lineDiv.textContent,
+            description: task.lineDiv.textContent
+          }, {
             silent: true
           });
           break;
