@@ -12,7 +12,7 @@ Note = define 'Note', ->
     property 'path'                 , String  
     property 'humanPath'            , [String]
     property '_attachments'         , Object
-    # property 'version'              , String
+    property 'version'              , String
 
 Tree = define 'Tree', ->
     property 'type'                 , String  , default: "Note"

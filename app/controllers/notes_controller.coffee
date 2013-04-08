@@ -149,6 +149,7 @@ action 'update', ->
                 isToUpdate = true
             if isToUpdate
                 newData.id = params.id
+                newData.version = body.version
                 note = new Note newData
                 saveAttributes isToIndex, note, newData
             else
@@ -167,6 +168,7 @@ action 'update', ->
             isToUpdate = true
         if isToUpdate
             newData.id = params.id
+            newData.version = body.version
             note = new Note newData
             saveAttributes isToIndex, note, newData
         else

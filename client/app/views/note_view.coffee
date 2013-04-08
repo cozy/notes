@@ -1,10 +1,10 @@
 template = require('./templates/note')
-Note = require('../models/note').Note
+Note     = require('../models/note').Note
 TreeInst = require('./widgets/tree')
 FileList = require('./widgets/file_list').FileList
 CNeditor = require('CNeditor/editor')
 
-helpers = require '../helpers'
+helpers  = require '../helpers'
 
 
 class exports.NoteView extends Backbone.View
@@ -41,8 +41,8 @@ class exports.NoteView extends Backbone.View
         @fileList = new FileList @model, '#file-list'
         
     ###*
-    # every keyUp in the note's editor will trigger a countdown of 3s, after
-    # 3s and if the user didn't type anything, the content will be saved
+     * every keyUp in the note's editor will trigger a countdown of 3s, after
+     * 3s and if the user didn't type anything, the content will be saved
     ###
     setSaveListeners: ->
         @$("#editor-container").on "onChange", () =>
@@ -53,6 +53,7 @@ class exports.NoteView extends Backbone.View
 
             @saveTimer = setTimeout(=>
                 @saveButton.spin 'small'
+                @editor.saveTasks()
                 Note.updateNote id, content: @editor.getEditorContent(), =>
                     @saveButton.spin()
 
@@ -137,12 +138,12 @@ class exports.NoteView extends Backbone.View
             delay     : delay
         
     ###*
-    # 
+     * 
     ###
     setModel : (note, data) ->
         @model = note
         @setTitle note.title
-        @setContent note.content
+        @setContent note
         @createBreadcrumb note, data
         @fileList.configure @model
         @fileList.render()
@@ -161,39 +162,48 @@ class exports.NoteView extends Backbone.View
         @$("#note-style").spin()
 
     ###*
-    #  Display note title
+     *  Display note title
     ###
     setTitle: (title) ->
         @noteFullTitle.val title
 
     ###*
-    # Stop saving timer if any and force saving of editor content. 
+     * Stop saving timer if any and force saving of editor content. 
     ###
     saveEditorContent: (callback) =>
         if @model? and @editor? and @saveTimer?
             clearTimeout @saveTimer
             @saveTimer = null
             @saveButton.spin 'small'
+            @editor.saveTasks()
             Note.updateNote @model.id, content: @editor.getEditorContent(), =>
                 @saveButton.addClass "active"
                 @saveButton.spin()
                 callback() if typeof(callback) == 'function'
 
-    # Display given content inside editor.
-    # If no content is given, editor is cleared.
-    setContent : (content) ->
-        if content
-            @editor.setEditorContent(content)
+
+    ###*
+     * Display given content inside editor.
+     * If no content is given, editor is cleared.
+    ###
+    setContent : (note) ->
+        if note.content
+            # means that the note had been saved in the olf markdown format
+            if !note.version
+                @editor.setEditorContentFromMD(note.content)
+            # otherwise it was stored in html
+            else
+                @editor.setEditorContent(note.content)
         else
             @editor.deleteContent()
 
 
 
     ###*
-    # create a breadcrumb showing a clickable way from the root to the current note
-    # input: noteModel, contains the informations of the current note
-    #  data, allow to reach the id of the parents of the current note
-    # output: the breadcrumb html is modified
+     * create a breadcrumb showing a clickable way from the root to the current note
+     * input: noteModel, contains the informations of the current note
+     *  data, allow to reach the id of the parents of the current note
+     * output: the breadcrumb html is modified
     ###
     createBreadcrumb : (noteModel, data) ->
         paths = noteModel.path
@@ -220,7 +230,7 @@ class exports.NoteView extends Backbone.View
             app.homeView.selectNote id
             
     ###*
-    # in case of renaming a note this function update the breadcrumb in consequences
+     * in case of renaming a note this function update the breadcrumb in consequences
     ###
     updateBreadcrumbOnTitleChange : (newName) ->
         @breadcrumb.find(" a:last").text newName

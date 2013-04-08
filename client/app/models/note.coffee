@@ -28,9 +28,11 @@ class exports.Note extends BaseModel
         @save content: @content
 
     @createNote = (data, callback) ->
+        data.version = '1'
         request.post "notes", data, callback
 
     @updateNote = (id, data, callback) ->
+        data.version = '1'
         request.put "notes/#{id}", data, callback
 
     @deleteNote = (id, callback) ->
