@@ -20418,6 +20418,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
           this.el.removeChild(this.el.lastChild);
           now = new Date();
           this._currentDate = now;
+          this._initialDate = new Date();
           this.datePick.datepicker('setValue', now);
           this.timePick.timepicker('setTime', now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds());
           this.el.appendChild(this.reminderDiv);
@@ -20425,8 +20426,15 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       }
     };
 
+    AutoComplete.prototype.update = function(typedTxt) {
+      if (!this.isVisible) {
+        return;
+      }
+      return this._updateDisp(typedTxt);
+    };
+
     AutoComplete.prototype._updateDisp = function(typedTxt) {
-      var it, items, ttag, _i, _j, _len, _len1, _ref;
+      var dh, dmn, it, items, now, reg1, reg2, resReg1, resReg2, ttag, txt, _i, _j, _len, _len1, _ref;
       _ref = this.tTags;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         ttag = _ref[_i];
@@ -20444,6 +20452,26 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
           items = this.htags;
           break;
         case 'reminder':
+          reg1 = /(\d*)h(\d*)mn/i;
+          reg2 = /(\d*)h/i;
+          txt = typedTxt.slice(2);
+          resReg1 = reg1.exec(txt);
+          resReg2 = reg2.exec(txt);
+          console.log(txt);
+          console.log(resReg1);
+          if (resReg1) {
+            dh = parseInt(resReg1[1]) * 3600000;
+            dmn = parseInt(resReg1[2]) * 60000;
+          } else if (resReg2) {
+            dh = parseInt(resReg2[1]) * 3600000;
+            dmn = 0;
+          }
+          if (resReg1 || resReg2) {
+            this._currentDate.setTime(this._initialDate.getTime() + dh + dmn);
+            now = this._currentDate;
+            this.datePick.datepicker('setValue', now);
+            this.timePick.timepicker('setTime', now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds());
+          }
           return;
       }
       for (_j = 0, _len1 = items.length; _j < _len1; _j++) {
@@ -20572,7 +20600,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       if (this.regexStore[typedTxt]) {
         reg = this.regexStore[typedTxt];
       } else {
-        reg = new RegExp(typedTxt.split('').join('[\\w ]*'), 'i');
+        reg = new RegExp(typedTxt.split('').join('[\\w ]*').replace('\W', '').replace('\+', '\\+'), 'i');
         this.regexStore[typedTxt] = reg;
       }
       if (item.text.match(reg)) {
@@ -20603,13 +20631,6 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       } else {
         return false;
       }
-    };
-
-    AutoComplete.prototype.update = function(typedTxt) {
-      if (!this.isVisible) {
-        return;
-      }
-      return this._updateDisp(typedTxt);
     };
 
     AutoComplete.prototype.up = function() {
@@ -22474,7 +22495,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     CNeditor.prototype.isNormalChar = function(e) {
       var keyCode, res;
       keyCode = e.which;
-      res = !e.altKey && !e.ctrlKey && !e.shiftKey && (96 < keyCode && keyCode < 123) || (63 < keyCode && keyCode < 91) || (47 < keyCode && keyCode < 58);
+      res = !e.altKey && !e.ctrlKey && !e.shiftKey && (96 < keyCode && keyCode < 123) || (63 < keyCode && keyCode < 91) || (47 < keyCode && keyCode < 58) || (keyCode === 43);
       return res;
     };
 
