@@ -415,7 +415,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
     }
     _ref = µ.getSegmentIndex(cont), segmentI = _ref[0], nodeI = _ref[1];
     n = parent.childNodes.length;
-    isStart = isStart && (index === 0);
+    isStart = isStart && (segmentI === 0);
     isEnd = isEnd && ((nodeI === n - 1) || (nodeI === n - 2));
     return {
       div: parent,
@@ -523,7 +523,23 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
   };
 
   µ.isSegment = function(segment) {
-    return !segment.classList.contains('CNE_task_btn');
+    return segment.nodeName !== 'BR' && !segment.classList.contains('CNE_task_btn');
+  };
+
+  µ.getNextSegment = function(seg) {
+    seg = seg.nextSibling;
+    while (seg && !µ.isSegment(seg)) {
+      seg = seg.nextSibling;
+    }
+    return seg;
+  };
+
+  µ.getPrevSegment = function(seg) {
+    seg = seg.previousSibling;
+    while (seg && !µ.isSegment(seg)) {
+      seg = seg.previousSibling;
+    }
+    return seg;
   };
 
   /**
@@ -20186,8 +20202,7 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
  */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);;
 
 window.require.define({"CNeditor/autocomplete": function(exports, require, module) {
-  var AutoComplete,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  var AutoComplete;
 
   require('./bootstrap-datepicker');
 
@@ -20196,10 +20211,6 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
   AutoComplete = (function() {
 
     function AutoComplete(container, editor) {
-      this._detectMouseupAuto = __bind(this._detectMouseupAuto, this);
-
-      this._detectMousedownAuto = __bind(this._detectMousedownAuto, this);
-
       var auto, reminderHTML,
         _this = this;
       this.container = container;
@@ -20234,7 +20245,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       auto = document.createElement('div');
       auto.id = 'CNE_autocomplete';
       auto.className = 'CNE_autocomplete';
-      auto.setAttribute('contenteditable', 'false');
+      auto.setAttribute('contentEditable', 'false');
       auto.addEventListener('keypress', function(e) {
         if (e.keyCode === 13) {
           _this._validateUrlPopover();
@@ -20252,17 +20263,21 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
         {
           text: 'contact',
           type: 'ttag',
+          value: 'contact',
           mention: ' (@)'
         }, {
           text: 'reminder',
           type: 'ttag',
+          value: 'reminder',
           mention: ' (@@)'
         }, {
           text: 'todo',
-          type: 'ttag'
+          type: 'ttag',
+          value: 'todo'
         }, {
           text: 'tag',
           type: 'ttag',
+          value: 'htag',
           mention: ' (#)'
         }
       ]);
@@ -20367,28 +20382,23 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     /**
      * Show the suggestion list
-     * @param  {Object} currentSel The editor current selection
+     * @param  {Object} seg The segment to be positionned next to.
      * @param  {String} typedTxt   The string typed by the user (hotstring)
      * @param  {[type]} edLineDiv  The editor line div where the user is typing
     */
 
 
-    AutoComplete.prototype.show = function(currentSel, typedTxt, edLineDiv) {
-      if (edLineDiv) {
-        this._currentEdLineDiv = edLineDiv;
-      }
-      this._updateDisp(typedTxt);
-      if (currentSel) {
-        this._position(currentSel);
-      }
-      this.container.appendChild(this.el);
+    AutoComplete.prototype.show = function(seg, typedTxt) {
+      var edLineDiv;
+      edLineDiv = seg.parentElement;
       this.isVisible = true;
-      this.container.addEventListener('mousedown', this._detectMousedownAuto);
-      return this.container.addEventListener('mouseup', this._detectMouseupAuto);
+      this.update(typedTxt);
+      this._position(seg);
+      return this.container.appendChild(this.el);
     };
 
-    AutoComplete.prototype.setModes = function(modes) {
-      var m, now, ttag, _i, _j, _len, _len1, _ref;
+    AutoComplete.prototype.setAllowedModes = function(modes) {
+      var m, ttag, _i, _j, _len, _len1, _ref;
       this._modes = modes;
       _ref = this.tTags;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -20402,72 +20412,112 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
           }
         }
       }
-      if (modes[0] === this._currentMode) {
-        return;
-      }
-      switch (modes[0]) {
+      return true;
+    };
+
+    AutoComplete.prototype.setMode = function(mode) {
+      var now;
+      this._unSelectLine();
+      switch (mode) {
         case 'contact':
-          this.el.removeChild(this.el.lastChild);
-          this.el.appendChild(this.contactsDiv);
-          return this._currentMode = 'contact';
-        case 'tag':
-          this.el.removeChild(this.el.lastChild);
-          this.el.appendChild(this.htagDiv);
-          return this._currentMode = 'htag';
+          this._currentMode = 'contact';
+          if (!this.tTagsDiv.parentNode) {
+            this.el.appendChild(this.tTagsDiv);
+          }
+          if (this.htagDiv.parentNode) {
+            this.el.removeChild(this.htagDiv);
+          }
+          if (!this.contactsDiv.parentNode) {
+            this.el.appendChild(this.contactsDiv);
+          }
+          if (this.reminderDiv.parentNode) {
+            return this.el.removeChild(this.reminderDiv);
+          }
+          break;
+        case 'htag':
+          this._currentMode = 'htag';
+          if (this.tTagsDiv.parentNode) {
+            this.el.removeChild(this.tTagsDiv);
+          }
+          if (!this.htagDiv.parentNode) {
+            this.el.appendChild(this.htagDiv);
+          }
+          if (this.contactsDiv.parentNode) {
+            this.el.removeChild(this.contactsDiv);
+          }
+          if (this.reminderDiv.parentNode) {
+            return this.el.removeChild(this.reminderDiv);
+          }
+          break;
         case 'reminder':
-          this.el.removeChild(this.el.lastChild);
           now = new Date();
           this._currentDate = now;
           this._initialDate = new Date();
           this.datePick.datepicker('setValue', now);
           this.timePick.timepicker('setTime', now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds());
-          this.el.appendChild(this.reminderDiv);
-          return this._currentMode = 'reminder';
+          this._currentMode = 'reminder';
+          if (this.tTagsDiv.parentNode) {
+            this.el.removeChild(this.tTagsDiv);
+          }
+          if (this.htagDiv.parentNode) {
+            this.el.removeChild(this.htagDiv);
+          }
+          if (this.contactsDiv.parentNode) {
+            this.el.removeChild(this.contactsDiv);
+          }
+          if (!this.reminderDiv.parentNode) {
+            return this.el.appendChild(this.reminderDiv);
+          }
       }
     };
 
     AutoComplete.prototype.update = function(typedTxt) {
+      var dd, dh, dmn, it, items, now, reg1, reg2, reg3, regD, regH, regMn, resReg1, resReg2, resReg3, resRegD, resRegH, resRegMn, ttag, _i, _j, _len, _len1, _ref;
       if (!this.isVisible) {
         return;
       }
-      return this._updateDisp(typedTxt);
-    };
-
-    AutoComplete.prototype._updateDisp = function(typedTxt) {
-      var dh, dmn, it, items, now, reg1, reg2, resReg1, resReg2, ttag, txt, _i, _j, _len, _len1, _ref;
-      _ref = this.tTags;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        ttag = _ref[_i];
-        if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
-          ttag.line.style.display = 'block';
-        } else {
-          ttag.line.style.display = 'none';
-        }
-      }
       switch (this._currentMode) {
         case 'contact':
+          _ref = this.tTags;
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            ttag = _ref[_i];
+            if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
+              ttag.line.style.display = 'block';
+            } else {
+              ttag.line.style.display = 'none';
+            }
+          }
           items = this.contacts;
           break;
         case 'htag':
           items = this.htags;
           break;
         case 'reminder':
-          reg1 = /(\d*)h(\d*)mn/i;
-          reg2 = /(\d*)h/i;
-          txt = typedTxt.slice(2);
-          resReg1 = reg1.exec(txt);
-          resReg2 = reg2.exec(txt);
-          console.log(txt);
-          console.log(resReg1);
-          if (resReg1) {
-            dh = parseInt(resReg1[1]) * 3600000;
-            dmn = parseInt(resReg1[2]) * 60000;
-          } else if (resReg2) {
-            dh = parseInt(resReg2[1]) * 3600000;
-            dmn = 0;
-          }
-          if (resReg1 || resReg2) {
-            this._currentDate.setTime(this._initialDate.getTime() + dh + dmn);
+          reg1 = /\+?(\d+)h(\d*)mn/i;
+          reg2 = /\+?(\d+)h/i;
+          reg3 = /\+?((\d+)d)?((\d+)h)?((\d*)mn)?/i;
+          regD = /(\d+)d/i;
+          regH = /(\d+)h/i;
+          regMn = /(\d+)mn/i;
+          resReg1 = reg1.exec(typedTxt);
+          resReg2 = reg2.exec(typedTxt);
+          resReg3 = reg3.exec(typedTxt);
+          resRegD = regD.exec(typedTxt);
+          resRegH = regH.exec(typedTxt);
+          resRegMn = regMn.exec(typedTxt);
+          console.log(resRegD);
+          if (resRegMn || resRegH || resRegD) {
+            dd = dh = dmn = 0;
+            if (resRegD) {
+              dd = parseInt(resRegD[1]) * 3600000 * 24;
+            }
+            if (resRegH) {
+              dh = parseInt(resRegH[1]) * 3600000;
+            }
+            if (resRegMn) {
+              dmn = parseInt(resRegMn[1]) * 60000;
+            }
+            this._currentDate.setTime(this._initialDate.getTime() + dd + dh + dmn);
             now = this._currentDate;
             this.datePick.datepicker('setValue', now);
             this.timePick.timepicker('setTime', now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds());
@@ -20486,17 +20536,10 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       return true;
     };
 
-    AutoComplete.prototype._position = function(currentSel) {
-      var parent, span, targetRange;
-      span = document.createElement('SPAN');
-      targetRange = currentSel.theoricalRange;
-      targetRange.insertNode(span);
+    AutoComplete.prototype._position = function(span) {
       this.el.style.left = span.offsetLeft + 'px';
       this.el.style.top = span.offsetTop + 17 + 'px';
-      parent = span.parentNode;
-      span.parentNode.removeChild(span);
-      parent.normalize();
-      currentSel.range.collapse(true);
+      span.parentElement.normalize();
       return true;
     };
 
@@ -20547,9 +20590,13 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
     };
 
     AutoComplete.prototype._unSelectLine = function() {
-      if (this._selectedLine) {
-        return this._selectedLine.classList.remove('SUGG_selected');
+      var line;
+      line = this._selectedLine;
+      if (line) {
+        line.classList.remove('SUGG_selected');
+        this._selectedLine = null;
       }
+      return line;
     };
 
     AutoComplete.prototype._removeLine = function(line) {
@@ -20562,14 +20609,11 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
         return false;
       }
       this.container.removeChild(this.el);
-      this._currentEdLineDiv = null;
-      this.container.removeEventListener('mousedown', this._detectMousedownAuto);
-      this.container.removeEventListener('mouseup', this._detectMouseupAuto);
       switch (this._currentMode) {
         case 'contact':
           if (this._selectedLine) {
-            this._unSelectLine();
             item = this._selectedLine.item;
+            this._unSelectLine();
           } else {
             item = null;
             this._selectedLine = null;
@@ -20577,8 +20621,8 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
           break;
         case 'htag':
           if (this._selectedLine && this._selectedLine.item.type === 'htag') {
-            this._unSelectLine();
             item = this._selectedLine.item;
+            this._unSelectLine();
           } else {
             item = null;
             this._selectedLine = null;
@@ -20596,11 +20640,12 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
     };
 
     AutoComplete.prototype._shouldDisp = function(item, typedTxt) {
-      var c, i, l, reg, s, spans, typedCar;
+      var c, i, l, reg, regText, s, spans, typedCar;
       if (this.regexStore[typedTxt]) {
         reg = this.regexStore[typedTxt];
       } else {
-        reg = new RegExp(typedTxt.split('').join('[\\w ]*').replace('\W', '').replace('\+', '\\+'), 'i');
+        regText = typedTxt.replace(/\W/g, '').split('').join('[\\w ]*');
+        reg = new RegExp(regText, 'i');
         this.regexStore[typedTxt] = reg;
       }
       if (item.text.match(reg)) {
@@ -20620,7 +20665,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
             if (c) {
               i += 1;
             } else {
-              break;
+              i += 1;
             }
           } else {
             s.className = '';
@@ -20634,16 +20679,16 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
     };
 
     AutoComplete.prototype.up = function() {
-      var prev;
+      var line, prev;
       if (!this._selectedLine) {
         this._selectedLine = this.el.lastChild.lastChild;
       } else {
-        this._unSelectLine();
-        prev = this._selectedLine.previousSibling;
+        line = this._unSelectLine();
+        prev = line.previousSibling;
         if (prev) {
           this._selectedLine = prev;
         } else {
-          if (this._selectedLine.item.type === 'ttag') {
+          if (line.item.type === 'ttag') {
             this._selectedLine = this.el.lastChild.lastChild;
           } else {
             this._selectedLine = this.el.firstChild.lastChild;
@@ -20659,16 +20704,16 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
     };
 
     AutoComplete.prototype.down = function() {
-      var next;
+      var line, next;
       if (!this._selectedLine) {
         this._selectedLine = this.el.firstChild.firstChild;
       } else {
-        this._unSelectLine();
-        next = this._selectedLine.nextSibling;
+        line = this._unSelectLine();
+        next = line.nextSibling;
         if (next) {
           this._selectedLine = next;
         } else {
-          if (this._selectedLine.item.type === 'ttag') {
+          if (line.item.type === 'ttag') {
             this._selectedLine = this.el.lastChild.firstChild;
           } else {
             this._selectedLine = this.el.firstChild.firstChild;
@@ -20696,34 +20741,6 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
         }
       }
       return false;
-    };
-
-    AutoComplete.prototype._detectMousedownAuto = function(e) {
-      console.log('== mousedown');
-      return e.preventDefault();
-    };
-
-    AutoComplete.prototype._detectMouseupAuto = function(e) {
-      var isOut, selectedLine;
-      console.log('== mouseup');
-      isOut = e.target !== this.el && $(e.target).parents('#CNE_autocomplete').length === 0;
-      if (isOut) {
-        return this.hide();
-      } else {
-        if (this._currentMode === 'reminder') {
-          return;
-        }
-        selectedLine = e.target;
-        while (selectedLine && selectedLine.tagName !== 'LI') {
-          selectedLine = selectedLine.parentElement;
-        }
-        if (selectedLine) {
-          this.editor._doHotStringAction(selectedLine.item, this._currentEdLineDiv);
-          return this.hide();
-        } else {
-          return this.hide();
-        }
-      }
     };
 
     return AutoComplete;
@@ -22123,7 +22140,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
   #   _firstLine        : points the first line : TODO : not taken into account
   */
 
-  var AutoComplete, CNeditor, Line, Task, md2cozy, realtimer, selection,
+  var CNeditor, HotString, Line, Task, md2cozy, realtimer, selection,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __slice = [].slice;
 
@@ -22133,7 +22150,9 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
   Task = require('./task');
 
-  AutoComplete = require('./autocomplete').AutoComplete;
+  HotString = require('./hot-string');
+
+  Line = require('./line');
 
   try {
     realtimer = require('./realtimer');
@@ -22142,124 +22161,6 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       watch: function() {}
     };
   }
-
-  /** -----------------------------------------------------------------------
-   * line$        : 
-   * lineID       : 
-   * lineType     : 
-   * lineDepthAbs : 
-   * lineDepthRel : 
-   * lineNext     : 
-   * linePrev     :
-  */
-
-
-  Line = (function() {
-    /*
-         * If no arguments, returns an empty object (only methods), otherwise
-         * constructs a full line. The dom element of the line is inserted according
-         * to the previous or next line given in the arguments.
-         * @param  {Array}  Array of parameters :
-         *   [ 
-                editor        , # 
-                type          , # 
-                depthAbs      , # 
-                depthRelative , # 
-                prevLine      , # The prev line, null if nextLine is given
-                nextLine      , # The next line, null if prevLine is given
-                fragment        # [optional] a fragment to insert in the line, will
-                                  add a br at the end if none in the fragment.
-              ]
-    */
-
-    function Line() {
-      var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
-      if (arguments.length === 0) {
-        return;
-      } else {
-        editor = arguments[0], type = arguments[1], depthAbs = arguments[2], depthRelative = arguments[3], prevLine = arguments[4], nextLine = arguments[5], fragment = arguments[6];
-      }
-      editor._highestId += 1;
-      lineID = 'CNID_' + editor._highestId;
-      newLineEl = document.createElement('div');
-      newLineEl.setAttribute('class', type + '-' + depthAbs);
-      if (fragment != null) {
-        newLineEl.appendChild(fragment);
-        if (newLineEl.lastChild.nodeName !== 'BR') {
-          newLineEl.appendChild(document.createElement('br'));
-        }
-      } else {
-        node = document.createElement('span');
-        node.appendChild(document.createTextNode(''));
-        newLineEl.appendChild(node);
-        newLineEl.appendChild(document.createElement('br'));
-      }
-      this.line$ = $(newLineEl);
-      if (prevLine != null) {
-        this.linePrev = prevLine;
-        linesDiv = prevLine.line$[0].parentNode;
-        if (prevLine.lineNext != null) {
-          nextL = prevLine.lineNext;
-          linesDiv.insertBefore(newLineEl, nextL.line$[0]);
-          this.lineNext = nextL;
-          nextL.linePrev = this;
-        } else {
-          linesDiv.appendChild(newLineEl);
-          this.lineNext = null;
-        }
-        prevLine.lineNext = this;
-      } else if (nextLine != null) {
-        linesDiv = nextLine.line$[0].parentNode;
-        this.lineNext = nextLine;
-        linesDiv.insertBefore(newLineEl, nextLine.line$[0]);
-        if (nextLine.linePrev != null) {
-          this.linePrev = nextLine.linePrev;
-          nextLine.linePrev.lineNext = this;
-        } else {
-          this.linePrev = null;
-        }
-        nextLine.linePrev = this;
-      }
-      newLineEl.id = lineID;
-      this.lineID = lineID;
-      this.lineType = type;
-      this.lineDepthAbs = depthAbs;
-      this.lineDepthRel = depthRelative;
-      editor._lines[lineID] = this;
-    }
-
-    Line.prototype.setType = function(type) {
-      this.lineType = type;
-      return this.line$.prop('class', "" + type + "-" + this.lineDepthAbs);
-    };
-
-    Line.prototype.setDepthAbs = function(absDepth) {
-      this.lineDepthAbs = absDepth;
-      return this.line$.prop('class', "" + this.lineType + "-" + absDepth);
-    };
-
-    Line.prototype.setTypeDepth = function(type, absDepth) {
-      this.lineType = type;
-      this.lineDepthAbs = absDepth;
-      return this.line$.prop('class', "" + type + "-" + absDepth);
-    };
-
-    return Line;
-
-  })();
-
-  Line.clone = function(line) {
-    var clone;
-    clone = new Line();
-    clone.line$ = line.line$.clone();
-    clone.lineID = line.lineID;
-    clone.lineType = line.lineType;
-    clone.lineDepthAbs = line.lineDepthAbs;
-    clone.lineDepthRel = line.lineDepthRel;
-    clone.linePrev = line.linePrev;
-    clone.lineNext = line.lineNext;
-    return clone;
-  };
 
   module.exports = CNeditor = (function() {
     /*
@@ -22291,8 +22192,6 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this._keyDownCallBackTry = __bind(this._keyDownCallBackTry, this);
 
       this._toggleTaskCB = __bind(this._toggleTaskCB, this);
-
-      this._hotStringDetectionKeypress = __bind(this._hotStringDetectionKeypress, this);
 
       this._pasteCB = __bind(this._pasteCB, this);
 
@@ -22355,13 +22254,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       }
       this._initClipBoard();
       this._initUrlPopover();
-      this._auto = new AutoComplete(linesDiv, this);
+      this._hotString = new HotString(this);
       this._lines = {};
       this.newPosition = true;
       this._highestId = 0;
       this._deepest = 1;
       this._firstLine = null;
-      this.hotString = '';
       HISTORY_SIZE = 100;
       this.HISTORY_SIZE = HISTORY_SIZE;
       this._history = {
@@ -22383,6 +22281,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this.enable();
       return this.callBack.call(this);
     };
+
+    /**
+     * Whe the user click in the editor, moueup event will set @newPosition to
+     * true.
+    */
+
 
     CNeditor.prototype._mouseupCB = function() {
       return this.newPosition = true;
@@ -22409,13 +22313,17 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         if (e.ctrlKey) {
           url = segments[0].href;
           window.open(url, '_blank');
-          return e.preventDefault();
+          e.preventDefault();
         } else {
           this._showUrlPopover(segments, false);
           e.stopPropagation();
-          return e.preventDefault();
+          e.preventDefault();
         }
       }
+      if (this.hotString.isPreparing) {
+        this.hotString.reInit();
+      }
+      return true;
     };
 
     CNeditor.prototype._pasteCB = function(event) {
@@ -22429,8 +22337,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this.editorBody$.on('keyup', this._keyupCast);
       this.editorBody$.on('click', this._clickCB);
       this.editorBody$.on('paste', this._pasteCB);
-      this.editorBody.addEventListener('keypress', this._hotStringDetectionKeypress);
-      return this.editorBody.addEventListener('keydown', this._hotStringDetectionKeydown);
+      return this.editorBody.addEventListener('keypress', this._hotString.newtypedChar);
     };
 
     CNeditor.prototype._unRegisterEventListeners = function() {
@@ -22439,7 +22346,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this.linesDiv.removeEventListener('mouseup', this._mouseupCB, true);
       this.editorBody$.off('keyup', this._keyupCast);
       this.editorBody$.off('click', this._clickCB);
-      return this.editorBody$.off('paste', this._pasteCB);
+      this.editorBody$.off('paste', this._pasteCB);
+      return this.editorBody.removeEventListener('keypress', this._hotString.newtypedChar);
     };
 
     CNeditor.prototype.disable = function() {
@@ -22492,165 +22400,6 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return this.serializeRange(sel.getRangeAt(0));
     };
 
-    CNeditor.prototype.isNormalChar = function(e) {
-      var keyCode, res;
-      keyCode = e.which;
-      res = !e.altKey && !e.ctrlKey && !e.shiftKey && (96 < keyCode && keyCode < 123) || (63 < keyCode && keyCode < 91) || (47 < keyCode && keyCode < 58) || (keyCode === 43);
-      return res;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Update the current "hotString" typed by the user. This function is called
-     * by keypress event, and detects keys such as '@' and "normal caracters". 
-     * Arrows, return, baskspace etc are manage in _keyDownCallBack()
-     * @param  {[type]} e [description]
-     * @return {[type]}   [description]
-    */
-
-
-    CNeditor.prototype._hotStringDetectionKeypress = function(e) {
-      var char, sel;
-      char = String.fromCharCode(e.which);
-      if (e.which === 64) {
-        if (this.hotString === ' ' || this._isStartingWord()) {
-          this.hotString = ' @';
-          sel = this.updateCurrentSel();
-          if (sel.startLineDiv.dataset.type === 'task') {
-            this._auto.setModes(['contact', 'event', 'reminder', 'tag']);
-          } else {
-            this._auto.setModes(['contact', 'todo', 'event', 'reminder', 'tag']);
-          }
-          this._auto.show(sel, '', sel.startLineDiv);
-          return;
-        }
-      }
-      if (e.which === 35) {
-        if (this.hotString === ' ' || this._isStartingWord()) {
-          this.hotString = ' #';
-          sel = this.updateCurrentSel();
-          this._auto.setModes(['tag']);
-          this._auto.show(sel, '', sel.startLineDiv);
-          return;
-        }
-      }
-      if (this.isNormalChar(e)) {
-        if (this.hotString.length > 1) {
-          this.hotString += String.fromCharCode(e.which);
-          this._auto.update(this.hotString.slice(2));
-          if (this._doHotStringAction()) {
-            return e.preventDefault();
-          }
-        } else {
-          this.hotString = '';
-          return this._auto.hide();
-        }
-      }
-    };
-
-    CNeditor.prototype._isAHotString = function(txt) {
-      switch (txt.slice(2)) {
-        case 'reminder':
-        case '@':
-          return {
-            text: 'reminder',
-            type: 'ttag'
-          };
-        case 'todo':
-          return {
-            text: 'todo',
-            type: 'ttag'
-          };
-      }
-    };
-
-    CNeditor.prototype._doHotStringAction = function(autoItem, lineDiv) {
-      var d, date, format, h, lastSeg, m, mn, newSeg, reg, rg, taskDiv, txt, y;
-      if (!autoItem) {
-        autoItem = this._isAHotString(this.hotString);
-        if (!autoItem) {
-          return false;
-        }
-      }
-      switch (autoItem.type) {
-        case 'ttag':
-          switch (autoItem.text) {
-            case 'todo':
-              taskDiv = this._turnIntoTask();
-              if (taskDiv) {
-                txt = taskDiv.textContent.trim();
-                reg = new RegExp('^ *@?t?o?d?o? *$', 'i');
-                if (txt.match(reg)) {
-                  this._initTaskContent(taskDiv);
-                } else {
-                  this._forceUserHotString('');
-                }
-                this.hotString = '';
-                this._auto.hide();
-                return true;
-              }
-              break;
-            case 'reminder':
-              this._auto.hide();
-              this._forceUserHotString(' @@', true);
-              this.hotString = ' @@';
-              this._auto.setModes(['reminder']);
-              this._auto.show(null, this.hotString.slice(2), null);
-              return true;
-            case 'tag':
-              this._auto.hide();
-              this._forceUserHotString(' #', true);
-              this.hotString = ' #';
-              this._auto.setModes(['tag']);
-              this._auto.show(null, this.hotString.slice(2), null);
-              return true;
-          }
-          break;
-        case 'contact':
-          this._forceUserHotString(autoItem.text);
-          rg = this._applyMetaDataOnSelection('CNE_contact');
-          lastSeg = selection.getSegment(rg.endContainer, 0);
-          newSeg = this._insertSegmentAfterSeg(lastSeg);
-          this._setCaret(newSeg, 1);
-          this.hotString = '';
-          this._auto.hide();
-          return true;
-        case 'htag':
-          this._forceUserHotString(autoItem.text);
-          rg = this._applyMetaDataOnSelection('CNE_htag');
-          lastSeg = selection.getSegment(rg.endContainer, 0);
-          newSeg = this._insertSegmentAfterSeg(lastSeg);
-          this._setCaret(newSeg, 1);
-          this.hotString = '';
-          this._auto.hide();
-          return true;
-        case 'reminder':
-          format = function(n) {
-            if (n.toString().length === 1) {
-              return '0' + n;
-            } else {
-              return n;
-            }
-          };
-          date = autoItem.text;
-          d = format(date.getDate());
-          m = format(date.getMonth());
-          y = format(date.getFullYear());
-          h = format(date.getHours());
-          mn = format(date.getMinutes());
-          txt = d + '/' + m + '/' + y + '  ' + h + ':' + mn;
-          this._forceUserHotString(txt);
-          rg = this._applyMetaDataOnSelection('CNE_reminder');
-          lastSeg = selection.getSegment(rg.endContainer, 0);
-          newSeg = this._insertSegmentAfterSeg(lastSeg);
-          this._setCaret(newSeg, 1);
-          this.hotString = '';
-          this._auto.hide();
-          return true;
-      }
-      this._auto.hide();
-      return false;
-    };
-
     CNeditor.prototype._initTaskContent = function(taskDiv) {
       var segment, span, txt;
       segment = taskDiv.firstChild.nextSibling;
@@ -22664,21 +22413,6 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       span.appendChild(txt);
       taskDiv.insertBefore(span, segment);
       return this._setSelectionOnNode(txt);
-    };
-
-    CNeditor.prototype._forceUserHotString = function(newHotString, setEnd) {
-      var index, rg, textContent, textNode, txt;
-      rg = this.updateCurrentSel().theoricalRange;
-      textNode = rg.startContainer;
-      textContent = textNode.textContent;
-      index = rg.startOffset - this.hotString.length + 1;
-      txt = textContent.slice(0, index) + newHotString + textContent.slice(rg.startOffset);
-      textNode.textContent = txt;
-      if (setEnd) {
-        return this._setCaret(textNode, index + newHotString.length);
-      } else {
-        return this._setSelection(textNode, index, textNode, index + newHotString.length);
-      }
     };
 
     CNeditor.prototype._turnIntoTask = function(lineDiv) {
@@ -22698,7 +22432,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       btn = this.document.createElement('SPAN');
       btn.className = 'CNE_task_btn';
       btn.dataset.type = 'taskBtn';
-      text = this.document.createTextNode('\u00a0');
+      if (this.isChromeOrSafari) {
+        text = this.document.createTextNode(' ');
+      } else {
+        text = this.document.createTextNode('\u00a0');
+      }
       btn.appendChild(text);
       btn.addEventListener('click', this._toggleTaskCB);
       lineDiv.insertBefore(btn, lineDiv.firstChild);
@@ -22918,11 +22656,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       } else {
         if (rg.startOffset === 0) {
           rg2 = rg.cloneRange();
-          txt = rg.toString();
+          rg2.collapse();
+          rg2.setStart(selection._getLineDiv(rg2.startContainer), 0);
+          txt = rg2.toString();
           if (txt.length === 0) {
             return true;
+          } else {
+            char = text.slice(-1);
           }
-          char = txt[txt.length];
         } else {
           char = rg.startContainer.textContent.substr(rg.startOffset - 1, 1);
         }
@@ -22931,6 +22672,16 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         } else {
           return false;
         }
+      }
+    };
+
+    CNeditor.prototype.getCurrentAllowedInsertions = function() {
+      var sel;
+      sel = this.updateCurrentSel();
+      if (sel.startLineDiv.dataset.type === 'task') {
+        return ['contact', 'event', 'reminder', 'tag'];
+      } else {
+        return ['contact', 'todo', 'event', 'reminder', 'tag'];
       }
     };
 
@@ -22999,21 +22750,43 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /* ------------------------------------------------------------------------
-    # Returns a markdown string representing the editor content
+    # Returns an html string representing the editor content
     */
 
 
     CNeditor.prototype.getEditorContent = function() {
-      var txt;
-      if (this._auto.isVisible) {
-        this.linesDiv.removeChild(this._auto.el);
-      }
-      txt = this.linesDiv.innerHTML;
-      if (this._auto.isVisible) {
-        this.linesDiv.appendChild(this._auto.el);
-      }
-      if (this.isUrlPopoverOn) {
-        txt = txt.replace('<div[=":;\w ]*CNE_urlPopover[\w\W]*', '');
+      var clone, lineDiv, seg, segment, segments, txt, _i, _j, _len, _len1;
+      if (this._hotString.isPreparing || this.isUrlPopoverOn) {
+        clone = this.linesDiv.cloneNode(true);
+        if (this._hotString.isPreparing) {
+          segment = clone.querySelector('.CNE_hot_string');
+          segment.classList.remove('CNE_hot_string');
+          lineDiv = segment.parentElement;
+          segment.textContent = '';
+          this._fusionSimilarSegments(lineDiv, []);
+          segment = clone.querySelector('#CNE_autocomplete');
+          segment.parentElement.removeChild(segment);
+        }
+        if (this.isUrlPopoverOn) {
+          segment = clone.querySelector('#CNE_urlPopover');
+          segment.parentElement.removeChild(segment);
+          segments = clone.querySelectorAll('.CNE_url_in_edition');
+          for (_i = 0, _len = segments.length; _i < _len; _i++) {
+            seg = segments[_i];
+            seg.classList.remove('CNE_url_in_edition');
+          }
+          if (this.urlPopover.isLinkCreation) {
+            lineDiv = selection._getLineDiv(segments[0]);
+            for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
+              seg = segments[_j];
+              this._applyAhrefToSegments(seg, seg, [], false, '');
+            }
+            this._fusionSimilarSegments(lineDiv, []);
+          }
+        }
+        txt = clone.innerHTML;
+      } else {
+        txt = this.linesDiv.innerHTML;
       }
       return txt;
     };
@@ -23069,54 +22842,69 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
 
     CNeditor.prototype.getShortCut = function(e) {
-      var keyCode, metaKeyCode, shortcut;
+      var isAction, keyCode, metaKeyCode, shortcut;
       metaKeyCode = (e.altKey ? "Alt" : "") + 
                                 (e.ctrlKey ? "Ctrl" : "") + 
                                 (e.shiftKey ? "Shift" : "");
       switch (e.keyCode) {
         case 13:
           keyCode = 'return';
+          isAction = true;
           break;
         case 35:
           keyCode = 'end';
+          isAction = true;
           break;
         case 36:
           keyCode = 'home';
+          isAction = true;
           break;
         case 33:
           keyCode = 'pgUp';
+          isAction = true;
           break;
         case 34:
           keyCode = 'pgDwn';
+          isAction = true;
           break;
         case 37:
           keyCode = 'left';
+          isAction = true;
           break;
         case 38:
           keyCode = 'up';
+          isAction = true;
           break;
         case 39:
           keyCode = 'right';
+          isAction = true;
           break;
         case 40:
           keyCode = 'down';
+          isAction = true;
           break;
         case 9:
           keyCode = 'tab';
+          isAction = true;
           break;
         case 8:
           keyCode = 'backspace';
+          isAction = true;
           break;
         case 32:
           keyCode = 'space';
+          isAction = true;
           break;
         case 27:
           keyCode = 'esc';
+          isAction = true;
           break;
         case 46:
           keyCode = 'suppr';
+          isAction = true;
           break;
         default:
+          isAction = false;
           switch (e.which) {
             case 32:
               keyCode = 'space';
@@ -23159,7 +22947,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       if (metaKeyCode === '' && (keyCode === 'A' || keyCode === 'B' || keyCode === 'U' || keyCode === 'K' || keyCode === 'L' || keyCode === 'S' || keyCode === 'V' || keyCode === 'Y' || keyCode === 'Z')) {
         keyCode = 'other';
       }
-      return [metaKeyCode, keyCode];
+      return [metaKeyCode, keyCode, isAction];
     };
 
     /** -----------------------------------------------------------------------
@@ -23193,47 +22981,41 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return this.linesDiv.addEventListener('keydown', this._keyDownCallBackTry, true);
     };
 
-    /* ------------------------------------------------------------------------
-    #   _keyDownCallBack
-    # 
-    # The listener of keyPress event on the editor's iframe... the king !
-    */
-
-
-    /*
-        # SHORTCUT
-        #
-        # Definition of a shortcut : 
-        #   a combination alt,ctrl,shift,meta
-        #   + one caracter(.which) 
-        #   or 
-        #     arrow (.keyCode=dghb:) or 
-        #     return(keyCode:13) or 
-        #     bckspace (which:8) or 
-        #     tab(keyCode:9)
-        #   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
-        #                   'Ctrl-'
+    /**------------------------------------------------------------------------
+     *
+     * The listener of keyPress event on the editor's iframe... the king !
+     * 
+     * Params :
+     * e : the event object. Interesting attributes : 
+     *   .which
+     *   .altKey
+     *   .ctrlKey
+     *   .metaKey
+     *   .shiftKey
+     *   .keyCode
+     *   
+     * SHORTCUT
+     *
+     * Definition of a shortcut : 
+     *   a combination alt,ctrl,shift,meta
+     *   + one caracter(.which) 
+     *   or 
+     *     arrow (.keyCode=dghb:) or 
+     *     return(keyCode:13) or 
+     *     bckspace (which:8) or 
+     *     tab(keyCode:9)
+     *   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
+     *                   'Ctrl-'
     */
 
 
     CNeditor.prototype._keyDownCallBack = function(e) {
-      var item, keyCode, metaKeyCode, sel, shortcut, _ref;
+      var keyCode, metaKeyCode, sel, shortcut, _ref;
       if (!this.isEnabled) {
         return true;
       }
       _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
       shortcut = metaKeyCode + '-' + keyCode;
-      switch (e.keyCode) {
-        case 16:
-          e.preventDefault();
-          return;
-        case 17:
-          e.preventDefault();
-          return;
-        case 18:
-          e.preventDefault();
-          return;
-      }
       if (this._lastKey !== shortcut && (shortcut === '-return' || shortcut === '-backspace' || shortcut === '-suppr' || shortcut === 'CtrlShift-down' || shortcut === 'CtrlShift-up' || shortcut === 'CtrlShift-left' || shortcut === 'CtrlShift-right' || shortcut === 'Ctrl-V' || shortcut === '-space' || shortcut === '-other')) {
         this._addHistory();
       }
@@ -23248,27 +23030,20 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         startBP: null,
         endBP: null
       };
+      if (this._hotString.isPreparing) {
+        if (this._hotString.newShortCut(shortcut, metaKeyCode, keyCode)) {
+          e.preventDefault();
+          return false;
+        }
+      }
       switch (shortcut) {
         case '-return':
-          if (this._auto.isVisible) {
-            item = this._auto.hide();
-            this._doHotStringAction(item);
-            return e.preventDefault();
-          } else {
-            this.updateCurrentSelIsStartIsEnd();
-            this._return();
-            this.newPosition = false;
-            e.preventDefault();
-            return this.editorTarget$.trigger(jQuery.Event('onChange'));
-          }
-          break;
+          this.updateCurrentSelIsStartIsEnd();
+          this._return();
+          this.newPosition = false;
+          e.preventDefault();
+          return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case '-backspace':
-          this.hotString = this.hotString.slice(0, -1);
-          if (this.hotString.length < 2) {
-            this._auto.hide();
-          } else {
-            this._auto.update(this.hotString.slice(2));
-          }
           this.updateCurrentSelIsStartIsEnd();
           this._backspace();
           this.newPosition = true;
@@ -23287,41 +23062,22 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           this._suppr(e);
           e.preventDefault();
           this.newPosition = true;
-          this.editorTarget$.trigger(jQuery.Event('onChange'));
-          this.hotString = '';
-          return this._auto.hide();
+          return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case 'CtrlShift-down':
           return e.preventDefault();
         case 'CtrlShift-up':
           return e.preventDefault();
         case '-up':
-          if (this._auto.isVisible) {
-            this._auto.up();
-            return e.preventDefault();
-          } else {
-            this._previousLineDiv = this.updateCurrentSel().startLineDiv;
-            this.newPosition = true;
-            return this.hotString = '';
-          }
-          break;
+          return this.newPosition = true;
         case '-down':
-          if (this._auto.isVisible) {
-            this._auto.down();
-            return e.preventDefault();
-          } else {
-            this.newPosition = true;
-            return this.hotString = '';
-          }
-          break;
+          return this.newPosition = true;
         case '-left':
         case '-right':
         case '-pgUp':
         case '-pgDwn':
         case '-end':
         case '-home':
-          this.newPosition = true;
-          this.hotString = '';
-          return this._auto.hide();
+          return this.newPosition = true;
         case 'Ctrl-A':
           selection.selectAll(this);
           return e.preventDefault();
@@ -23343,11 +23099,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             this.newPosition = false;
           }
           this.editorTarget$.trigger(jQuery.Event('onChange'));
-          this._detectTaskChange();
-          if (shortcut === '-space') {
-            return this.hotString = ' ';
-          }
-          break;
+          return this._detectTaskChange();
         case 'Ctrl-V':
           this.editorTarget$.trigger(jQuery.Event('onChange'));
           return true;
@@ -23369,8 +23121,6 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           this.reDo();
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case '-esc':
-          return this._auto.hide();
       }
     };
 
@@ -23788,7 +23538,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       pop.urlInput.focus();
       for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
         seg = segments[_j];
-        seg.style.backgroundColor = '#dddddd';
+        seg.classList.add('CNE_url_in_edition');
       }
       return true;
     };
@@ -23816,7 +23566,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
 
     CNeditor.prototype._cancelUrlPopover = function(doNotRestoreOginalSel) {
-      var pop, seg, segments, sel, serial, _i, _len;
+      var bp1, bp2, bps, lineDiv, pop, s0, s1, seg, segments, sel, _i, _len;
       pop = this.urlPopover;
       segments = pop.segments;
       this.editorBody.removeEventListener('mouseup', this._detectClickOutUrlPopover);
@@ -23824,17 +23574,26 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this.isUrlPopoverOn = false;
       for (_i = 0, _len = segments.length; _i < _len; _i++) {
         seg = segments[_i];
-        seg.style.removeProperty('background-color');
+        seg.classList.remove('CNE_url_in_edition');
       }
       if (pop.isLinkCreation) {
-        if (doNotRestoreOginalSel) {
-          serial = this.serializeSel();
-          this._forceUndo();
-          if (serial) {
-            this.deSerializeSelection(serial);
-          }
-        } else {
-          this._forceUndo();
+        s0 = segments[0];
+        s1 = segments[segments.length - 1];
+        bp1 = {
+          cont: s0,
+          offset: 0
+        };
+        bp2 = {
+          cont: s1,
+          offset: s1.childNodes.length
+        };
+        bps = [bp1, bp2];
+        selection.normalizeBPs(bps);
+        lineDiv = selection._getLineDiv(s0);
+        this._applyAhrefToSegments(s0, s1, bps, false, '');
+        this._fusionSimilarSegments(lineDiv, bps);
+        if (!doNotRestoreOginalSel) {
+          this.setSelectionBp(bp1, bp2);
         }
       } else if (!doNotRestoreOginalSel) {
         sel = this.document.getSelection();
@@ -23877,7 +23636,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this.isUrlPopoverOn = false;
       for (_i = 0, _len = segments.length; _i < _len; _i++) {
         seg = segments[_i];
-        seg.style.removeProperty('background-color');
+        seg.classList.remove('CNE_url_in_edition');
       }
       if (!pop.isLinkCreation) {
         sel = this.document.getSelection();
@@ -23935,6 +23694,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       i = i[1];
       bp = selection.normalizeBP(lineDiv, i + 1);
       this._fusionSimilarSegments(lineDiv, [bp]);
+      bp = this.insertSpaceAfterUrl(selection.getNestedSegment(bp.cont));
       this._setCaret(bp.cont, bp.offset);
       this.setFocus();
       this.enable();
@@ -23993,7 +23753,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
 
     CNeditor.prototype._applyMetaDataOnSelection = function() {
-      var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, others, range, rg, rgEnd, rgStart, sel, _i, _j, _len, _len1;
+      var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, nextSegment, others, prevSegment, range, rangeIsToNormalize, rg, rgEnd, rgStart, seg, sel, _i, _j, _len, _len1;
       metaData = arguments[0], others = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
       currentSel = this.updateCurrentSelIsStartIsEnd();
       range = currentSel.theoricalRange;
@@ -24002,30 +23762,43 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       }
       line = currentSel.startLine;
       endLine = currentSel.endLine;
-      if (currentSel.firstLineIsEnd) {
-        if (line.line$[0].textContent !== '') {
+      if (range.startContainer.length !== 0 && range.startContainer.length === range.startOffset) {
+        seg = selection.getNestedSegment(range.startContainer);
+        nextSegment = selection.getNextSegment(seg);
+        if (nextSegment) {
+          range.setStartBefore(nextSegment.firstChild);
+          rangeIsToNormalize = true;
+        } else {
           line = line.lineNext;
           if (line === null) {
             return;
           }
           range.setStartBefore(line.line$[0].firstChild);
-          selection.normalize(range);
+          rangeIsToNormalize = true;
+        }
+      }
+      if (range.endContainer.length !== 0 && range.endOffset === 0) {
+        seg = selection.getNestedSegment(range.endContainer);
+        prevSegment = selection.getPrevSegment(seg);
+        if (prevSegment) {
+          range.setEndAfter(prevSegment.lastChild);
+          rangeIsToNormalize = true;
+        } else {
+          endLine = endLine.linePrev;
+          if (endLine === null) {
+            return;
+          }
+          range.setEndAfter(endLine.line$[0].lastChild);
+          rangeIsToNormalize = true;
           if (range.collapsed) {
             return;
           }
         }
       }
-      if (currentSel.lastLineIsStart) {
-        if (endLine.line$[0].textContent !== '') {
-          endLine = endLine.linePrev;
-          if (endLine === null) {
-            return;
-          }
-          range.setEndBefore(endLine.line$[0].lastChild);
-          selection.normalize(range);
-          if (range.collapsed) {
-            return;
-          }
+      if (rangeIsToNormalize) {
+        selection.normalize(range);
+        if (range.collapsed) {
+          return;
         }
       }
       if (metaData === 'A' && line !== endLine) {
@@ -24375,7 +24148,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      *     class and if required href.
      *   * Remove empty segments.
      * @param  {element} lineDiv     the DIV containing the line
-     * @param  {Array} breakPoints [{con,offset}...] array of respectively the 
+     * @param  {Array} breakPoints [{cont,offset}...] array of respectively the 
      *                              container and offset of the breakpoint to 
      *                              update if cont is in a segment modified by 
      *                              the fusion. 
@@ -25575,11 +25348,23 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return true;
     };
 
-    CNeditor.prototype._setSelection = function(startContainer, startOffset, endContainer, endOffset) {
+    CNeditor.prototype.setSelection = function(startContainer, startOffset, endContainer, endOffset) {
       var range, sel;
       range = this.document.createRange();
       range.setStart(startContainer, startOffset);
       range.setEnd(endContainer, endOffset);
+      selection.normalize(range);
+      sel = this.document.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return true;
+    };
+
+    CNeditor.prototype.setSelectionBp = function(bp1, bp2) {
+      var range, sel;
+      range = this.document.createRange();
+      range.setStart(bp1.cont, bp1.offset);
+      range.setEnd(bp2.cont, bp2.offset);
       selection.normalize(range);
       sel = this.document.getSelection();
       sel.removeAllRanges();
@@ -25687,6 +25472,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           }
         }
         if (htmlLine.dataset.type === 'task') {
+          if (this.isChromeOrSafari) {
+            htmlLine.firstChild.textContent = ' ';
+          } else {
+            htmlLine.firstChild.textContent = '\u00a0';
+          }
           this._setTaskToLine(htmlLine);
         }
       }
@@ -25934,7 +25724,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._addHistory = function() {
       var i, savedScroll, savedSel;
-      if (this.isUrlPopoverOn || this.isAutoCompleteOn) {
+      if (this.isUrlPopoverOn || this._hotString.isPreparing) {
         return;
       }
       if (this._history.index < this.HISTORY_SIZE - 1) {
@@ -26606,6 +26396,62 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return span;
     };
 
+    /**
+     * returns a break point, collapsed after a space caracter immediately
+     * following a given segment. A segment will we inserted if required.
+     * @param  {[type]} seg [description]
+     * @return {[type]}     [description]
+    */
+
+
+    CNeditor.prototype.insertSpaceAfterSeg = function(seg) {
+      var bp, c1, index, nextSeg, span, txtNode;
+      nextSeg = seg.nextSibling;
+      if (nextSeg.nodeName === 'BR') {
+        span = this._insertSegmentAfterSeg(seg);
+        bp = {
+          cont: span.firstChild,
+          offset: 1
+        };
+      } else {
+        index = selection.getSegmentIndex(seg)[1] + 1;
+        bp = selection.normalizeBP(seg.parentElement, index, true);
+        txtNode = bp.cont;
+        c1 = txtNode.textContent[0];
+        if (!(c1 === ' ' || c1 === '\u00a0')) {
+          txtNode.textContent = '\u00a0' + txtNode.textContent;
+        }
+        bp.offset = 1;
+      }
+      return bp;
+    };
+
+    /**
+     * returns a break point, collapsed after a space caracter immediately
+     * following a given segment. A segment will we inserted if required.
+     * @param  {[type]} seg [description]
+     * @return {Object}     {cont,offset} : the break point
+    */
+
+
+    CNeditor.prototype.insertSpaceAfterUrl = function(seg) {
+      var bp, index, nextSeg, span, txtNode;
+      nextSeg = seg.nextSibling;
+      if (nextSeg.nodeName === 'BR') {
+        span = this._insertSegmentAfterSeg(seg);
+        bp = {
+          cont: span.firstChild,
+          offset: 1
+        };
+      } else {
+        index = selection.getSegmentIndex(seg)[1] + 1;
+        bp = selection.normalizeBP(seg.parentElement, index, true);
+        txtNode = bp.cont;
+        bp.offset = 0;
+      }
+      return bp;
+    };
+
     /** -----------------------------------------------------------------------
      * Walks thoug an html tree in order to convert it in a strutured content
      * that fit to a note structure.
@@ -26818,6 +26664,76 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return context.lastAddedLine = this._insertLineAfter(p);
     };
 
+    CNeditor.prototype.doHotStringAction = function(autoItem) {
+      var bp, d, date, format, h, hs, m, mn, reg, taskDiv, txt, y;
+      hs = this._hotString;
+      switch (autoItem.type) {
+        case 'ttag':
+          return hs.forceHsType(autoItem.value);
+        case 'todo':
+          taskDiv = this._turnIntoTask();
+          if (taskDiv) {
+            txt = taskDiv.textContent.trim();
+            reg = new RegExp('^ *@?t?o?d?o? *$', 'i');
+            if (txt.match(reg)) {
+              this._initTaskContent(taskDiv);
+            } else {
+              hs._forceUserHotString('');
+            }
+            hs.reset();
+            this.editorTarget$.trigger(jQuery.Event('onChange'));
+            return true;
+          }
+          break;
+        case 'contact':
+          hs._forceUserHotString(autoItem.text);
+          hs._hsSegment.classList.add('CNE_contact');
+          hs._hsSegment.classList.remove('CNE_hot_string');
+          bp = this.insertSpaceAfterSeg(hs._hsSegment);
+          this._setCaret(bp.cont, 1);
+          hs._auto.hide();
+          hs._reInit();
+          this.editorTarget$.trigger(jQuery.Event('onChange'));
+          return true;
+        case 'htag':
+          hs._forceUserHotString(autoItem.text);
+          hs._hsSegment.classList.add('CNE_htag');
+          hs._hsSegment.classList.remove('CNE_hot_string');
+          bp = this.insertSpaceAfterSeg(hs._hsSegment);
+          this._setCaret(bp.cont, 1);
+          hs._auto.hide();
+          this.editorTarget$.trigger(jQuery.Event('onChange'));
+          return true;
+        case 'reminder':
+          format = function(n) {
+            if (n.toString().length === 1) {
+              return '0' + n;
+            } else {
+              return n;
+            }
+          };
+          date = autoItem.text;
+          d = format(date.getDate());
+          m = format(date.getMonth());
+          y = format(date.getFullYear());
+          h = format(date.getHours());
+          mn = format(date.getMinutes());
+          txt = d + '/' + m + '/' + y + '  ' + h + ':' + mn;
+          hs._forceUserHotString(txt);
+          hs._hsSegment.classList.add('CNE_reminder');
+          hs._hsSegment.classList.remove('CNE_hot_string');
+          bp = this.insertSpaceAfterSeg(hs._hsSegment);
+          this._setCaret(bp.cont, 1);
+          hs._auto.hide();
+          hs._reInit();
+          this.editorTarget$.trigger(jQuery.Event('onChange'));
+          return true;
+      }
+      this.editorTarget$.trigger(jQuery.Event('onChange'));
+      this._auto.hide();
+      return false;
+    };
+
     /* ------------------------------------------------------------------------
     # EXTENSION  :  cleaned up HTML parsing
     #
@@ -26859,6 +26775,477 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
   })();
 
   CNeditor = exports.CNeditor;
+  
+}});
+
+window.require.define({"CNeditor/hot-string": function(exports, require, module) {
+  var AutoComplete, HotString, selection,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+  AutoComplete = require('./autocomplete').AutoComplete;
+
+  selection = require('./selection').selection;
+
+  module.exports = HotString = (function() {
+
+    function HotString(editor) {
+      this._mouseUpCb = __bind(this._mouseUpCb, this);
+
+      this._mouseDownCb = __bind(this._mouseDownCb, this);
+
+      this._tryHighlight = __bind(this._tryHighlight, this);
+
+      this.newtypedChar = __bind(this.newtypedChar, this);
+      this.editor = editor;
+      this.container = editor.linesDiv;
+      this._auto = new AutoComplete(editor.linesDiv, editor);
+      this._hsTypes = ['@', '@@', '#'];
+      this._modes = {
+        '@': 'contact',
+        '@@': 'reminder',
+        '#': 'tag'
+      };
+      this.isPreparing = false;
+      this._fullHS = '';
+      this._hsType = '';
+      this._hsRight = '';
+      this._hsLeft = '';
+      this._hsString = '';
+      this._currentMode = '';
+      this._getShortCut = editor.getShortCut;
+      this._autoToBeShowed = false;
+      this.container.addEventListener('keyup', this._tryHighlight);
+    }
+
+    HotString.prototype.newShortCut = function(shortcut, metaKeyCode, keyCode) {
+      var item, newType, preventDefault;
+      switch (shortcut) {
+        case '-return':
+          item = this._auto.hide();
+          this.isPreparing = false;
+          this.editor.doHotStringAction(item);
+          preventDefault = true;
+          break;
+        case '-backspace':
+          if (this._hsLeft.length === 0) {
+            newType = this._hsType.slice(0, -1);
+            if (__indexOf.call(this._hsTypes, newType) >= 0) {
+              this._hsType = newType;
+              this._currentMode = this._modes[newType];
+              this._auto.setMode(this._currentMode);
+              this._auto.update(this._hsString);
+            } else {
+              this.reset(true);
+            }
+          } else {
+            this._hsLeft = this._hsLeft.slice(0, -1);
+            this._hsString = this._hsLeft + this._hsRight;
+            this._fullHS = this._hsType + this._hsString;
+            this._auto.update(this._hsString);
+          }
+          preventDefault = false;
+          break;
+        case '-suppr':
+          if (this._hsRight.length === 0) {
+            this.reset(true);
+          } else {
+            this._hsRight = this._hsRight.slice(1);
+            this._hsString = this._hsLeft + this._hsRight;
+            this._fullHS = this._hsType + this._hsString;
+            this._auto.update(this._hsString);
+          }
+          preventDefault = false;
+          break;
+        case '-up':
+          this._auto.up();
+          preventDefault = true;
+          break;
+        case '-down':
+          this._auto.down();
+          preventDefault = true;
+          break;
+        case '-left':
+          if (this._hsLeft.length === 0) {
+            this.reset(true);
+          } else {
+            this._hsRight = this._hsLeft.slice(-1) + this._hsRight;
+            this._hsLeft = this._hsLeft.slice(0, -1);
+          }
+          preventDefault = false;
+          break;
+        case '-right':
+          if (this._hsRight.length === 0) {
+            this.reset(true);
+          } else {
+            this._hsLeft = this._hsLeft + this._hsRight[0];
+            this._hsRight = this._hsRight.slice(1);
+          }
+          preventDefault = false;
+          break;
+        case '-pgUp':
+        case '-pgDwn':
+        case '-end':
+        case '-home':
+          this.reset(true);
+          preventDefault = false;
+          break;
+        case '-space':
+          preventDefault = false;
+          break;
+        case '-esc':
+          this.reset(true);
+          preventDefault = false;
+      }
+      return preventDefault;
+    };
+
+    HotString.prototype.printHotString = function() {
+      return console.log('_fullHS = "' + this._fullHS + '"', '_hsType = "' + this._hsType + '"', '_hsLeft = "' + this._hsLeft + '"', '_hsRight = "' + this._hsRight + '"');
+    };
+
+    /** -----------------------------------------------------------------------
+     * Update the current "hotString" typed by the user. This function is called
+     * by keypress event, and detects keys such as '@' and "normal caracters". 
+     * Arrows, return, baskspace etc are manage in newShortCut()
+     * @param  {Event} e The keyboard event
+    */
+
+
+    HotString.prototype.newtypedChar = function(e) {
+      var autoItem, charCode, isAction, modes;
+      charCode = e.which;
+      if (this.isPreparing) {
+        if (this._hsLeft === '' && charCode === 64 && (this._hsType = '@')) {
+          this._hsType = '@@';
+          this._currentMode = 'reminder';
+          this._auto.setMode('reminder');
+          return true;
+        }
+        isAction = this._getShortCut(e)[2];
+        if (!isAction) {
+          this._hsLeft += String.fromCharCode(charCode);
+          this._hsString = this._hsLeft + this._hsRight;
+          this._fullHS = this._hsType + this._hsString;
+          autoItem = this._isAHotString(this._hsString);
+          if (autoItem) {
+            this.editor.doHotStringAction(autoItem);
+            e.preventDefault();
+            return false;
+          }
+          this._auto.update(this._hsString);
+          return true;
+        }
+      } else if (charCode === 64) {
+        if (this.editor._isStartingWord()) {
+          modes = this.editor.getCurrentAllowedInsertions();
+          if (__indexOf.call(modes, 'contact') >= 0) {
+            this._hsType = '@';
+            this._fullHS = '@';
+            this.isPreparing = true;
+            this.container.addEventListener('mousedown', this._mouseDownCb);
+            this.container.addEventListener('mouseup', this._mouseUpCb);
+            this._auto.setAllowedModes(modes);
+            this._currentMode = 'contact';
+            this._auto.setMode('contact');
+            this._autoToBeShowed = true;
+          }
+        }
+      } else if (charCode === 35) {
+        if (this.editor._isStartingWord()) {
+          modes = this.editor.getCurrentAllowedInsertions();
+          if (__indexOf.call(modes, 'tag') >= 0) {
+            this._hsType = '#';
+            this._fullHS = '#';
+            this.isPreparing = true;
+            this.container.addEventListener('mousedown', this._mouseDownCb);
+            this.container.addEventListener('mouseup', this._mouseUpCb);
+            this._currentMode = 'htag';
+            this._auto.setMode('htag');
+            this._autoToBeShowed = true;
+          }
+        }
+      }
+      return true;
+    };
+
+    HotString.prototype._isNormalChar = function(charCode) {
+      var res;
+      res = (96 < charCode && charCode < 123) || (63 < charCode && charCode < 91) || (47 < charCode && charCode < 58) || (charCode === 43);
+      return res;
+    };
+
+    HotString.prototype._tryHighlight = function() {
+      var rg;
+      if (this._autoToBeShowed) {
+        rg = this.editor.getEditorSelection().getRangeAt(0);
+        this.editor.setSelection(rg.startContainer, rg.startOffset - this._hsType.length, rg.endContainer, rg.endOffset);
+        rg = this.editor._applyMetaDataOnSelection('CNE_hot_string');
+        this._hsTextNode = rg.startContainer;
+        this._hsSegment = rg.startContainer.parentElement;
+        this.editor._setCaret(this._hsSegment, this._hsSegment.childNodes.length);
+        this._autoToBeShowed = false;
+        this._auto.show(this._hsSegment, '');
+      }
+      return true;
+    };
+
+    HotString.prototype._unhighLight = function(dealCaret) {
+      var bp, seg;
+      seg = this._hsSegment;
+      if (seg.parentElement) {
+        seg.classList.remove('CNE_hot_string');
+        bp = {
+          cont: this._hsTextNode,
+          offset: this._hsType.length + this._hsLeft.length
+        };
+        this.editor._fusionSimilarSegments(seg.parentElement, [bp]);
+        if (dealCaret) {
+          this.editor._setCaret(bp.cont, bp.offset);
+        }
+        this._hsTextNode = null;
+        this._hsSegment = null;
+      }
+      return true;
+    };
+
+    HotString.prototype._forceUserHotString = function(newHotString, setEnd) {
+      var textNode;
+      textNode = this._hsTextNode;
+      textNode.textContent = newHotString;
+      if (setEnd) {
+        return this.editor._setCaret(textNode, textNode.length);
+      } else {
+        return this.editor._setSelectionOnNode(textNode);
+      }
+    };
+
+    HotString.prototype.forceHsType = function(type) {
+      switch (type) {
+        case 'todo':
+          return this.editor.doHotStringAction({
+            type: 'todo'
+          });
+        case 'reminder':
+          this._forceUserHotString('@@', true);
+          this._hsType = '@@';
+          this._currentMode = 'reminder';
+          this._auto.setMode('reminder');
+          return true;
+        case 'htag':
+          this._auto.hide();
+          this._forceUserHotString('#', true);
+          this._fullHS = '#';
+          this._hsType = '#';
+          this._hsString = '';
+          this._hsRight = '';
+          this._hsLeft = '';
+          this._currentMode = 'htag';
+          this._auto.setMode('htag');
+          this._auto.show(this._hsSegment, this._hsString);
+          return true;
+      }
+    };
+
+    HotString.prototype.reset = function(dealCaret) {
+      this._unhighLight(dealCaret);
+      this._reInit();
+      return this._auto.hide();
+    };
+
+    HotString.prototype._reInit = function() {
+      this._fullHS = '';
+      this._hsType = '';
+      this._hsString = '';
+      this._hsRight = '';
+      this._hsLeft = '';
+      this.isPreparing = false;
+      this.container.removeEventListener('mousedown', this._mouseDownCb);
+      return this.container.removeEventListener('mouseup', this._mouseUpCb);
+    };
+
+    HotString.prototype._isAHotString = function(txt) {
+      switch (txt) {
+        case 'reminder':
+          return {
+            text: 'reminder',
+            type: 'ttag',
+            value: 'reminder'
+          };
+        case 'todo':
+          return {
+            text: 'todo',
+            type: 'ttag',
+            value: 'todo'
+          };
+        case 'tag':
+          return {
+            text: 'tag',
+            type: 'ttag',
+            value: 'htag'
+          };
+      }
+    };
+
+    HotString.prototype._mouseDownCb = function(e) {
+      var isOut;
+      console.log('== mousedown');
+      isOut = e.target !== this.el && $(e.target).parents('#CNE_autocomplete').length === 0;
+      if (!isOut) {
+        return e.preventDefault();
+      }
+    };
+
+    HotString.prototype._mouseUpCb = function(e) {
+      var isOut, selectedLine;
+      console.log('== mouseup');
+      isOut = e.target !== this.el && $(e.target).parents('#CNE_autocomplete').length === 0;
+      if (isOut) {
+        this.reset(false);
+        return true;
+      } else {
+        if (this._currentMode === 'reminder') {
+          return true;
+        }
+        selectedLine = e.target;
+        while (selectedLine && selectedLine.tagName !== 'LI') {
+          selectedLine = selectedLine.parentElement;
+        }
+        if (selectedLine) {
+          return this.editor.doHotStringAction(selectedLine.item);
+        } else {
+          return this.reset(true);
+        }
+      }
+    };
+
+    return HotString;
+
+  })();
+  
+}});
+
+window.require.define({"CNeditor/line": function(exports, require, module) {
+  /** -----------------------------------------------------------------------
+   * line$        : 
+   * lineID       : 
+   * lineType     : 
+   * lineDepthAbs : 
+   * lineDepthRel : 
+   * lineNext     : 
+   * linePrev     :
+  */
+
+  var Line;
+
+  Line = (function() {
+    /*
+         * If no arguments, returns an empty object (only methods), otherwise
+         * constructs a full line. The dom element of the line is inserted according
+         * to the previous or next line given in the arguments.
+         * @param  {Array}  Array of parameters :
+         *   [ 
+                editor        , # 
+                type          , # 
+                depthAbs      , # 
+                depthRelative , # 
+                prevLine      , # The prev line, null if nextLine is given
+                nextLine      , # The next line, null if prevLine is given
+                fragment        # [optional] a fragment to insert in the line, will
+                                  add a br at the end if none in the fragment.
+              ]
+    */
+
+    function Line() {
+      var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
+      if (arguments.length === 0) {
+        return;
+      } else {
+        editor = arguments[0], type = arguments[1], depthAbs = arguments[2], depthRelative = arguments[3], prevLine = arguments[4], nextLine = arguments[5], fragment = arguments[6];
+      }
+      editor._highestId += 1;
+      lineID = 'CNID_' + editor._highestId;
+      newLineEl = document.createElement('div');
+      newLineEl.setAttribute('class', type + '-' + depthAbs);
+      if (fragment != null) {
+        newLineEl.appendChild(fragment);
+        if (newLineEl.lastChild.nodeName !== 'BR') {
+          newLineEl.appendChild(document.createElement('br'));
+        }
+      } else {
+        node = document.createElement('span');
+        node.appendChild(document.createTextNode(''));
+        newLineEl.appendChild(node);
+        newLineEl.appendChild(document.createElement('br'));
+      }
+      this.line$ = $(newLineEl);
+      if (prevLine != null) {
+        this.linePrev = prevLine;
+        linesDiv = prevLine.line$[0].parentNode;
+        if (prevLine.lineNext != null) {
+          nextL = prevLine.lineNext;
+          linesDiv.insertBefore(newLineEl, nextL.line$[0]);
+          this.lineNext = nextL;
+          nextL.linePrev = this;
+        } else {
+          linesDiv.appendChild(newLineEl);
+          this.lineNext = null;
+        }
+        prevLine.lineNext = this;
+      } else if (nextLine != null) {
+        linesDiv = nextLine.line$[0].parentNode;
+        this.lineNext = nextLine;
+        linesDiv.insertBefore(newLineEl, nextLine.line$[0]);
+        if (nextLine.linePrev != null) {
+          this.linePrev = nextLine.linePrev;
+          nextLine.linePrev.lineNext = this;
+        } else {
+          this.linePrev = null;
+        }
+        nextLine.linePrev = this;
+      }
+      newLineEl.id = lineID;
+      this.lineID = lineID;
+      this.lineType = type;
+      this.lineDepthAbs = depthAbs;
+      this.lineDepthRel = depthRelative;
+      editor._lines[lineID] = this;
+    }
+
+    Line.prototype.setType = function(type) {
+      this.lineType = type;
+      return this.line$.prop('class', "" + type + "-" + this.lineDepthAbs);
+    };
+
+    Line.prototype.setDepthAbs = function(absDepth) {
+      this.lineDepthAbs = absDepth;
+      return this.line$.prop('class', "" + this.lineType + "-" + absDepth);
+    };
+
+    Line.prototype.setTypeDepth = function(type, absDepth) {
+      this.lineType = type;
+      this.lineDepthAbs = absDepth;
+      return this.line$.prop('class', "" + type + "-" + absDepth);
+    };
+
+    return Line;
+
+  })();
+
+  Line.clone = function(line) {
+    var clone;
+    clone = new Line();
+    clone.line$ = line.line$.clone();
+    clone.lineID = line.lineID;
+    clone.lineType = line.lineType;
+    clone.lineDepthAbs = line.lineDepthAbs;
+    clone.lineDepthRel = line.lineDepthRel;
+    clone.linePrev = line.linePrev;
+    clone.lineNext = line.lineNext;
+    return clone;
+  };
+
+  module.exports = Line;
   
 }});
 

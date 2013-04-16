@@ -116,13 +116,13 @@ class exports.NoteView extends Backbone.View
             @editor.toggleType()
             @editor.setFocus()
 
-        # @boldBtn.tooltip
-        #     placement : "right"
-        #     title     : "Bold (Ctrl + B)"
-        #     delay     : delay
-        # @boldBtn.on "click", () =>
-        #     @editor.strong()
-        #     @editor.setFocus()
+        @boldBtn.tooltip
+            placement : "right"
+            title     : "Bold (Ctrl + B)"
+            delay     : delay
+        @boldBtn.on "click", () =>
+            @editor.strong()
+            @editor.setFocus()
 
         @linkBtn.tooltip
             placement : "right"
