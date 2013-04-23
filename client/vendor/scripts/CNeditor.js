@@ -61,20 +61,25 @@
     throw new Error('Cannot find module "' + name + '"');
   };
 
-  var define = function(bundle) {
-    for (var key in bundle) {
-      if (has(bundle, key)) {
-        modules[key] = bundle[key];
+  var define = function(bundle, fn) {
+    if (typeof bundle === 'object') {
+      for (var key in bundle) {
+        if (has(bundle, key)) {
+          modules[key] = bundle[key];
+        }
       }
+    } else {
+      modules[bundle] = fn;
     }
-  }
+  };
 
   globals.require = require;
   globals.require.define = define;
+  globals.require.register = define;
   globals.require.brunch = true;
 })();
 
-window.require.define({"CNeditor/selection": function(exports, require, module) {
+window.require.register("CNeditor/selection", function(exports, require, module) {
   var selection, µ;
 
   µ = {};
@@ -97,6 +102,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.cleanSelection = function(startLine, endLine, range) {
     var endNode, startNode;
+
     if (startLine === null) {
       startLine = endLine;
       endLine = endLine.lineNext;
@@ -113,6 +119,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.selectAll = function(editor) {
     var range, sel;
+
     range = document.createRange();
     range.setStartBefore(editor.linesDiv.firstChild);
     range.setEndAfter(editor.linesDiv.lastChild);
@@ -129,6 +136,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.cloneEndFragment = function(range, endLine) {
     var range4fragment;
+
     range4fragment = rangy.createRangyRange();
     range4fragment.setStart(range.endContainer, range.endOffset);
     range4fragment.setEndAfter(endLine.line$[0].lastChild);
@@ -241,17 +249,18 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
   */
 
 
-  µ.normalize = function(range) {
+  µ.normalize = function(rg, preferNext) {
     var isCollapsed, newEndBP, newStartBP;
-    isCollapsed = range.collapsed;
-    newStartBP = µ.normalizeBP(range.startContainer, range.startOffset);
-    range.setStart(newStartBP.cont, newStartBP.offset);
+
+    isCollapsed = rg.collapsed;
+    newStartBP = µ.normalizeBP(rg.startContainer, rg.startOffset, preferNext);
+    rg.setStart(newStartBP.cont, newStartBP.offset);
     if (isCollapsed) {
-      range.collapse(true);
+      rg.collapse(true);
       newEndBP = newStartBP;
     } else {
-      newEndBP = µ.normalizeBP(range.endContainer, range.endOffset);
-      range.setEnd(newEndBP.cont, newEndBP.offset);
+      newEndBP = µ.normalizeBP(rg.endContainer, rg.endOffset, preferNext);
+      rg.setEnd(newEndBP.cont, newEndBP.offset);
     }
     return [newStartBP, newEndBP];
   };
@@ -269,6 +278,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.normalizeBP = function(cont, offset, preferNext) {
     var newCont, newOffset, res, _ref;
+
     if (cont.nodeName === '#text') {
       res = {
         cont: cont,
@@ -353,6 +363,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.normalizeBPs = function(bps, preferNext) {
     var bp, newBp, _i, _len;
+
     for (_i = 0, _len = bps.length; _i < _len; _i++) {
       bp = bps[_i];
       newBp = µ.normalizeBP(bp.cont, bp.offset, preferNext);
@@ -373,6 +384,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getLineDivIsStartIsEnd = function(cont, offset) {
     var index, isEnd, isStart, n, nodeI, parent, segmentI, _ref;
+
     if (cont.nodeName === 'DIV' && (cont.id != null) && cont.id.substr(0, 5) === 'CNID_') {
       if (cont.textContent === '') {
         return {
@@ -415,7 +427,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
     }
     _ref = µ.getSegmentIndex(cont), segmentI = _ref[0], nodeI = _ref[1];
     n = parent.childNodes.length;
-    isStart = isStart && (index === 0);
+    isStart = isStart && (segmentI === 0);
     isEnd = isEnd && ((nodeI === n - 1) || (nodeI === n - 2));
     return {
       div: parent,
@@ -426,6 +438,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.putStartOnStart = function(range, elt) {
     var blank, offset;
+
     if ((elt != null ? elt.firstChild : void 0) != null) {
       offset = elt.firstChild.textContent.length;
       if (offset === 0) {
@@ -441,6 +454,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.putEndOnStart = function(range, elt) {
     var blank, offset;
+
     if ((elt != null ? elt.firstChild : void 0) != null) {
       offset = elt.firstChild.textContent.length;
       if (offset === 0) {
@@ -464,6 +478,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getLineDiv = function(cont, offset) {
     var startDiv;
+
     if (cont.nodeName === 'DIV') {
       if (cont.id === 'editor-lines') {
         startDiv = cont.children[offset];
@@ -478,6 +493,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ._getLineDiv = function(elt) {
     var parent;
+
     parent = elt;
     while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
       parent = parent.parentNode;
@@ -498,6 +514,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getSegment = function(cont, offset) {
     var startDiv;
+
     if (cont.nodeName === 'DIV') {
       if (cont.id === 'editor-lines') {
         startDiv = cont.children[Math.min(offset, cont.children.length - 1)];
@@ -514,6 +531,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getNestedSegment = function(elt) {
     var parent;
+
     parent = elt.parentNode;
     while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
       elt = parent;
@@ -523,7 +541,23 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
   };
 
   µ.isSegment = function(segment) {
-    return !segment.classList.contains('CNE_task_btn');
+    return segment.nodeName !== 'BR' && !segment.classList.contains('CNE_task_btn');
+  };
+
+  µ.getNextSegment = function(seg) {
+    seg = seg.nextSibling;
+    while (seg && !µ.isSegment(seg)) {
+      seg = seg.nextSibling;
+    }
+    return seg;
+  };
+
+  µ.getPrevSegment = function(seg) {
+    seg = seg.previousSibling;
+    while (seg && !µ.isSegment(seg)) {
+      seg = seg.previousSibling;
+    }
+    return seg;
   };
 
   /**
@@ -535,6 +569,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.setBpPreviousSegEnd = function(elmt) {
     var bp, index, seg;
+
     seg = µ.getNestedSegment(elmt);
     index = µ.getNodeIndex(seg);
     return bp = µ.normalizeBP(seg.parentNode, index);
@@ -549,6 +584,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.setBpNextSegEnd = function(elmt) {
     var bp, index, seg;
+
     seg = µ.getNestedSegment(elmt);
     index = µ.getNodeIndex(seg) + 1;
     return bp = µ.normalizeBP(seg.parentNode, index, true);
@@ -563,6 +599,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getSegmentIndex = function(segment) {
     var i, segmentI, sibling, _i, _len, _ref;
+
     segmentI = 0;
     _ref = segment.parentNode.childNodes;
     for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
@@ -580,6 +617,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getNodeIndex = function(node) {
     var i, index, sibling, _i, _len, _ref;
+
     _ref = node.parentNode.childNodes;
     for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
       sibling = _ref[i];
@@ -595,9 +633,8 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   exports.selection = µ;
   
-}});
-
-window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
+});
+window.require.register("CNeditor/md2cozy", function(exports, require, module) {
   /* ------------------------------------------------------------------------
   #  MARKUP LANGUAGE CONVERTERS
   # _cozy2md (Read a string of editor html code format and turns it into a
@@ -624,6 +661,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.cozy2md = function(linesDiv) {
     var line, lineMetaData, lines, markCode, prevLineMetaData, segment, _i, _j, _len, _len1, _ref, _ref1;
+
     md2cozy.currentDepth = 0;
     lines = [];
     prevLineMetaData = null;
@@ -653,6 +691,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.getLineMetadata = function(name) {
     var data, depth, type;
+
     if (name != null) {
       data = name.split("-");
       type = data[0];
@@ -671,6 +710,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
     var blanks, dieses, i, nbBlanks, prefix, _i, _j, _k, _ref, _ref1, _ref2;
+
     blanks = "";
     switch (metadata.type) {
       case 'Th':
@@ -715,6 +755,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.convertInlineEltToMarkdown = function(obj) {
     var alt, classList, href, src, title;
+
     switch (obj[0].nodeName) {
       case 'A':
         title = obj.attr('title') != null ? obj.attr('title') : "";
@@ -748,6 +789,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.md2cozy = function(text) {
     var conv, cozyCode, htmlCode;
+
     conv = new Showdown.converter();
     htmlCode = $(conv.makeHtml(text));
     cozyCode = '';
@@ -764,6 +806,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.parseLine = function(obj) {
     var tag;
+
     tag = obj[0].tagName;
     if ((tag != null) && tag[0] === "H") {
       md2cozy.editorDepth = parseInt(tag[1], 10);
@@ -777,11 +820,13 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.buildEditorLine = function(type, depth, obj) {
     var code;
+
     md2cozy.currentId++;
     code = '';
     if (obj != null) {
       obj.contents().each(function() {
         var name;
+
         name = this.nodeName;
         if (name === "#text") {
           return code += "<span>" + ($(this).text()) + "</span>";
@@ -800,6 +845,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.parseList = function(obj) {
     var child, cozyCode, i, nodeName, tag, type, _i, _len, _ref;
+
     tag = obj[0].tagName;
     cozyCode = "";
     if ((tag != null) && tag === "UL") {
@@ -835,197 +881,141 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   exports.md2cozy = md2cozy;
   
-}});
-
-window.require.define({"CNeditor/task": function(exports, require, module) {
-  var Task, request,
+});
+window.require.register("CNeditor/task", function(exports, require, module) {
+  var Task, request, _ref,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  request = require("./request");
+  request = require("lib/request");
 
-  Task = Task = (function(_super) {
-    var createInboxTodoList, doNothing, findInboxTodoList, isFromNote, isTodo, todoIsInstalled;
+  module.exports = Task = (function(_super) {
+    var checkTodoInstalled, createInbox, getApps, getLists, inboxExists, isFromNote, isTodo, noCallback;
 
     __extends(Task, _super);
 
     function Task() {
-      return Task.__super__.constructor.apply(this, arguments);
+      _ref = Task.__super__.constructor.apply(this, arguments);
+      return _ref;
     }
 
     Task.prototype.url = function() {
       if (this.isNew()) {
         return "/apps/todos/todolists/" + Task.todolistId + "/tasks";
       } else {
-        return "/apps/todos/todolists/" + Task.todolistId + "/tasks/" + this.id;
+        return "/apps/todos/tasks/" + this.id;
       }
     };
 
     Task.prototype.defaults = function() {
       return {
-        done: false,
-        nextTask: null,
-        previousTask: null
+        done: false
       };
     };
 
     Task.prototype.parse = function(data) {
-      if (data.rows != null) {
+      if (data.rows) {
         return data.rows[0];
       } else {
         return data;
       }
     };
 
-    doNothing = function() {};
+    noCallback = function() {};
 
     isTodo = function(app) {
       return app.name === 'todos';
     };
 
     isFromNote = function(todolist) {
-      return todolist.title === 'from notes';
+      return todolist.title === 'Inbox';
     };
 
-    todoIsInstalled = function(callback) {
-      return request.get('/api/applications', function(err, apps) {
-        if (!err && apps.rows.some(isTodo)) {
-          return callback(true);
-        } else {
-          return callback(false);
-        }
-      });
+    getApps = function() {
+      return request.get('/api/applications', noCallback);
     };
 
-    findInboxTodoList = function(callback) {
-      return request.get('/apps/todos/todolists', function(err, lists) {
-        var inboxList;
-        if (err) {
-          return callback(null);
-        } else {
-          inboxList = _.find(lists.rows, isFromNote);
-          return callback(inboxList);
-        }
-      });
+    checkTodoInstalled = function(apps) {
+      if (apps.rows.some(isTodo)) {
+        return true;
+      }
+      return $.Deferred().reject();
     };
 
-    createInboxTodoList = function(callback) {
+    getLists = function() {
+      return request.get('/apps/todos/todolists', noCallback);
+    };
+
+    inboxExists = function(lists) {
+      var inbox;
+
+      inbox = _.find(lists.rows, isFromNote);
+      if (inbox) {
+        return inbox;
+      }
+      return $.Deferred().reject('noinbox');
+    };
+
+    createInbox = function(err) {
       var todolist;
+
+      if (err !== 'noinbox') {
+        return err;
+      }
       todolist = {
-        title: 'from notes',
+        title: 'Inbox',
         parent_id: 'tree-node-all'
       };
-      return request.post('/apps/todos/todolists', todolist, function(err, inboxList) {
-        if (err) {
-          return callback(null);
-        } else {
-          return callback(inboxList);
-        }
-      });
+      return request.post('/apps/todos/todolists', todolist, noCallback);
     };
 
     Task.initialize = function(callback) {
-      if (callback == null) {
-        callback = doNothing;
-      }
-      return todoIsInstalled(function(installed) {
-        if (!installed) {
-          return callback(Task.canBeUsed = false);
-        } else {
-          return findInboxTodoList(function(list) {
-            if (list) {
-              Task.todolistId = list.id;
-              return callback(Task.canBeUsed = true);
-            } else {
-              return createInboxTodoList(function(list) {
-                if (list) {
-                  Task.todolistId = list.id;
-                  return callback(Task.canBeUsed = true);
-                } else {
-                  return callback(Task.canBeUsed = false);
-                }
-              });
-            }
-          });
-        }
+      return getApps().then(checkTodoInstalled).then(getLists).then(inboxExists).then(null, createInbox).done(function(inbox) {
+        Task.todolistId = inbox.id;
+        Task.canBeUsed = true;
+        return callback(true);
+      }).fail(function(err) {
+        Task.canBeUsed = false;
+        return callback(false);
       });
     };
 
     return Task;
 
   })(Backbone.Model);
-
-  module.exports = Task;
   
-}});
+});
+window.require.register("CNeditor/realtimer", function(exports, require, module) {
+  var SocketListener, _ref,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-window.require.define({"CNeditor/realtimer": function(exports, require, module) {
-  var RealTimer;
+  SocketListener = (function(_super) {
+    __extends(SocketListener, _super);
 
-  RealTimer = (function() {
-
-    RealTimer.prototype.events = ['note.create', 'note.update', 'note.delete', 'task.update', 'task.delete'];
-
-    RealTimer.prototype.url = window.location.origin;
-
-    RealTimer.prototype.params = {
-      resource: "" + (window.location.pathname.substring(1)) + "socket.io"
-    };
-
-    RealTimer.prototype.watched = {};
-
-    function RealTimer() {
-      var event, socket, _i, _len, _ref;
-      socket = io.connect(this.url, this.params);
-      _ref = this.events;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        event = _ref[_i];
-        socket.on(event, this.callbackFactory(event));
-      }
+    function SocketListener() {
+      _ref = SocketListener.__super__.constructor.apply(this, arguments);
+      return _ref;
     }
 
-    RealTimer.prototype.callbackFactory = function(event) {
-      var _this = this;
-      return function(id) {
-        var doctype, operation, _ref;
-        _ref = event.split('.'), doctype = _ref[0], operation = _ref[1];
-        return _this.callback(doctype, operation, id);
-      };
+    SocketListener.prototype.models = {
+      'task': require('CNeditor/task'),
+      'alarm': require('CNeditor/alarm')
     };
 
-    RealTimer.prototype.callback = function(doctype, operation, id) {
-      var method;
-      console.log('RealTimer', doctype, operation, id);
-      if (doctype === 'note') {
+    SocketListener.prototype.events = ['alarm.update', 'alarm.delete', 'task.update', 'task.delete'];
 
-      } else if (doctype === 'task' && (this.watched[id] != null)) {
-        method = operation === 'update' ? 'fetch' : 'destroy';
-        return this.watched[id][method]();
-      }
+    SocketListener.prototype.onRemoteDelete = function(model) {
+      return model.trigger('destroy');
     };
 
-    RealTimer.prototype.watch = function(model) {
-      var _this = this;
-      this.watched[model.id] = model;
-      return model.on('destroy', function() {
-        return _this.stopWatching(model);
-      });
-    };
+    return SocketListener;
 
-    RealTimer.prototype.stopWatching = function(model) {
-      if (this.watched[model.id] === model) {
-        return delete this.watched[model.id];
-      }
-    };
+  })(CozySocketListener);
 
-    return RealTimer;
-
-  })();
-
-  module.exports = new RealTimer();
+  module.exports = new SocketListener();
   
-}});
-
+});
 /*!
  * jQuery JavaScript Library v1.8.2
  * http://jquery.com/
@@ -10467,7 +10457,6 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 })( window );
 ;
-
 /**
  * @license Rangy, a cross-browser JavaScript range and selection library
  * http://code.google.com/p/rangy/
@@ -13693,7 +13682,6 @@ rangy.createModule("DomUtil", function(api, module) {
     });
 });
 ;
-
 /*
  Serializer module for Rangy.
  Serializes Ranges and Selections. An example use would be to store a user's selection on a particular page in a
@@ -13717,7 +13705,6 @@ c.split("|");for(var e=g.getSelection(b),d=[],f=0,h=c.length;f<h;++f)d[f]=q(c[f]
 b.push(f>>12|224,f>>6&63|128,f&63|128)}a=-1;if(!c){e=[];d=0;for(var h;d<256;++d){h=d;for(f=8;f--;)if((h&1)==1)h=h>>>1^3988292384;else h>>>=1;e[d]=h>>>0}c=e}e=c;d=0;for(f=b.length;d<f;++d){h=(a^b[d])&255;a=a>>>8^e[h]}return(a^-1)>>>0}}(),i=g.dom;g.serializePosition=l;g.deserializePosition=m;g.serializeRange=p;g.deserializeRange=q;g.canDeserializeRange=r;g.serializeSelection=s;g.deserializeSelection=t;g.canDeserializeSelection=function(c,a,b){var e;if(a)e=b?b.document:i.getDocument(a);else{b=b||window;
 a=b.document.documentElement}c=c.split("|");b=0;for(var d=c.length;b<d;++b)if(!r(c[b],a,e))return false;return true};g.restoreSelectionFromCookie=function(c){c=c||window;var a;a:{a=c.document.cookie.split(/[;,]/);for(var b=0,e=a.length,d;b<e;++b){d=a[b].split("=");if(d[0].replace(/^\s+/,"")=="rangySerializedSelection")if(d=d[1]){a=decodeURIComponent(d.replace(/\s+$/,""));break a}}a=null}a&&t(a,c.doc)};g.saveSelectionCookie=function(c,a){c=c||window;a=typeof a=="object"?a:{};var b=a.expires?";expires="+
 a.expires.toUTCString():"",e=a.path?";path="+a.path:"",d=a.domain?";domain="+a.domain:"",f=a.secure?";secure":"",h=s(g.getSelection(c));c.document.cookie=encodeURIComponent("rangySerializedSelection")+"="+encodeURIComponent(h)+b+e+d+f};g.getElementChecksum=j});;
-
 //
 // showdown.js -- A javascript port of Markdown.
 //
@@ -15059,7 +15046,4561 @@ var escapeCharacters_callback = function(wholeMatch,m1) {
 
 // export
 if (typeof module !== 'undefined') module.exports = Showdown;;
+/*
+ *  Sugar Library v1.3.9
+ *
+ *  Freely distributable and licensed under the MIT-style license.
+ *  Copyright (c) 2013 Andrew Plummer
+ *  http://sugarjs.com/
+ *
+ * ---------------------------- */
+(function(){
+  /***
+   * @package Core
+   * @description Internal utility and common methods.
+   ***/
 
+
+  // A few optimizations for Google Closure Compiler will save us a couple kb in the release script.
+  var object = Object, array = Array, regexp = RegExp, date = Date, string = String, number = Number, math = Math, Undefined;
+
+  // Internal toString
+  var internalToString = object.prototype.toString;
+
+  // The global context
+  var globalContext = typeof global !== 'undefined' ? global : this;
+
+  // Type check methods need a way to be accessed dynamically outside global context.
+  var typeChecks = {};
+
+  // defineProperty exists in IE8 but will error when trying to define a property on
+  // native objects. IE8 does not have defineProperies, however, so this check saves a try/catch block.
+  var definePropertySupport = object.defineProperty && object.defineProperties;
+
+
+  // Class initializers and class helpers
+
+  var ClassNames = 'Array,Boolean,Date,Function,Number,String,RegExp'.split(',');
+
+  var isArray    = buildClassCheck(ClassNames[0]);
+  var isBoolean  = buildClassCheck(ClassNames[1]);
+  var isDate     = buildClassCheck(ClassNames[2]);
+  var isFunction = buildClassCheck(ClassNames[3]);
+  var isNumber   = buildClassCheck(ClassNames[4]);
+  var isString   = buildClassCheck(ClassNames[5]);
+  var isRegExp   = buildClassCheck(ClassNames[6]);
+
+  function buildClassCheck(name) {
+    var type, fn;
+    if(/String|Number|Boolean/.test(name)) {
+      type = name.toLowerCase();
+    }
+    fn = (name === 'Array' && array.isArray) || function(obj) {
+      if(type && typeof obj === type) {
+        return true;
+      }
+      return className(obj) === '[object '+name+']';
+    }
+    typeChecks[name] = fn;
+    return fn;
+  }
+
+  function className(obj) {
+    return internalToString.call(obj);
+  }
+
+  function initializeClasses() {
+    initializeClass(object);
+    iterateOverObject(ClassNames, function(i,name) {
+      initializeClass(globalContext[name]);
+    });
+  }
+
+  function initializeClass(klass) {
+    if(klass['SugarMethods']) return;
+    defineProperty(klass, 'SugarMethods', {});
+    extend(klass, false, false, {
+      'extend': function(methods, override, instance) {
+        extend(klass, instance !== false, override, methods);
+      },
+      'sugarRestore': function() {
+        return batchMethodExecute(klass, arguments, function(target, name, m) {
+          defineProperty(target, name, m.method);
+        });
+      },
+      'sugarRevert': function() {
+        return batchMethodExecute(klass, arguments, function(target, name, m) {
+          if(m.existed) {
+            defineProperty(target, name, m.original);
+          } else {
+            delete target[name];
+          }
+        });
+      }
+    });
+  }
+
+  // Class extending methods
+
+  function extend(klass, instance, override, methods) {
+    var extendee = instance ? klass.prototype : klass;
+    initializeClass(klass);
+    iterateOverObject(methods, function(name, method) {
+      var original = extendee[name];
+      var existed  = hasOwnProperty(extendee, name);
+      if(typeof override === 'function') {
+        method = wrapNative(extendee[name], method, override);
+      }
+      if(override !== false || !extendee[name]) {
+        defineProperty(extendee, name, method);
+      }
+      // If the method is internal to Sugar, then store a reference so it can be restored later.
+      klass['SugarMethods'][name] = { instance: instance, method: method, original: original, existed: existed };
+    });
+  }
+
+  function extendSimilar(klass, instance, override, set, fn) {
+    var methods = {};
+    set = isString(set) ? set.split(',') : set;
+    set.forEach(function(name, i) {
+      fn(methods, name, i);
+    });
+    extend(klass, instance, override, methods);
+  }
+
+  function batchMethodExecute(klass, args, fn) {
+    var all = args.length === 0, methods = multiArgs(args), changed = false;
+    iterateOverObject(klass['SugarMethods'], function(name, m) {
+      if(all || methods.indexOf(name) > -1) {
+        changed = true;
+        fn(m.instance ? klass.prototype : klass, name, m);
+      }
+    });
+    return changed;
+  }
+
+  function wrapNative(nativeFn, extendedFn, condition) {
+    return function() {
+      var fn;
+      if(nativeFn && (condition === true || !condition.apply(this, arguments))) {
+        fn = nativeFn;
+      } else {
+        fn = extendedFn;
+      }
+      return fn.apply(this, arguments);
+    }
+  }
+
+  function defineProperty(target, name, method) {
+    if(definePropertySupport) {
+      object.defineProperty(target, name, { 'value': method, 'configurable': true, 'enumerable': false, 'writable': true });
+    } else {
+      target[name] = method;
+    }
+  }
+
+
+  // Argument helpers
+
+  function multiArgs(args, fn) {
+    var result = [], i, len;
+    for(i = 0, len = args.length; i < len; i++) {
+      result.push(args[i]);
+      if(fn) fn.call(args, args[i], i);
+    }
+    return result;
+  }
+
+  function flattenedArgs(obj, fn, from) {
+    multiArgs(array.prototype.concat.apply([], array.prototype.slice.call(obj, from || 0)), fn);
+  }
+
+  function checkCallback(fn) {
+    if(!fn || !fn.call) {
+      throw new TypeError('Callback is not callable');
+    }
+  }
+
+
+  // General helpers
+
+  function isDefined(o) {
+    return o !== Undefined;
+  }
+
+  function isUndefined(o) {
+    return o === Undefined;
+  }
+
+
+  // Object helpers
+
+  function isObjectPrimitive(obj) {
+    // Check for null
+    return obj && typeof obj === 'object';
+  }
+
+  function isObject(obj) {
+    // === on the constructor is not safe across iframes
+    // 'hasOwnProperty' ensures that the object also inherits
+    // from Object, which is false for DOMElements in IE.
+    return !!obj && className(obj) === '[object Object]' && 'hasOwnProperty' in obj;
+  }
+
+  function hasOwnProperty(obj, key) {
+    return object['hasOwnProperty'].call(obj, key);
+  }
+
+  function iterateOverObject(obj, fn) {
+    var key;
+    for(key in obj) {
+      if(!hasOwnProperty(obj, key)) continue;
+      if(fn.call(obj, key, obj[key], obj) === false) break;
+    }
+  }
+
+  function simpleMerge(target, source) {
+    iterateOverObject(source, function(key) {
+      target[key] = source[key];
+    });
+    return target;
+  }
+
+  // Hash definition
+
+  function Hash(obj) {
+    simpleMerge(this, obj);
+  };
+
+  Hash.prototype.constructor = object;
+
+  // Number helpers
+
+  function getRange(start, stop, fn, step) {
+    var arr = [], i = parseInt(start), down = step < 0;
+    while((!down && i <= stop) || (down && i >= stop)) {
+      arr.push(i);
+      if(fn) fn.call(this, i);
+      i += step || 1;
+    }
+    return arr;
+  }
+
+  function round(val, precision, method) {
+    var fn = math[method || 'round'];
+    var multiplier = math.pow(10, math.abs(precision || 0));
+    if(precision < 0) multiplier = 1 / multiplier;
+    return fn(val * multiplier) / multiplier;
+  }
+
+  function ceil(val, precision) {
+    return round(val, precision, 'ceil');
+  }
+
+  function floor(val, precision) {
+    return round(val, precision, 'floor');
+  }
+
+  function padNumber(num, place, sign, base) {
+    var str = math.abs(num).toString(base || 10);
+    str = repeatString(place - str.replace(/\.\d+/, '').length, '0') + str;
+    if(sign || num < 0) {
+      str = (num < 0 ? '-' : '+') + str;
+    }
+    return str;
+  }
+
+  function getOrdinalizedSuffix(num) {
+    if(num >= 11 && num <= 13) {
+      return 'th';
+    } else {
+      switch(num % 10) {
+        case 1:  return 'st';
+        case 2:  return 'nd';
+        case 3:  return 'rd';
+        default: return 'th';
+      }
+    }
+  }
+
+
+  // String helpers
+
+  // WhiteSpace/LineTerminator as defined in ES5.1 plus Unicode characters in the Space, Separator category.
+  function getTrimmableCharacters() {
+    return '\u0009\u000A\u000B\u000C\u000D\u0020\u00A0\u1680\u180E\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u2028\u2029\u3000\uFEFF';
+  }
+
+  function repeatString(times, str) {
+    return array(math.max(0, isDefined(times) ? times : 1) + 1).join(str || '');
+  }
+
+
+  // RegExp helpers
+
+  function getRegExpFlags(reg, add) {
+    var flags = reg.toString().match(/[^/]*$/)[0];
+    if(add) {
+      flags = (flags + add).split('').sort().join('').replace(/([gimy])\1+/g, '$1');
+    }
+    return flags;
+  }
+
+  function escapeRegExp(str) {
+    if(!isString(str)) str = string(str);
+    return str.replace(/([\\/'*+?|()\[\]{}.^$])/g,'\\$1');
+  }
+
+
+  // Specialized helpers
+
+
+  // Used by Array#unique and Object.equal
+
+  function stringify(thing, stack) {
+    var type = typeof thing,
+        thingIsObject,
+        thingIsArray,
+        klass, value,
+        arr, key, i, len;
+
+    // Return quickly if string to save cycles
+    if(type === 'string') return thing;
+
+    klass         = internalToString.call(thing)
+    thingIsObject = isObject(thing);
+    thingIsArray  = klass === '[object Array]';
+
+    if(thing != null && thingIsObject || thingIsArray) {
+      // This method for checking for cyclic structures was egregiously stolen from
+      // the ingenious method by @kitcambridge from the Underscore script:
+      // https://github.com/documentcloud/underscore/issues/240
+      if(!stack) stack = [];
+      // Allowing a step into the structure before triggering this
+      // script to save cycles on standard JSON structures and also to
+      // try as hard as possible to catch basic properties that may have
+      // been modified.
+      if(stack.length > 1) {
+        i = stack.length;
+        while (i--) {
+          if (stack[i] === thing) {
+            return 'CYC';
+          }
+        }
+      }
+      stack.push(thing);
+      value = string(thing.constructor);
+      arr = thingIsArray ? thing : object.keys(thing).sort();
+      for(i = 0, len = arr.length; i < len; i++) {
+        key = thingIsArray ? i : arr[i];
+        value += key + stringify(thing[key], stack);
+      }
+      stack.pop();
+    } else if(1 / thing === -Infinity) {
+      value = '-0';
+    } else {
+      value = string(thing && thing.valueOf ? thing.valueOf() : thing);
+    }
+    return type + klass + value;
+  }
+
+  function isEqual(a, b) {
+    if(objectIsMatchedByValue(a) && objectIsMatchedByValue(b)) {
+      return stringify(a) === stringify(b);
+    } else {
+      return a === b;
+    }
+  }
+
+  function objectIsMatchedByValue(obj) {
+    var klass = className(obj);
+    return /^\[object Date|Array|String|Number|RegExp|Boolean|Arguments\]$/.test(klass) ||
+           isObject(obj);
+  }
+
+
+  // Used by Array#at and String#at
+
+  function entryAtIndex(arr, args, str) {
+    var result = [], length = arr.length, loop = args[args.length - 1] !== false, r;
+    multiArgs(args, function(index) {
+      if(isBoolean(index)) return false;
+      if(loop) {
+        index = index % length;
+        if(index < 0) index = length + index;
+      }
+      r = str ? arr.charAt(index) || '' : arr[index];
+      result.push(r);
+    });
+    return result.length < 2 ? result[0] : result;
+  }
+
+
+  // Object class methods implemented as instance methods
+
+  function buildObjectInstanceMethods(set, target) {
+    extendSimilar(target, true, false, set, function(methods, name) {
+      methods[name + (name === 'equal' ? 's' : '')] = function() {
+        return object[name].apply(null, [this].concat(multiArgs(arguments)));
+      }
+    });
+  }
+
+  initializeClasses();
+
+
+
+  /***
+   * @package ES5
+   * @description Shim methods that provide ES5 compatible functionality. This package can be excluded if you do not require legacy browser support (IE8 and below).
+   *
+   ***/
+
+
+  /***
+   * Object module
+   *
+   ***/
+
+  extend(object, false, false, {
+
+    'keys': function(obj) {
+      var keys = [];
+      if(!isObjectPrimitive(obj) && !isRegExp(obj) && !isFunction(obj)) {
+        throw new TypeError('Object required');
+      }
+      iterateOverObject(obj, function(key, value) {
+        keys.push(key);
+      });
+      return keys;
+    }
+
+  });
+
+
+  /***
+   * Array module
+   *
+   ***/
+
+  // ECMA5 methods
+
+  function arrayIndexOf(arr, search, fromIndex, increment) {
+    var length = arr.length,
+        fromRight = increment == -1,
+        start = fromRight ? length - 1 : 0,
+        index = toIntegerWithDefault(fromIndex, start);
+    if(index < 0) {
+      index = length + index;
+    }
+    if((!fromRight && index < 0) || (fromRight && index >= length)) {
+      index = start;
+    }
+    while((fromRight && index >= 0) || (!fromRight && index < length)) {
+      if(arr[index] === search) {
+        return index;
+      }
+      index += increment;
+    }
+    return -1;
+  }
+
+  function arrayReduce(arr, fn, initialValue, fromRight) {
+    var length = arr.length, count = 0, defined = isDefined(initialValue), result, index;
+    checkCallback(fn);
+    if(length == 0 && !defined) {
+      throw new TypeError('Reduce called on empty array with no initial value');
+    } else if(defined) {
+      result = initialValue;
+    } else {
+      result = arr[fromRight ? length - 1 : count];
+      count++;
+    }
+    while(count < length) {
+      index = fromRight ? length - count - 1 : count;
+      if(index in arr) {
+        result = fn(result, arr[index], index, arr);
+      }
+      count++;
+    }
+    return result;
+  }
+
+  function toIntegerWithDefault(i, d) {
+    if(isNaN(i)) {
+      return d;
+    } else {
+      return parseInt(i >> 0);
+    }
+  }
+
+  function checkFirstArgumentExists(args) {
+    if(args.length === 0) {
+      throw new TypeError('First argument must be defined');
+    }
+  }
+
+
+
+
+  extend(array, false, false, {
+
+    /***
+     *
+     * @method Array.isArray(<obj>)
+     * @returns Boolean
+     * @short Returns true if <obj> is an Array.
+     * @extra This method is provided for browsers that don't support it internally.
+     * @example
+     *
+     *   Array.isArray(3)        -> false
+     *   Array.isArray(true)     -> false
+     *   Array.isArray('wasabi') -> false
+     *   Array.isArray([1,2,3])  -> true
+     *
+     ***/
+    'isArray': function(obj) {
+      return isArray(obj);
+    }
+
+  });
+
+
+  extend(array, true, false, {
+
+    /***
+     * @method every(<f>, [scope])
+     * @returns Boolean
+     * @short Returns true if all elements in the array match <f>.
+     * @extra [scope] is the %this% object. %all% is provided an alias. In addition to providing this method for browsers that don't support it natively, this method also implements @array_matching.
+     * @example
+     *
+     +   ['a','a','a'].every(function(n) {
+     *     return n == 'a';
+     *   });
+     *   ['a','a','a'].every('a')   -> true
+     *   [{a:2},{a:2}].every({a:2}) -> true
+     ***/
+    'every': function(fn, scope) {
+      var length = this.length, index = 0;
+      checkFirstArgumentExists(arguments);
+      while(index < length) {
+        if(index in this && !fn.call(scope, this[index], index, this)) {
+          return false;
+        }
+        index++;
+      }
+      return true;
+    },
+
+    /***
+     * @method some(<f>, [scope])
+     * @returns Boolean
+     * @short Returns true if any element in the array matches <f>.
+     * @extra [scope] is the %this% object. %any% is provided as an alias. In addition to providing this method for browsers that don't support it natively, this method also implements @array_matching.
+     * @example
+     *
+     +   ['a','b','c'].some(function(n) {
+     *     return n == 'a';
+     *   });
+     +   ['a','b','c'].some(function(n) {
+     *     return n == 'd';
+     *   });
+     *   ['a','b','c'].some('a')   -> true
+     *   [{a:2},{b:5}].some({a:2}) -> true
+     ***/
+    'some': function(fn, scope) {
+      var length = this.length, index = 0;
+      checkFirstArgumentExists(arguments);
+      while(index < length) {
+        if(index in this && fn.call(scope, this[index], index, this)) {
+          return true;
+        }
+        index++;
+      }
+      return false;
+    },
+
+    /***
+     * @method map(<map>, [scope])
+     * @returns Array
+     * @short Maps the array to another array containing the values that are the result of calling <map> on each element.
+     * @extra [scope] is the %this% object. In addition to providing this method for browsers that don't support it natively, this enhanced method also directly accepts a string, which is a shortcut for a function that gets that property (or invokes a function) on each element.
+     * @example
+     *
+     +   [1,2,3].map(function(n) {
+     *     return n * 3;
+     *   });                                  -> [3,6,9]
+     *   ['one','two','three'].map(function(n) {
+     *     return n.length;
+     *   });                                  -> [3,3,5]
+     *   ['one','two','three'].map('length')  -> [3,3,5]
+     ***/
+    'map': function(fn, scope) {
+      var length = this.length, index = 0, result = new Array(length);
+      checkFirstArgumentExists(arguments);
+      while(index < length) {
+        if(index in this) {
+          result[index] = fn.call(scope, this[index], index, this);
+        }
+        index++;
+      }
+      return result;
+    },
+
+    /***
+     * @method filter(<f>, [scope])
+     * @returns Array
+     * @short Returns any elements in the array that match <f>.
+     * @extra [scope] is the %this% object. In addition to providing this method for browsers that don't support it natively, this method also implements @array_matching.
+     * @example
+     *
+     +   [1,2,3].filter(function(n) {
+     *     return n > 1;
+     *   });
+     *   [1,2,2,4].filter(2) -> 2
+     *
+     ***/
+    'filter': function(fn, scope) {
+      var length = this.length, index = 0, result = [];
+      checkFirstArgumentExists(arguments);
+      while(index < length) {
+        if(index in this && fn.call(scope, this[index], index, this)) {
+          result.push(this[index]);
+        }
+        index++;
+      }
+      return result;
+    },
+
+    /***
+     * @method indexOf(<search>, [fromIndex])
+     * @returns Number
+     * @short Searches the array and returns the first index where <search> occurs, or -1 if the element is not found.
+     * @extra [fromIndex] is the index from which to begin the search. This method performs a simple strict equality comparison on <search>. It does not support enhanced functionality such as searching the contents against a regex, callback, or deep comparison of objects. For such functionality, use the %findIndex% method instead.
+     * @example
+     *
+     *   [1,2,3].indexOf(3)           -> 1
+     *   [1,2,3].indexOf(7)           -> -1
+     *
+     ***/
+    'indexOf': function(search, fromIndex) {
+      if(isString(this)) return this.indexOf(search, fromIndex);
+      return arrayIndexOf(this, search, fromIndex, 1);
+    },
+
+    /***
+     * @method lastIndexOf(<search>, [fromIndex])
+     * @returns Number
+     * @short Searches the array and returns the last index where <search> occurs, or -1 if the element is not found.
+     * @extra [fromIndex] is the index from which to begin the search. This method performs a simple strict equality comparison on <search>.
+     * @example
+     *
+     *   [1,2,1].lastIndexOf(1)                 -> 2
+     *   [1,2,1].lastIndexOf(7)                 -> -1
+     *
+     ***/
+    'lastIndexOf': function(search, fromIndex) {
+      if(isString(this)) return this.lastIndexOf(search, fromIndex);
+      return arrayIndexOf(this, search, fromIndex, -1);
+    },
+
+    /***
+     * @method forEach([fn], [scope])
+     * @returns Nothing
+     * @short Iterates over the array, calling [fn] on each loop.
+     * @extra This method is only provided for those browsers that do not support it natively. [scope] becomes the %this% object.
+     * @example
+     *
+     *   ['a','b','c'].forEach(function(a) {
+     *     // Called 3 times: 'a','b','c'
+     *   });
+     *
+     ***/
+    'forEach': function(fn, scope) {
+      var length = this.length, index = 0;
+      checkCallback(fn);
+      while(index < length) {
+        if(index in this) {
+          fn.call(scope, this[index], index, this);
+        }
+        index++;
+      }
+    },
+
+    /***
+     * @method reduce(<fn>, [init])
+     * @returns Mixed
+     * @short Reduces the array to a single result.
+     * @extra If [init] is passed as a starting value, that value will be passed as the first argument to the callback. The second argument will be the first element in the array. From that point, the result of the callback will then be used as the first argument of the next iteration. This is often refered to as "accumulation", and [init] is often called an "accumulator". If [init] is not passed, then <fn> will be called n - 1 times, where n is the length of the array. In this case, on the first iteration only, the first argument will be the first element of the array, and the second argument will be the second. After that callbacks work as normal, using the result of the previous callback as the first argument of the next. This method is only provided for those browsers that do not support it natively.
+     *
+     * @example
+     *
+     +   [1,2,3,4].reduce(function(a, b) {
+     *     return a - b;
+     *   });
+     +   [1,2,3,4].reduce(function(a, b) {
+     *     return a - b;
+     *   }, 100);
+     *
+     ***/
+    'reduce': function(fn, init) {
+      return arrayReduce(this, fn, init);
+    },
+
+    /***
+     * @method reduceRight([fn], [init])
+     * @returns Mixed
+     * @short Identical to %Array#reduce%, but operates on the elements in reverse order.
+     * @extra This method is only provided for those browsers that do not support it natively.
+     *
+     *
+     *
+     *
+     * @example
+     *
+     +   [1,2,3,4].reduceRight(function(a, b) {
+     *     return a - b;
+     *   });
+     *
+     ***/
+    'reduceRight': function(fn, init) {
+      return arrayReduce(this, fn, init, true);
+    }
+
+
+  });
+
+
+
+
+  /***
+   * String module
+   *
+   ***/
+
+
+  function buildTrim() {
+    var support = getTrimmableCharacters().match(/^\s+$/);
+    try { string.prototype.trim.call([1]); } catch(e) { support = false; }
+    extend(string, true, !support, {
+
+      /***
+       * @method trim[Side]()
+       * @returns String
+       * @short Removes leading and/or trailing whitespace from the string.
+       * @extra Whitespace is defined as line breaks, tabs, and any character in the "Space, Separator" Unicode category, conforming to the the ES5 spec. The standard %trim% method is only added when not fully supported natively.
+       *
+       * @set
+       *   trim
+       *   trimLeft
+       *   trimRight
+       *
+       * @example
+       *
+       *   '   wasabi   '.trim()      -> 'wasabi'
+       *   '   wasabi   '.trimLeft()  -> 'wasabi   '
+       *   '   wasabi   '.trimRight() -> '   wasabi'
+       *
+       ***/
+      'trim': function() {
+        return this.toString().trimLeft().trimRight();
+      },
+
+      'trimLeft': function() {
+        return this.replace(regexp('^['+getTrimmableCharacters()+']+'), '');
+      },
+
+      'trimRight': function() {
+        return this.replace(regexp('['+getTrimmableCharacters()+']+$'), '');
+      }
+    });
+  }
+
+
+
+  /***
+   * Function module
+   *
+   ***/
+
+
+  extend(Function, true, false, {
+
+     /***
+     * @method bind(<scope>, [arg1], ...)
+     * @returns Function
+     * @short Binds <scope> as the %this% object for the function when it is called. Also allows currying an unlimited number of parameters.
+     * @extra "currying" means setting parameters ([arg1], [arg2], etc.) ahead of time so that they are passed when the function is called later. If you pass additional parameters when the function is actually called, they will be added will be added to the end of the curried parameters. This method is provided for browsers that don't support it internally.
+     * @example
+     *
+     +   (function() {
+     *     return this;
+     *   }).bind('woof')(); -> returns 'woof'; function is bound with 'woof' as the this object.
+     *   (function(a) {
+     *     return a;
+     *   }).bind(1, 2)();   -> returns 2; function is bound with 1 as the this object and 2 curried as the first parameter
+     *   (function(a, b) {
+     *     return a + b;
+     *   }).bind(1, 2)(3);  -> returns 5; function is bound with 1 as the this object, 2 curied as the first parameter and 3 passed as the second when calling the function
+     *
+     ***/
+    'bind': function(scope) {
+      var fn = this, args = multiArgs(arguments).slice(1), nop, bound;
+      if(!isFunction(this)) {
+        throw new TypeError('Function.prototype.bind called on a non-function');
+      }
+      bound = function() {
+        return fn.apply(fn.prototype && this instanceof fn ? this : scope, args.concat(multiArgs(arguments)));
+      }
+      bound.prototype = this.prototype;
+      return bound;
+    }
+
+  });
+
+  /***
+   * Date module
+   *
+   ***/
+
+   /***
+   * @method toISOString()
+   * @returns String
+   * @short Formats the string to ISO8601 format.
+   * @extra This will always format as UTC time. Provided for browsers that do not support this method.
+   * @example
+   *
+   *   Date.create().toISOString() -> ex. 2011-07-05 12:24:55.528Z
+   *
+   ***
+   * @method toJSON()
+   * @returns String
+   * @short Returns a JSON representation of the date.
+   * @extra This is effectively an alias for %toISOString%. Will always return the date in UTC time. Provided for browsers that do not support this method.
+   * @example
+   *
+   *   Date.create().toJSON() -> ex. 2011-07-05 12:24:55.528Z
+   *
+   ***/
+
+  extend(date, false, false, {
+
+     /***
+     * @method Date.now()
+     * @returns String
+     * @short Returns the number of milliseconds since January 1st, 1970 00:00:00 (UTC time).
+     * @extra Provided for browsers that do not support this method.
+     * @example
+     *
+     *   Date.now() -> ex. 1311938296231
+     *
+     ***/
+    'now': function() {
+      return new date().getTime();
+    }
+
+  });
+
+   function buildISOString() {
+    var d = new date(date.UTC(1999, 11, 31)), target = '1999-12-31T00:00:00.000Z';
+    var support = d.toISOString && d.toISOString() === target;
+    extendSimilar(date, true, !support, 'toISOString,toJSON', function(methods, name) {
+      methods[name] = function() {
+        return padNumber(this.getUTCFullYear(), 4) + '-' +
+               padNumber(this.getUTCMonth() + 1, 2) + '-' +
+               padNumber(this.getUTCDate(), 2) + 'T' +
+               padNumber(this.getUTCHours(), 2) + ':' +
+               padNumber(this.getUTCMinutes(), 2) + ':' +
+               padNumber(this.getUTCSeconds(), 2) + '.' +
+               padNumber(this.getUTCMilliseconds(), 3) + 'Z';
+      }
+    });
+   }
+
+  // Initialize
+  buildTrim();
+  buildISOString();
+
+
+  /***
+   * @package Date
+   * @dependency core
+   * @description Date parsing and formatting, relative formats like "1 minute ago", Number methods like "daysAgo", localization support with default English locale definition.
+   *
+   ***/
+
+  var English;
+  var CurrentLocalization;
+
+  var TimeFormat = ['ampm','hour','minute','second','ampm','utc','offset_sign','offset_hours','offset_minutes','ampm']
+  var DecimalReg = '(?:[,.]\\d+)?';
+  var HoursReg   = '\\d{1,2}' + DecimalReg;
+  var SixtyReg   = '[0-5]\\d' + DecimalReg;
+  var RequiredTime = '({t})?\\s*('+HoursReg+')(?:{h}('+SixtyReg+')?{m}(?::?('+SixtyReg+'){s})?\\s*(?:({t})|(Z)|(?:([+-])(\\d{2,2})(?::?(\\d{2,2}))?)?)?|\\s*({t}))';
+
+  var KanjiDigits     = '〇一二三四五六七八九十百千万';
+  var FullWidthDigits = '０１２３４５６７８９';
+  var AsianDigitMap = {};
+  var AsianDigitReg;
+
+  var DateArgumentUnits;
+  var DateUnitsReversed;
+  var CoreDateFormats = [];
+
+  var DateOutputFormats = [
+    {
+      token: 'f{1,4}|ms|milliseconds',
+      format: function(d) {
+        return callDateGet(d, 'Milliseconds');
+      }
+    },
+    {
+      token: 'ss?|seconds',
+      format: function(d, len) {
+        return callDateGet(d, 'Seconds');
+      }
+    },
+    {
+      token: 'mm?|minutes',
+      format: function(d, len) {
+        return callDateGet(d, 'Minutes');
+      }
+    },
+    {
+      token: 'hh?|hours|12hr',
+      format: function(d) {
+        return getShortHour(d);
+      }
+    },
+    {
+      token: 'HH?|24hr',
+      format: function(d) {
+        return callDateGet(d, 'Hours');
+      }
+    },
+    {
+      token: 'dd?|date|day',
+      format: function(d) {
+        return callDateGet(d, 'Date');
+      }
+    },
+    {
+      token: 'dow|weekday',
+      word: true,
+      format: function(d, loc, n, t) {
+        var dow = callDateGet(d, 'Day');
+        return loc['weekdays'][dow + (n - 1) * 7];
+      }
+    },
+    {
+      token: 'MM?',
+      format: function(d) {
+        return callDateGet(d, 'Month') + 1;
+      }
+    },
+    {
+      token: 'mon|month',
+      word: true,
+      format: function(d, loc, n, len) {
+        var month = callDateGet(d, 'Month');
+        return loc['months'][month + (n - 1) * 12];
+      }
+    },
+    {
+      token: 'y{2,4}|year',
+      format: function(d) {
+        return callDateGet(d, 'FullYear');
+      }
+    },
+    {
+      token: '[Tt]{1,2}',
+      format: function(d, loc, n, format) {
+        if(loc['ampm'].length == 0) return '';
+        var hours = callDateGet(d, 'Hours');
+        var str = loc['ampm'][floor(hours / 12)];
+        if(format.length === 1) str = str.slice(0,1);
+        if(format.slice(0,1) === 'T') str = str.toUpperCase();
+        return str;
+      }
+    },
+    {
+      token: 'z{1,4}|tz|timezone',
+      text: true,
+      format: function(d, loc, n, format) {
+        var tz = d.getUTCOffset();
+        if(format == 'z' || format == 'zz') {
+          tz = tz.replace(/(\d{2})(\d{2})/, function(f,h,m) {
+            return padNumber(h, format.length);
+          });
+        }
+        return tz;
+      }
+    },
+    {
+      token: 'iso(tz|timezone)',
+      format: function(d) {
+        return d.getUTCOffset(true);
+      }
+    },
+    {
+      token: 'ord',
+      format: function(d) {
+        var date = callDateGet(d, 'Date');
+        return date + getOrdinalizedSuffix(date);
+      }
+    }
+  ];
+
+  var DateUnits = [
+    {
+      unit: 'year',
+      method: 'FullYear',
+      ambiguous: true,
+      multiplier: function(d) {
+        var adjust = d ? (d.isLeapYear() ? 1 : 0) : 0.25;
+        return (365 + adjust) * 24 * 60 * 60 * 1000;
+      }
+    },
+    {
+      unit: 'month',
+      method: 'Month',
+      ambiguous: true,
+      multiplier: function(d, ms) {
+        var days = 30.4375, inMonth;
+        if(d) {
+          inMonth = d.daysInMonth();
+          if(ms <= inMonth.days()) {
+            days = inMonth;
+          }
+        }
+        return days * 24 * 60 * 60 * 1000;
+      },
+      error: 0.919
+    },
+    {
+      unit: 'week',
+      method: 'ISOWeek',
+      multiplier: function() {
+        return 7 * 24 * 60 * 60 * 1000;
+      }
+    },
+    {
+      unit: 'day',
+      method: 'Date',
+      ambiguous: true,
+      multiplier: function() {
+        return 24 * 60 * 60 * 1000;
+      }
+    },
+    {
+      unit: 'hour',
+      method: 'Hours',
+      multiplier: function() {
+        return 60 * 60 * 1000;
+      }
+    },
+    {
+      unit: 'minute',
+      method: 'Minutes',
+      multiplier: function() {
+        return 60 * 1000;
+      }
+    },
+    {
+      unit: 'second',
+      method: 'Seconds',
+      multiplier: function() {
+        return 1000;
+      }
+    },
+    {
+      unit: 'millisecond',
+      method: 'Milliseconds',
+      multiplier: function() {
+        return 1;
+      }
+    }
+  ];
+
+
+
+
+  // Date Localization
+
+  var Localizations = {};
+
+  // Localization object
+
+  function Localization(l) {
+    simpleMerge(this, l);
+    this.compiledFormats = CoreDateFormats.concat();
+  }
+
+  Localization.prototype = {
+
+    getMonth: function(n) {
+      if(isNumber(n)) {
+        return n - 1;
+      } else {
+        return this['months'].indexOf(n) % 12;
+      }
+    },
+
+    getWeekday: function(n) {
+      return this['weekdays'].indexOf(n) % 7;
+    },
+
+    getNumber: function(n) {
+      var i;
+      if(isNumber(n)) {
+        return n;
+      } else if(n && (i = this['numbers'].indexOf(n)) !== -1) {
+        return (i + 1) % 10;
+      } else {
+        return 1;
+      }
+    },
+
+    getNumericDate: function(n) {
+      var self = this;
+      return n.replace(regexp(this['num'], 'g'), function(d) {
+        var num = self.getNumber(d);
+        return num || '';
+      });
+    },
+
+    getEnglishUnit: function(n) {
+      return English['units'][this['units'].indexOf(n) % 8];
+    },
+
+    getRelativeFormat: function(adu) {
+      return this.convertAdjustedToFormat(adu, adu[2] > 0 ? 'future' : 'past');
+    },
+
+    getDuration: function(ms) {
+      return this.convertAdjustedToFormat(getAdjustedUnit(ms), 'duration');
+    },
+
+    hasVariant: function(code) {
+      code = code || this.code;
+      return code === 'en' || code === 'en-US' ? true : this['variant'];
+    },
+
+    matchAM: function(str) {
+      return str === this['ampm'][0];
+    },
+
+    matchPM: function(str) {
+      return str && str === this['ampm'][1];
+    },
+
+    convertAdjustedToFormat: function(adu, mode) {
+      var sign, unit, mult,
+          num    = adu[0],
+          u      = adu[1],
+          ms     = adu[2],
+          format = this[mode] || this['relative'];
+      if(isFunction(format)) {
+        return format.call(this, num, u, ms, mode);
+      }
+      mult = this['plural'] && num > 1 ? 1 : 0;
+      unit = this['units'][mult * 8 + u] || this['units'][u];
+      if(this['capitalizeUnit']) unit = simpleCapitalize(unit);
+      sign = this['modifiers'].filter(function(m) { return m.name == 'sign' && m.value == (ms > 0 ? 1 : -1); })[0];
+      return format.replace(/\{(.*?)\}/g, function(full, match) {
+        switch(match) {
+          case 'num': return num;
+          case 'unit': return unit;
+          case 'sign': return sign.src;
+        }
+      });
+    },
+
+    getFormats: function() {
+      return this.cachedFormat ? [this.cachedFormat].concat(this.compiledFormats) : this.compiledFormats;
+    },
+
+    addFormat: function(src, allowsTime, match, variant, iso) {
+      var to = match || [], loc = this, time, timeMarkers, lastIsNumeral;
+
+      src = src.replace(/\s+/g, '[-,. ]*');
+      src = src.replace(/\{([^,]+?)\}/g, function(all, k) {
+        var value, arr, result,
+            opt   = k.match(/\?$/),
+            nc    = k.match(/^(\d+)\??$/),
+            slice = k.match(/(\d)(?:-(\d))?/),
+            key   = k.replace(/[^a-z]+$/, '');
+        if(nc) {
+          value = loc['tokens'][nc[1]];
+        } else if(loc[key]) {
+          value = loc[key];
+        } else if(loc[key + 's']) {
+          value = loc[key + 's'];
+          if(slice) {
+            // Can't use filter here as Prototype hijacks the method and doesn't
+            // pass an index, so use a simple loop instead!
+            arr = [];
+            value.forEach(function(m, i) {
+              var mod = i % (loc['units'] ? 8 : value.length);
+              if(mod >= slice[1] && mod <= (slice[2] || slice[1])) {
+                arr.push(m);
+              }
+            });
+            value = arr;
+          }
+          value = arrayToAlternates(value);
+        }
+        if(nc) {
+          result = '(?:' + value + ')';
+        } else {
+          if(!match) {
+            to.push(key);
+          }
+          result = '(' + value + ')';
+        }
+        if(opt) {
+          result += '?';
+        }
+        return result;
+      });
+      if(allowsTime) {
+        time = prepareTime(RequiredTime, loc, iso);
+        timeMarkers = ['t','[\\s\\u3000]'].concat(loc['timeMarker']);
+        lastIsNumeral = src.match(/\\d\{\d,\d\}\)+\??$/);
+        addDateInputFormat(loc, '(?:' + time + ')[,\\s\\u3000]+?' + src, TimeFormat.concat(to), variant);
+        addDateInputFormat(loc, src + '(?:[,\\s]*(?:' + timeMarkers.join('|') + (lastIsNumeral ? '+' : '*') +')' + time + ')?', to.concat(TimeFormat), variant);
+      } else {
+        addDateInputFormat(loc, src, to, variant);
+      }
+    }
+
+  };
+
+
+  // Localization helpers
+
+  function getLocalization(localeCode, fallback) {
+    var loc;
+    if(!isString(localeCode)) localeCode = '';
+    loc = Localizations[localeCode] || Localizations[localeCode.slice(0,2)];
+    if(fallback === false && !loc) {
+      throw new Error('Invalid locale.');
+    }
+    return loc || CurrentLocalization;
+  }
+
+  function setLocalization(localeCode, set) {
+    var loc, canAbbreviate;
+
+    function initializeField(name) {
+      var val = loc[name];
+      if(isString(val)) {
+        loc[name] = val.split(',');
+      } else if(!val) {
+        loc[name] = [];
+      }
+    }
+
+    function eachAlternate(str, fn) {
+      str = str.split('+').map(function(split) {
+        return split.replace(/(.+):(.+)$/, function(full, base, suffixes) {
+          return suffixes.split('|').map(function(suffix) {
+            return base + suffix;
+          }).join('|');
+        });
+      }).join('|');
+      return str.split('|').forEach(fn);
+    }
+
+    function setArray(name, abbreviate, multiple) {
+      var arr = [];
+      loc[name].forEach(function(full, i) {
+        if(abbreviate) {
+          full += '+' + full.slice(0,3);
+        }
+        eachAlternate(full, function(day, j) {
+          arr[j * multiple + i] = day.toLowerCase();
+        });
+      });
+      loc[name] = arr;
+    }
+
+    function getDigit(start, stop, allowNumbers) {
+      var str = '\\d{' + start + ',' + stop + '}';
+      if(allowNumbers) str += '|(?:' + arrayToAlternates(loc['numbers']) + ')+';
+      return str;
+    }
+
+    function getNum() {
+      var arr = ['\\d+'].concat(loc['articles']);
+      if(loc['numbers']) arr = arr.concat(loc['numbers']);
+      return arrayToAlternates(arr);
+    }
+
+    function setDefault(name, value) {
+      loc[name] = loc[name] || value;
+    }
+
+    function setModifiers() {
+      var arr = [];
+      loc.modifiersByName = {};
+      loc['modifiers'].push({ 'name': 'day', 'src': 'yesterday', 'value': -1 });
+      loc['modifiers'].push({ 'name': 'day', 'src': 'today', 'value': 0 });
+      loc['modifiers'].push({ 'name': 'day', 'src': 'tomorrow', 'value': 1 });
+      loc['modifiers'].forEach(function(modifier) {
+        var name = modifier.name;
+        eachAlternate(modifier.src, function(t) {
+          var locEntry = loc[name];
+          loc.modifiersByName[t] = modifier;
+          arr.push({ name: name, src: t, value: modifier.value });
+          loc[name] = locEntry ? locEntry + '|' + t : t;
+        });
+      });
+      loc['day'] += '|' + arrayToAlternates(loc['weekdays']);
+      loc['modifiers'] = arr;
+    }
+
+    // Initialize the locale
+    loc = new Localization(set);
+    initializeField('modifiers');
+    'months,weekdays,units,numbers,articles,tokens,timeMarker,ampm,timeSuffixes,dateParse,timeParse'.split(',').forEach(initializeField);
+
+    canAbbreviate = !loc['monthSuffix'];
+
+    setArray('months',   canAbbreviate, 12);
+    setArray('weekdays', canAbbreviate, 7);
+    setArray('units', false, 8);
+    setArray('numbers', false, 10);
+
+    setDefault('code', localeCode);
+    setDefault('date', getDigit(1,2, loc['digitDate']));
+    setDefault('year', "'\\d{2}|" + getDigit(4,4));
+    setDefault('num', getNum());
+
+    setModifiers();
+
+    if(loc['monthSuffix']) {
+      loc['month'] = getDigit(1,2);
+      loc['months'] = getRange(1, 12).map(function(n) { return n + loc['monthSuffix']; });
+    }
+    loc['full_month'] = getDigit(1,2) + '|' + arrayToAlternates(loc['months']);
+
+    // The order of these formats is very important. Order is reversed so formats that come
+    // later will take precedence over formats that come before. This generally means that
+    // more specific formats should come later, however, the {year} format should come before
+    // {day}, as 2011 needs to be parsed as a year (2011) and not date (20) + hours (11)
+
+    // If the locale has time suffixes then add a time only format for that locale
+    // that is separate from the core English-based one.
+    if(loc['timeSuffixes'].length > 0) {
+      loc.addFormat(prepareTime(RequiredTime, loc), false, TimeFormat)
+    }
+
+    loc.addFormat('{day}', true);
+    loc.addFormat('{month}' + (loc['monthSuffix'] || ''));
+    loc.addFormat('{year}' + (loc['yearSuffix'] || ''));
+
+    loc['timeParse'].forEach(function(src) {
+      loc.addFormat(src, true);
+    });
+
+    loc['dateParse'].forEach(function(src) {
+      loc.addFormat(src);
+    });
+
+    return Localizations[localeCode] = loc;
+  }
+
+
+  // General helpers
+
+  function addDateInputFormat(locale, format, match, variant) {
+    locale.compiledFormats.unshift({
+      variant: variant,
+      locale: locale,
+      reg: regexp('^' + format + '$', 'i'),
+      to: match
+    });
+  }
+
+  function simpleCapitalize(str) {
+    return str.slice(0,1).toUpperCase() + str.slice(1);
+  }
+
+  function arrayToAlternates(arr) {
+    return arr.filter(function(el) {
+      return !!el;
+    }).join('|');
+  }
+
+  // Date argument helpers
+
+  function collectDateArguments(args, allowDuration) {
+    var obj, arr;
+    if(isObject(args[0])) {
+      return args;
+    } else if (isNumber(args[0]) && !isNumber(args[1])) {
+      return [args[0]];
+    } else if (isString(args[0]) && allowDuration) {
+      return [getDateParamsFromString(args[0]), args[1]];
+    }
+    obj = {};
+    DateArgumentUnits.forEach(function(u,i) {
+      obj[u.unit] = args[i];
+    });
+    return [obj];
+  }
+
+  function getDateParamsFromString(str, num) {
+    var params = {};
+    match = str.match(/^(\d+)?\s?(\w+?)s?$/i);
+    if(match) {
+      if(isUndefined(num)) {
+        num = parseInt(match[1]) || 1;
+      }
+      params[match[2].toLowerCase()] = num;
+    }
+    return params;
+  }
+
+  // Date parsing helpers
+
+  function getFormatMatch(match, arr) {
+    var obj = {}, value, num;
+    arr.forEach(function(key, i) {
+      value = match[i + 1];
+      if(isUndefined(value) || value === '') return;
+      if(key === 'year') {
+        obj.yearAsString = value.replace(/'/, '');
+      }
+      num = parseFloat(value.replace(/'/, '').replace(/,/, '.'));
+      obj[key] = !isNaN(num) ? num : value.toLowerCase();
+    });
+    return obj;
+  }
+
+  function cleanDateInput(str) {
+    str = str.trim().replace(/^just (?=now)|\.+$/i, '');
+    return convertAsianDigits(str);
+  }
+
+  function convertAsianDigits(str) {
+    return str.replace(AsianDigitReg, function(full, disallowed, match) {
+      var sum = 0, place = 1, lastWasHolder, lastHolder;
+      if(disallowed) return full;
+      match.split('').reverse().forEach(function(letter) {
+        var value = AsianDigitMap[letter], holder = value > 9;
+        if(holder) {
+          if(lastWasHolder) sum += place;
+          place *= value / (lastHolder || 1);
+          lastHolder = value;
+        } else {
+          if(lastWasHolder === false) {
+            place *= 10;
+          }
+          sum += place * value;
+        }
+        lastWasHolder = holder;
+      });
+      if(lastWasHolder) sum += place;
+      return sum;
+    });
+  }
+
+  function getExtendedDate(f, localeCode, prefer, forceUTC) {
+    var d = new date(), relative = false, baseLocalization, loc, format, set, unit, weekday, num, tmp, after;
+
+    d.utc(forceUTC);
+
+    if(isDate(f)) {
+      // If the source here is already a date object, then the operation
+      // is the same as cloning the date, which preserves the UTC flag.
+      d.utc(f.isUTC()).setTime(f.getTime());
+    } else if(isNumber(f)) {
+      d.setTime(f);
+    } else if(isObject(f)) {
+      d.set(f, true);
+      set = f;
+    } else if(isString(f)) {
+
+      // The act of getting the localization will pre-initialize
+      // if it is missing and add the required formats.
+      baseLocalization = getLocalization(localeCode);
+
+      // Clean the input and convert Kanji based numerals if they exist.
+      f = cleanDateInput(f);
+
+      if(baseLocalization) {
+        iterateOverObject(baseLocalization.getFormats(), function(i, dif) {
+          var match = f.match(dif.reg);
+          if(match) {
+            format = dif;
+            loc = format.locale;
+            set = getFormatMatch(match, format.to, loc);
+
+            if(set['utc']) {
+              d.utc();
+            }
+
+            loc.cachedFormat = format;
+
+            if(set.timestamp) {
+              set = set.timestamp;
+              return false;
+            }
+
+            // If there's a variant (crazy Endian American format), swap the month and day.
+            if(format.variant && !isString(set['month']) && (isString(set['date']) || baseLocalization.hasVariant(localeCode))) {
+              tmp = set['month'];
+              set['month'] = set['date'];
+              set['date']  = tmp;
+            }
+
+            // If the year is 2 digits then get the implied century.
+            if(set['year'] && set.yearAsString.length === 2) {
+              set['year'] = getYearFromAbbreviation(set['year']);
+            }
+
+            // Set the month which may be localized.
+            if(set['month']) {
+              set['month'] = loc.getMonth(set['month']);
+              if(set['shift'] && !set['unit']) set['unit'] = loc['units'][7];
+            }
+
+            // If there is both a weekday and a date, the date takes precedence.
+            if(set['weekday'] && set['date']) {
+              delete set['weekday'];
+            // Otherwise set a localized weekday.
+            } else if(set['weekday']) {
+              set['weekday'] = loc.getWeekday(set['weekday']);
+              if(set['shift'] && !set['unit']) set['unit'] = loc['units'][5];
+            }
+
+            // Relative day localizations such as "today" and "tomorrow".
+            if(set['day'] && (tmp = loc.modifiersByName[set['day']])) {
+              set['day'] = tmp.value;
+              d.reset();
+              relative = true;
+            // If the day is a weekday, then set that instead.
+            } else if(set['day'] && (weekday = loc.getWeekday(set['day'])) > -1) {
+              delete set['day'];
+              if(set['num'] && set['month']) {
+                // If we have "the 2nd tuesday of June", set the day to the beginning of the month, then
+                // look ahead to set the weekday after all other properties have been set. The weekday needs
+                // to be set after the actual set because it requires overriding the "prefer" argument which
+                // could unintentionally send the year into the future, past, etc.
+                after = function() {
+                  var w = d.getWeekday();
+                  d.setWeekday((7 * (set['num'] - 1)) + (w > weekday ? weekday + 7 : weekday));
+                }
+                set['day'] = 1;
+              } else {
+                set['weekday'] = weekday;
+              }
+            }
+
+            if(set['date'] && !isNumber(set['date'])) {
+              set['date'] = loc.getNumericDate(set['date']);
+            }
+
+            // If the time is 1pm-11pm advance the time by 12 hours.
+            if(loc.matchPM(set['ampm']) && set['hour'] < 12) {
+              set['hour'] += 12;
+            } else if(loc.matchAM(set['ampm']) && set['hour'] === 12) {
+              set['hour'] = 0;
+            }
+
+            // Adjust for timezone offset
+            if('offset_hours' in set || 'offset_minutes' in set) {
+              d.utc();
+              set['offset_minutes'] = set['offset_minutes'] || 0;
+              set['offset_minutes'] += set['offset_hours'] * 60;
+              if(set['offset_sign'] === '-') {
+                set['offset_minutes'] *= -1;
+              }
+              set['minute'] -= set['offset_minutes'];
+            }
+
+            // Date has a unit like "days", "months", etc. are all relative to the current date.
+            if(set['unit']) {
+              relative = true;
+              num = loc.getNumber(set['num']);
+              unit = loc.getEnglishUnit(set['unit']);
+
+              // Shift and unit, ie "next month", "last week", etc.
+              if(set['shift'] || set['edge']) {
+                num *= (tmp = loc.modifiersByName[set['shift']]) ? tmp.value : 0;
+
+                // Relative month and static date: "the 15th of last month"
+                if(unit === 'month' && isDefined(set['date'])) {
+                  d.set({ 'day': set['date'] }, true);
+                  delete set['date'];
+                }
+
+                // Relative year and static month/date: "June 15th of last year"
+                if(unit === 'year' && isDefined(set['month'])) {
+                  d.set({ 'month': set['month'], 'day': set['date'] }, true);
+                  delete set['month'];
+                  delete set['date'];
+                }
+              }
+              // Unit and sign, ie "months ago", "weeks from now", etc.
+              if(set['sign'] && (tmp = loc.modifiersByName[set['sign']])) {
+                num *= tmp.value;
+              }
+
+              // Units can be with non-relative dates, set here. ie "the day after monday"
+              if(isDefined(set['weekday'])) {
+                d.set({'weekday': set['weekday'] }, true);
+                delete set['weekday'];
+              }
+
+              // Finally shift the unit.
+              set[unit] = (set[unit] || 0) + num;
+            }
+
+            if(set['year_sign'] === '-') {
+              set['year'] *= -1;
+            }
+
+            DateUnitsReversed.slice(1,4).forEach(function(u, i) {
+              var value = set[u.unit], fraction = value % 1;
+              if(fraction) {
+                set[DateUnitsReversed[i].unit] = round(fraction * (u.unit === 'second' ? 1000 : 60));
+                set[u.unit] = floor(value);
+              }
+            });
+            return false;
+          }
+        });
+      }
+      if(!format) {
+        // The Date constructor does something tricky like checking the number
+        // of arguments so simply passing in undefined won't work.
+        if(f !== 'now') {
+          d = new date(f);
+        }
+        if(forceUTC) {
+          // Falling back to system date here which cannot be parsed as UTC,
+          // so if we're forcing UTC then simply add the offset.
+          d.addMinutes(-d.getTimezoneOffset());
+        }
+      } else if(relative) {
+        d.advance(set);
+      } else {
+        if(d._utc) {
+          // UTC times can traverse into other days or even months,
+          // so preemtively reset the time here to prevent this.
+          d.reset();
+        }
+        updateDate(d, set, true, false, prefer);
+      }
+
+      // If there is an "edge" it needs to be set after the
+      // other fields are set. ie "the end of February"
+      if(set && set['edge']) {
+        tmp = loc.modifiersByName[set['edge']];
+        iterateOverObject(DateUnitsReversed.slice(4), function(i, u) {
+          if(isDefined(set[u.unit])) {
+            unit = u.unit;
+            return false;
+          }
+        });
+        if(unit === 'year') set.specificity = 'month';
+        else if(unit === 'month' || unit === 'week') set.specificity = 'day';
+        d[(tmp.value < 0 ? 'endOf' : 'beginningOf') + simpleCapitalize(unit)]();
+        // This value of -2 is arbitrary but it's a nice clean way to hook into this system.
+        if(tmp.value === -2) d.reset();
+      }
+      if(after) {
+        after();
+      }
+      // A date created by parsing a string presumes that the format *itself* is UTC, but
+      // not that the date, once created, should be manipulated as such. In other words,
+      // if you are creating a date object from a server time "2012-11-15T12:00:00Z",
+      // in the majority of cases you are using it to create a date that will, after creation,
+      // be manipulated as local, so reset the utc flag here.
+      d.utc(false);
+    }
+    return {
+      date: d,
+      set: set
+    }
+  }
+
+  // If the year is two digits, add the most appropriate century prefix.
+  function getYearFromAbbreviation(year) {
+    return round(callDateGet(new date(), 'FullYear') / 100) * 100 - round(year / 100) * 100 + year;
+  }
+
+  function getShortHour(d) {
+    var hours = callDateGet(d, 'Hours');
+    return hours === 0 ? 12 : hours - (floor(hours / 13) * 12);
+  }
+
+  // weeksSince won't work here as the result needs to be floored, not rounded.
+  function getWeekNumber(date) {
+    date = date.clone();
+    var dow = callDateGet(date, 'Day') || 7;
+    date.addDays(4 - dow).reset();
+    return 1 + floor(date.daysSince(date.clone().beginningOfYear()) / 7);
+  }
+
+  function getAdjustedUnit(ms) {
+    var next, ams = math.abs(ms), value = ams, unit = 0;
+    DateUnitsReversed.slice(1).forEach(function(u, i) {
+      next = floor(round(ams / u.multiplier() * 10) / 10);
+      if(next >= 1) {
+        value = next;
+        unit = i + 1;
+      }
+    });
+    return [value, unit, ms];
+  }
+
+  function getAdjustedUnitWithMonthFallback(date) {
+    var adu = getAdjustedUnit(date.millisecondsFromNow());
+    if(adu[1] === 6) {
+      // If the adjusted unit is in months, then better to use
+      // the "monthsfromNow" which applies a special error margin
+      // for edge cases such as Jan-09 - Mar-09 being less than
+      // 2 months apart (when using a strict numeric definition).
+      // The third "ms" element in the array will handle the sign
+      // (past or future), so simply take the absolute value here.
+      adu[0] = math.abs(date.monthsFromNow());
+    }
+    return adu;
+  }
+
+
+  // Date formatting helpers
+
+  function formatDate(date, format, relative, localeCode) {
+    var adu, loc = getLocalization(localeCode), caps = regexp(/^[A-Z]/), value, shortcut;
+    if(!date.isValid()) {
+      return 'Invalid Date';
+    } else if(Date[format]) {
+      format = Date[format];
+    } else if(isFunction(format)) {
+      adu = getAdjustedUnitWithMonthFallback(date);
+      format = format.apply(date, adu.concat(loc));
+    }
+    if(!format && relative) {
+      adu = adu || getAdjustedUnitWithMonthFallback(date);
+      // Adjust up if time is in ms, as this doesn't
+      // look very good for a standard relative date.
+      if(adu[1] === 0) {
+        adu[1] = 1;
+        adu[0] = 1;
+      }
+      return loc.getRelativeFormat(adu);
+    }
+
+    format = format || 'long';
+    format = loc[format] || format;
+
+    DateOutputFormats.forEach(function(dof) {
+      format = format.replace(regexp('\\{('+dof.token+')(\\d)?\\}', dof.word ? 'i' : ''), function(m,t,d) {
+        var val = dof.format(date, loc, d || 1, t), l = t.length, one = t.match(/^(.)\1+$/);
+        if(dof.word) {
+          if(l === 3) val = val.slice(0,3);
+          if(one || t.match(caps)) val = simpleCapitalize(val);
+        } else if(one && !dof.text) {
+          val = (isNumber(val) ? padNumber(val, l) : val.toString()).slice(-l);
+        }
+        return val;
+      });
+    });
+    return format;
+  }
+
+  // Date comparison helpers
+
+  function compareDate(d, find, buffer, forceUTC) {
+    var p, t, min, max, minOffset, maxOffset, override, capitalized, accuracy = 0, loBuffer = 0, hiBuffer = 0;
+    p = getExtendedDate(find, null, null, forceUTC);
+    if(buffer > 0) {
+      loBuffer = hiBuffer = buffer;
+      override = true;
+    }
+    if(!p.date.isValid()) return false;
+    if(p.set && p.set.specificity) {
+      DateUnits.forEach(function(u, i) {
+        if(u.unit === p.set.specificity) {
+          accuracy = u.multiplier(p.date, d - p.date) - 1;
+        }
+      });
+      capitalized = simpleCapitalize(p.set.specificity);
+      if(p.set['edge'] || p.set['shift']) {
+        p.date['beginningOf' + capitalized]();
+      }
+      if(p.set.specificity === 'month') {
+        max = p.date.clone()['endOf' + capitalized]().getTime();
+      }
+      if(!override && p.set['sign'] && p.set.specificity != 'millisecond') {
+        // If the time is relative, there can occasionally be an disparity between the relative date
+        // and "now", which it is being compared to, so set an extra buffer to account for this.
+        loBuffer = 50;
+        hiBuffer = -50;
+      }
+    }
+    t   = d.getTime();
+    min = p.date.getTime();
+    max = max || (min + accuracy);
+    max = compensateForTimezoneTraversal(d, min, max);
+    return t >= (min - loBuffer) && t <= (max + hiBuffer);
+  }
+
+  function compensateForTimezoneTraversal(d, min, max) {
+    var dMin, dMax, minOffset, maxOffset;
+    dMin = new Date(min);
+    dMax = new Date(max).utc(d.isUTC());
+    if(callDateGet(dMax, 'Hours') !== 23) {
+      minOffset = dMin.getTimezoneOffset();
+      maxOffset = dMax.getTimezoneOffset();
+      if(minOffset !== maxOffset) {
+        max += (maxOffset - minOffset).minutes();
+      }
+    }
+    return max;
+  }
+
+  function updateDate(d, params, reset, advance, prefer) {
+    var weekday, specificityIndex;
+
+    function getParam(key) {
+      return isDefined(params[key]) ? params[key] : params[key + 's'];
+    }
+
+    function paramExists(key) {
+      return isDefined(getParam(key));
+    }
+
+    function uniqueParamExists(key, isDay) {
+      return paramExists(key) || (isDay && paramExists('weekday'));
+    }
+
+    function canDisambiguate() {
+      var now = new date;
+      return (prefer === -1 && d > now) || (prefer === 1 && d < now);
+    }
+
+    if(isNumber(params) && advance) {
+      // If param is a number and we're advancing, the number is presumed to be milliseconds.
+      params = { 'milliseconds': params };
+    } else if(isNumber(params)) {
+      // Otherwise just set the timestamp and return.
+      d.setTime(params);
+      return d;
+    }
+
+    // "date" can also be passed for the day
+    if(isDefined(params['date'])) {
+      params['day'] = params['date'];
+    }
+
+    // Reset any unit lower than the least specific unit set. Do not do this for weeks
+    // or for years. This needs to be performed before the acutal setting of the date
+    // because the order needs to be reversed in order to get the lowest specificity,
+    // also because higher order units can be overwritten by lower order units, such
+    // as setting hour: 3, minute: 345, etc.
+    iterateOverObject(DateUnitsReversed, function(i,u) {
+      var isDay = u.unit === 'day';
+      if(uniqueParamExists(u.unit, isDay)) {
+        params.specificity = u.unit;
+        specificityIndex = +i;
+        return false;
+      } else if(reset && u.unit !== 'week' && (!isDay || !paramExists('week'))) {
+        // Days are relative to months, not weeks, so don't reset if a week exists.
+        callDateSet(d, u.method, (isDay ? 1 : 0));
+      }
+    });
+
+
+    // Now actually set or advance the date in order, higher units first.
+    DateUnits.forEach(function(u,i) {
+      var unit = u.unit, method = u.method, higherUnit = DateUnits[i - 1], value;
+      value = getParam(unit)
+      if(isUndefined(value)) return;
+      if(advance) {
+        if(unit === 'week') {
+          value  = (params['day'] || 0) + (value * 7);
+          method = 'Date';
+        }
+        value = (value * advance) + callDateGet(d, method);
+      } else if(unit === 'month' && paramExists('day')) {
+        // When setting the month, there is a chance that we will traverse into a new month.
+        // This happens in DST shifts, for example June 1st DST jumping to January 1st
+        // (non-DST) will have a shift of -1:00 which will traverse into the previous year.
+        // Prevent this by proactively setting the day when we know it will be set again anyway.
+        // It can also happen when there are not enough days in the target month. This second
+        // situation is identical to checkMonthTraversal below, however when we are advancing
+        // we want to reset the date to "the last date in the target month". In the case of
+        // DST shifts, however, we want to avoid the "edges" of months as that is where this
+        // unintended traversal can happen. This is the reason for the different handling of
+        // two similar but slightly different situations.
+        //
+        // TL;DR This method avoids the edges of a month IF not advancing and the date is going
+        // to be set anyway, while checkMonthTraversal resets the date to the last day if advancing.
+        //
+        callDateSet(d, 'Date', 15);
+      }
+      callDateSet(d, method, value);
+      if(advance && unit === 'month') {
+        checkMonthTraversal(d, value);
+      }
+    });
+
+
+    // If a weekday is included in the params, set it ahead of time and set the params
+    // to reflect the updated date so that resetting works properly.
+    if(!advance && !paramExists('day') && paramExists('weekday')) {
+      var weekday = getParam('weekday'), isAhead, futurePreferred;
+      d.setWeekday(weekday);
+    }
+
+    if(canDisambiguate()) {
+      iterateOverObject(DateUnitsReversed.slice(specificityIndex + 1), function(i,u) {
+        var ambiguous = u.ambiguous || (u.unit === 'week' && paramExists('weekday'));
+        if(ambiguous && !uniqueParamExists(u.unit, u.unit === 'day')) {
+          d[u.addMethod](prefer);
+          return false;
+        }
+      });
+    }
+    return d;
+  }
+
+  function callDateGet(d, method) {
+    return d['get' + (d._utc ? 'UTC' : '') + method]();
+  }
+
+  function callDateSet(d, method, value) {
+    return d['set' + (d._utc && method != 'ISOWeek' ? 'UTC' : '') + method](value);
+  }
+
+  // The ISO format allows times strung together without a demarcating ":", so make sure
+  // that these markers are now optional.
+  function prepareTime(format, loc, iso) {
+    var timeSuffixMapping = {'h':0,'m':1,'s':2}, add;
+    loc = loc || English;
+    return format.replace(/{([a-z])}/g, function(full, token) {
+      var separators = [],
+          isHours = token === 'h',
+          tokenIsRequired = isHours && !iso;
+      if(token === 't') {
+        return loc['ampm'].join('|');
+      } else {
+        if(isHours) {
+          separators.push(':');
+        }
+        if(add = loc['timeSuffixes'][timeSuffixMapping[token]]) {
+          separators.push(add + '\\s*');
+        }
+        return separators.length === 0 ? '' : '(?:' + separators.join('|') + ')' + (tokenIsRequired ? '' : '?');
+      }
+    });
+  }
+
+
+  // If the month is being set, then we don't want to accidentally
+  // traverse into a new month just because the target month doesn't have enough
+  // days. In other words, "5 months ago" from July 30th is still February, even
+  // though there is no February 30th, so it will of necessity be February 28th
+  // (or 29th in the case of a leap year).
+
+  function checkMonthTraversal(date, targetMonth) {
+    if(targetMonth < 0) {
+      targetMonth = targetMonth % 12 + 12;
+    }
+    if(targetMonth % 12 != callDateGet(date, 'Month')) {
+      callDateSet(date, 'Date', 0);
+    }
+  }
+
+  function createDate(args, prefer, forceUTC) {
+    var f, localeCode;
+    if(isNumber(args[1])) {
+      // If the second argument is a number, then we have an enumerated constructor type as in "new Date(2003, 2, 12);"
+      f = collectDateArguments(args)[0];
+    } else {
+      f          = args[0];
+      localeCode = args[1];
+    }
+    return getExtendedDate(f, localeCode, prefer, forceUTC).date;
+  }
+
+  function buildDateUnits() {
+    DateUnitsReversed = DateUnits.concat().reverse();
+    DateArgumentUnits = DateUnits.concat();
+    DateArgumentUnits.splice(2,1);
+  }
+
+
+  /***
+   * @method [units]Since([d], [locale] = currentLocale)
+   * @returns Number
+   * @short Returns the time since [d] in the appropriate unit.
+   * @extra [d] will accept a date object, timestamp, or text format. If not specified, [d] is assumed to be now. [locale] can be passed to specify the locale that the date is in. %[unit]Ago% is provided as an alias to make this more readable when [d] is assumed to be the current date. For more see @date_format.
+   *
+   * @set
+   *   millisecondsSince
+   *   secondsSince
+   *   minutesSince
+   *   hoursSince
+   *   daysSince
+   *   weeksSince
+   *   monthsSince
+   *   yearsSince
+   *
+   * @example
+   *
+   *   Date.create().millisecondsSince('1 hour ago') -> 3,600,000
+   *   Date.create().daysSince('1 week ago')         -> 7
+   *   Date.create().yearsSince('15 years ago')      -> 15
+   *   Date.create('15 years ago').yearsAgo()        -> 15
+   *
+   ***
+   * @method [units]Ago()
+   * @returns Number
+   * @short Returns the time ago in the appropriate unit.
+   *
+   * @set
+   *   millisecondsAgo
+   *   secondsAgo
+   *   minutesAgo
+   *   hoursAgo
+   *   daysAgo
+   *   weeksAgo
+   *   monthsAgo
+   *   yearsAgo
+   *
+   * @example
+   *
+   *   Date.create('last year').millisecondsAgo() -> 3,600,000
+   *   Date.create('last year').daysAgo()         -> 7
+   *   Date.create('last year').yearsAgo()        -> 15
+   *
+   ***
+   * @method [units]Until([d], [locale] = currentLocale)
+   * @returns Number
+   * @short Returns the time until [d] in the appropriate unit.
+   * @extra [d] will accept a date object, timestamp, or text format. If not specified, [d] is assumed to be now. [locale] can be passed to specify the locale that the date is in. %[unit]FromNow% is provided as an alias to make this more readable when [d] is assumed to be the current date. For more see @date_format.
+   *
+   * @set
+   *   millisecondsUntil
+   *   secondsUntil
+   *   minutesUntil
+   *   hoursUntil
+   *   daysUntil
+   *   weeksUntil
+   *   monthsUntil
+   *   yearsUntil
+   *
+   * @example
+   *
+   *   Date.create().millisecondsUntil('1 hour from now') -> 3,600,000
+   *   Date.create().daysUntil('1 week from now')         -> 7
+   *   Date.create().yearsUntil('15 years from now')      -> 15
+   *   Date.create('15 years from now').yearsFromNow()    -> 15
+   *
+   ***
+   * @method [units]FromNow()
+   * @returns Number
+   * @short Returns the time from now in the appropriate unit.
+   *
+   * @set
+   *   millisecondsFromNow
+   *   secondsFromNow
+   *   minutesFromNow
+   *   hoursFromNow
+   *   daysFromNow
+   *   weeksFromNow
+   *   monthsFromNow
+   *   yearsFromNow
+   *
+   * @example
+   *
+   *   Date.create('next year').millisecondsFromNow() -> 3,600,000
+   *   Date.create('next year').daysFromNow()         -> 7
+   *   Date.create('next year').yearsFromNow()        -> 15
+   *
+   ***
+   * @method add[Units](<num>, [reset] = false)
+   * @returns Date
+   * @short Adds <num> of the unit to the date. If [reset] is true, all lower units will be reset.
+   * @extra Note that "months" is ambiguous as a unit of time. If the target date falls on a day that does not exist (ie. August 31 -> February 31), the date will be shifted to the last day of the month. Don't use %addMonths% if you need precision.
+   *
+   * @set
+   *   addMilliseconds
+   *   addSeconds
+   *   addMinutes
+   *   addHours
+   *   addDays
+   *   addWeeks
+   *   addMonths
+   *   addYears
+   *
+   * @example
+   *
+   *   Date.create().addMilliseconds(5) -> current time + 5 milliseconds
+   *   Date.create().addDays(5)         -> current time + 5 days
+   *   Date.create().addYears(5)        -> current time + 5 years
+   *
+   ***
+   * @method isLast[Unit]()
+   * @returns Boolean
+   * @short Returns true if the date is last week/month/year.
+   *
+   * @set
+   *   isLastWeek
+   *   isLastMonth
+   *   isLastYear
+   *
+   * @example
+   *
+   *   Date.create('yesterday').isLastWeek()  -> true or false?
+   *   Date.create('yesterday').isLastMonth() -> probably not...
+   *   Date.create('yesterday').isLastYear()  -> even less likely...
+   *
+   ***
+   * @method isThis[Unit]()
+   * @returns Boolean
+   * @short Returns true if the date is this week/month/year.
+   *
+   * @set
+   *   isThisWeek
+   *   isThisMonth
+   *   isThisYear
+   *
+   * @example
+   *
+   *   Date.create('tomorrow').isThisWeek()  -> true or false?
+   *   Date.create('tomorrow').isThisMonth() -> probably...
+   *   Date.create('tomorrow').isThisYear()  -> signs point to yes...
+   *
+   ***
+   * @method isNext[Unit]()
+   * @returns Boolean
+   * @short Returns true if the date is next week/month/year.
+   *
+   * @set
+   *   isNextWeek
+   *   isNextMonth
+   *   isNextYear
+   *
+   * @example
+   *
+   *   Date.create('tomorrow').isNextWeek()  -> true or false?
+   *   Date.create('tomorrow').isNextMonth() -> probably not...
+   *   Date.create('tomorrow').isNextYear()  -> even less likely...
+   *
+   ***
+   * @method beginningOf[Unit]()
+   * @returns Date
+   * @short Sets the date to the beginning of the appropriate unit.
+   *
+   * @set
+   *   beginningOfDay
+   *   beginningOfWeek
+   *   beginningOfMonth
+   *   beginningOfYear
+   *
+   * @example
+   *
+   *   Date.create().beginningOfDay()   -> the beginning of today (resets the time)
+   *   Date.create().beginningOfWeek()  -> the beginning of the week
+   *   Date.create().beginningOfMonth() -> the beginning of the month
+   *   Date.create().beginningOfYear()  -> the beginning of the year
+   *
+   ***
+   * @method endOf[Unit]()
+   * @returns Date
+   * @short Sets the date to the end of the appropriate unit.
+   *
+   * @set
+   *   endOfDay
+   *   endOfWeek
+   *   endOfMonth
+   *   endOfYear
+   *
+   * @example
+   *
+   *   Date.create().endOfDay()   -> the end of today (sets the time to 23:59:59.999)
+   *   Date.create().endOfWeek()  -> the end of the week
+   *   Date.create().endOfMonth() -> the end of the month
+   *   Date.create().endOfYear()  -> the end of the year
+   *
+   ***/
+
+  function buildDateMethods() {
+    extendSimilar(date, true, false, DateUnits, function(methods, u, i) {
+      var unit = u.unit, caps = simpleCapitalize(unit), multiplier = u.multiplier(), since, until;
+      u.addMethod = 'add' + caps + 's';
+      // "since/until now" only count "past" an integer, i.e. "2 days ago" is
+      // anything between 2 - 2.999 days. The default margin of error is 0.999,
+      // but "months" have an inherently larger margin, as the number of days
+      // in a given month may be significantly less than the number of days in
+      // the average month, so for example "30 days" before March 15 may in fact
+      // be 1 month ago. Years also have a margin of error due to leap years,
+      // but this is roughly 0.999 anyway (365 / 365.25). Other units do not
+      // technically need the error margin applied to them but this accounts
+      // for discrepancies like (15).hoursAgo() which technically creates the
+      // current date first, then creates a date 15 hours before and compares
+      // them, the discrepancy between the creation of the 2 dates means that
+      // they may actually be 15.0001 hours apart. Milliseconds don't have
+      // fractions, so they won't be subject to this error margin.
+      function applyErrorMargin(ms) {
+        var num      = ms / multiplier,
+            fraction = num % 1,
+            error    = u.error || 0.999;
+        if(fraction && math.abs(fraction % 1) > error) {
+          num = round(num);
+        }
+        return parseInt(num);
+      }
+      since = function(f, localeCode) {
+        return applyErrorMargin(this.getTime() - date.create(f, localeCode).getTime());
+      };
+      until = function(f, localeCode) {
+        return applyErrorMargin(date.create(f, localeCode).getTime() - this.getTime());
+      };
+      methods[unit+'sAgo']     = until;
+      methods[unit+'sUntil']   = until;
+      methods[unit+'sSince']   = since;
+      methods[unit+'sFromNow'] = since;
+      methods[u.addMethod] = function(num, reset) {
+        var set = {};
+        set[unit] = num;
+        return this.advance(set, reset);
+      };
+      buildNumberToDateAlias(u, multiplier);
+      if(i < 3) {
+        ['Last','This','Next'].forEach(function(shift) {
+          methods['is' + shift + caps] = function() {
+            return this.is(shift + ' ' + unit);
+          };
+        });
+      }
+      if(i < 4) {
+        methods['beginningOf' + caps] = function() {
+          var set = {};
+          switch(unit) {
+            case 'year':  set['year']    = callDateGet(this, 'FullYear'); break;
+            case 'month': set['month']   = callDateGet(this, 'Month');    break;
+            case 'day':   set['day']     = callDateGet(this, 'Date');     break;
+            case 'week':  set['weekday'] = 0; break;
+          }
+          return this.set(set, true);
+        };
+        methods['endOf' + caps] = function() {
+          var set = { 'hours': 23, 'minutes': 59, 'seconds': 59, 'milliseconds': 999 };
+          switch(unit) {
+            case 'year':  set['month']   = 11; set['day'] = 31; break;
+            case 'month': set['day']     = this.daysInMonth();  break;
+            case 'week':  set['weekday'] = 6;                   break;
+          }
+          return this.set(set, true);
+        };
+      }
+    });
+  }
+
+  function buildCoreInputFormats() {
+    English.addFormat('([+-])?(\\d{4,4})[-.]?{full_month}[-.]?(\\d{1,2})?', true, ['year_sign','year','month','date'], false, true);
+    English.addFormat('(\\d{1,2})[-.\\/]{full_month}(?:[-.\\/](\\d{2,4}))?', true, ['date','month','year'], true);
+    English.addFormat('{full_month}[-.](\\d{4,4})', false, ['month','year']);
+    English.addFormat('\\/Date\\((\\d+(?:\\+\\d{4,4})?)\\)\\/', false, ['timestamp'])
+    English.addFormat(prepareTime(RequiredTime, English), false, TimeFormat)
+
+    // When a new locale is initialized it will have the CoreDateFormats initialized by default.
+    // From there, adding new formats will push them in front of the previous ones, so the core
+    // formats will be the last to be reached. However, the core formats themselves have English
+    // months in them, which means that English needs to first be initialized and creates a race
+    // condition. I'm getting around this here by adding these generalized formats in the order
+    // specific -> general, which will mean they will be added to the English localization in
+    // general -> specific order, then chopping them off the front and reversing to get the correct
+    // order. Note that there are 7 formats as 2 have times which adds a front and a back format.
+    CoreDateFormats = English.compiledFormats.slice(0,7).reverse();
+    English.compiledFormats = English.compiledFormats.slice(7).concat(CoreDateFormats);
+  }
+
+  function buildDateOutputShortcuts() {
+    extendSimilar(date, true, false, 'short,long,full', function(methods, name) {
+      methods[name] = function(localeCode) {
+        return formatDate(this, name, false, localeCode);
+      }
+    });
+  }
+
+  function buildAsianDigits() {
+    KanjiDigits.split('').forEach(function(digit, value) {
+      var holder;
+      if(value > 9) {
+        value = math.pow(10, value - 9);
+      }
+      AsianDigitMap[digit] = value;
+    });
+    FullWidthDigits.split('').forEach(function(digit, value) {
+      AsianDigitMap[digit] = value;
+    });
+    // Kanji numerals may also be included in phrases which are text-based rather
+    // than actual numbers such as Chinese weekdays (上周三), and "the day before
+    // yesterday" (一昨日) in Japanese, so don't match these.
+    AsianDigitReg = regexp('([期週周])?([' + KanjiDigits + FullWidthDigits + ']+)(?!昨)', 'g');
+  }
+
+   /***
+   * @method is[Day]()
+   * @returns Boolean
+   * @short Returns true if the date falls on that day.
+   * @extra Also available: %isYesterday%, %isToday%, %isTomorrow%, %isWeekday%, and %isWeekend%.
+   *
+   * @set
+   *   isToday
+   *   isYesterday
+   *   isTomorrow
+   *   isWeekday
+   *   isWeekend
+   *   isSunday
+   *   isMonday
+   *   isTuesday
+   *   isWednesday
+   *   isThursday
+   *   isFriday
+   *   isSaturday
+   *
+   * @example
+   *
+   *   Date.create('tomorrow').isToday() -> false
+   *   Date.create('thursday').isTomorrow() -> ?
+   *   Date.create('yesterday').isWednesday() -> ?
+   *   Date.create('today').isWeekend() -> ?
+   *
+   ***
+   * @method isFuture()
+   * @returns Boolean
+   * @short Returns true if the date is in the future.
+   * @example
+   *
+   *   Date.create('next week').isFuture() -> true
+   *   Date.create('last week').isFuture() -> false
+   *
+   ***
+   * @method isPast()
+   * @returns Boolean
+   * @short Returns true if the date is in the past.
+   * @example
+   *
+   *   Date.create('last week').isPast() -> true
+   *   Date.create('next week').isPast() -> false
+   *
+   ***/
+  function buildRelativeAliases() {
+    var special  = 'today,yesterday,tomorrow,weekday,weekend,future,past'.split(',');
+    var weekdays = English['weekdays'].slice(0,7);
+    var months   = English['months'].slice(0,12);
+    extendSimilar(date, true, false, special.concat(weekdays).concat(months), function(methods, name) {
+      methods['is'+ simpleCapitalize(name)] = function(utc) {
+       return this.is(name, 0, utc);
+      };
+    });
+  }
+
+  function buildUTCAliases() {
+    date.extend({
+      'utc': {
+
+        'create': function() {
+          return createDate(arguments, 0, true);
+        },
+
+        'past': function() {
+          return createDate(arguments, -1, true);
+        },
+
+        'future': function() {
+          return createDate(arguments, 1, true);
+        }
+
+      }
+    }, false, false);
+  }
+
+  function setDateProperties() {
+    date.extend({
+      'RFC1123': '{Dow}, {dd} {Mon} {yyyy} {HH}:{mm}:{ss} {tz}',
+      'RFC1036': '{Weekday}, {dd}-{Mon}-{yy} {HH}:{mm}:{ss} {tz}',
+      'ISO8601_DATE': '{yyyy}-{MM}-{dd}',
+      'ISO8601_DATETIME': '{yyyy}-{MM}-{dd}T{HH}:{mm}:{ss}.{fff}{isotz}'
+    }, false, false);
+  }
+
+
+  date.extend({
+
+     /***
+     * @method Date.create(<d>, [locale] = currentLocale)
+     * @returns Date
+     * @short Alternate Date constructor which understands many different text formats, a timestamp, or another date.
+     * @extra If no argument is given, date is assumed to be now. %Date.create% additionally can accept enumerated parameters as with the standard date constructor. [locale] can be passed to specify the locale that the date is in. When unspecified, the current locale (default is English) is assumed. UTC-based dates can be created through the %utc% object. For more see @date_format.
+     * @set
+     *   Date.utc.create
+     *
+     * @example
+     *
+     *   Date.create('July')          -> July of this year
+     *   Date.create('1776')          -> 1776
+     *   Date.create('today')         -> today
+     *   Date.create('wednesday')     -> This wednesday
+     *   Date.create('next friday')   -> Next friday
+     *   Date.create('July 4, 1776')  -> July 4, 1776
+     *   Date.create(-446806800000)   -> November 5, 1955
+     *   Date.create(1776, 6, 4)      -> July 4, 1776
+     *   Date.create('1776年07月04日', 'ja') -> July 4, 1776
+     *   Date.utc.create('July 4, 1776', 'en')  -> July 4, 1776
+     *
+     ***/
+    'create': function() {
+      return createDate(arguments);
+    },
+
+     /***
+     * @method Date.past(<d>, [locale] = currentLocale)
+     * @returns Date
+     * @short Alternate form of %Date.create% with any ambiguity assumed to be the past.
+     * @extra For example %"Sunday"% can be either "the Sunday coming up" or "the Sunday last" depending on context. Note that dates explicitly in the future ("next Sunday") will remain in the future. This method simply provides a hint when ambiguity exists. UTC-based dates can be created through the %utc% object. For more, see @date_format.
+     * @set
+     *   Date.utc.past
+     * @example
+     *
+     *   Date.past('July')          -> July of this year or last depending on the current month
+     *   Date.past('Wednesday')     -> This wednesday or last depending on the current weekday
+     *
+     ***/
+    'past': function() {
+      return createDate(arguments, -1);
+    },
+
+     /***
+     * @method Date.future(<d>, [locale] = currentLocale)
+     * @returns Date
+     * @short Alternate form of %Date.create% with any ambiguity assumed to be the future.
+     * @extra For example %"Sunday"% can be either "the Sunday coming up" or "the Sunday last" depending on context. Note that dates explicitly in the past ("last Sunday") will remain in the past. This method simply provides a hint when ambiguity exists. UTC-based dates can be created through the %utc% object. For more, see @date_format.
+     * @set
+     *   Date.utc.future
+     *
+     * @example
+     *
+     *   Date.future('July')          -> July of this year or next depending on the current month
+     *   Date.future('Wednesday')     -> This wednesday or next depending on the current weekday
+     *
+     ***/
+    'future': function() {
+      return createDate(arguments, 1);
+    },
+
+     /***
+     * @method Date.addLocale(<code>, <set>)
+     * @returns Locale
+     * @short Adds a locale <set> to the locales understood by Sugar.
+     * @extra For more see @date_format.
+     *
+     ***/
+    'addLocale': function(localeCode, set) {
+      return setLocalization(localeCode, set);
+    },
+
+     /***
+     * @method Date.setLocale(<code>)
+     * @returns Locale
+     * @short Sets the current locale to be used with dates.
+     * @extra Sugar has support for 13 locales that are available through the "Date Locales" package. In addition you can define a new locale with %Date.addLocale%. For more see @date_format.
+     *
+     ***/
+    'setLocale': function(localeCode, set) {
+      var loc = getLocalization(localeCode, false);
+      CurrentLocalization = loc;
+      // The code is allowed to be more specific than the codes which are required:
+      // i.e. zh-CN or en-US. Currently this only affects US date variants such as 8/10/2000.
+      if(localeCode && localeCode != loc['code']) {
+        loc['code'] = localeCode;
+      }
+      return loc;
+    },
+
+     /***
+     * @method Date.getLocale([code] = current)
+     * @returns Locale
+     * @short Gets the locale for the given code, or the current locale.
+     * @extra The resulting locale object can be manipulated to provide more control over date localizations. For more about locales, see @date_format.
+     *
+     ***/
+    'getLocale': function(localeCode) {
+      return !localeCode ? CurrentLocalization : getLocalization(localeCode, false);
+    },
+
+     /**
+     * @method Date.addFormat(<format>, <match>, [code] = null)
+     * @returns Nothing
+     * @short Manually adds a new date input format.
+     * @extra This method allows fine grained control for alternate formats. <format> is a string that can have regex tokens inside. <match> is an array of the tokens that each regex capturing group will map to, for example %year%, %date%, etc. For more, see @date_format.
+     *
+     **/
+    'addFormat': function(format, match, localeCode) {
+      addDateInputFormat(getLocalization(localeCode), format, match);
+    }
+
+  }, false, false);
+
+  date.extend({
+
+     /***
+     * @method set(<set>, [reset] = false)
+     * @returns Date
+     * @short Sets the date object.
+     * @extra This method can accept multiple formats including a single number as a timestamp, an object, or enumerated parameters (as with the Date constructor). If [reset] is %true%, any units more specific than those passed will be reset.
+     *
+     * @example
+     *
+     *   new Date().set({ year: 2011, month: 11, day: 31 }) -> December 31, 2011
+     *   new Date().set(2011, 11, 31)                       -> December 31, 2011
+     *   new Date().set(86400000)                           -> 1 day after Jan 1, 1970
+     *   new Date().set({ year: 2004, month: 6 }, true)     -> June 1, 2004, 00:00:00.000
+     *
+     ***/
+    'set': function() {
+      var args = collectDateArguments(arguments);
+      return updateDate(this, args[0], args[1])
+    },
+
+     /***
+     * @method setWeekday()
+     * @returns Nothing
+     * @short Sets the weekday of the date.
+     * @extra In order to maintain a parallel with %getWeekday% (which itself is an alias for Javascript native %getDay%), Sunday is considered day %0%. This contrasts with ISO-8601 standard (used in %getISOWeek% and %setISOWeek%) which places Sunday at the end of the week (day 7). This effectively means that passing %0% to this method while in the middle of a week will rewind the date, where passing %7% will advance it.
+     *
+     * @example
+     *
+     *   d = new Date(); d.setWeekday(1); d; -> Monday of this week
+     *   d = new Date(); d.setWeekday(6); d; -> Saturday of this week
+     *
+     ***/
+    'setWeekday': function(dow) {
+      if(isUndefined(dow)) return;
+      return callDateSet(this, 'Date', callDateGet(this, 'Date') + dow - callDateGet(this, 'Day'));
+    },
+
+     /***
+     * @method setISOWeek()
+     * @returns Nothing
+     * @short Sets the week (of the year) as defined by the ISO-8601 standard.
+     * @extra Note that this standard places Sunday at the end of the week (day 7).
+     *
+     * @example
+     *
+     *   d = new Date(); d.setISOWeek(15); d; -> 15th week of the year
+     *
+     ***/
+    'setISOWeek': function(week) {
+      var weekday = callDateGet(this, 'Day') || 7;
+      if(isUndefined(week)) return;
+      this.set({ 'month': 0, 'date': 4 });
+      this.set({ 'weekday': 1 });
+      if(week > 1) {
+        this.addWeeks(week - 1);
+      }
+      if(weekday !== 1) {
+        this.advance({ 'days': weekday - 1 });
+      }
+      return this.getTime();
+    },
+
+     /***
+     * @method getISOWeek()
+     * @returns Number
+     * @short Gets the date's week (of the year) as defined by the ISO-8601 standard.
+     * @extra Note that this standard places Sunday at the end of the week (day 7). If %utc% is set on the date, the week will be according to UTC time.
+     *
+     * @example
+     *
+     *   new Date().getISOWeek()    -> today's week of the year
+     *
+     ***/
+    'getISOWeek': function() {
+      return getWeekNumber(this);
+    },
+
+     /***
+     * @method getUTCOffset([iso])
+     * @returns String
+     * @short Returns a string representation of the offset from UTC time. If [iso] is true the offset will be in ISO8601 format.
+     * @example
+     *
+     *   new Date().getUTCOffset()     -> "+0900"
+     *   new Date().getUTCOffset(true) -> "+09:00"
+     *
+     ***/
+    'getUTCOffset': function(iso) {
+      var offset = this._utc ? 0 : this.getTimezoneOffset();
+      var colon  = iso === true ? ':' : '';
+      if(!offset && iso) return 'Z';
+      return padNumber(floor(-offset / 60), 2, true) + colon + padNumber(math.abs(offset % 60), 2);
+    },
+
+     /***
+     * @method utc([on] = true)
+     * @returns Date
+     * @short Sets the internal utc flag for the date. When on, UTC-based methods will be called internally.
+     * @extra For more see @date_format.
+     * @example
+     *
+     *   new Date().utc(true)
+     *   new Date().utc(false)
+     *
+     ***/
+    'utc': function(set) {
+      defineProperty(this, '_utc', set === true || arguments.length === 0);
+      return this;
+    },
+
+     /***
+     * @method isUTC()
+     * @returns Boolean
+     * @short Returns true if the date has no timezone offset.
+     * @extra This will also return true for utc-based dates (dates that have the %utc% method set true). Note that even if the utc flag is set, %getTimezoneOffset% will always report the same thing as Javascript always reports that based on the environment's locale.
+     * @example
+     *
+     *   new Date().isUTC()           -> true or false?
+     *   new Date().utc(true).isUTC() -> true
+     *
+     ***/
+    'isUTC': function() {
+      return !!this._utc || this.getTimezoneOffset() === 0;
+    },
+
+     /***
+     * @method advance(<set>, [reset] = false)
+     * @returns Date
+     * @short Sets the date forward.
+     * @extra This method can accept multiple formats including an object, a string in the format %3 days%, a single number as milliseconds, or enumerated parameters (as with the Date constructor). If [reset] is %true%, any units more specific than those passed will be reset. For more see @date_format.
+     * @example
+     *
+     *   new Date().advance({ year: 2 }) -> 2 years in the future
+     *   new Date().advance('2 days')    -> 2 days in the future
+     *   new Date().advance(0, 2, 3)     -> 2 months 3 days in the future
+     *   new Date().advance(86400000)    -> 1 day in the future
+     *
+     ***/
+    'advance': function() {
+      var args = collectDateArguments(arguments, true);
+      return updateDate(this, args[0], args[1], 1);
+    },
+
+     /***
+     * @method rewind(<set>, [reset] = false)
+     * @returns Date
+     * @short Sets the date back.
+     * @extra This method can accept multiple formats including a single number as a timestamp, an object, or enumerated parameters (as with the Date constructor). If [reset] is %true%, any units more specific than those passed will be reset. For more see @date_format.
+     * @example
+     *
+     *   new Date().rewind({ year: 2 }) -> 2 years in the past
+     *   new Date().rewind(0, 2, 3)     -> 2 months 3 days in the past
+     *   new Date().rewind(86400000)    -> 1 day in the past
+     *
+     ***/
+    'rewind': function() {
+      var args = collectDateArguments(arguments, true);
+      return updateDate(this, args[0], args[1], -1);
+    },
+
+     /***
+     * @method isValid()
+     * @returns Boolean
+     * @short Returns true if the date is valid.
+     * @example
+     *
+     *   new Date().isValid()         -> true
+     *   new Date('flexor').isValid() -> false
+     *
+     ***/
+    'isValid': function() {
+      return !isNaN(this.getTime());
+    },
+
+     /***
+     * @method isAfter(<d>, [margin] = 0)
+     * @returns Boolean
+     * @short Returns true if the date is after the <d>.
+     * @extra [margin] is to allow extra margin of error (in ms). <d> will accept a date object, timestamp, or text format. If not specified, <d> is assumed to be now. See @date_format for more.
+     * @example
+     *
+     *   new Date().isAfter('tomorrow')  -> false
+     *   new Date().isAfter('yesterday') -> true
+     *
+     ***/
+    'isAfter': function(d, margin, utc) {
+      return this.getTime() > date.create(d).getTime() - (margin || 0);
+    },
+
+     /***
+     * @method isBefore(<d>, [margin] = 0)
+     * @returns Boolean
+     * @short Returns true if the date is before <d>.
+     * @extra [margin] is to allow extra margin of error (in ms). <d> will accept a date object, timestamp, or text format. If not specified, <d> is assumed to be now. See @date_format for more.
+     * @example
+     *
+     *   new Date().isBefore('tomorrow')  -> true
+     *   new Date().isBefore('yesterday') -> false
+     *
+     ***/
+    'isBefore': function(d, margin) {
+      return this.getTime() < date.create(d).getTime() + (margin || 0);
+    },
+
+     /***
+     * @method isBetween(<d1>, <d2>, [margin] = 0)
+     * @returns Boolean
+     * @short Returns true if the date falls between <d1> and <d2>.
+     * @extra [margin] is to allow extra margin of error (in ms). <d1> and <d2> will accept a date object, timestamp, or text format. If not specified, they are assumed to be now. See @date_format for more.
+     * @example
+     *
+     *   new Date().isBetween('yesterday', 'tomorrow')    -> true
+     *   new Date().isBetween('last year', '2 years ago') -> false
+     *
+     ***/
+    'isBetween': function(d1, d2, margin) {
+      var t  = this.getTime();
+      var t1 = date.create(d1).getTime();
+      var t2 = date.create(d2).getTime();
+      var lo = math.min(t1, t2);
+      var hi = math.max(t1, t2);
+      margin = margin || 0;
+      return (lo - margin < t) && (hi + margin > t);
+    },
+
+     /***
+     * @method isLeapYear()
+     * @returns Boolean
+     * @short Returns true if the date is a leap year.
+     * @example
+     *
+     *   Date.create('2000').isLeapYear() -> true
+     *
+     ***/
+    'isLeapYear': function() {
+      var year = callDateGet(this, 'FullYear');
+      return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    },
+
+     /***
+     * @method daysInMonth()
+     * @returns Number
+     * @short Returns the number of days in the date's month.
+     * @example
+     *
+     *   Date.create('May').daysInMonth()            -> 31
+     *   Date.create('February, 2000').daysInMonth() -> 29
+     *
+     ***/
+    'daysInMonth': function() {
+      return 32 - callDateGet(new date(callDateGet(this, 'FullYear'), callDateGet(this, 'Month'), 32), 'Date');
+    },
+
+     /***
+     * @method format(<format>, [locale] = currentLocale)
+     * @returns String
+     * @short Formats and outputs the date.
+     * @extra <format> can be a number of pre-determined formats or a string of tokens. Locale-specific formats are %short%, %long%, and %full% which have their own aliases and can be called with %date.short()%, etc. If <format> is not specified the %long% format is assumed. [locale] specifies a locale code to use (if not specified the current locale is used). See @date_format for more details.
+     *
+     * @set
+     *   short
+     *   long
+     *   full
+     *
+     * @example
+     *
+     *   Date.create().format()                                   -> ex. July 4, 2003
+     *   Date.create().format('{Weekday} {d} {Month}, {yyyy}')    -> ex. Monday July 4, 2003
+     *   Date.create().format('{hh}:{mm}')                        -> ex. 15:57
+     *   Date.create().format('{12hr}:{mm}{tt}')                  -> ex. 3:57pm
+     *   Date.create().format(Date.ISO8601_DATETIME)              -> ex. 2011-07-05 12:24:55.528Z
+     *   Date.create('last week').format('short', 'ja')                -> ex. 先週
+     *   Date.create('yesterday').format(function(value,unit,ms,loc) {
+     *     // value = 1, unit = 3, ms = -86400000, loc = [current locale object]
+     *   });                                                      -> ex. 1 day ago
+     *
+     ***/
+    'format': function(f, localeCode) {
+      return formatDate(this, f, false, localeCode);
+    },
+
+     /***
+     * @method relative([fn], [locale] = currentLocale)
+     * @returns String
+     * @short Returns a relative date string offset to the current time.
+     * @extra [fn] can be passed to provide for more granular control over the resulting string. [fn] is passed 4 arguments: the adjusted value, unit, offset in milliseconds, and a localization object. As an alternate syntax, [locale] can also be passed as the first (and only) parameter. For more, see @date_format.
+     * @example
+     *
+     *   Date.create('90 seconds ago').relative() -> 1 minute ago
+     *   Date.create('January').relative()        -> ex. 5 months ago
+     *   Date.create('January').relative('ja')    -> 3ヶ月前
+     *   Date.create('120 minutes ago').relative(function(val,unit,ms,loc) {
+     *     // value = 2, unit = 3, ms = -7200, loc = [current locale object]
+     *   });                                      -> ex. 5 months ago
+     *
+     ***/
+    'relative': function(f, localeCode) {
+      if(isString(f)) {
+        localeCode = f;
+        f = null;
+      }
+      return formatDate(this, f, true, localeCode);
+    },
+
+     /***
+     * @method is(<d>, [margin] = 0)
+     * @returns Boolean
+     * @short Returns true if the date is <d>.
+     * @extra <d> will accept a date object, timestamp, or text format. %is% additionally understands more generalized expressions like month/weekday names, 'today', etc, and compares to the precision implied in <d>. [margin] allows an extra margin of error in milliseconds.  For more, see @date_format.
+     * @example
+     *
+     *   Date.create().is('July')               -> true or false?
+     *   Date.create().is('1776')               -> false
+     *   Date.create().is('today')              -> true
+     *   Date.create().is('weekday')            -> true or false?
+     *   Date.create().is('July 4, 1776')       -> false
+     *   Date.create().is(-6106093200000)       -> false
+     *   Date.create().is(new Date(1776, 6, 4)) -> false
+     *
+     ***/
+    'is': function(d, margin, utc) {
+      var tmp, comp;
+      if(!this.isValid()) return;
+      if(isString(d)) {
+        d = d.trim().toLowerCase();
+        comp = this.clone().utc(utc);
+        switch(true) {
+          case d === 'future':  return this.getTime() > new date().getTime();
+          case d === 'past':    return this.getTime() < new date().getTime();
+          case d === 'weekday': return callDateGet(comp, 'Day') > 0 && callDateGet(comp, 'Day') < 6;
+          case d === 'weekend': return callDateGet(comp, 'Day') === 0 || callDateGet(comp, 'Day') === 6;
+          case (tmp = English['weekdays'].indexOf(d) % 7) > -1: return callDateGet(comp, 'Day') === tmp;
+          case (tmp = English['months'].indexOf(d) % 12) > -1:  return callDateGet(comp, 'Month') === tmp;
+        }
+      }
+      return compareDate(this, d, margin, utc);
+    },
+
+     /***
+     * @method reset([unit] = 'hours')
+     * @returns Date
+     * @short Resets the unit passed and all smaller units. Default is "hours", effectively resetting the time.
+     * @example
+     *
+     *   Date.create().reset('day')   -> Beginning of today
+     *   Date.create().reset('month') -> 1st of the month
+     *
+     ***/
+    'reset': function(unit) {
+      var params = {}, recognized;
+      unit = unit || 'hours';
+      if(unit === 'date') unit = 'days';
+      recognized = DateUnits.some(function(u) {
+        return unit === u.unit || unit === u.unit + 's';
+      });
+      params[unit] = unit.match(/^days?/) ? 1 : 0;
+      return recognized ? this.set(params, true) : this;
+    },
+
+     /***
+     * @method clone()
+     * @returns Date
+     * @short Clones the date.
+     * @example
+     *
+     *   Date.create().clone() -> Copy of now
+     *
+     ***/
+    'clone': function() {
+      var d = new date(this.getTime());
+      d.utc(!!this._utc);
+      return d;
+    }
+
+  });
+
+
+  // Instance aliases
+  date.extend({
+
+     /***
+     * @method iso()
+     * @alias toISOString
+     *
+     ***/
+    'iso': function() {
+      return this.toISOString();
+    },
+
+     /***
+     * @method getWeekday()
+     * @returns Number
+     * @short Alias for %getDay%.
+     * @set
+     *   getUTCWeekday
+     *
+     * @example
+     *
+     +   Date.create().getWeekday();    -> (ex.) 3
+     +   Date.create().getUTCWeekday();    -> (ex.) 3
+     *
+     ***/
+    'getWeekday':    date.prototype.getDay,
+    'getUTCWeekday':    date.prototype.getUTCDay
+
+  });
+
+
+
+  /***
+   * Number module
+   *
+   ***/
+
+  /***
+   * @method [unit]()
+   * @returns Number
+   * @short Takes the number as a corresponding unit of time and converts to milliseconds.
+   * @extra Method names can be both singular and plural.  Note that as "a month" is ambiguous as a unit of time, %months% will be equivalent to 30.4375 days, the average number in a month. Be careful using %months% if you need exact precision.
+   *
+   * @set
+   *   millisecond
+   *   milliseconds
+   *   second
+   *   seconds
+   *   minute
+   *   minutes
+   *   hour
+   *   hours
+   *   day
+   *   days
+   *   week
+   *   weeks
+   *   month
+   *   months
+   *   year
+   *   years
+   *
+   * @example
+   *
+   *   (5).milliseconds() -> 5
+   *   (10).hours()       -> 36000000
+   *   (1).day()          -> 86400000
+   *
+   ***
+   * @method [unit]Before([d], [locale] = currentLocale)
+   * @returns Date
+   * @short Returns a date that is <n> units before [d], where <n> is the number.
+   * @extra [d] will accept a date object, timestamp, or text format. Note that "months" is ambiguous as a unit of time. If the target date falls on a day that does not exist (ie. August 31 -> February 31), the date will be shifted to the last day of the month. Be careful using %monthsBefore% if you need exact precision. See @date_format for more.
+   *
+   * @set
+   *   millisecondBefore
+   *   millisecondsBefore
+   *   secondBefore
+   *   secondsBefore
+   *   minuteBefore
+   *   minutesBefore
+   *   hourBefore
+   *   hoursBefore
+   *   dayBefore
+   *   daysBefore
+   *   weekBefore
+   *   weeksBefore
+   *   monthBefore
+   *   monthsBefore
+   *   yearBefore
+   *   yearsBefore
+   *
+   * @example
+   *
+   *   (5).daysBefore('tuesday')          -> 5 days before tuesday of this week
+   *   (1).yearBefore('January 23, 1997') -> January 23, 1996
+   *
+   ***
+   * @method [unit]Ago()
+   * @returns Date
+   * @short Returns a date that is <n> units ago.
+   * @extra Note that "months" is ambiguous as a unit of time. If the target date falls on a day that does not exist (ie. August 31 -> February 31), the date will be shifted to the last day of the month. Be careful using %monthsAgo% if you need exact precision.
+   *
+   * @set
+   *   millisecondAgo
+   *   millisecondsAgo
+   *   secondAgo
+   *   secondsAgo
+   *   minuteAgo
+   *   minutesAgo
+   *   hourAgo
+   *   hoursAgo
+   *   dayAgo
+   *   daysAgo
+   *   weekAgo
+   *   weeksAgo
+   *   monthAgo
+   *   monthsAgo
+   *   yearAgo
+   *   yearsAgo
+   *
+   * @example
+   *
+   *   (5).weeksAgo() -> 5 weeks ago
+   *   (1).yearAgo()  -> January 23, 1996
+   *
+   ***
+   * @method [unit]After([d], [locale] = currentLocale)
+   * @returns Date
+   * @short Returns a date <n> units after [d], where <n> is the number.
+   * @extra [d] will accept a date object, timestamp, or text format. Note that "months" is ambiguous as a unit of time. If the target date falls on a day that does not exist (ie. August 31 -> February 31), the date will be shifted to the last day of the month. Be careful using %monthsAfter% if you need exact precision. See @date_format for more.
+   *
+   * @set
+   *   millisecondAfter
+   *   millisecondsAfter
+   *   secondAfter
+   *   secondsAfter
+   *   minuteAfter
+   *   minutesAfter
+   *   hourAfter
+   *   hoursAfter
+   *   dayAfter
+   *   daysAfter
+   *   weekAfter
+   *   weeksAfter
+   *   monthAfter
+   *   monthsAfter
+   *   yearAfter
+   *   yearsAfter
+   *
+   * @example
+   *
+   *   (5).daysAfter('tuesday')          -> 5 days after tuesday of this week
+   *   (1).yearAfter('January 23, 1997') -> January 23, 1998
+   *
+   ***
+   * @method [unit]FromNow()
+   * @returns Date
+   * @short Returns a date <n> units from now.
+   * @extra Note that "months" is ambiguous as a unit of time. If the target date falls on a day that does not exist (ie. August 31 -> February 31), the date will be shifted to the last day of the month. Be careful using %monthsFromNow% if you need exact precision.
+   *
+   * @set
+   *   millisecondFromNow
+   *   millisecondsFromNow
+   *   secondFromNow
+   *   secondsFromNow
+   *   minuteFromNow
+   *   minutesFromNow
+   *   hourFromNow
+   *   hoursFromNow
+   *   dayFromNow
+   *   daysFromNow
+   *   weekFromNow
+   *   weeksFromNow
+   *   monthFromNow
+   *   monthsFromNow
+   *   yearFromNow
+   *   yearsFromNow
+   *
+   * @example
+   *
+   *   (5).weeksFromNow() -> 5 weeks ago
+   *   (1).yearFromNow()  -> January 23, 1998
+   *
+   ***/
+  function buildNumberToDateAlias(u, multiplier) {
+    var unit = u.unit, methods = {};
+    function base() { return round(this * multiplier); }
+    function after() { return createDate(arguments)[u.addMethod](this);  }
+    function before() { return createDate(arguments)[u.addMethod](-this); }
+    methods[unit] = base;
+    methods[unit + 's'] = base;
+    methods[unit + 'Before'] = before;
+    methods[unit + 'sBefore'] = before;
+    methods[unit + 'Ago'] = before;
+    methods[unit + 'sAgo'] = before;
+    methods[unit + 'After'] = after;
+    methods[unit + 'sAfter'] = after;
+    methods[unit + 'FromNow'] = after;
+    methods[unit + 'sFromNow'] = after;
+    number.extend(methods);
+  }
+
+  number.extend({
+
+     /***
+     * @method duration([locale] = currentLocale)
+     * @returns String
+     * @short Takes the number as milliseconds and returns a unit-adjusted localized string.
+     * @extra This method is the same as %Date#relative% without the localized equivalent of "from now" or "ago". [locale] can be passed as the first (and only) parameter. Note that this method is only available when the dates package is included.
+     * @example
+     *
+     *   (500).duration() -> '500 milliseconds'
+     *   (1200).duration() -> '1 second'
+     *   (75).minutes().duration() -> '1 hour'
+     *   (75).minutes().duration('es') -> '1 hora'
+     *
+     ***/
+    'duration': function(localeCode) {
+      return getLocalization(localeCode).getDuration(this);
+    }
+
+  });
+
+
+  English = CurrentLocalization = date.addLocale('en', {
+    'plural':     true,
+    'timeMarker': 'at',
+    'ampm':       'am,pm',
+    'months':     'January,February,March,April,May,June,July,August,September,October,November,December',
+    'weekdays':   'Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
+    'units':      'millisecond:|s,second:|s,minute:|s,hour:|s,day:|s,week:|s,month:|s,year:|s',
+    'numbers':    'one,two,three,four,five,six,seven,eight,nine,ten',
+    'articles':   'a,an,the',
+    'tokens':     'the,st|nd|rd|th,of',
+    'short':      '{Month} {d}, {yyyy}',
+    'long':       '{Month} {d}, {yyyy} {h}:{mm}{tt}',
+    'full':       '{Weekday} {Month} {d}, {yyyy} {h}:{mm}:{ss}{tt}',
+    'past':       '{num} {unit} {sign}',
+    'future':     '{num} {unit} {sign}',
+    'duration':   '{num} {unit}',
+    'modifiers': [
+      { 'name': 'sign',  'src': 'ago|before', 'value': -1 },
+      { 'name': 'sign',  'src': 'from now|after|from|in|later', 'value': 1 },
+      { 'name': 'edge',  'src': 'last day', 'value': -2 },
+      { 'name': 'edge',  'src': 'end', 'value': -1 },
+      { 'name': 'edge',  'src': 'first day|beginning', 'value': 1 },
+      { 'name': 'shift', 'src': 'last', 'value': -1 },
+      { 'name': 'shift', 'src': 'the|this', 'value': 0 },
+      { 'name': 'shift', 'src': 'next', 'value': 1 }
+    ],
+    'dateParse': [
+      '{num} {unit} {sign}',
+      '{sign} {num} {unit}',
+      '{month} {year}',
+      '{shift} {unit=5-7}',
+      '{0?} {date}{1}',
+      '{0?} {edge} of {shift?} {unit=4-7?}{month?}{year?}'
+    ],
+    'timeParse': [
+      '{0} {num}{1} {day} of {month} {year?}',
+      '{weekday?} {month} {date}{1?} {year?}',
+      '{date} {month} {year}',
+      '{date} {month}',
+      '{shift} {weekday}',
+      '{shift} week {weekday}',
+      '{weekday} {2?} {shift} week',
+      '{num} {unit=4-5} {sign} {day}',
+      '{0?} {date}{1} of {month}',
+      '{0?}{month?} {date?}{1?} of {shift} {unit=6-7}'
+    ]
+  });
+
+  buildDateUnits();
+  buildDateMethods();
+  buildCoreInputFormats();
+  buildDateOutputShortcuts();
+  buildAsianDigits();
+  buildRelativeAliases();
+  buildUTCAliases();
+  setDateProperties();
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('da');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('da', {
+  'plural': true,
+  'months': 'januar,februar,marts,april,maj,juni,juli,august,september,oktober,november,december',
+  'weekdays': 'søndag|sondag,mandag,tirsdag,onsdag,torsdag,fredag,lørdag|lordag',
+  'units': 'millisekund:|er,sekund:|er,minut:|ter,tim:e|er,dag:|e,ug:e|er|en,måned:|er|en+maaned:|er|en,år:||et+aar:||et',
+  'numbers': 'en|et,to,tre,fire,fem,seks,syv,otte,ni,ti',
+  'tokens': 'den,for',
+  'articles': 'den',
+  'short':'d. {d}. {month} {yyyy}',
+  'long': 'den {d}. {month} {yyyy} {H}:{mm}',
+  'full': '{Weekday} den {d}. {month} {yyyy} {H}:{mm}:{ss}',
+  'past': '{num} {unit} {sign}',
+  'future': '{sign} {num} {unit}',
+  'duration': '{num} {unit}',
+  'ampm': 'am,pm',
+  'modifiers': [
+    { 'name': 'day', 'src': 'forgårs|i forgårs|forgaars|i forgaars', 'value': -2 },
+    { 'name': 'day', 'src': 'i går|igår|i gaar|igaar', 'value': -1 },
+    { 'name': 'day', 'src': 'i dag|idag', 'value': 0 },
+    { 'name': 'day', 'src': 'i morgen|imorgen', 'value': 1 },
+    { 'name': 'day', 'src': 'over morgon|overmorgen|i over morgen|i overmorgen|iovermorgen', 'value': 2 },
+    { 'name': 'sign', 'src': 'siden', 'value': -1 },
+    { 'name': 'sign', 'src': 'om', 'value':  1 },
+    { 'name': 'shift', 'src': 'i sidste|sidste', 'value': -1 },
+    { 'name': 'shift', 'src': 'denne', 'value': 0 },
+    { 'name': 'shift', 'src': 'næste|naeste', 'value': 1 }
+  ],
+  'dateParse': [
+    '{num} {unit} {sign}',
+    '{sign} {num} {unit}',
+    '{1?} {num} {unit} {sign}',
+    '{shift} {unit=5-7}'
+  ],
+  'timeParse': [
+    '{0?} {weekday?} {date?} {month} {year}',
+    '{date} {month}',
+    '{shift} {weekday}'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('de');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('de', {
+  'plural': true,
+   'capitalizeUnit': true,
+  'months': 'Januar,Februar,März|Marz,April,Mai,Juni,Juli,August,September,Oktober,November,Dezember',
+  'weekdays': 'Sonntag,Montag,Dienstag,Mittwoch,Donnerstag,Freitag,Samstag',
+  'units': 'Millisekunde:|n,Sekunde:|n,Minute:|n,Stunde:|n,Tag:|en,Woche:|n,Monat:|en,Jahr:|en',
+  'numbers': 'ein:|e|er|en|em,zwei,drei,vier,fuenf,sechs,sieben,acht,neun,zehn',
+  'tokens': 'der',
+  'short':'{d}. {Month} {yyyy}',
+  'long': '{d}. {Month} {yyyy} {H}:{mm}',
+  'full': '{Weekday} {d}. {Month} {yyyy} {H}:{mm}:{ss}',
+  'past': '{sign} {num} {unit}',
+  'future': '{sign} {num} {unit}',
+  'duration': '{num} {unit}',
+  'timeMarker': 'um',
+  'ampm': 'am,pm',
+  'modifiers': [
+    { 'name': 'day', 'src': 'vorgestern', 'value': -2 },
+    { 'name': 'day', 'src': 'gestern', 'value': -1 },
+    { 'name': 'day', 'src': 'heute', 'value': 0 },
+    { 'name': 'day', 'src': 'morgen', 'value': 1 },
+    { 'name': 'day', 'src': 'übermorgen|ubermorgen|uebermorgen', 'value': 2 },
+    { 'name': 'sign', 'src': 'vor:|her', 'value': -1 },
+    { 'name': 'sign', 'src': 'in', 'value': 1 },
+    { 'name': 'shift', 'src': 'letzte:|r|n|s', 'value': -1 },
+    { 'name': 'shift', 'src': 'nächste:|r|n|s+nachste:|r|n|s+naechste:|r|n|s+kommende:n|r', 'value': 1 }
+  ],
+  'dateParse': [
+    '{sign} {num} {unit}',
+    '{num} {unit} {sign}',
+    '{shift} {unit=5-7}'
+  ],
+  'timeParse': [
+    '{weekday?} {date?} {month} {year?}',
+    '{shift} {weekday}'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('es');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('es', {
+  'plural': true,
+  'months': 'enero,febrero,marzo,abril,mayo,junio,julio,agosto,septiembre,octubre,noviembre,diciembre',
+  'weekdays': 'domingo,lunes,martes,miércoles|miercoles,jueves,viernes,sábado|sabado',
+  'units': 'milisegundo:|s,segundo:|s,minuto:|s,hora:|s,día|días|dia|dias,semana:|s,mes:|es,año|años|ano|anos',
+  'numbers': 'uno,dos,tres,cuatro,cinco,seis,siete,ocho,nueve,diez',
+  'tokens': 'el,de',
+  'short':'{d} {month} {yyyy}',
+  'long': '{d} {month} {yyyy} {H}:{mm}',
+  'full': '{Weekday} {d} {month} {yyyy} {H}:{mm}:{ss}',
+  'past': '{sign} {num} {unit}',
+  'future': '{num} {unit} {sign}',
+  'duration': '{num} {unit}',
+  'timeMarker': 'a las',
+  'ampm': 'am,pm',
+  'modifiers': [
+    { 'name': 'day', 'src': 'anteayer', 'value': -2 },
+    { 'name': 'day', 'src': 'ayer', 'value': -1 },
+    { 'name': 'day', 'src': 'hoy', 'value': 0 },
+    { 'name': 'day', 'src': 'mañana|manana', 'value': 1 },
+    { 'name': 'sign', 'src': 'hace', 'value': -1 },
+    { 'name': 'sign', 'src': 'de ahora', 'value': 1 },
+    { 'name': 'shift', 'src': 'pasad:o|a', 'value': -1 },
+    { 'name': 'shift', 'src': 'próximo|próxima|proximo|proxima', 'value': 1 }
+  ],
+  'dateParse': [
+    '{sign} {num} {unit}',
+    '{num} {unit} {sign}',
+    '{0?} {unit=5-7} {shift}',
+    '{0?} {shift} {unit=5-7}'
+  ],
+  'timeParse': [
+    '{shift} {weekday}',
+    '{weekday} {shift}',
+    '{date?} {1?} {month} {1?} {year?}'
+  ]
+});
+Date.addLocale('fi', {
+    'plural':     true,
+    'timeMarker': 'kello',
+    'ampm':       ',',
+    'months':     'tammikuu,helmikuu,maaliskuu,huhtikuu,toukokuu,kesäkuu,heinäkuu,elokuu,syyskuu,lokakuu,marraskuu,joulukuu',
+    'weekdays':   'sunnuntai,maanantai,tiistai,keskiviikko,torstai,perjantai,lauantai',
+    'units':      'millisekun:ti|tia|teja|tina|nin,sekun:ti|tia|teja|tina|nin,minuut:ti|tia|teja|tina|in,tun:ti|tia|teja|tina|nin,päiv:ä|ää|iä|änä|än,viik:ko|koa|koja|on|kona,kuukau:si|sia|tta|den|tena,vuo:si|sia|tta|den|tena',
+    'numbers':    'yksi|ensimmäinen,kaksi|toinen,kolm:e|as,neljä:s,vii:si|des,kuu:si|des,seitsemä:n|s,kahdeksa:n|s,yhdeksä:n|s,kymmene:n|s',
+    'articles':   '',
+    'optionals':  '',
+    'short':      '{d}. {month}ta {yyyy}',
+    'long':       '{d}. {month}ta {yyyy} kello {H}.{mm}',
+    'full':       '{Weekday}na {d}. {month}ta {yyyy} kello {H}.{mm}',
+    'relative':       function(num, unit, ms, format) {
+      var units = this['units'];
+      function numberWithUnit(mult) {
+        return (num === 1 ? '' : num + ' ') + units[(8 * mult) + unit];
+      }
+      switch(format) {
+        case 'duration':  return numberWithUnit(0);
+        case 'past':      return numberWithUnit(num > 1 ? 1 : 0) + ' sitten';
+        case 'future':    return numberWithUnit(4) + ' päästä';
+      }
+    },
+    'modifiers': [
+        { 'name': 'day',   'src': 'toissa päivänä|toissa päiväistä', 'value': -2 },
+        { 'name': 'day',   'src': 'eilen|eilistä', 'value': -1 },
+        { 'name': 'day',   'src': 'tänään', 'value': 0 },
+        { 'name': 'day',   'src': 'huomenna|huomista', 'value': 1 },
+        { 'name': 'day',   'src': 'ylihuomenna|ylihuomista', 'value': 2 },
+        { 'name': 'sign',  'src': 'sitten|aiemmin', 'value': -1 },
+        { 'name': 'sign',  'src': 'päästä|kuluttua|myöhemmin', 'value': 1 },
+        { 'name': 'edge',  'src': 'viimeinen|viimeisenä', 'value': -2 },
+        { 'name': 'edge',  'src': 'lopussa', 'value': -1 },
+        { 'name': 'edge',  'src': 'ensimmäinen|ensimmäisenä', 'value': 1 },
+        { 'name': 'shift', 'src': 'edellinen|edellisenä|edeltävä|edeltävänä|viime|toissa', 'value': -1 },
+        { 'name': 'shift', 'src': 'tänä|tämän', 'value': 0 },
+        { 'name': 'shift', 'src': 'seuraava|seuraavana|tuleva|tulevana|ensi', 'value': 1 }
+    ],
+    'dateParse': [
+        '{num} {unit} {sign}',
+        '{sign} {num} {unit}',
+        '{num} {unit=4-5} {sign} {day}',
+        '{month} {year}',
+        '{shift} {unit=5-7}'
+    ],
+    'timeParse': [
+        '{0} {num}{1} {day} of {month} {year?}',
+        '{weekday?} {month} {date}{1} {year?}',
+        '{date} {month} {year}',
+        '{shift} {weekday}',
+        '{shift} week {weekday}',
+        '{weekday} {2} {shift} week',
+        '{0} {date}{1} of {month}',
+        '{0}{month?} {date?}{1} of {shift} {unit=6-7}'
+    ]
+});
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('fr');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('fr', {
+  'plural': true,
+  'months': 'janvier,février|fevrier,mars,avril,mai,juin,juillet,août,septembre,octobre,novembre,décembre|decembre',
+  'weekdays': 'dimanche,lundi,mardi,mercredi,jeudi,vendredi,samedi',
+  'units': 'milliseconde:|s,seconde:|s,minute:|s,heure:|s,jour:|s,semaine:|s,mois,an:|s|née|nee',
+  'numbers': 'un:|e,deux,trois,quatre,cinq,six,sept,huit,neuf,dix',
+  'tokens': ["l'|la|le"],
+  'short':'{d} {month} {yyyy}',
+  'long': '{d} {month} {yyyy} {H}:{mm}',
+  'full': '{Weekday} {d} {month} {yyyy} {H}:{mm}:{ss}',
+  'past': '{sign} {num} {unit}',
+  'future': '{sign} {num} {unit}',
+  'duration': '{num} {unit}',
+  'timeMarker': 'à',
+  'ampm': 'am,pm',
+  'modifiers': [
+    { 'name': 'day', 'src': 'hier', 'value': -1 },
+    { 'name': 'day', 'src': "aujourd'hui", 'value': 0 },
+    { 'name': 'day', 'src': 'demain', 'value': 1 },
+    { 'name': 'sign', 'src': 'il y a', 'value': -1 },
+    { 'name': 'sign', 'src': "dans|d'ici", 'value': 1 },
+    { 'name': 'shift', 'src': 'derni:èr|er|ère|ere', 'value': -1 },
+    { 'name': 'shift', 'src': 'prochain:|e', 'value': 1 }
+  ],
+  'dateParse': [
+    '{sign} {num} {unit}',
+    '{sign} {num} {unit}',
+    '{0?} {unit=5-7} {shift}'
+  ],
+  'timeParse': [
+    '{weekday?} {0?} {date?} {month} {year?}',
+    '{0?} {weekday} {shift}'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('it');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('it', {
+  'plural': true,
+  'months': 'Gennaio,Febbraio,Marzo,Aprile,Maggio,Giugno,Luglio,Agosto,Settembre,Ottobre,Novembre,Dicembre',
+  'weekdays': 'Domenica,Luned:ì|i,Marted:ì|i,Mercoled:ì|i,Gioved:ì|i,Venerd:ì|i,Sabato',
+  'units': 'millisecond:o|i,second:o|i,minut:o|i,or:a|e,giorn:o|i,settiman:a|e,mes:e|i,ann:o|i',
+  'numbers': "un:|a|o|',due,tre,quattro,cinque,sei,sette,otto,nove,dieci",
+  'tokens': "l'|la|il",
+  'short':'{d} {Month} {yyyy}',
+  'long': '{d} {Month} {yyyy} {H}:{mm}',
+  'full': '{Weekday} {d} {Month} {yyyy} {H}:{mm}:{ss}',
+  'past': '{num} {unit} {sign}',
+  'future': '{num} {unit} {sign}',
+  'duration': '{num} {unit}',
+  'timeMarker': 'alle',
+  'ampm': 'am,pm',
+  'modifiers': [
+    { 'name': 'day', 'src': 'ieri', 'value': -1 },
+    { 'name': 'day', 'src': 'oggi', 'value': 0 },
+    { 'name': 'day', 'src': 'domani', 'value': 1 },
+    { 'name': 'day', 'src': 'dopodomani', 'value': 2 },
+    { 'name': 'sign', 'src': 'fa', 'value': -1 },
+    { 'name': 'sign', 'src': 'da adesso', 'value': 1 },
+    { 'name': 'shift', 'src': 'scors:o|a', 'value': -1 },
+    { 'name': 'shift', 'src': 'prossim:o|a', 'value': 1 }
+  ],
+  'dateParse': [
+    '{num} {unit} {sign}',
+    '{0?} {unit=5-7} {shift}',
+    '{0?} {shift} {unit=5-7}'
+  ],
+  'timeParse': [
+    '{weekday?} {date?} {month} {year?}',
+    '{shift} {weekday}'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('ja');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('ja', {
+  'monthSuffix': '月',
+  'weekdays': '日曜日,月曜日,火曜日,水曜日,木曜日,金曜日,土曜日',
+  'units': 'ミリ秒,秒,分,時間,日,週間|週,ヶ月|ヵ月|月,年',
+  'short': '{yyyy}年{M}月{d}日',
+  'long': '{yyyy}年{M}月{d}日 {H}時{mm}分',
+  'full': '{yyyy}年{M}月{d}日 {Weekday} {H}時{mm}分{ss}秒',
+  'past': '{num}{unit}{sign}',
+  'future': '{num}{unit}{sign}',
+  'duration': '{num}{unit}',
+  'timeSuffixes': '時,分,秒',
+  'ampm': '午前,午後',
+  'modifiers': [
+    { 'name': 'day', 'src': '一昨日', 'value': -2 },
+    { 'name': 'day', 'src': '昨日', 'value': -1 },
+    { 'name': 'day', 'src': '今日', 'value': 0 },
+    { 'name': 'day', 'src': '明日', 'value': 1 },
+    { 'name': 'day', 'src': '明後日', 'value': 2 },
+    { 'name': 'sign', 'src': '前', 'value': -1 },
+    { 'name': 'sign', 'src': '後', 'value':  1 },
+    { 'name': 'shift', 'src': '去|先', 'value': -1 },
+    { 'name': 'shift', 'src': '来', 'value':  1 }
+  ],
+  'dateParse': [
+    '{num}{unit}{sign}'
+  ],
+  'timeParse': [
+    '{shift}{unit=5-7}{weekday?}',
+    '{year}年{month?}月?{date?}日?',
+    '{month}月{date?}日?',
+    '{date}日'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('ko');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('ko', {
+  'digitDate': true,
+  'monthSuffix': '월',
+  'weekdays': '일요일,월요일,화요일,수요일,목요일,금요일,토요일',
+  'units': '밀리초,초,분,시간,일,주,개월|달,년',
+  'numbers': '일|한,이,삼,사,오,육,칠,팔,구,십',
+  'short': '{yyyy}년{M}월{d}일',
+  'long': '{yyyy}년{M}월{d}일 {H}시{mm}분',
+  'full': '{yyyy}년{M}월{d}일 {Weekday} {H}시{mm}분{ss}초',
+  'past': '{num}{unit} {sign}',
+  'future': '{num}{unit} {sign}',
+  'duration': '{num}{unit}',
+  'timeSuffixes': '시,분,초',
+  'ampm': '오전,오후',
+  'modifiers': [
+    { 'name': 'day', 'src': '그저께', 'value': -2 },
+    { 'name': 'day', 'src': '어제', 'value': -1 },
+    { 'name': 'day', 'src': '오늘', 'value': 0 },
+    { 'name': 'day', 'src': '내일', 'value': 1 },
+    { 'name': 'day', 'src': '모레', 'value': 2 },
+    { 'name': 'sign', 'src': '전', 'value': -1 },
+    { 'name': 'sign', 'src': '후', 'value':  1 },
+    { 'name': 'shift', 'src': '지난|작', 'value': -1 },
+    { 'name': 'shift', 'src': '이번', 'value': 0 },
+    { 'name': 'shift', 'src': '다음|내', 'value': 1 }
+  ],
+  'dateParse': [
+    '{num}{unit} {sign}',
+    '{shift?} {unit=5-7}'
+  ],
+  'timeParse': [
+    '{shift} {unit=5?} {weekday}',
+    '{year}년{month?}월?{date?}일?',
+    '{month}월{date?}일?',
+    '{date}일'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('nl');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('nl', {
+  'plural': true,
+  'months': 'januari,februari,maart,april,mei,juni,juli,augustus,september,oktober,november,december',
+  'weekdays': 'zondag|zo,maandag|ma,dinsdag|di,woensdag|woe|wo,donderdag|do,vrijdag|vrij|vr,zaterdag|za',
+  'units': 'milliseconde:|n,seconde:|n,minu:ut|ten,uur,dag:|en,we:ek|ken,maand:|en,jaar',
+  'numbers': 'een,twee,drie,vier,vijf,zes,zeven,acht,negen',
+  'tokens': '',
+  'short':'{d} {Month} {yyyy}',
+  'long': '{d} {Month} {yyyy} {H}:{mm}',
+  'full': '{Weekday} {d} {Month} {yyyy} {H}:{mm}:{ss}',
+  'past': '{num} {unit} {sign}',
+  'future': '{num} {unit} {sign}',
+  'duration': '{num} {unit}',
+  'timeMarker': "'s|om",
+  'modifiers': [
+    { 'name': 'day', 'src': 'gisteren', 'value': -1 },
+    { 'name': 'day', 'src': 'vandaag', 'value': 0 },
+    { 'name': 'day', 'src': 'morgen', 'value': 1 },
+    { 'name': 'day', 'src': 'overmorgen', 'value': 2 },
+    { 'name': 'sign', 'src': 'geleden', 'value': -1 },
+    { 'name': 'sign', 'src': 'vanaf nu', 'value': 1 },
+    { 'name': 'shift', 'src': 'laatste|vorige|afgelopen', 'value': -1 },
+    { 'name': 'shift', 'src': 'volgend:|e', 'value': 1 }
+  ],
+  'dateParse': [
+    '{num} {unit} {sign}',
+    '{0?} {unit=5-7} {shift}',
+    '{0?} {shift} {unit=5-7}'
+  ],
+  'timeParse': [
+    '{weekday?} {date?} {month} {year?}',
+    '{shift} {weekday}'
+  ]
+});
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('pl');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.optionals. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('pl', {
+  'plural':    true,
+  'months':    'Styczeń|Stycznia,Luty|Lutego,Marzec|Marca,Kwiecień|Kwietnia,Maj|Maja,Czerwiec|Czerwca,Lipiec|Lipca,Sierpień|Sierpnia,Wrzesień|Września,Październik|Października,Listopad|Listopada,Grudzień|Grudnia',
+  'weekdays':  'Niedziela|Niedzielę,Poniedziałek,Wtorek,Środ:a|ę,Czwartek,Piątek,Sobota|Sobotę',
+  'units':     'milisekund:a|y|,sekund:a|y|,minut:a|y|,godzin:a|y|,dzień|dni,tydzień|tygodnie|tygodni,miesiące|miesiące|miesięcy,rok|lata|lat',
+  'numbers':   'jeden|jedną,dwa|dwie,trzy,cztery,pięć,sześć,siedem,osiem,dziewięć,dziesięć',
+  'optionals': 'w|we,roku',
+  'short':     '{d} {Month} {yyyy}',
+  'long':      '{d} {Month} {yyyy} {H}:{mm}',
+  'full' :     '{Weekday}, {d} {Month} {yyyy} {H}:{mm}:{ss}',
+  'past':      '{num} {unit} {sign}',
+  'future':    '{sign} {num} {unit}',
+  'duration':  '{num} {unit}',
+  'timeMarker':'o',
+  'ampm':      'am,pm',
+  'modifiers': [
+    { 'name': 'day', 'src': 'przedwczoraj', 'value': -2 },
+    { 'name': 'day', 'src': 'wczoraj', 'value': -1 },
+    { 'name': 'day', 'src': 'dzisiaj|dziś', 'value': 0 },
+    { 'name': 'day', 'src': 'jutro', 'value': 1 },
+    { 'name': 'day', 'src': 'pojutrze', 'value': 2 },
+    { 'name': 'sign', 'src': 'temu|przed', 'value': -1 },
+    { 'name': 'sign', 'src': 'za', 'value': 1 },
+    { 'name': 'shift', 'src': 'zeszły|zeszła|ostatni|ostatnia', 'value': -1 },
+    { 'name': 'shift', 'src': 'następny|następna|następnego|przyszły|przyszła|przyszłego', 'value': 1 }
+  ],
+  'dateParse': [
+    '{num} {unit} {sign}',
+    '{sign} {num} {unit}',
+    '{month} {year}',
+    '{shift} {unit=5-7}',
+    '{0} {shift?} {weekday}'
+  ],
+  'timeParse': [
+    '{date} {month} {year?} {1}',
+    '{0} {shift?} {weekday}'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('pt');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('pt', {
+  'plural': true,
+  'months': 'janeiro,fevereiro,março,abril,maio,junho,julho,agosto,setembro,outubro,novembro,dezembro',
+  'weekdays': 'domingo,segunda-feira,terça-feira,quarta-feira,quinta-feira,sexta-feira,sábado|sabado',
+  'units': 'milisegundo:|s,segundo:|s,minuto:|s,hora:|s,dia:|s,semana:|s,mês|mêses|mes|meses,ano:|s',
+  'numbers': 'um,dois,três|tres,quatro,cinco,seis,sete,oito,nove,dez,uma,duas',
+  'tokens': 'a,de',
+  'short':'{d} de {month} de {yyyy}',
+  'long': '{d} de {month} de {yyyy} {H}:{mm}',
+  'full': '{Weekday}, {d} de {month} de {yyyy} {H}:{mm}:{ss}',
+  'past': '{num} {unit} {sign}',
+  'future': '{sign} {num} {unit}',
+  'duration': '{num} {unit}',
+  'timeMarker': 'às',
+  'ampm': 'am,pm',
+  'modifiers': [
+    { 'name': 'day', 'src': 'anteontem', 'value': -2 },
+    { 'name': 'day', 'src': 'ontem', 'value': -1 },
+    { 'name': 'day', 'src': 'hoje', 'value': 0 },
+    { 'name': 'day', 'src': 'amanh:ã|a', 'value': 1 },
+    { 'name': 'sign', 'src': 'atrás|atras|há|ha', 'value': -1 },
+    { 'name': 'sign', 'src': 'daqui a', 'value': 1 },
+    { 'name': 'shift', 'src': 'passad:o|a', 'value': -1 },
+    { 'name': 'shift', 'src': 'próximo|próxima|proximo|proxima', 'value': 1 }
+  ],
+  'dateParse': [
+    '{num} {unit} {sign}',
+    '{sign} {num} {unit}',
+    '{0?} {unit=5-7} {shift}',
+    '{0?} {shift} {unit=5-7}'
+  ],
+  'timeParse': [
+    '{date?} {1?} {month} {1?} {year?}',
+    '{0?} {shift} {weekday}'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('ru');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('ru', {
+  'months': 'Январ:я|ь,Феврал:я|ь,Март:а|,Апрел:я|ь,Ма:я|й,Июн:я|ь,Июл:я|ь,Август:а|,Сентябр:я|ь,Октябр:я|ь,Ноябр:я|ь,Декабр:я|ь',
+  'weekdays': 'Воскресенье,Понедельник,Вторник,Среда,Четверг,Пятница,Суббота',
+  'units': 'миллисекунд:а|у|ы|,секунд:а|у|ы|,минут:а|у|ы|,час:||а|ов,день|день|дня|дней,недел:я|ю|и|ь|е,месяц:||а|ев|е,год|год|года|лет|году',
+  'numbers': 'од:ин|ну,дв:а|е,три,четыре,пять,шесть,семь,восемь,девять,десять',
+  'tokens': 'в|на,года',
+  'short':'{d} {month} {yyyy} года',
+  'long': '{d} {month} {yyyy} года {H}:{mm}',
+  'full': '{Weekday} {d} {month} {yyyy} года {H}:{mm}:{ss}',
+  'relative': function(num, unit, ms, format) {
+    var numberWithUnit, last = num.toString().slice(-1);
+    switch(true) {
+      case num >= 11 && num <= 15: mult = 3; break;
+      case last == 1: mult = 1; break;
+      case last >= 2 && last <= 4: mult = 2; break;
+      default: mult = 3;
+    }
+    numberWithUnit = num + ' ' + this['units'][(mult * 8) + unit];
+    switch(format) {
+      case 'duration':  return numberWithUnit;
+      case 'past':      return numberWithUnit + ' назад';
+      case 'future':    return 'через ' + numberWithUnit;
+    }
+  },
+  'timeMarker': 'в',
+  'ampm': ' утра, вечера',
+  'modifiers': [
+    { 'name': 'day', 'src': 'позавчера', 'value': -2 },
+    { 'name': 'day', 'src': 'вчера', 'value': -1 },
+    { 'name': 'day', 'src': 'сегодня', 'value': 0 },
+    { 'name': 'day', 'src': 'завтра', 'value': 1 },
+    { 'name': 'day', 'src': 'послезавтра', 'value': 2 },
+    { 'name': 'sign', 'src': 'назад', 'value': -1 },
+    { 'name': 'sign', 'src': 'через', 'value': 1 },
+    { 'name': 'shift', 'src': 'прошл:ый|ой|ом', 'value': -1 },
+    { 'name': 'shift', 'src': 'следующ:ий|ей|ем', 'value': 1 }
+  ],
+  'dateParse': [
+    '{num} {unit} {sign}',
+    '{sign} {num} {unit}',
+    '{month} {year}',
+    '{0?} {shift} {unit=5-7}'
+  ],
+  'timeParse': [
+    '{date} {month} {year?} {1?}',
+    '{0?} {shift} {weekday}'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('sv');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('sv', {
+  'plural': true,
+  'months': 'januari,februari,mars,april,maj,juni,juli,augusti,september,oktober,november,december',
+  'weekdays': 'söndag|sondag,måndag:|en+mandag:|en,tisdag,onsdag,torsdag,fredag,lördag|lordag',
+  'units': 'millisekund:|er,sekund:|er,minut:|er,timm:e|ar,dag:|ar,veck:a|or|an,månad:|er|en+manad:|er|en,år:||et+ar:||et',
+  'numbers': 'en|ett,två|tva,tre,fyra,fem,sex,sju,åtta|atta,nio,tio',
+  'tokens': 'den,för|for',
+  'articles': 'den',
+  'short':'den {d} {month} {yyyy}',
+  'long': 'den {d} {month} {yyyy} {H}:{mm}',
+  'full': '{Weekday} den {d} {month} {yyyy} {H}:{mm}:{ss}',
+  'past': '{num} {unit} {sign}',
+  'future': '{sign} {num} {unit}',
+  'duration': '{num} {unit}',
+  'ampm': 'am,pm',
+  'modifiers': [
+    { 'name': 'day', 'src': 'förrgår|i förrgår|iförrgår|forrgar|i forrgar|iforrgar', 'value': -2 },
+    { 'name': 'day', 'src': 'går|i går|igår|gar|i gar|igar', 'value': -1 },
+    { 'name': 'day', 'src': 'dag|i dag|idag', 'value': 0 },
+    { 'name': 'day', 'src': 'morgon|i morgon|imorgon', 'value': 1 },
+    { 'name': 'day', 'src': 'över morgon|övermorgon|i över morgon|i övermorgon|iövermorgon|over morgon|overmorgon|i over morgon|i overmorgon|iovermorgon', 'value': 2 },
+    { 'name': 'sign', 'src': 'sedan|sen', 'value': -1 },
+    { 'name': 'sign', 'src': 'om', 'value':  1 },
+    { 'name': 'shift', 'src': 'i förra|förra|i forra|forra', 'value': -1 },
+    { 'name': 'shift', 'src': 'denna', 'value': 0 },
+    { 'name': 'shift', 'src': 'nästa|nasta', 'value': 1 }
+  ],
+  'dateParse': [
+    '{num} {unit} {sign}',
+    '{sign} {num} {unit}',
+    '{1?} {num} {unit} {sign}',
+    '{shift} {unit=5-7}'
+  ],
+  'timeParse': [
+    '{0?} {weekday?} {date?} {month} {year}',
+    '{date} {month}',
+    '{shift} {weekday}'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('zh-CN');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+Date.addLocale('zh-CN', {
+  'variant': true,
+  'monthSuffix': '月',
+  'weekdays': '星期日|周日,星期一|周一,星期二|周二,星期三|周三,星期四|周四,星期五|周五,星期六|周六',
+  'units': '毫秒,秒钟,分钟,小时,天,个星期|周,个月,年',
+  'tokens': '日|号',
+  'short':'{yyyy}年{M}月{d}日',
+  'long': '{yyyy}年{M}月{d}日 {tt}{h}:{mm}',
+  'full': '{yyyy}年{M}月{d}日 {weekday} {tt}{h}:{mm}:{ss}',
+  'past': '{num}{unit}{sign}',
+  'future': '{num}{unit}{sign}',
+  'duration': '{num}{unit}',
+  'timeSuffixes': '点|时,分钟?,秒',
+  'ampm': '上午,下午',
+  'modifiers': [
+    { 'name': 'day', 'src': '前天', 'value': -2 },
+    { 'name': 'day', 'src': '昨天', 'value': -1 },
+    { 'name': 'day', 'src': '今天', 'value': 0 },
+    { 'name': 'day', 'src': '明天', 'value': 1 },
+    { 'name': 'day', 'src': '后天', 'value': 2 },
+    { 'name': 'sign', 'src': '前', 'value': -1 },
+    { 'name': 'sign', 'src': '后', 'value':  1 },
+    { 'name': 'shift', 'src': '上|去', 'value': -1 },
+    { 'name': 'shift', 'src': '这', 'value':  0 },
+    { 'name': 'shift', 'src': '下|明', 'value':  1 }
+  ],
+  'dateParse': [
+    '{num}{unit}{sign}',
+    '{shift}{unit=5-7}'
+  ],
+  'timeParse': [
+    '{shift}{weekday}',
+    '{year}年{month?}月?{date?}{0?}',
+    '{month}月{date?}{0?}',
+    '{date}[日号]'
+  ]
+});
+
+/*
+ *
+ * Date.addLocale(<code>) adds this locale to Sugar.
+ * To set the locale globally, simply call:
+ *
+ * Date.setLocale('zh-TW');
+ *
+ * var locale = Date.getLocale(<code>) will return this object, which
+ * can be tweaked to change the behavior of parsing/formatting in the locales.
+ *
+ * locale.addFormat adds a date format (see this file for examples).
+ * Special tokens in the date format will be parsed out into regex tokens:
+ *
+ * {0} is a reference to an entry in locale.tokens. Output: (?:the)?
+ * {unit} is a reference to all units. Output: (day|week|month|...)
+ * {unit3} is a reference to a specific unit. Output: (hour)
+ * {unit3-5} is a reference to a subset of the units array. Output: (hour|day|week)
+ * {unit?} "?" makes that token optional. Output: (day|week|month)?
+ *
+ * {day} Any reference to tokens in the modifiers array will include all with the same name. Output: (yesterday|today|tomorrow)
+ *
+ * All spaces are optional and will be converted to "\s*"
+ *
+ * Locale arrays months, weekdays, units, numbers, as well as the "src" field for
+ * all entries in the modifiers array follow a special format indicated by a colon:
+ *
+ * minute:|s  = minute|minutes
+ * thicke:n|r = thicken|thicker
+ *
+ * Additionally in the months, weekdays, units, and numbers array these will be added at indexes that are multiples
+ * of the relevant number for retrieval. For example having "sunday:|s" in the units array will result in:
+ *
+ * units: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sundays']
+ *
+ * When matched, the index will be found using:
+ *
+ * units.indexOf(match) % 7;
+ *
+ * Resulting in the correct index with any number of alternates for that entry.
+ *
+ */
+
+  //'zh-TW': '1;月;年;;星期日|週日,星期一|週一,星期二|週二,星期三|週三,星期四|週四,星期五|週五,星期六|週六;毫秒,秒鐘,分鐘,小時,天,個星期|週,個月,年;;;日|號;;上午,下午;點|時,分鐘?,秒;{num}{unit}{sign},{shift}{unit=5-7};{shift}{weekday},{year}年{month?}月?{date?}{0},{month}月{date?}{0},{date}{0};{yyyy}年{M}月{d}日 {Weekday};{tt}{h}:{mm}:{ss};前天,昨天,今天,明天,後天;,前,,後;,上|去,這,下|明',
+
+Date.addLocale('zh-TW', {
+  'monthSuffix': '月',
+  'weekdays': '星期日|週日,星期一|週一,星期二|週二,星期三|週三,星期四|週四,星期五|週五,星期六|週六',
+  'units': '毫秒,秒鐘,分鐘,小時,天,個星期|週,個月,年',
+  'tokens': '日|號',
+  'short':'{yyyy}年{M}月{d}日',
+  'long': '{yyyy}年{M}月{d}日 {tt}{h}:{mm}',
+  'full': '{yyyy}年{M}月{d}日 {Weekday} {tt}{h}:{mm}:{ss}',
+  'past': '{num}{unit}{sign}',
+  'future': '{num}{unit}{sign}',
+  'duration': '{num}{unit}',
+  'timeSuffixes': '點|時,分鐘?,秒',
+  'ampm': '上午,下午',
+  'modifiers': [
+    { 'name': 'day', 'src': '前天', 'value': -2 },
+    { 'name': 'day', 'src': '昨天', 'value': -1 },
+    { 'name': 'day', 'src': '今天', 'value': 0 },
+    { 'name': 'day', 'src': '明天', 'value': 1 },
+    { 'name': 'day', 'src': '後天', 'value': 2 },
+    { 'name': 'sign', 'src': '前', 'value': -1 },
+    { 'name': 'sign', 'src': '後', 'value': 1 },
+    { 'name': 'shift', 'src': '上|去', 'value': -1 },
+    { 'name': 'shift', 'src': '這', 'value':  0 },
+    { 'name': 'shift', 'src': '下|明', 'value':  1 }
+  ],
+  'dateParse': [
+    '{num}{unit}{sign}',
+    '{shift}{unit=5-7}'
+  ],
+  'timeParse': [
+    '{shift}{weekday}',
+    '{year}年{month?}月?{date?}{0?}',
+    '{month}月{date?}{0?}',
+    '{date}[日號]'
+  ]
+});
+
+
+  /***
+   * @package DateRange
+   * @dependency date
+   * @description Date Ranges define a range of time. They can enumerate over specific points within that range, and be manipulated and compared.
+   *
+   ***/
+
+  var DateRange = function(start, end) {
+    this.start = date.create(start);
+    this.end   = date.create(end);
+  };
+
+  // 'toString' doesn't appear in a for..in loop in IE even though
+  // hasOwnProperty reports true, so extend() can't be used here.
+  // Also tried simply setting the prototype = {} up front for all
+  // methods but GCC very oddly started dropping properties in the
+  // object randomly (maybe because of the global scope?) hence
+  // the need for the split logic here.
+  DateRange.prototype.toString = function() {
+    /***
+     * @method toString()
+     * @returns String
+     * @short Returns a string representation of the DateRange.
+     * @example
+     *
+     *   Date.range('2003', '2005').toString() -> January 1, 2003..January 1, 2005
+     *
+     ***/
+    return this.isValid() ? this.start.full() + '..' + this.end.full() : 'Invalid DateRange';
+  };
+
+  extend(DateRange, true, false, {
+
+    /***
+     * @method isValid()
+     * @returns Boolean
+     * @short Returns true if the DateRange is valid, false otherwise.
+     * @example
+     *
+     *   Date.range('2003', '2005').isValid() -> true
+     *   Date.range('2005', '2003').isValid() -> false
+     *
+     ***/
+    'isValid': function() {
+      return this.start < this.end;
+    },
+
+    /***
+     * @method duration()
+     * @returns Number
+     * @short Return the duration of the DateRange in milliseconds.
+     * @example
+     *
+     *   Date.range('2003', '2005').duration() -> 94694400000
+     *
+     ***/
+    'duration': function() {
+      return this.isValid() ? this.end.getTime() - this.start.getTime() : NaN;
+    },
+
+    /***
+     * @method contains(<d>)
+     * @returns Boolean
+     * @short Returns true if <d> is contained inside the DateRange. <d> may be a date or another DateRange.
+     * @example
+     *
+     *   Date.range('2003', '2005').contains(Date.create('2004')) -> true
+     *
+     ***/
+    'contains': function(obj) {
+      var self = this, arr = obj.start && obj.end ? [obj.start, obj.end] : [obj];
+      return arr.every(function(d) {
+        return d >= self.start && d <= self.end;
+      });
+    },
+
+    /***
+     * @method every(<increment>, [fn])
+     * @returns Array
+     * @short Iterates through the DateRange for every <increment>, calling [fn] if it is passed. Returns an array of each increment visited.
+     * @extra When <increment> is a number, increments will be to the exact millisecond. <increment> can also be a string in the format %{number} {unit}s%, in which case it will increment in the unit specified. Note that a discrepancy exists in the case of months, as %(2).months()% is an approximation. Stepping through the actual months by passing %"2 months"% is usually preferable in this case.
+     * @example
+     *
+     *   Date.range('2003-01', '2003-03').every("2 months") -> [...]
+     *
+     ***/
+    'every': function(increment, fn) {
+      var current = this.start.clone(), result = [], index = 0, params, isDay;
+      if(isString(increment)) {
+        current.advance(getDateParamsFromString(increment, 0), true);
+        params = getDateParamsFromString(increment);
+        isDay = increment.toLowerCase() === 'day';
+      } else {
+        params = { 'milliseconds': increment };
+      }
+      while(current <= this.end) {
+        result.push(current);
+        if(fn) fn(current, index);
+        if(isDay && callDateGet(current, 'Hours') === 23) {
+          // When DST traversal happens at 00:00 hours, the time is effectively
+          // pushed back to 23:00, meaning 1) 00:00 for that day does not exist,
+          // and 2) there is no difference between 23:00 and 00:00, as you are
+          // "jumping" around in time. Hours here will be reset before the date
+          // is advanced and the date will never in fact advance, so set the hours
+          // directly ahead to the next day to avoid this problem.
+          current = current.clone();
+          callDateSet(current, 'Hours', 48);
+        } else {
+          current = current.clone().advance(params, true);
+        }
+        index++;
+      }
+      return result;
+    },
+
+    /***
+     * @method union(<range>)
+     * @returns DateRange
+     * @short Returns a new DateRange with the earliest starting point as its start, and the latest ending point as its end. If the two ranges do not intersect this will effectively remove the "gap" between them.
+     * @example
+     *
+     *   Date.range('2003=01', '2005-01').union(Date.range('2004-01', '2006-01')) -> Jan 1, 2003..Jan 1, 2006
+     *
+     ***/
+    'union': function(range) {
+      return new DateRange(
+        this.start < range.start ? this.start : range.start,
+        this.end   > range.end   ? this.end   : range.end
+      );
+    },
+
+    /***
+     * @method intersect(<range>)
+     * @returns DateRange
+     * @short Returns a new DateRange with the latest starting point as its start, and the earliest ending point as its end. If the two ranges do not intersect this will effectively produce an invalid range.
+     * @example
+     *
+     *   Date.range('2003-01', '2005-01').intersect(Date.range('2004-01', '2006-01')) -> Jan 1, 2004..Jan 1, 2005
+     *
+     ***/
+    'intersect': function(range) {
+      return new DateRange(
+        this.start > range.start ? this.start : range.start,
+        this.end   < range.end   ? this.end   : range.end
+      );
+    },
+
+    /***
+     * @method clone()
+     * @returns DateRange
+     * @short Clones the DateRange.
+     * @example
+     *
+     *   Date.range('2003-01', '2005-01').intersect(Date.range('2004-01', '2006-01')) -> Jan 1, 2004..Jan 1, 2005
+     *
+     ***/
+    'clone': function(range) {
+      return new DateRange(this.start, this.end);
+    }
+
+  });
+
+  /***
+   * @method each[Unit]([fn])
+   * @returns Date
+   * @short Increments through the date range for each [unit], calling [fn] if it is passed. Returns an array of each increment visited.
+   *
+   * @set
+   *   eachMillisecond
+   *   eachSecond
+   *   eachMinute
+   *   eachHour
+   *   eachDay
+   *   eachWeek
+   *   eachMonth
+   *   eachYear
+   *
+   * @example
+   *
+   *   Date.range('2003-01', '2003-02').eachMonth()     -> [...]
+   *   Date.range('2003-01-15', '2003-01-16').eachDay() -> [...]
+   *
+   ***/
+  extendSimilar(DateRange, true, false, 'Millisecond,Second,Minute,Hour,Day,Week,Month,Year', function(methods, name) {
+    methods['each' + name] = function(fn) { return this.every(name, fn); }
+  });
+
+
+  /***
+   * Date module
+   ***/
+
+  extend(date, false, false, {
+
+     /***
+     * @method Date.range([start], [end])
+     * @returns DateRange
+     * @short Creates a new date range.
+     * @extra If either [start] or [end] are null, they will default to the current date.
+     *
+     ***/
+    'range': function(start, end) {
+      return new DateRange(start, end);
+    }
+
+  });
+
+})();;
 //     Backbone.js 1.0.0
 
 //     (c) 2010-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -16632,7 +21173,6 @@ if (typeof module !== 'undefined') module.exports = Showdown;;
 
 }).call(this);
 ;
-
 /*
 
  CSS Beautifier
@@ -16832,7 +21372,6 @@ function css_beautify(source_text, options) {
 if (typeof exports !== "undefined")
     exports.css_beautify = css_beautify;
 ;
-
 /*
 
  Style HTML
@@ -17371,7 +21910,6 @@ function style_html(html_source, options) {
   return multi_parser.output.join('');
 }
 ;
-
 /*jslint onevar: false, plusplus: false */
 /*
 
@@ -18592,14 +23130,12 @@ function js_beautify(js_source_text, options) {
 if (typeof exports !== "undefined")
     exports.js_beautify = js_beautify;
 ;
-
 /*!
 * Bootstrap.js by @fat & @mdo
 * Copyright 2012 Twitter, Inc.
 * http://www.apache.org/licenses/LICENSE-2.0.txt
 */
 !function($){"use strict";$(function(){$.support.transition=function(){var transitionEnd=function(){var name,el=document.createElement("bootstrap"),transEndEventNames={WebkitTransition:"webkitTransitionEnd",MozTransition:"transitionend",OTransition:"oTransitionEnd otransitionend",transition:"transitionend"};for(name in transEndEventNames)if(void 0!==el.style[name])return transEndEventNames[name]}();return transitionEnd&&{end:transitionEnd}}()})}(window.jQuery),!function($){"use strict";var dismiss='[data-dismiss="alert"]',Alert=function(el){$(el).on("click",dismiss,this.close)};Alert.prototype.close=function(e){function removeElement(){$parent.trigger("closed").remove()}var $parent,$this=$(this),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),e&&e.preventDefault(),$parent.length||($parent=$this.hasClass("alert")?$this:$this.parent()),$parent.trigger(e=$.Event("close")),e.isDefaultPrevented()||($parent.removeClass("in"),$.support.transition&&$parent.hasClass("fade")?$parent.on($.support.transition.end,removeElement):removeElement())};var old=$.fn.alert;$.fn.alert=function(option){return this.each(function(){var $this=$(this),data=$this.data("alert");data||$this.data("alert",data=new Alert(this)),"string"==typeof option&&data[option].call($this)})},$.fn.alert.Constructor=Alert,$.fn.alert.noConflict=function(){return $.fn.alert=old,this},$(document).on("click.alert.data-api",dismiss,Alert.prototype.close)}(window.jQuery),!function($){"use strict";var Button=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.button.defaults,options)};Button.prototype.setState=function(state){var d="disabled",$el=this.$element,data=$el.data(),val=$el.is("input")?"val":"html";state+="Text",data.resetText||$el.data("resetText",$el[val]()),$el[val](data[state]||this.options[state]),setTimeout(function(){"loadingText"==state?$el.addClass(d).attr(d,d):$el.removeClass(d).removeAttr(d)},0)},Button.prototype.toggle=function(){var $parent=this.$element.closest('[data-toggle="buttons-radio"]');$parent&&$parent.find(".active").removeClass("active"),this.$element.toggleClass("active")};var old=$.fn.button;$.fn.button=function(option){return this.each(function(){var $this=$(this),data=$this.data("button"),options="object"==typeof option&&option;data||$this.data("button",data=new Button(this,options)),"toggle"==option?data.toggle():option&&data.setState(option)})},$.fn.button.defaults={loadingText:"loading..."},$.fn.button.Constructor=Button,$.fn.button.noConflict=function(){return $.fn.button=old,this},$(document).on("click.button.data-api","[data-toggle^=button]",function(e){var $btn=$(e.target);$btn.hasClass("btn")||($btn=$btn.closest(".btn")),$btn.button("toggle")})}(window.jQuery),!function($){"use strict";var Carousel=function(element,options){this.$element=$(element),this.options=options,"hover"==this.options.pause&&this.$element.on("mouseenter",$.proxy(this.pause,this)).on("mouseleave",$.proxy(this.cycle,this))};Carousel.prototype={cycle:function(e){return e||(this.paused=!1),this.options.interval&&!this.paused&&(this.interval=setInterval($.proxy(this.next,this),this.options.interval)),this},to:function(pos){var $active=this.$element.find(".item.active"),children=$active.parent().children(),activePos=children.index($active),that=this;if(!(pos>children.length-1||0>pos))return this.sliding?this.$element.one("slid",function(){that.to(pos)}):activePos==pos?this.pause().cycle():this.slide(pos>activePos?"next":"prev",$(children[pos]))},pause:function(e){return e||(this.paused=!0),this.$element.find(".next, .prev").length&&$.support.transition.end&&(this.$element.trigger($.support.transition.end),this.cycle()),clearInterval(this.interval),this.interval=null,this},next:function(){return this.sliding?void 0:this.slide("next")},prev:function(){return this.sliding?void 0:this.slide("prev")},slide:function(type,next){var e,$active=this.$element.find(".item.active"),$next=next||$active[type](),isCycling=this.interval,direction="next"==type?"left":"right",fallback="next"==type?"first":"last",that=this;if(this.sliding=!0,isCycling&&this.pause(),$next=$next.length?$next:this.$element.find(".item")[fallback](),e=$.Event("slide",{relatedTarget:$next[0]}),!$next.hasClass("active")){if($.support.transition&&this.$element.hasClass("slide")){if(this.$element.trigger(e),e.isDefaultPrevented())return;$next.addClass(type),$next[0].offsetWidth,$active.addClass(direction),$next.addClass(direction),this.$element.one($.support.transition.end,function(){$next.removeClass([type,direction].join(" ")).addClass("active"),$active.removeClass(["active",direction].join(" ")),that.sliding=!1,setTimeout(function(){that.$element.trigger("slid")},0)})}else{if(this.$element.trigger(e),e.isDefaultPrevented())return;$active.removeClass("active"),$next.addClass("active"),this.sliding=!1,this.$element.trigger("slid")}return isCycling&&this.cycle(),this}}};var old=$.fn.carousel;$.fn.carousel=function(option){return this.each(function(){var $this=$(this),data=$this.data("carousel"),options=$.extend({},$.fn.carousel.defaults,"object"==typeof option&&option),action="string"==typeof option?option:options.slide;data||$this.data("carousel",data=new Carousel(this,options)),"number"==typeof option?data.to(option):action?data[action]():options.interval&&data.cycle()})},$.fn.carousel.defaults={interval:5e3,pause:"hover"},$.fn.carousel.Constructor=Carousel,$.fn.carousel.noConflict=function(){return $.fn.carousel=old,this},$(document).on("click.carousel.data-api","[data-slide]",function(e){var href,$this=$(this),$target=$($this.attr("data-target")||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")),options=$.extend({},$target.data(),$this.data());$target.carousel(options),e.preventDefault()})}(window.jQuery),!function($){"use strict";var Collapse=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.collapse.defaults,options),this.options.parent&&(this.$parent=$(this.options.parent)),this.options.toggle&&this.toggle()};Collapse.prototype={constructor:Collapse,dimension:function(){var hasWidth=this.$element.hasClass("width");return hasWidth?"width":"height"},show:function(){var dimension,scroll,actives,hasData;if(!this.transitioning){if(dimension=this.dimension(),scroll=$.camelCase(["scroll",dimension].join("-")),actives=this.$parent&&this.$parent.find("> .accordion-group > .in"),actives&&actives.length){if(hasData=actives.data("collapse"),hasData&&hasData.transitioning)return;actives.collapse("hide"),hasData||actives.data("collapse",null)}this.$element[dimension](0),this.transition("addClass",$.Event("show"),"shown"),$.support.transition&&this.$element[dimension](this.$element[0][scroll])}},hide:function(){var dimension;this.transitioning||(dimension=this.dimension(),this.reset(this.$element[dimension]()),this.transition("removeClass",$.Event("hide"),"hidden"),this.$element[dimension](0))},reset:function(size){var dimension=this.dimension();return this.$element.removeClass("collapse")[dimension](size||"auto")[0].offsetWidth,this.$element[null!==size?"addClass":"removeClass"]("collapse"),this},transition:function(method,startEvent,completeEvent){var that=this,complete=function(){"show"==startEvent.type&&that.reset(),that.transitioning=0,that.$element.trigger(completeEvent)};this.$element.trigger(startEvent),startEvent.isDefaultPrevented()||(this.transitioning=1,this.$element[method]("in"),$.support.transition&&this.$element.hasClass("collapse")?this.$element.one($.support.transition.end,complete):complete())},toggle:function(){this[this.$element.hasClass("in")?"hide":"show"]()}};var old=$.fn.collapse;$.fn.collapse=function(option){return this.each(function(){var $this=$(this),data=$this.data("collapse"),options="object"==typeof option&&option;data||$this.data("collapse",data=new Collapse(this,options)),"string"==typeof option&&data[option]()})},$.fn.collapse.defaults={toggle:!0},$.fn.collapse.Constructor=Collapse,$.fn.collapse.noConflict=function(){return $.fn.collapse=old,this},$(document).on("click.collapse.data-api","[data-toggle=collapse]",function(e){var href,$this=$(this),target=$this.attr("data-target")||e.preventDefault()||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,""),option=$(target).data("collapse")?"toggle":$this.data();$this[$(target).hasClass("in")?"addClass":"removeClass"]("collapsed"),$(target).collapse(option)})}(window.jQuery),!function($){"use strict";function clearMenus(){$(toggle).each(function(){getParent($(this)).removeClass("open")})}function getParent($this){var $parent,selector=$this.attr("data-target");return selector||(selector=$this.attr("href"),selector=selector&&/#/.test(selector)&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),$parent.length||($parent=$this.parent()),$parent}var toggle="[data-toggle=dropdown]",Dropdown=function(element){var $el=$(element).on("click.dropdown.data-api",this.toggle);$("html").on("click.dropdown.data-api",function(){$el.parent().removeClass("open")})};Dropdown.prototype={constructor:Dropdown,toggle:function(){var $parent,isActive,$this=$(this);if(!$this.is(".disabled, :disabled"))return $parent=getParent($this),isActive=$parent.hasClass("open"),clearMenus(),isActive||$parent.toggleClass("open"),$this.focus(),!1},keydown:function(e){var $this,$items,$parent,isActive,index;if(/(38|40|27)/.test(e.keyCode)&&($this=$(this),e.preventDefault(),e.stopPropagation(),!$this.is(".disabled, :disabled"))){if($parent=getParent($this),isActive=$parent.hasClass("open"),!isActive||isActive&&27==e.keyCode)return $this.click();$items=$("[role=menu] li:not(.divider):visible a",$parent),$items.length&&(index=$items.index($items.filter(":focus")),38==e.keyCode&&index>0&&index--,40==e.keyCode&&$items.length-1>index&&index++,~index||(index=0),$items.eq(index).focus())}}};var old=$.fn.dropdown;$.fn.dropdown=function(option){return this.each(function(){var $this=$(this),data=$this.data("dropdown");data||$this.data("dropdown",data=new Dropdown(this)),"string"==typeof option&&data[option].call($this)})},$.fn.dropdown.Constructor=Dropdown,$.fn.dropdown.noConflict=function(){return $.fn.dropdown=old,this},$(document).on("click.dropdown.data-api touchstart.dropdown.data-api",clearMenus).on("click.dropdown touchstart.dropdown.data-api",".dropdown form",function(e){e.stopPropagation()}).on("touchstart.dropdown.data-api",".dropdown-menu",function(e){e.stopPropagation()}).on("click.dropdown.data-api touchstart.dropdown.data-api",toggle,Dropdown.prototype.toggle).on("keydown.dropdown.data-api touchstart.dropdown.data-api",toggle+", [role=menu]",Dropdown.prototype.keydown)}(window.jQuery),!function($){"use strict";var Modal=function(element,options){this.options=options,this.$element=$(element).delegate('[data-dismiss="modal"]',"click.dismiss.modal",$.proxy(this.hide,this)),this.options.remote&&this.$element.find(".modal-body").load(this.options.remote)};Modal.prototype={constructor:Modal,toggle:function(){return this[this.isShown?"hide":"show"]()},show:function(){var that=this,e=$.Event("show");this.$element.trigger(e),this.isShown||e.isDefaultPrevented()||(this.isShown=!0,this.escape(),this.backdrop(function(){var transition=$.support.transition&&that.$element.hasClass("fade");that.$element.parent().length||that.$element.appendTo(document.body),that.$element.show(),transition&&that.$element[0].offsetWidth,that.$element.addClass("in").attr("aria-hidden",!1),that.enforceFocus(),transition?that.$element.one($.support.transition.end,function(){that.$element.focus().trigger("shown")}):that.$element.focus().trigger("shown")}))},hide:function(e){e&&e.preventDefault(),e=$.Event("hide"),this.$element.trigger(e),this.isShown&&!e.isDefaultPrevented()&&(this.isShown=!1,this.escape(),$(document).off("focusin.modal"),this.$element.removeClass("in").attr("aria-hidden",!0),$.support.transition&&this.$element.hasClass("fade")?this.hideWithTransition():this.hideModal())},enforceFocus:function(){var that=this;$(document).on("focusin.modal",function(e){that.$element[0]===e.target||that.$element.has(e.target).length||that.$element.focus()})},escape:function(){var that=this;this.isShown&&this.options.keyboard?this.$element.on("keyup.dismiss.modal",function(e){27==e.which&&that.hide()}):this.isShown||this.$element.off("keyup.dismiss.modal")},hideWithTransition:function(){var that=this,timeout=setTimeout(function(){that.$element.off($.support.transition.end),that.hideModal()},500);this.$element.one($.support.transition.end,function(){clearTimeout(timeout),that.hideModal()})},hideModal:function(){this.$element.hide().trigger("hidden"),this.backdrop()},removeBackdrop:function(){this.$backdrop.remove(),this.$backdrop=null},backdrop:function(callback){var animate=this.$element.hasClass("fade")?"fade":"";if(this.isShown&&this.options.backdrop){var doAnimate=$.support.transition&&animate;this.$backdrop=$('<div class="modal-backdrop '+animate+'" />').appendTo(document.body),this.$backdrop.click("static"==this.options.backdrop?$.proxy(this.$element[0].focus,this.$element[0]):$.proxy(this.hide,this)),doAnimate&&this.$backdrop[0].offsetWidth,this.$backdrop.addClass("in"),doAnimate?this.$backdrop.one($.support.transition.end,callback):callback()}else!this.isShown&&this.$backdrop?(this.$backdrop.removeClass("in"),$.support.transition&&this.$element.hasClass("fade")?this.$backdrop.one($.support.transition.end,$.proxy(this.removeBackdrop,this)):this.removeBackdrop()):callback&&callback()}};var old=$.fn.modal;$.fn.modal=function(option){return this.each(function(){var $this=$(this),data=$this.data("modal"),options=$.extend({},$.fn.modal.defaults,$this.data(),"object"==typeof option&&option);data||$this.data("modal",data=new Modal(this,options)),"string"==typeof option?data[option]():options.show&&data.show()})},$.fn.modal.defaults={backdrop:!0,keyboard:!0,show:!0},$.fn.modal.Constructor=Modal,$.fn.modal.noConflict=function(){return $.fn.modal=old,this},$(document).on("click.modal.data-api",'[data-toggle="modal"]',function(e){var $this=$(this),href=$this.attr("href"),$target=$($this.attr("data-target")||href&&href.replace(/.*(?=#[^\s]+$)/,"")),option=$target.data("modal")?"toggle":$.extend({remote:!/#/.test(href)&&href},$target.data(),$this.data());e.preventDefault(),$target.modal(option).one("hide",function(){$this.focus()})})}(window.jQuery),!function($){"use strict";var Tooltip=function(element,options){this.init("tooltip",element,options)};Tooltip.prototype={constructor:Tooltip,init:function(type,element,options){var eventIn,eventOut;this.type=type,this.$element=$(element),this.options=this.getOptions(options),this.enabled=!0,"click"==this.options.trigger?this.$element.on("click."+this.type,this.options.selector,$.proxy(this.toggle,this)):"manual"!=this.options.trigger&&(eventIn="hover"==this.options.trigger?"mouseenter":"focus",eventOut="hover"==this.options.trigger?"mouseleave":"blur",this.$element.on(eventIn+"."+this.type,this.options.selector,$.proxy(this.enter,this)),this.$element.on(eventOut+"."+this.type,this.options.selector,$.proxy(this.leave,this))),this.options.selector?this._options=$.extend({},this.options,{trigger:"manual",selector:""}):this.fixTitle()},getOptions:function(options){return options=$.extend({},$.fn[this.type].defaults,options,this.$element.data()),options.delay&&"number"==typeof options.delay&&(options.delay={show:options.delay,hide:options.delay}),options},enter:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return self.options.delay&&self.options.delay.show?(clearTimeout(this.timeout),self.hoverState="in",this.timeout=setTimeout(function(){"in"==self.hoverState&&self.show()},self.options.delay.show),void 0):self.show()},leave:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return this.timeout&&clearTimeout(this.timeout),self.options.delay&&self.options.delay.hide?(self.hoverState="out",this.timeout=setTimeout(function(){"out"==self.hoverState&&self.hide()},self.options.delay.hide),void 0):self.hide()},show:function(){var $tip,inside,pos,actualWidth,actualHeight,placement,tp;if(this.hasContent()&&this.enabled){switch($tip=this.tip(),this.setContent(),this.options.animation&&$tip.addClass("fade"),placement="function"==typeof this.options.placement?this.options.placement.call(this,$tip[0],this.$element[0]):this.options.placement,inside=/in/.test(placement),$tip.detach().css({top:0,left:0,display:"block"}).insertAfter(this.$element),pos=this.getPosition(inside),actualWidth=$tip[0].offsetWidth,actualHeight=$tip[0].offsetHeight,inside?placement.split(" ")[1]:placement){case"bottom":tp={top:pos.top+pos.height,left:pos.left+pos.width/2-actualWidth/2};break;case"top":tp={top:pos.top-actualHeight,left:pos.left+pos.width/2-actualWidth/2};break;case"left":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left-actualWidth};break;case"right":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left+pos.width}}$tip.offset(tp).addClass(placement).addClass("in")}},setContent:function(){var $tip=this.tip(),title=this.getTitle();$tip.find(".tooltip-inner")[this.options.html?"html":"text"](title),$tip.removeClass("fade in top bottom left right")},hide:function(){function removeWithAnimation(){var timeout=setTimeout(function(){$tip.off($.support.transition.end).detach()},500);$tip.one($.support.transition.end,function(){clearTimeout(timeout),$tip.detach()})}var $tip=this.tip();return $tip.removeClass("in"),$.support.transition&&this.$tip.hasClass("fade")?removeWithAnimation():$tip.detach(),this},fixTitle:function(){var $e=this.$element;($e.attr("title")||"string"!=typeof $e.attr("data-original-title"))&&$e.attr("data-original-title",$e.attr("title")||"").removeAttr("title")},hasContent:function(){return this.getTitle()},getPosition:function(inside){return $.extend({},inside?{top:0,left:0}:this.$element.offset(),{width:this.$element[0].offsetWidth,height:this.$element[0].offsetHeight})},getTitle:function(){var title,$e=this.$element,o=this.options;return title=$e.attr("data-original-title")||("function"==typeof o.title?o.title.call($e[0]):o.title)},tip:function(){return this.$tip=this.$tip||$(this.options.template)},validate:function(){this.$element[0].parentNode||(this.hide(),this.$element=null,this.options=null)},enable:function(){this.enabled=!0},disable:function(){this.enabled=!1},toggleEnabled:function(){this.enabled=!this.enabled},toggle:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);self[self.tip().hasClass("in")?"hide":"show"]()},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}};var old=$.fn.tooltip;$.fn.tooltip=function(option){return this.each(function(){var $this=$(this),data=$this.data("tooltip"),options="object"==typeof option&&option;data||$this.data("tooltip",data=new Tooltip(this,options)),"string"==typeof option&&data[option]()})},$.fn.tooltip.Constructor=Tooltip,$.fn.tooltip.defaults={animation:!0,placement:"top",selector:!1,template:'<div class="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',trigger:"hover",title:"",delay:0,html:!1},$.fn.tooltip.noConflict=function(){return $.fn.tooltip=old,this}}(window.jQuery),!function($){"use strict";var Popover=function(element,options){this.init("popover",element,options)};Popover.prototype=$.extend({},$.fn.tooltip.Constructor.prototype,{constructor:Popover,setContent:function(){var $tip=this.tip(),title=this.getTitle(),content=this.getContent();$tip.find(".popover-title")[this.options.html?"html":"text"](title),$tip.find(".popover-content")[this.options.html?"html":"text"](content),$tip.removeClass("fade top bottom left right in")},hasContent:function(){return this.getTitle()||this.getContent()},getContent:function(){var content,$e=this.$element,o=this.options;return content=$e.attr("data-content")||("function"==typeof o.content?o.content.call($e[0]):o.content)},tip:function(){return this.$tip||(this.$tip=$(this.options.template)),this.$tip},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}});var old=$.fn.popover;$.fn.popover=function(option){return this.each(function(){var $this=$(this),data=$this.data("popover"),options="object"==typeof option&&option;data||$this.data("popover",data=new Popover(this,options)),"string"==typeof option&&data[option]()})},$.fn.popover.Constructor=Popover,$.fn.popover.defaults=$.extend({},$.fn.tooltip.defaults,{placement:"right",trigger:"click",content:"",template:'<div class="popover"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"></div></div></div>'}),$.fn.popover.noConflict=function(){return $.fn.popover=old,this}}(window.jQuery),!function($){"use strict";function ScrollSpy(element,options){var href,process=$.proxy(this.process,this),$element=$(element).is("body")?$(window):$(element);this.options=$.extend({},$.fn.scrollspy.defaults,options),this.$scrollElement=$element.on("scroll.scroll-spy.data-api",process),this.selector=(this.options.target||(href=$(element).attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")||"")+" .nav li > a",this.$body=$("body"),this.refresh(),this.process()}ScrollSpy.prototype={constructor:ScrollSpy,refresh:function(){var $targets,self=this;this.offsets=$([]),this.targets=$([]),$targets=this.$body.find(this.selector).map(function(){var $el=$(this),href=$el.data("target")||$el.attr("href"),$href=/^#\w/.test(href)&&$(href);return $href&&$href.length&&[[$href.position().top+self.$scrollElement.scrollTop(),href]]||null}).sort(function(a,b){return a[0]-b[0]}).each(function(){self.offsets.push(this[0]),self.targets.push(this[1])})},process:function(){var i,scrollTop=this.$scrollElement.scrollTop()+this.options.offset,scrollHeight=this.$scrollElement[0].scrollHeight||this.$body[0].scrollHeight,maxScroll=scrollHeight-this.$scrollElement.height(),offsets=this.offsets,targets=this.targets,activeTarget=this.activeTarget;if(scrollTop>=maxScroll)return activeTarget!=(i=targets.last()[0])&&this.activate(i);for(i=offsets.length;i--;)activeTarget!=targets[i]&&scrollTop>=offsets[i]&&(!offsets[i+1]||offsets[i+1]>=scrollTop)&&this.activate(targets[i])},activate:function(target){var active,selector;this.activeTarget=target,$(this.selector).parent(".active").removeClass("active"),selector=this.selector+'[data-target="'+target+'"],'+this.selector+'[href="'+target+'"]',active=$(selector).parent("li").addClass("active"),active.parent(".dropdown-menu").length&&(active=active.closest("li.dropdown").addClass("active")),active.trigger("activate")}};var old=$.fn.scrollspy;$.fn.scrollspy=function(option){return this.each(function(){var $this=$(this),data=$this.data("scrollspy"),options="object"==typeof option&&option;data||$this.data("scrollspy",data=new ScrollSpy(this,options)),"string"==typeof option&&data[option]()})},$.fn.scrollspy.Constructor=ScrollSpy,$.fn.scrollspy.defaults={offset:10},$.fn.scrollspy.noConflict=function(){return $.fn.scrollspy=old,this},$(window).on("load",function(){$('[data-spy="scroll"]').each(function(){var $spy=$(this);$spy.scrollspy($spy.data())})})}(window.jQuery),!function($){"use strict";var Tab=function(element){this.element=$(element)};Tab.prototype={constructor:Tab,show:function(){var previous,$target,e,$this=this.element,$ul=$this.closest("ul:not(.dropdown-menu)"),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$this.parent("li").hasClass("active")||(previous=$ul.find(".active:last a")[0],e=$.Event("show",{relatedTarget:previous}),$this.trigger(e),e.isDefaultPrevented()||($target=$(selector),this.activate($this.parent("li"),$ul),this.activate($target,$target.parent(),function(){$this.trigger({type:"shown",relatedTarget:previous})})))},activate:function(element,container,callback){function next(){$active.removeClass("active").find("> .dropdown-menu > .active").removeClass("active"),element.addClass("active"),transition?(element[0].offsetWidth,element.addClass("in")):element.removeClass("fade"),element.parent(".dropdown-menu")&&element.closest("li.dropdown").addClass("active"),callback&&callback()}var $active=container.find("> .active"),transition=callback&&$.support.transition&&$active.hasClass("fade");transition?$active.one($.support.transition.end,next):next(),$active.removeClass("in")}};var old=$.fn.tab;$.fn.tab=function(option){return this.each(function(){var $this=$(this),data=$this.data("tab");data||$this.data("tab",data=new Tab(this)),"string"==typeof option&&data[option]()})},$.fn.tab.Constructor=Tab,$.fn.tab.noConflict=function(){return $.fn.tab=old,this},$(document).on("click.tab.data-api",'[data-toggle="tab"], [data-toggle="pill"]',function(e){e.preventDefault(),$(this).tab("show")})}(window.jQuery),!function($){"use strict";var Typeahead=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.typeahead.defaults,options),this.matcher=this.options.matcher||this.matcher,this.sorter=this.options.sorter||this.sorter,this.highlighter=this.options.highlighter||this.highlighter,this.updater=this.options.updater||this.updater,this.source=this.options.source,this.$menu=$(this.options.menu),this.shown=!1,this.listen()};Typeahead.prototype={constructor:Typeahead,select:function(){var val=this.$menu.find(".active").attr("data-value");return this.$element.val(this.updater(val)).change(),this.hide()},updater:function(item){return item},show:function(){var pos=$.extend({},this.$element.position(),{height:this.$element[0].offsetHeight});return this.$menu.insertAfter(this.$element).css({top:pos.top+pos.height,left:pos.left}).show(),this.shown=!0,this},hide:function(){return this.$menu.hide(),this.shown=!1,this},lookup:function(){var items;return this.query=this.$element.val(),!this.query||this.query.length<this.options.minLength?this.shown?this.hide():this:(items=$.isFunction(this.source)?this.source(this.query,$.proxy(this.process,this)):this.source,items?this.process(items):this)},process:function(items){var that=this;return items=$.grep(items,function(item){return that.matcher(item)}),items=this.sorter(items),items.length?this.render(items.slice(0,this.options.items)).show():this.shown?this.hide():this},matcher:function(item){return~item.toLowerCase().indexOf(this.query.toLowerCase())},sorter:function(items){for(var item,beginswith=[],caseSensitive=[],caseInsensitive=[];item=items.shift();)item.toLowerCase().indexOf(this.query.toLowerCase())?~item.indexOf(this.query)?caseSensitive.push(item):caseInsensitive.push(item):beginswith.push(item);return beginswith.concat(caseSensitive,caseInsensitive)},highlighter:function(item){var query=this.query.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g,"\\$&");return item.replace(RegExp("("+query+")","ig"),function($1,match){return"<strong>"+match+"</strong>"})},render:function(items){var that=this;return items=$(items).map(function(i,item){return i=$(that.options.item).attr("data-value",item),i.find("a").html(that.highlighter(item)),i[0]}),items.first().addClass("active"),this.$menu.html(items),this},next:function(){var active=this.$menu.find(".active").removeClass("active"),next=active.next();next.length||(next=$(this.$menu.find("li")[0])),next.addClass("active")},prev:function(){var active=this.$menu.find(".active").removeClass("active"),prev=active.prev();prev.length||(prev=this.$menu.find("li").last()),prev.addClass("active")},listen:function(){this.$element.on("blur",$.proxy(this.blur,this)).on("keypress",$.proxy(this.keypress,this)).on("keyup",$.proxy(this.keyup,this)),this.eventSupported("keydown")&&this.$element.on("keydown",$.proxy(this.keydown,this)),this.$menu.on("click",$.proxy(this.click,this)).on("mouseenter","li",$.proxy(this.mouseenter,this))},eventSupported:function(eventName){var isSupported=eventName in this.$element;return isSupported||(this.$element.setAttribute(eventName,"return;"),isSupported="function"==typeof this.$element[eventName]),isSupported},move:function(e){if(this.shown){switch(e.keyCode){case 9:case 13:case 27:e.preventDefault();break;case 38:e.preventDefault(),this.prev();break;case 40:e.preventDefault(),this.next()}e.stopPropagation()}},keydown:function(e){this.suppressKeyPressRepeat=~$.inArray(e.keyCode,[40,38,9,13,27]),this.move(e)},keypress:function(e){this.suppressKeyPressRepeat||this.move(e)},keyup:function(e){switch(e.keyCode){case 40:case 38:case 16:case 17:case 18:break;case 9:case 13:if(!this.shown)return;this.select();break;case 27:if(!this.shown)return;this.hide();break;default:this.lookup()}e.stopPropagation(),e.preventDefault()},blur:function(){var that=this;setTimeout(function(){that.hide()},150)},click:function(e){e.stopPropagation(),e.preventDefault(),this.select()},mouseenter:function(e){this.$menu.find(".active").removeClass("active"),$(e.currentTarget).addClass("active")}};var old=$.fn.typeahead;$.fn.typeahead=function(option){return this.each(function(){var $this=$(this),data=$this.data("typeahead"),options="object"==typeof option&&option;data||$this.data("typeahead",data=new Typeahead(this,options)),"string"==typeof option&&data[option]()})},$.fn.typeahead.defaults={source:[],items:8,menu:'<ul class="typeahead dropdown-menu"></ul>',item:'<li><a href="#"></a></li>',minLength:1},$.fn.typeahead.Constructor=Typeahead,$.fn.typeahead.noConflict=function(){return $.fn.typeahead=old,this},$(document).on("focus.typeahead.data-api",'[data-provide="typeahead"]',function(e){var $this=$(this);$this.data("typeahead")||(e.preventDefault(),$this.typeahead($this.data()))})}(window.jQuery),!function($){"use strict";var Affix=function(element,options){this.options=$.extend({},$.fn.affix.defaults,options),this.$window=$(window).on("scroll.affix.data-api",$.proxy(this.checkPosition,this)).on("click.affix.data-api",$.proxy(function(){setTimeout($.proxy(this.checkPosition,this),1)},this)),this.$element=$(element),this.checkPosition()};Affix.prototype.checkPosition=function(){if(this.$element.is(":visible")){var affix,scrollHeight=$(document).height(),scrollTop=this.$window.scrollTop(),position=this.$element.offset(),offset=this.options.offset,offsetBottom=offset.bottom,offsetTop=offset.top,reset="affix affix-top affix-bottom";"object"!=typeof offset&&(offsetBottom=offsetTop=offset),"function"==typeof offsetTop&&(offsetTop=offset.top()),"function"==typeof offsetBottom&&(offsetBottom=offset.bottom()),affix=null!=this.unpin&&scrollTop+this.unpin<=position.top?!1:null!=offsetBottom&&position.top+this.$element.height()>=scrollHeight-offsetBottom?"bottom":null!=offsetTop&&offsetTop>=scrollTop?"top":!1,this.affixed!==affix&&(this.affixed=affix,this.unpin="bottom"==affix?position.top-scrollTop:null,this.$element.removeClass(reset).addClass("affix"+(affix?"-"+affix:"")))}};var old=$.fn.affix;$.fn.affix=function(option){return this.each(function(){var $this=$(this),data=$this.data("affix"),options="object"==typeof option&&option;data||$this.data("affix",data=new Affix(this,options)),"string"==typeof option&&data[option]()})},$.fn.affix.Constructor=Affix,$.fn.affix.defaults={offset:0},$.fn.affix.noConflict=function(){return $.fn.affix=old,this},$(window).on("load",function(){$('[data-spy="affix"]').each(function(){var $spy=$(this),data=$spy.data();data.offset=data.offset||{},data.offsetBottom&&(data.offset.bottom=data.offsetBottom),data.offsetTop&&(data.offset.top=data.offsetTop),$spy.affix(data)})})}(window.jQuery);;
-
 
 jade = (function(exports){
 /*!
@@ -18780,7 +23316,6 @@ exports.rethrow = function rethrow(err, filename, lineno){
 
 })({});
 ;
-
 /*! jQuery UI - v1.8.23 - 2012-08-15
 * https://github.com/jquery/jquery-ui
 * Includes: jquery.ui.core.js
@@ -18798,7 +23333,6 @@ exports.rethrow = function rethrow(err, filename, lineno){
 * Includes: jquery.ui.draggable.js
 * Copyright (c) 2012 AUTHORS.txt; Licensed MIT, GPL */
 (function(a,b){a.widget("ui.draggable",a.ui.mouse,{widgetEventPrefix:"drag",options:{addClasses:!0,appendTo:"parent",axis:!1,connectToSortable:!1,containment:!1,cursor:"auto",cursorAt:!1,grid:!1,handle:!1,helper:"original",iframeFix:!1,opacity:!1,refreshPositions:!1,revert:!1,revertDuration:500,scope:"default",scroll:!0,scrollSensitivity:20,scrollSpeed:20,snap:!1,snapMode:"both",snapTolerance:20,stack:!1,zIndex:!1},_create:function(){this.options.helper=="original"&&!/^(?:r|a|f)/.test(this.element.css("position"))&&(this.element[0].style.position="relative"),this.options.addClasses&&this.element.addClass("ui-draggable"),this.options.disabled&&this.element.addClass("ui-draggable-disabled"),this._mouseInit()},destroy:function(){if(!this.element.data("draggable"))return;return this.element.removeData("draggable").unbind(".draggable").removeClass("ui-draggable ui-draggable-dragging ui-draggable-disabled"),this._mouseDestroy(),this},_mouseCapture:function(b){var c=this.options;return this.helper||c.disabled||a(b.target).is(".ui-resizable-handle")?!1:(this.handle=this._getHandle(b),this.handle?(c.iframeFix&&a(c.iframeFix===!0?"iframe":c.iframeFix).each(function(){a('<div class="ui-draggable-iframeFix" style="background: #fff;"></div>').css({width:this.offsetWidth+"px",height:this.offsetHeight+"px",position:"absolute",opacity:"0.001",zIndex:1e3}).css(a(this).offset()).appendTo("body")}),!0):!1)},_mouseStart:function(b){var c=this.options;return this.helper=this._createHelper(b),this.helper.addClass("ui-draggable-dragging"),this._cacheHelperProportions(),a.ui.ddmanager&&(a.ui.ddmanager.current=this),this._cacheMargins(),this.cssPosition=this.helper.css("position"),this.scrollParent=this.helper.scrollParent(),this.offset=this.positionAbs=this.element.offset(),this.offset={top:this.offset.top-this.margins.top,left:this.offset.left-this.margins.left},a.extend(this.offset,{click:{left:b.pageX-this.offset.left,top:b.pageY-this.offset.top},parent:this._getParentOffset(),relative:this._getRelativeOffset()}),this.originalPosition=this.position=this._generatePosition(b),this.originalPageX=b.pageX,this.originalPageY=b.pageY,c.cursorAt&&this._adjustOffsetFromHelper(c.cursorAt),c.containment&&this._setContainment(),this._trigger("start",b)===!1?(this._clear(),!1):(this._cacheHelperProportions(),a.ui.ddmanager&&!c.dropBehaviour&&a.ui.ddmanager.prepareOffsets(this,b),this._mouseDrag(b,!0),a.ui.ddmanager&&a.ui.ddmanager.dragStart(this,b),!0)},_mouseDrag:function(b,c){this.position=this._generatePosition(b),this.positionAbs=this._convertPositionTo("absolute");if(!c){var d=this._uiHash();if(this._trigger("drag",b,d)===!1)return this._mouseUp({}),!1;this.position=d.position}if(!this.options.axis||this.options.axis!="y")this.helper[0].style.left=this.position.left+"px";if(!this.options.axis||this.options.axis!="x")this.helper[0].style.top=this.position.top+"px";return a.ui.ddmanager&&a.ui.ddmanager.drag(this,b),!1},_mouseStop:function(b){var c=!1;a.ui.ddmanager&&!this.options.dropBehaviour&&(c=a.ui.ddmanager.drop(this,b)),this.dropped&&(c=this.dropped,this.dropped=!1);var d=this.element[0],e=!1;while(d&&(d=d.parentNode))d==document&&(e=!0);if(!e&&this.options.helper==="original")return!1;if(this.options.revert=="invalid"&&!c||this.options.revert=="valid"&&c||this.options.revert===!0||a.isFunction(this.options.revert)&&this.options.revert.call(this.element,c)){var f=this;a(this.helper).animate(this.originalPosition,parseInt(this.options.revertDuration,10),function(){f._trigger("stop",b)!==!1&&f._clear()})}else this._trigger("stop",b)!==!1&&this._clear();return!1},_mouseUp:function(b){return this.options.iframeFix===!0&&a("div.ui-draggable-iframeFix").each(function(){this.parentNode.removeChild(this)}),a.ui.ddmanager&&a.ui.ddmanager.dragStop(this,b),a.ui.mouse.prototype._mouseUp.call(this,b)},cancel:function(){return this.helper.is(".ui-draggable-dragging")?this._mouseUp({}):this._clear(),this},_getHandle:function(b){var c=!this.options.handle||!a(this.options.handle,this.element).length?!0:!1;return a(this.options.handle,this.element).find("*").andSelf().each(function(){this==b.target&&(c=!0)}),c},_createHelper:function(b){var c=this.options,d=a.isFunction(c.helper)?a(c.helper.apply(this.element[0],[b])):c.helper=="clone"?this.element.clone().removeAttr("id"):this.element;return d.parents("body").length||d.appendTo(c.appendTo=="parent"?this.element[0].parentNode:c.appendTo),d[0]!=this.element[0]&&!/(fixed|absolute)/.test(d.css("position"))&&d.css("position","absolute"),d},_adjustOffsetFromHelper:function(b){typeof b=="string"&&(b=b.split(" ")),a.isArray(b)&&(b={left:+b[0],top:+b[1]||0}),"left"in b&&(this.offset.click.left=b.left+this.margins.left),"right"in b&&(this.offset.click.left=this.helperProportions.width-b.right+this.margins.left),"top"in b&&(this.offset.click.top=b.top+this.margins.top),"bottom"in b&&(this.offset.click.top=this.helperProportions.height-b.bottom+this.margins.top)},_getParentOffset:function(){this.offsetParent=this.helper.offsetParent();var b=this.offsetParent.offset();this.cssPosition=="absolute"&&this.scrollParent[0]!=document&&a.ui.contains(this.scrollParent[0],this.offsetParent[0])&&(b.left+=this.scrollParent.scrollLeft(),b.top+=this.scrollParent.scrollTop());if(this.offsetParent[0]==document.body||this.offsetParent[0].tagName&&this.offsetParent[0].tagName.toLowerCase()=="html"&&a.browser.msie)b={top:0,left:0};return{top:b.top+(parseInt(this.offsetParent.css("borderTopWidth"),10)||0),left:b.left+(parseInt(this.offsetParent.css("borderLeftWidth"),10)||0)}},_getRelativeOffset:function(){if(this.cssPosition=="relative"){var a=this.element.position();return{top:a.top-(parseInt(this.helper.css("top"),10)||0)+this.scrollParent.scrollTop(),left:a.left-(parseInt(this.helper.css("left"),10)||0)+this.scrollParent.scrollLeft()}}return{top:0,left:0}},_cacheMargins:function(){this.margins={left:parseInt(this.element.css("marginLeft"),10)||0,top:parseInt(this.element.css("marginTop"),10)||0,right:parseInt(this.element.css("marginRight"),10)||0,bottom:parseInt(this.element.css("marginBottom"),10)||0}},_cacheHelperProportions:function(){this.helperProportions={width:this.helper.outerWidth(),height:this.helper.outerHeight()}},_setContainment:function(){var b=this.options;b.containment=="parent"&&(b.containment=this.helper[0].parentNode);if(b.containment=="document"||b.containment=="window")this.containment=[b.containment=="document"?0:a(window).scrollLeft()-this.offset.relative.left-this.offset.parent.left,b.containment=="document"?0:a(window).scrollTop()-this.offset.relative.top-this.offset.parent.top,(b.containment=="document"?0:a(window).scrollLeft())+a(b.containment=="document"?document:window).width()-this.helperProportions.width-this.margins.left,(b.containment=="document"?0:a(window).scrollTop())+(a(b.containment=="document"?document:window).height()||document.body.parentNode.scrollHeight)-this.helperProportions.height-this.margins.top];if(!/^(document|window|parent)$/.test(b.containment)&&b.containment.constructor!=Array){var c=a(b.containment),d=c[0];if(!d)return;var e=c.offset(),f=a(d).css("overflow")!="hidden";this.containment=[(parseInt(a(d).css("borderLeftWidth"),10)||0)+(parseInt(a(d).css("paddingLeft"),10)||0),(parseInt(a(d).css("borderTopWidth"),10)||0)+(parseInt(a(d).css("paddingTop"),10)||0),(f?Math.max(d.scrollWidth,d.offsetWidth):d.offsetWidth)-(parseInt(a(d).css("borderLeftWidth"),10)||0)-(parseInt(a(d).css("paddingRight"),10)||0)-this.helperProportions.width-this.margins.left-this.margins.right,(f?Math.max(d.scrollHeight,d.offsetHeight):d.offsetHeight)-(parseInt(a(d).css("borderTopWidth"),10)||0)-(parseInt(a(d).css("paddingBottom"),10)||0)-this.helperProportions.height-this.margins.top-this.margins.bottom],this.relative_container=c}else b.containment.constructor==Array&&(this.containment=b.containment)},_convertPositionTo:function(b,c){c||(c=this.position);var d=b=="absolute"?1:-1,e=this.options,f=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,g=/(html|body)/i.test(f[0].tagName);return{top:c.top+this.offset.relative.top*d+this.offset.parent.top*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollTop():g?0:f.scrollTop())*d),left:c.left+this.offset.relative.left*d+this.offset.parent.left*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():g?0:f.scrollLeft())*d)}},_generatePosition:function(b){var c=this.options,d=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,e=/(html|body)/i.test(d[0].tagName),f=b.pageX,g=b.pageY;if(this.originalPosition){var h;if(this.containment){if(this.relative_container){var i=this.relative_container.offset();h=[this.containment[0]+i.left,this.containment[1]+i.top,this.containment[2]+i.left,this.containment[3]+i.top]}else h=this.containment;b.pageX-this.offset.click.left<h[0]&&(f=h[0]+this.offset.click.left),b.pageY-this.offset.click.top<h[1]&&(g=h[1]+this.offset.click.top),b.pageX-this.offset.click.left>h[2]&&(f=h[2]+this.offset.click.left),b.pageY-this.offset.click.top>h[3]&&(g=h[3]+this.offset.click.top)}if(c.grid){var j=c.grid[1]?this.originalPageY+Math.round((g-this.originalPageY)/c.grid[1])*c.grid[1]:this.originalPageY;g=h?j-this.offset.click.top<h[1]||j-this.offset.click.top>h[3]?j-this.offset.click.top<h[1]?j+c.grid[1]:j-c.grid[1]:j:j;var k=c.grid[0]?this.originalPageX+Math.round((f-this.originalPageX)/c.grid[0])*c.grid[0]:this.originalPageX;f=h?k-this.offset.click.left<h[0]||k-this.offset.click.left>h[2]?k-this.offset.click.left<h[0]?k+c.grid[0]:k-c.grid[0]:k:k}}return{top:g-this.offset.click.top-this.offset.relative.top-this.offset.parent.top+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollTop():e?0:d.scrollTop()),left:f-this.offset.click.left-this.offset.relative.left-this.offset.parent.left+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():e?0:d.scrollLeft())}},_clear:function(){this.helper.removeClass("ui-draggable-dragging"),this.helper[0]!=this.element[0]&&!this.cancelHelperRemoval&&this.helper.remove(),this.helper=null,this.cancelHelperRemoval=!1},_trigger:function(b,c,d){return d=d||this._uiHash(),a.ui.plugin.call(this,b,[c,d]),b=="drag"&&(this.positionAbs=this._convertPositionTo("absolute")),a.Widget.prototype._trigger.call(this,b,c,d)},plugins:{},_uiHash:function(a){return{helper:this.helper,position:this.position,originalPosition:this.originalPosition,offset:this.positionAbs}}}),a.extend(a.ui.draggable,{version:"1.8.23"}),a.ui.plugin.add("draggable","connectToSortable",{start:function(b,c){var d=a(this).data("draggable"),e=d.options,f=a.extend({},c,{item:d.element});d.sortables=[],a(e.connectToSortable).each(function(){var c=a.data(this,"sortable");c&&!c.options.disabled&&(d.sortables.push({instance:c,shouldRevert:c.options.revert}),c.refreshPositions(),c._trigger("activate",b,f))})},stop:function(b,c){var d=a(this).data("draggable"),e=a.extend({},c,{item:d.element});a.each(d.sortables,function(){this.instance.isOver?(this.instance.isOver=0,d.cancelHelperRemoval=!0,this.instance.cancelHelperRemoval=!1,this.shouldRevert&&(this.instance.options.revert=!0),this.instance._mouseStop(b),this.instance.options.helper=this.instance.options._helper,d.options.helper=="original"&&this.instance.currentItem.css({top:"auto",left:"auto"})):(this.instance.cancelHelperRemoval=!1,this.instance._trigger("deactivate",b,e))})},drag:function(b,c){var d=a(this).data("draggable"),e=this,f=function(b){var c=this.offset.click.top,d=this.offset.click.left,e=this.positionAbs.top,f=this.positionAbs.left,g=b.height,h=b.width,i=b.top,j=b.left;return a.ui.isOver(e+c,f+d,i,j,g,h)};a.each(d.sortables,function(f){this.instance.positionAbs=d.positionAbs,this.instance.helperProportions=d.helperProportions,this.instance.offset.click=d.offset.click,this.instance._intersectsWith(this.instance.containerCache)?(this.instance.isOver||(this.instance.isOver=1,this.instance.currentItem=a(e).clone().removeAttr("id").appendTo(this.instance.element).data("sortable-item",!0),this.instance.options._helper=this.instance.options.helper,this.instance.options.helper=function(){return c.helper[0]},b.target=this.instance.currentItem[0],this.instance._mouseCapture(b,!0),this.instance._mouseStart(b,!0,!0),this.instance.offset.click.top=d.offset.click.top,this.instance.offset.click.left=d.offset.click.left,this.instance.offset.parent.left-=d.offset.parent.left-this.instance.offset.parent.left,this.instance.offset.parent.top-=d.offset.parent.top-this.instance.offset.parent.top,d._trigger("toSortable",b),d.dropped=this.instance.element,d.currentItem=d.element,this.instance.fromOutside=d),this.instance.currentItem&&this.instance._mouseDrag(b)):this.instance.isOver&&(this.instance.isOver=0,this.instance.cancelHelperRemoval=!0,this.instance.options.revert=!1,this.instance._trigger("out",b,this.instance._uiHash(this.instance)),this.instance._mouseStop(b,!0),this.instance.options.helper=this.instance.options._helper,this.instance.currentItem.remove(),this.instance.placeholder&&this.instance.placeholder.remove(),d._trigger("fromSortable",b),d.dropped=!1)})}}),a.ui.plugin.add("draggable","cursor",{start:function(b,c){var d=a("body"),e=a(this).data("draggable").options;d.css("cursor")&&(e._cursor=d.css("cursor")),d.css("cursor",e.cursor)},stop:function(b,c){var d=a(this).data("draggable").options;d._cursor&&a("body").css("cursor",d._cursor)}}),a.ui.plugin.add("draggable","opacity",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("opacity")&&(e._opacity=d.css("opacity")),d.css("opacity",e.opacity)},stop:function(b,c){var d=a(this).data("draggable").options;d._opacity&&a(c.helper).css("opacity",d._opacity)}}),a.ui.plugin.add("draggable","scroll",{start:function(b,c){var d=a(this).data("draggable");d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"&&(d.overflowOffset=d.scrollParent.offset())},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=!1;if(d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"){if(!e.axis||e.axis!="x")d.overflowOffset.top+d.scrollParent[0].offsetHeight-b.pageY<e.scrollSensitivity?d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop+e.scrollSpeed:b.pageY-d.overflowOffset.top<e.scrollSensitivity&&(d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop-e.scrollSpeed);if(!e.axis||e.axis!="y")d.overflowOffset.left+d.scrollParent[0].offsetWidth-b.pageX<e.scrollSensitivity?d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft+e.scrollSpeed:b.pageX-d.overflowOffset.left<e.scrollSensitivity&&(d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft-e.scrollSpeed)}else{if(!e.axis||e.axis!="x")b.pageY-a(document).scrollTop()<e.scrollSensitivity?f=a(document).scrollTop(a(document).scrollTop()-e.scrollSpeed):a(window).height()-(b.pageY-a(document).scrollTop())<e.scrollSensitivity&&(f=a(document).scrollTop(a(document).scrollTop()+e.scrollSpeed));if(!e.axis||e.axis!="y")b.pageX-a(document).scrollLeft()<e.scrollSensitivity?f=a(document).scrollLeft(a(document).scrollLeft()-e.scrollSpeed):a(window).width()-(b.pageX-a(document).scrollLeft())<e.scrollSensitivity&&(f=a(document).scrollLeft(a(document).scrollLeft()+e.scrollSpeed))}f!==!1&&a.ui.ddmanager&&!e.dropBehaviour&&a.ui.ddmanager.prepareOffsets(d,b)}}),a.ui.plugin.add("draggable","snap",{start:function(b,c){var d=a(this).data("draggable"),e=d.options;d.snapElements=[],a(e.snap.constructor!=String?e.snap.items||":data(draggable)":e.snap).each(function(){var b=a(this),c=b.offset();this!=d.element[0]&&d.snapElements.push({item:this,width:b.outerWidth(),height:b.outerHeight(),top:c.top,left:c.left})})},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=e.snapTolerance,g=c.offset.left,h=g+d.helperProportions.width,i=c.offset.top,j=i+d.helperProportions.height;for(var k=d.snapElements.length-1;k>=0;k--){var l=d.snapElements[k].left,m=l+d.snapElements[k].width,n=d.snapElements[k].top,o=n+d.snapElements[k].height;if(!(l-f<g&&g<m+f&&n-f<i&&i<o+f||l-f<g&&g<m+f&&n-f<j&&j<o+f||l-f<h&&h<m+f&&n-f<i&&i<o+f||l-f<h&&h<m+f&&n-f<j&&j<o+f)){d.snapElements[k].snapping&&d.options.snap.release&&d.options.snap.release.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=!1;continue}if(e.snapMode!="inner"){var p=Math.abs(n-j)<=f,q=Math.abs(o-i)<=f,r=Math.abs(l-h)<=f,s=Math.abs(m-g)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n-d.helperProportions.height,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l-d.helperProportions.width}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m}).left-d.margins.left)}var t=p||q||r||s;if(e.snapMode!="outer"){var p=Math.abs(n-i)<=f,q=Math.abs(o-j)<=f,r=Math.abs(l-g)<=f,s=Math.abs(m-h)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o-d.helperProportions.height,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m-d.helperProportions.width}).left-d.margins.left)}!d.snapElements[k].snapping&&(p||q||r||s||t)&&d.options.snap.snap&&d.options.snap.snap.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=p||q||r||s||t}}}),a.ui.plugin.add("draggable","stack",{start:function(b,c){var d=a(this).data("draggable").options,e=a.makeArray(a(d.stack)).sort(function(b,c){return(parseInt(a(b).css("zIndex"),10)||0)-(parseInt(a(c).css("zIndex"),10)||0)});if(!e.length)return;var f=parseInt(e[0].style.zIndex)||0;a(e).each(function(a){this.style.zIndex=f+a}),this[0].style.zIndex=f+e.length}}),a.ui.plugin.add("draggable","zIndex",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("zIndex")&&(e._zIndex=d.css("zIndex")),d.css("zIndex",e.zIndex)},stop:function(b,c){var d=a(this).data("draggable").options;d._zIndex&&a(c.helper).css("zIndex",d._zIndex)}})})(jQuery);;;
-
 /*
  jquery.layout 1.3.0 - Release Candidate 30.62
  $Date: 2012-08-04 08:00:00 (Thu, 23 Aug 2012) $
@@ -18932,7 +23466,6 @@ b.attr("pin");if(!(h&&f===(h=="down"))){var a=a.options[d],h=a.buttonClass+"-pin
 b,d,j)},addOpenBtn:function(b,d,j){return c.addOpen(a,b,d,j)},addCloseBtn:function(b,d){return c.addClose(a,b,d)},addPinBtn:function(b,d){return c.addPin(a,b,d)}});for(var d=0;d<4;d++)a.state[b.layout.config.borderPanes[d]].pins=[];a.options.autoBindCustomButtons&&c.init(a)},_unload:function(){}};b.layout.onLoad.push(b.layout.buttons._load);b.layout.plugins.browserZoom=!0;b.layout.defaults.browserZoomCheckInterval=1E3;b.layout.optionsMap.layout.push("browserZoomCheckInterval");b.layout.browserZoom=
 {_init:function(a){b.layout.browserZoom.ratio()!==false&&b.layout.browserZoom._setTimer(a)},_setTimer:function(a){if(!a.destroyed){var c=a.options,d=a.state,f=a.hasParentLayout?5E3:Math.max(c.browserZoomCheckInterval,100);setTimeout(function(){if(!a.destroyed&&c.resizeWithWindow){var f=b.layout.browserZoom.ratio();if(f!==d.browserZoom){d.browserZoom=f;a.resizeAll()}b.layout.browserZoom._setTimer(a)}},f)}},ratio:function(){function a(a,b){return(parseInt(a,10)/parseInt(b,10)*100).toFixed()}var c=window,
 d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r,y,D;return j.msie&&m>8||!j.msie?false:d.deviceXDPI?a(d.deviceXDPI,d.systemXDPI):j.webkit&&(r=f.body.getBoundingClientRect)?a(r.left-r.right,f.body.offsetWidth):j.webkit&&(y=c.outerWidth)?a(y,c.innerWidth):(y=d.width)&&(D=h.clientWidth)?a(y,D):false}};b.layout.onReady.push(b.layout.browserZoom._init)})(jQuery);;
-
 // Underscore.js 1.4.4
 // ===================
 
@@ -20161,7 +24694,6 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
 
 }).call(this);
 ;
-
 /*!
  * Copyright (c) 2010 Chris O'Hara <cohara87@gmail.com>
  *
@@ -20184,24 +24716,81 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);;
+window.require.register("CNeditor/alarm", function(exports, require, module) {
+  var Alarm, request, _ref,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-window.require.define({"CNeditor/autocomplete": function(exports, require, module) {
-  var AutoComplete,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  request = require("lib/request");
+
+  module.exports = Alarm = (function(_super) {
+    var checkAlarmInstalled, getApps, isAlarm, noCallback;
+
+    __extends(Alarm, _super);
+
+    function Alarm() {
+      _ref = Alarm.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    Alarm.prototype.url = function() {
+      if (this.isNew()) {
+        return "/apps/todos/todolists/" + Task.todolistId + "/tasks";
+      } else {
+        return "/apps/todos/tasks/" + this.id;
+      }
+    };
+
+    Alarm.prototype.defaults = function() {
+      return {
+        done: false
+      };
+    };
+
+    noCallback = function() {};
+
+    isAlarm = function(app) {
+      return app.name === 'todos';
+    };
+
+    getApps = function() {
+      return request.get('/api/applications', noCallback);
+    };
+
+    checkAlarmInstalled = function(apps) {
+      if (apps.rows.some(isAlarm)) {
+        return true;
+      }
+      return $.Deferred().reject();
+    };
+
+    Alarm.initialize = function(callback) {
+      return getApps().then(checkAlarmInstalled).then(function(inbox) {
+        Alarm.canBeUsed = true;
+        return callback(true);
+      }).fail(function(err) {
+        Alarm.canBeUsed = false;
+        return callback(false);
+      });
+    };
+
+    return Alarm;
+
+  })(Backbone.Model);
+  
+});
+window.require.register("CNeditor/autocomplete", function(exports, require, module) {
+  var AutoComplete;
 
   require('./bootstrap-datepicker');
 
   require('./bootstrap-timepicker');
 
   AutoComplete = (function() {
-
     function AutoComplete(container, editor) {
-      this._detectMouseupAuto = __bind(this._detectMouseupAuto, this);
-
-      this._detectMousedownAuto = __bind(this._detectMousedownAuto, this);
-
       var auto, reminderHTML,
         _this = this;
+
       this.container = container;
       this.editor = editor;
       this.tTags = [];
@@ -20216,6 +24805,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       this.datePick.show();
       this.datePick.on('changeDate', function(ev) {
         var date, nd;
+
         nd = ev.date;
         date = _this._currentDate;
         date.setDate(nd.getDate());
@@ -20234,7 +24824,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       auto = document.createElement('div');
       auto.id = 'CNE_autocomplete';
       auto.className = 'CNE_autocomplete';
-      auto.setAttribute('contenteditable', 'false');
+      auto.setAttribute('contentEditable', 'false');
       auto.addEventListener('keypress', function(e) {
         if (e.keyCode === 13) {
           _this._validateUrlPopover();
@@ -20252,17 +24842,21 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
         {
           text: 'contact',
           type: 'ttag',
+          value: 'contact',
           mention: ' (@)'
         }, {
           text: 'reminder',
           type: 'ttag',
+          value: 'reminder',
           mention: ' (@@)'
         }, {
           text: 'todo',
-          type: 'ttag'
+          type: 'ttag',
+          value: 'todo'
         }, {
           text: 'tag',
           type: 'ttag',
+          value: 'htag',
           mention: ' (#)'
         }
       ]);
@@ -20313,6 +24907,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype.setItems = function(type, items) {
       var it, lines, _i, _len;
+
       switch (type) {
         case 'tTags':
           this.tTags = items;
@@ -20335,6 +24930,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype._createLine = function(item) {
       var c, line, span, t, type, _i, _len;
+
       line = document.createElement('LI');
       type = item.type;
       switch (type) {
@@ -20367,28 +24963,25 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     /**
      * Show the suggestion list
-     * @param  {Object} currentSel The editor current selection
+     * @param  {Object} seg The segment to be positionned next to.
      * @param  {String} typedTxt   The string typed by the user (hotstring)
      * @param  {[type]} edLineDiv  The editor line div where the user is typing
     */
 
 
-    AutoComplete.prototype.show = function(currentSel, typedTxt, edLineDiv) {
-      if (edLineDiv) {
-        this._currentEdLineDiv = edLineDiv;
-      }
-      this._updateDisp(typedTxt);
-      if (currentSel) {
-        this._position(currentSel);
-      }
-      this.container.appendChild(this.el);
+    AutoComplete.prototype.show = function(seg, typedTxt) {
+      var edLineDiv;
+
+      edLineDiv = seg.parentElement;
       this.isVisible = true;
-      this.container.addEventListener('mousedown', this._detectMousedownAuto);
-      return this.container.addEventListener('mouseup', this._detectMouseupAuto);
+      this.update(typedTxt);
+      this._position(seg);
+      return this.container.appendChild(this.el);
     };
 
-    AutoComplete.prototype.setModes = function(modes) {
-      var m, now, ttag, _i, _j, _len, _len1, _ref;
+    AutoComplete.prototype.setAllowedModes = function(modes) {
+      var m, ttag, _i, _j, _len, _len1, _ref;
+
       this._modes = modes;
       _ref = this.tTags;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -20402,72 +24995,114 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
           }
         }
       }
-      if (modes[0] === this._currentMode) {
-        return;
-      }
-      switch (modes[0]) {
+      return true;
+    };
+
+    AutoComplete.prototype.setMode = function(mode) {
+      var now;
+
+      this._unSelectLine();
+      switch (mode) {
         case 'contact':
-          this.el.removeChild(this.el.lastChild);
-          this.el.appendChild(this.contactsDiv);
-          return this._currentMode = 'contact';
-        case 'tag':
-          this.el.removeChild(this.el.lastChild);
-          this.el.appendChild(this.htagDiv);
-          return this._currentMode = 'htag';
+          this._currentMode = 'contact';
+          if (!this.tTagsDiv.parentNode) {
+            this.el.appendChild(this.tTagsDiv);
+          }
+          if (this.htagDiv.parentNode) {
+            this.el.removeChild(this.htagDiv);
+          }
+          if (!this.contactsDiv.parentNode) {
+            this.el.appendChild(this.contactsDiv);
+          }
+          if (this.reminderDiv.parentNode) {
+            return this.el.removeChild(this.reminderDiv);
+          }
+          break;
+        case 'htag':
+          this._currentMode = 'htag';
+          if (this.tTagsDiv.parentNode) {
+            this.el.removeChild(this.tTagsDiv);
+          }
+          if (!this.htagDiv.parentNode) {
+            this.el.appendChild(this.htagDiv);
+          }
+          if (this.contactsDiv.parentNode) {
+            this.el.removeChild(this.contactsDiv);
+          }
+          if (this.reminderDiv.parentNode) {
+            return this.el.removeChild(this.reminderDiv);
+          }
+          break;
         case 'reminder':
-          this.el.removeChild(this.el.lastChild);
           now = new Date();
           this._currentDate = now;
           this._initialDate = new Date();
           this.datePick.datepicker('setValue', now);
           this.timePick.timepicker('setTime', now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds());
-          this.el.appendChild(this.reminderDiv);
-          return this._currentMode = 'reminder';
+          this._currentMode = 'reminder';
+          if (this.tTagsDiv.parentNode) {
+            this.el.removeChild(this.tTagsDiv);
+          }
+          if (this.htagDiv.parentNode) {
+            this.el.removeChild(this.htagDiv);
+          }
+          if (this.contactsDiv.parentNode) {
+            this.el.removeChild(this.contactsDiv);
+          }
+          if (!this.reminderDiv.parentNode) {
+            return this.el.appendChild(this.reminderDiv);
+          }
       }
     };
 
     AutoComplete.prototype.update = function(typedTxt) {
+      var dd, dh, dmn, it, items, now, reg1, reg2, reg3, regD, regH, regMn, resReg1, resReg2, resReg3, resRegD, resRegH, resRegMn, ttag, _i, _j, _len, _len1, _ref;
+
       if (!this.isVisible) {
         return;
       }
-      return this._updateDisp(typedTxt);
-    };
-
-    AutoComplete.prototype._updateDisp = function(typedTxt) {
-      var dh, dmn, it, items, now, reg1, reg2, resReg1, resReg2, ttag, txt, _i, _j, _len, _len1, _ref;
-      _ref = this.tTags;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        ttag = _ref[_i];
-        if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
-          ttag.line.style.display = 'block';
-        } else {
-          ttag.line.style.display = 'none';
-        }
-      }
       switch (this._currentMode) {
         case 'contact':
+          _ref = this.tTags;
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            ttag = _ref[_i];
+            if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
+              ttag.line.style.display = 'block';
+            } else {
+              ttag.line.style.display = 'none';
+            }
+          }
           items = this.contacts;
           break;
         case 'htag':
           items = this.htags;
           break;
         case 'reminder':
-          reg1 = /(\d*)h(\d*)mn/i;
-          reg2 = /(\d*)h/i;
-          txt = typedTxt.slice(2);
-          resReg1 = reg1.exec(txt);
-          resReg2 = reg2.exec(txt);
-          console.log(txt);
-          console.log(resReg1);
-          if (resReg1) {
-            dh = parseInt(resReg1[1]) * 3600000;
-            dmn = parseInt(resReg1[2]) * 60000;
-          } else if (resReg2) {
-            dh = parseInt(resReg2[1]) * 3600000;
-            dmn = 0;
-          }
-          if (resReg1 || resReg2) {
-            this._currentDate.setTime(this._initialDate.getTime() + dh + dmn);
+          reg1 = /\+?(\d+)h(\d*)mn/i;
+          reg2 = /\+?(\d+)h/i;
+          reg3 = /\+?((\d+)d)?((\d+)h)?((\d*)mn)?/i;
+          regD = /(\d+)d/i;
+          regH = /(\d+)h/i;
+          regMn = /(\d+)mn/i;
+          resReg1 = reg1.exec(typedTxt);
+          resReg2 = reg2.exec(typedTxt);
+          resReg3 = reg3.exec(typedTxt);
+          resRegD = regD.exec(typedTxt);
+          resRegH = regH.exec(typedTxt);
+          resRegMn = regMn.exec(typedTxt);
+          console.log(resRegD);
+          if (resRegMn || resRegH || resRegD) {
+            dd = dh = dmn = 0;
+            if (resRegD) {
+              dd = parseInt(resRegD[1]) * 3600000 * 24;
+            }
+            if (resRegH) {
+              dh = parseInt(resRegH[1]) * 3600000;
+            }
+            if (resRegMn) {
+              dmn = parseInt(resRegMn[1]) * 60000;
+            }
+            this._currentDate.setTime(this._initialDate.getTime() + dd + dh + dmn);
             now = this._currentDate;
             this.datePick.datepicker('setValue', now);
             this.timePick.timepicker('setTime', now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds());
@@ -20486,17 +25121,10 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       return true;
     };
 
-    AutoComplete.prototype._position = function(currentSel) {
-      var parent, span, targetRange;
-      span = document.createElement('SPAN');
-      targetRange = currentSel.theoricalRange;
-      targetRange.insertNode(span);
+    AutoComplete.prototype._position = function(span) {
       this.el.style.left = span.offsetLeft + 'px';
       this.el.style.top = span.offsetTop + 17 + 'px';
-      parent = span.parentNode;
-      span.parentNode.removeChild(span);
-      parent.normalize();
-      currentSel.range.collapse(true);
+      span.parentElement.normalize();
       return true;
     };
 
@@ -20504,6 +25132,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype._addLine = function(item) {
       var line;
+
       line = document.createElement('LI');
       this._updateLine(line, item);
       this.el.appendChild(line);
@@ -20512,6 +25141,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype._updateLine = function(line, item, typedTxt) {
       var c, span, t, type, _i, _len;
+
       console.log('_updateLine');
       type = item.type;
       switch (type) {
@@ -20547,29 +25177,38 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
     };
 
     AutoComplete.prototype._unSelectLine = function() {
-      if (this._selectedLine) {
-        return this._selectedLine.classList.remove('SUGG_selected');
+      var line;
+
+      line = this._selectedLine;
+      if (line) {
+        line.classList.remove('SUGG_selected');
+        this._selectedLine = null;
       }
+      return line;
     };
 
     AutoComplete.prototype._removeLine = function(line) {
       return this.el.removeChild(line);
     };
 
+    /**
+     * Hide auto complete and returns the current selected item, null if none.
+     * @return {[type]} [description]
+    */
+
+
     AutoComplete.prototype.hide = function() {
       var date, item;
+
       if (!this.isVisible) {
         return false;
       }
       this.container.removeChild(this.el);
-      this._currentEdLineDiv = null;
-      this.container.removeEventListener('mousedown', this._detectMousedownAuto);
-      this.container.removeEventListener('mouseup', this._detectMouseupAuto);
       switch (this._currentMode) {
         case 'contact':
           if (this._selectedLine) {
-            this._unSelectLine();
             item = this._selectedLine.item;
+            this._unSelectLine();
           } else {
             item = null;
             this._selectedLine = null;
@@ -20577,8 +25216,8 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
           break;
         case 'htag':
           if (this._selectedLine && this._selectedLine.item.type === 'htag') {
-            this._unSelectLine();
             item = this._selectedLine.item;
+            this._unSelectLine();
           } else {
             item = null;
             this._selectedLine = null;
@@ -20596,11 +25235,13 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
     };
 
     AutoComplete.prototype._shouldDisp = function(item, typedTxt) {
-      var c, i, l, reg, s, spans, typedCar;
+      var c, i, l, reg, regText, s, spans, typedCar;
+
       if (this.regexStore[typedTxt]) {
         reg = this.regexStore[typedTxt];
       } else {
-        reg = new RegExp(typedTxt.split('').join('[\\w ]*').replace('\W', '').replace('\+', '\\+'), 'i');
+        regText = typedTxt.replace(/\W/g, '').split('').join('[\\w ]*');
+        reg = new RegExp(regText, 'i');
         this.regexStore[typedTxt] = reg;
       }
       if (item.text.match(reg)) {
@@ -20620,7 +25261,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
             if (c) {
               i += 1;
             } else {
-              break;
+              i += 1;
             }
           } else {
             s.className = '';
@@ -20634,16 +25275,17 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
     };
 
     AutoComplete.prototype.up = function() {
-      var prev;
+      var line, prev;
+
       if (!this._selectedLine) {
         this._selectedLine = this.el.lastChild.lastChild;
       } else {
-        this._unSelectLine();
-        prev = this._selectedLine.previousSibling;
+        line = this._unSelectLine();
+        prev = line.previousSibling;
         if (prev) {
           this._selectedLine = prev;
         } else {
-          if (this._selectedLine.item.type === 'ttag') {
+          if (line.item.type === 'ttag') {
             this._selectedLine = this.el.lastChild.lastChild;
           } else {
             this._selectedLine = this.el.firstChild.lastChild;
@@ -20659,16 +25301,17 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
     };
 
     AutoComplete.prototype.down = function() {
-      var next;
+      var line, next;
+
       if (!this._selectedLine) {
         this._selectedLine = this.el.firstChild.firstChild;
       } else {
-        this._unSelectLine();
-        next = this._selectedLine.nextSibling;
+        line = this._unSelectLine();
+        next = line.nextSibling;
         if (next) {
           this._selectedLine = next;
         } else {
-          if (this._selectedLine.item.type === 'ttag') {
+          if (line.item.type === 'ttag') {
             this._selectedLine = this.el.lastChild.firstChild;
           } else {
             this._selectedLine = this.el.firstChild.firstChild;
@@ -20688,6 +25331,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype.isInTTags = function(text) {
       var tag, _i, _len, _ref;
+
       _ref = this.tTags;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         tag = _ref[_i];
@@ -20698,43 +25342,14 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       return false;
     };
 
-    AutoComplete.prototype._detectMousedownAuto = function(e) {
-      console.log('== mousedown');
-      return e.preventDefault();
-    };
-
-    AutoComplete.prototype._detectMouseupAuto = function(e) {
-      var isOut, selectedLine;
-      console.log('== mouseup');
-      isOut = e.target !== this.el && $(e.target).parents('#CNE_autocomplete').length === 0;
-      if (isOut) {
-        return this.hide();
-      } else {
-        if (this._currentMode === 'reminder') {
-          return;
-        }
-        selectedLine = e.target;
-        while (selectedLine && selectedLine.tagName !== 'LI') {
-          selectedLine = selectedLine.parentElement;
-        }
-        if (selectedLine) {
-          this.editor._doHotStringAction(selectedLine.item, this._currentEdLineDiv);
-          return this.hide();
-        } else {
-          return this.hide();
-        }
-      }
-    };
-
     return AutoComplete;
 
   })();
 
   exports.AutoComplete = AutoComplete;
   
-}});
-
-window.require.define({"CNeditor/bootstrap-datepicker": function(exports, require, module) {
+});
+window.require.register("CNeditor/bootstrap-datepicker", function(exports, require, module) {
   /* =========================================================
    * bootstrap-datepicker.js 
    * http://www.eyecon.ro/bootstrap-datepicker
@@ -21081,7 +25696,7 @@ window.require.define({"CNeditor/bootstrap-datepicker": function(exports, requir
   			if (typeof option === 'string') data[option](val);
   		});
   	};
-
+  
   	$.fn.datepicker.defaults = {
   		onRender: function(date) {
   			return '';
@@ -21209,11 +25824,10 @@ window.require.define({"CNeditor/bootstrap-datepicker": function(exports, requir
   								'</table>'+
   							'</div>'+
   						'</div>';
-
+  
   }( window.jQuery );
-}});
-
-window.require.define({"CNeditor/bootstrap-timepicker": function(exports, require, module) {
+});
+window.require.register("CNeditor/bootstrap-timepicker", function(exports, require, module) {
   /*!
    * Timepicker Component for Twitter Bootstrap
    *
@@ -21225,9 +25839,9 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
    * file that was distributed with this source code.
    */
   ;(function($, window, document, undefined) {
-
+  
     'use strict'; // jshint ;_;
-
+  
     // TIMEPICKER PUBLIC CLASS DEFINITION
     var Timepicker = function(element, options) {
       this.widget = '';
@@ -21243,17 +25857,17 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
       this.showSeconds = options.showSeconds;
       this.template = options.template;
       this.appendWidgetTo = options.appendWidgetTo;
-
+  
       this._init();
     };
-
+  
     Timepicker.prototype = {
-
+  
       constructor: Timepicker,
-
+  
       _init: function() {
         var self = this;
-
+  
         if (this.$element.parent().hasClass('input-append') || this.$element.parent().hasClass('input-prepend')) {
             this.$element.parent('.input-append, .input-prepend').find('.add-on').on({
               'click.timepicker': $.proxy(this.showWidget, this)
@@ -21280,13 +25894,13 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             });
           }
         }
-
+  
         if (this.template !== false) {
           this.$widget = $(this.getTemplate()).prependTo(this.$element.parents(this.appendWidgetTo)).on('click', $.proxy(this.widgetClick, this));
         } else {
           this.$widget = false;
         }
-
+  
         if (this.showInputs && this.$widget !== false) {
             this.$widget.find('input').each(function() {
               $(this).on({
@@ -21295,26 +25909,26 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               });
             });
         }
-
+  
         this.setDefaultTime(this.defaultTime);
       },
-
+  
       blurElement: function() {
         this.highlightedUnit = undefined;
         this.updateFromElementVal();
       },
-
+  
       decrementHour: function() {
         if (this.showMeridian) {
           if (this.hour === 1) {
             this.hour = 12;
           } else if (this.hour === 12) {
             this.hour--;
-
+  
             return this.toggleMeridian();
           } else if (this.hour === 0) {
             this.hour = 11;
-
+  
             return this.toggleMeridian();
           } else {
             this.hour--;
@@ -21328,16 +25942,16 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       decrementMinute: function(step) {
         var newVal;
-
+  
         if (step) {
           newVal = this.minute - step;
         } else {
           newVal = this.minute - this.minuteStep;
         }
-
+  
         if (newVal < 0) {
           this.decrementHour();
           this.minute = newVal + 60;
@@ -21346,10 +25960,10 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       decrementSecond: function() {
         var newVal = this.second - this.secondStep;
-
+  
         if (newVal < 0) {
           this.decrementMinute(true);
           this.second = newVal + 60;
@@ -21358,12 +25972,12 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       elementKeydown: function(e) {
         switch (e.keyCode) {
           case 9: //tab
             this.updateFromElementVal();
-
+  
             switch (this.highlightedUnit) {
               case 'hour':
                 e.preventDefault();
@@ -21440,32 +26054,32 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           break;
         }
       },
-
+  
       formatTime: function(hour, minute, second, meridian) {
         hour = hour < 10 ? '0' + hour : hour;
         minute = minute < 10 ? '0' + minute : minute;
         second = second < 10 ? '0' + second : second;
-
+  
         return hour + ':' + minute + (this.showSeconds ? ':' + second : '') + (this.showMeridian ? ' ' + meridian : '');
       },
-
+  
       getCursorPosition: function() {
         var input = this.$element.get(0);
-
+  
         if ('selectionStart' in input) {// Standard-compliant browsers
-
+  
           return input.selectionStart;
         } else if (document.selection) {// IE fix
           input.focus();
           var sel = document.selection.createRange(),
             selLen = document.selection.createRange().text.length;
-
+  
           sel.moveStart('character', - input.value.length);
-
+  
           return sel.text.length - selLen;
         }
       },
-
+  
       getTemplate: function() {
         var template,
           hourTemplate,
@@ -21473,7 +26087,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           secondTemplate,
           meridianTemplate,
           templateContent;
-
+  
         if (this.showInputs) {
           hourTemplate = '<input type="text" name="hour" class="bootstrap-timepicker-hour" maxlength="2"/>';
           minuteTemplate = '<input type="text" name="minute" class="bootstrap-timepicker-minute" maxlength="2"/>';
@@ -21485,7 +26099,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           secondTemplate = '<span class="bootstrap-timepicker-second"></span>';
           meridianTemplate = '<span class="bootstrap-timepicker-meridian"></span>';
         }
-
+  
         templateContent = '<table>'+
            '<tr>'+
              '<td><a href="#" data-action="incrementHour"><i class="icon-chevron-up"></i></a></td>'+
@@ -21527,7 +26141,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
              : '') +
            '</tr>'+
          '</table>';
-
+  
         switch(this.template) {
           case 'modal':
             template = '<div class="bootstrap-timepicker-widget modal hide fade in" data-backdrop="'+ (this.modalBackdrop ? 'true' : 'false') +'">'+
@@ -21547,23 +26161,23 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             template = '<div class="bootstrap-timepicker-widget dropdown-menu">'+ templateContent +'</div>';
           break;
         }
-
+  
         return template;
       },
-
+  
       getTime: function() {
         return this.formatTime(this.hour, this.minute, this.second, this.meridian);
       },
-
+  
       hideWidget: function() {
         if (this.isOpen === false) {
           return;
         }
-
+  
               if (this.showInputs) {
                   this.updateFromWidgetInputs();
               }
-
+  
         this.$element.trigger({
           'type': 'hide.timepicker',
           'time': {
@@ -21574,18 +26188,18 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               'meridian': this.meridian
            }
         });
-
+  
         if (this.template === 'modal') {
           this.$widget.modal('hide');
         } else {
           this.$widget.removeClass('open');
         }
-
+  
         $(document).off('mousedown.timepicker');
-
+  
         this.isOpen = false;
       },
-
+  
       highlightUnit: function() {
         this.position = this.getCursorPosition();
         if (this.position >= 0 && this.position <= 2) {
@@ -21602,7 +26216,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           this.highlightMeridian();
         }
       },
-
+  
       highlightNextUnit: function() {
         switch (this.highlightedUnit) {
           case 'hour':
@@ -21629,7 +26243,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           break;
         }
       },
-
+  
       highlightPrevUnit: function() {
         switch (this.highlightedUnit) {
           case 'hour':
@@ -21650,48 +26264,48 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           break;
         }
       },
-
+  
       highlightHour: function() {
         var $element = this.$element.get(0);
-
+  
         this.highlightedUnit = 'hour';
-
+  
               if ($element.setSelectionRange) {
                   setTimeout(function() {
                       $element.setSelectionRange(0,2);
                   }, 0);
               }
       },
-
+  
       highlightMinute: function() {
         var $element = this.$element.get(0);
-
+  
         this.highlightedUnit = 'minute';
-
+  
               if ($element.setSelectionRange) {
                   setTimeout(function() {
                       $element.setSelectionRange(3,5);
                   }, 0);
               }
       },
-
+  
       highlightSecond: function() {
         var $element = this.$element.get(0);
-
+  
         this.highlightedUnit = 'second';
-
+  
               if ($element.setSelectionRange) {
                   setTimeout(function() {
                       $element.setSelectionRange(6,8);
                   }, 0);
               }
       },
-
+  
       highlightMeridian: function() {
         var $element = this.$element.get(0);
-
+  
         this.highlightedUnit = 'meridian';
-
+  
               if ($element.setSelectionRange) {
                   if (this.showSeconds) {
                       setTimeout(function() {
@@ -21704,7 +26318,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
                   }
               }
       },
-
+  
       incrementHour: function() {
         if (this.showMeridian) {
           if (this.hour === 11) {
@@ -21720,16 +26334,16 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         this.hour++;
         this.update();
       },
-
+  
       incrementMinute: function(step) {
         var newVal;
-
+  
         if (step) {
           newVal = this.minute + step;
         } else {
           newVal = this.minute + this.minuteStep - (this.minute % this.minuteStep);
         }
-
+  
         if (newVal > 59) {
           this.incrementHour();
           this.minute = newVal - 60;
@@ -21738,10 +26352,10 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       incrementSecond: function() {
         var newVal = this.second + this.secondStep - (this.second % this.secondStep);
-
+  
         if (newVal > 59) {
           this.incrementMinute(true);
           this.second = newVal - 60;
@@ -21750,7 +26364,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       remove: function() {
         $('document').off('.timepicker');
         if (this.$widget) {
@@ -21758,7 +26372,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         delete this.$element.data().timepicker;
       },
-
+  
       setDefaultTime: function(defaultTime){
         if (!this.$element.val()) {
           if (defaultTime === 'current') {
@@ -21767,7 +26381,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               minutes = Math.floor(dTime.getMinutes() / this.minuteStep) * this.minuteStep,
               seconds = Math.floor(dTime.getSeconds() / this.secondStep) * this.secondStep,
               meridian = 'AM';
-
+  
             if (this.showMeridian) {
               if (hours === 0) {
                 hours = 12;
@@ -21780,14 +26394,14 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
                 meridian = 'AM';
               }
             }
-
+  
             this.hour = hours;
             this.minute = minutes;
             this.second = seconds;
             this.meridian = meridian;
-
+  
             this.update();
-
+  
           } else if (defaultTime === false) {
             this.hour = 0;
             this.minute = 0;
@@ -21800,11 +26414,11 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           this.updateFromElementVal();
         }
       },
-
+  
       setTime: function(time) {
         var arr,
           timeArray;
-
+  
         if (this.showMeridian) {
           arr = time.split(' ');
           timeArray = arr[0].split(':');
@@ -21812,31 +26426,31 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         } else {
           timeArray = time.split(':');
         }
-
+  
         this.hour = parseInt(timeArray[0], 10);
         this.minute = parseInt(timeArray[1], 10);
         this.second = parseInt(timeArray[2], 10);
-
+  
         if (isNaN(this.hour)) {
           this.hour = 0;
         }
         if (isNaN(this.minute)) {
           this.minute = 0;
         }
-
+  
         if (this.showMeridian) {
           if (this.hour > 12) {
             this.hour = 12;
           } else if (this.hour < 1) {
             this.hour = 12;
           }
-
+  
           if (this.meridian === 'am' || this.meridian === 'a') {
             this.meridian = 'AM';
           } else if (this.meridian === 'pm' || this.meridian === 'p') {
             this.meridian = 'PM';
           }
-
+  
           if (this.meridian !== 'AM' && this.meridian !== 'PM') {
             this.meridian = 'AM';
           }
@@ -21847,13 +26461,13 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             this.hour = 0;
           }
         }
-
+  
         if (this.minute < 0) {
           this.minute = 0;
         } else if (this.minute >= 60) {
           this.minute = 59;
         }
-
+  
         if (this.showSeconds) {
           if (isNaN(this.second)) {
             this.second = 0;
@@ -21863,15 +26477,15 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             this.second = 59;
           }
         }
-
+  
         this.update();
       },
-
+  
       showWidget: function() {
         if (this.isOpen) {
           return;
         }
-
+  
         var self = this;
         $(document).on('mousedown.timepicker', function (e) {
           // Clicked outside the timepicker, hide it
@@ -21879,7 +26493,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             self.hideWidget();
           }
         });
-
+  
         this.$element.trigger({
           'type': 'show.timepicker',
           'time': {
@@ -21890,13 +26504,13 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               'meridian': this.meridian
            }
         });
-
+  
         if (this.disableFocus) {
           this.$element.blur();
         }
-
+  
         this.updateFromElementVal();
-
+  
         if (this.template === 'modal') {
           this.$widget.modal('show').on('hidden', $.proxy(this.hideWidget, this));
         } else {
@@ -21904,15 +26518,15 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             this.$widget.addClass('open');
           }
         }
-
+  
         this.isOpen = true;
       },
-
+  
       toggleMeridian: function() {
         this.meridian = this.meridian === 'AM' ? 'PM' : 'AM';
         this.update();
       },
-
+  
       update: function() {
         this.$element.trigger({
           'type': 'changeTime.timepicker',
@@ -21924,36 +26538,36 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               'meridian': this.meridian
            }
         });
-
+  
         this.updateElement();
         this.updateWidget();
       },
-
+  
       updateElement: function() {
         this.$element.val(this.getTime()).change();
       },
-
+  
       updateFromElementVal: function() {
               var val = this.$element.val();
-
+  
               if (val) {
                   this.setTime(val);
               }
       },
-
+  
       updateWidget: function() {
         if (this.$widget === false) {
           return;
         }
-
+  
         var hour = this.hour < 10 ? '0' + this.hour : this.hour,
             minute = this.minute < 10 ? '0' + this.minute : this.minute,
             second = this.second < 10 ? '0' + this.second : this.second;
-
+  
         if (this.showInputs) {
           this.$widget.find('input.bootstrap-timepicker-hour').val(hour);
           this.$widget.find('input.bootstrap-timepicker-minute').val(minute);
-
+  
           if (this.showSeconds) {
             this.$widget.find('input.bootstrap-timepicker-second').val(second);
           }
@@ -21963,7 +26577,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         } else {
           this.$widget.find('span.bootstrap-timepicker-hour').text(hour);
           this.$widget.find('span.bootstrap-timepicker-minute').text(minute);
-
+  
           if (this.showSeconds) {
             this.$widget.find('span.bootstrap-timepicker-second').text(second);
           }
@@ -21972,7 +26586,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           }
         }
       },
-
+  
       updateFromWidgetInputs: function() {
         if (this.$widget === false) {
           return;
@@ -21981,24 +26595,24 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           $('input.bootstrap-timepicker-minute', this.$widget).val() +
           (this.showSeconds ? ':' + $('input.bootstrap-timepicker-second', this.$widget).val() : '') +
           (this.showMeridian ? ' ' + $('input.bootstrap-timepicker-meridian', this.$widget).val() : '');
-
+  
         this.setTime(time);
       },
-
+  
       widgetClick: function(e) {
         e.stopPropagation();
         e.preventDefault();
-
+  
         var action = $(e.target).closest('a').data('action');
         if (action) {
           this[action]();
         }
       },
-
+  
       widgetKeydown: function(e) {
         var $input = $(e.target).closest('input'),
             name = $input.attr('name');
-
+  
         switch (e.keyCode) {
           case 9: //tab
             if (this.showMeridian) {
@@ -22016,7 +26630,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
                 }
               }
             }
-
+  
             this.updateFromWidgetInputs();
           break;
           case 27: // escape
@@ -22059,8 +26673,8 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
       }
     };
-
-
+  
+  
     //TIMEPICKER PLUGIN DEFINITION
     $.fn.timepicker = function(option) {
       var args = Array.apply(null, arguments);
@@ -22069,17 +26683,17 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         var $this = $(this),
           data = $this.data('timepicker'),
           options = typeof option === 'object' && option;
-
+  
         if (!data) {
           $this.data('timepicker', (data = new Timepicker(this, $.extend({}, $.fn.timepicker.defaults, options, $(this).data()))));
         }
-
+  
         if (typeof option === 'string') {
           data[option].apply(data, args);
         }
       });
     };
-
+  
     $.fn.timepicker.defaults = {
       defaultTime: 'current',
       disableFocus: false,
@@ -22093,37 +26707,36 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
       template: 'dropdown',
       appendWidgetTo: '.bootstrap-timepicker'
     };
-
+  
     $.fn.timepicker.Constructor = Timepicker;
-
+  
   })(jQuery, window, document);
   
-}});
-
-window.require.define({"CNeditor/editor": function(exports, require, module) {
+});
+window.require.register("CNeditor/editor", function(exports, require, module) {
   /* ------------------------------------------------------------------------
   # CLASS FOR THE COZY NOTE EDITOR
   #
-  # usage : 
+  # usage :
   #
   # newEditor = new CNEditor( iframeTarget,callBack )
   #   iframeTarget = iframe where the editor will be nested
-  #   callBack     = launched when editor ready, the context 
+  #   callBack     = launched when editor ready, the context
   #                  is set to the editorCtrl (callBack.call(this))
   # properties & methods :
   #   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
-  #   _keyDownCallBack : (e) =>
+  #   _keyDownCb : (e) =>
   #   _insertLineAfter  : (param) ->
   #   _insertLineBefore : (param) ->
-  #   
+  #
   #   editorIframe      : the iframe element where is nested the editor
   #   editorBody$       : the jquery pointer on the body of the iframe
   #   _lines            : {} an objet, each property refers a line
-  #   _highestId        : 
+  #   _highestId        :
   #   _firstLine        : points the first line : TODO : not taken into account
   */
 
-  var AutoComplete, CNeditor, Line, Task, md2cozy, realtimer, selection,
+  var CNeditor, HotString, Line, Task, md2cozy, realtimer, selection,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __slice = [].slice;
 
@@ -22133,178 +26746,39 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
   Task = require('./task');
 
-  AutoComplete = require('./autocomplete').AutoComplete;
+  HotString = require('./hot-string');
 
-  try {
-    realtimer = require('./realtimer');
-  } catch (e) {
-    realtimer = {
-      watch: function() {}
-    };
-  }
+  Line = require('./line');
 
-  /** -----------------------------------------------------------------------
-   * line$        : 
-   * lineID       : 
-   * lineType     : 
-   * lineDepthAbs : 
-   * lineDepthRel : 
-   * lineNext     : 
-   * linePrev     :
-  */
-
-
-  Line = (function() {
-    /*
-         * If no arguments, returns an empty object (only methods), otherwise
-         * constructs a full line. The dom element of the line is inserted according
-         * to the previous or next line given in the arguments.
-         * @param  {Array}  Array of parameters :
-         *   [ 
-                editor        , # 
-                type          , # 
-                depthAbs      , # 
-                depthRelative , # 
-                prevLine      , # The prev line, null if nextLine is given
-                nextLine      , # The next line, null if prevLine is given
-                fragment        # [optional] a fragment to insert in the line, will
-                                  add a br at the end if none in the fragment.
-              ]
-    */
-
-    function Line() {
-      var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
-      if (arguments.length === 0) {
-        return;
-      } else {
-        editor = arguments[0], type = arguments[1], depthAbs = arguments[2], depthRelative = arguments[3], prevLine = arguments[4], nextLine = arguments[5], fragment = arguments[6];
-      }
-      editor._highestId += 1;
-      lineID = 'CNID_' + editor._highestId;
-      newLineEl = document.createElement('div');
-      newLineEl.setAttribute('class', type + '-' + depthAbs);
-      if (fragment != null) {
-        newLineEl.appendChild(fragment);
-        if (newLineEl.lastChild.nodeName !== 'BR') {
-          newLineEl.appendChild(document.createElement('br'));
-        }
-      } else {
-        node = document.createElement('span');
-        node.appendChild(document.createTextNode(''));
-        newLineEl.appendChild(node);
-        newLineEl.appendChild(document.createElement('br'));
-      }
-      this.line$ = $(newLineEl);
-      if (prevLine != null) {
-        this.linePrev = prevLine;
-        linesDiv = prevLine.line$[0].parentNode;
-        if (prevLine.lineNext != null) {
-          nextL = prevLine.lineNext;
-          linesDiv.insertBefore(newLineEl, nextL.line$[0]);
-          this.lineNext = nextL;
-          nextL.linePrev = this;
-        } else {
-          linesDiv.appendChild(newLineEl);
-          this.lineNext = null;
-        }
-        prevLine.lineNext = this;
-      } else if (nextLine != null) {
-        linesDiv = nextLine.line$[0].parentNode;
-        this.lineNext = nextLine;
-        linesDiv.insertBefore(newLineEl, nextLine.line$[0]);
-        if (nextLine.linePrev != null) {
-          this.linePrev = nextLine.linePrev;
-          nextLine.linePrev.lineNext = this;
-        } else {
-          this.linePrev = null;
-        }
-        nextLine.linePrev = this;
-      }
-      newLineEl.id = lineID;
-      this.lineID = lineID;
-      this.lineType = type;
-      this.lineDepthAbs = depthAbs;
-      this.lineDepthRel = depthRelative;
-      editor._lines[lineID] = this;
-    }
-
-    Line.prototype.setType = function(type) {
-      this.lineType = type;
-      return this.line$.prop('class', "" + type + "-" + this.lineDepthAbs);
-    };
-
-    Line.prototype.setDepthAbs = function(absDepth) {
-      this.lineDepthAbs = absDepth;
-      return this.line$.prop('class', "" + this.lineType + "-" + absDepth);
-    };
-
-    Line.prototype.setTypeDepth = function(type, absDepth) {
-      this.lineType = type;
-      this.lineDepthAbs = absDepth;
-      return this.line$.prop('class', "" + type + "-" + absDepth);
-    };
-
-    return Line;
-
-  })();
-
-  Line.clone = function(line) {
-    var clone;
-    clone = new Line();
-    clone.line$ = line.line$.clone();
-    clone.lineID = line.lineID;
-    clone.lineType = line.lineType;
-    clone.lineDepthAbs = line.lineDepthAbs;
-    clone.lineDepthRel = line.lineDepthRel;
-    clone.linePrev = line.linePrev;
-    clone.lineNext = line.lineNext;
-    return clone;
-  };
+  realtimer = require('./realtimer');
 
   module.exports = CNeditor = (function() {
     /*
-        #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
-        #       iframeTarget = iframe where the editor will be nested
-        #       callBack     = launched when editor ready, the context 
-        #                      is set to the editorCtrl (callBack.call(this))
+    #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
+    #       iframeTarget = iframe where the editor will be nested
+    #       callBack     = launched when editor ready, the context
+    #                      is set to the editorCtrl (callBack.call(this))
     */
-
     function CNeditor(editorTarget, callBack) {
       this._processPaste = __bind(this._processPaste, this);
-
       this._waitForPasteData = __bind(this._waitForPasteData, this);
-
       this._validateUrlPopover = __bind(this._validateUrlPopover, this);
-
       this._cancelUrlPopoverCB = __bind(this._cancelUrlPopoverCB, this);
-
       this._cancelUrlPopover = __bind(this._cancelUrlPopover, this);
-
       this._detectClickOutUrlPopover = __bind(this._detectClickOutUrlPopover, this);
-
-      this._keyUpCorrection = __bind(this._keyUpCorrection, this);
-
-      this._keyDownCallBack = __bind(this._keyDownCallBack, this);
-
+      this._keyupCb = __bind(this._keyupCb, this);
+      this._keypressCb = __bind(this._keypressCb, this);
+      this._keyDownCb = __bind(this._keyDownCb, this);
       this.registerKeyDownCbForTest = __bind(this.registerKeyDownCbForTest, this);
-
-      this._keyDownCallBackTry = __bind(this._keyDownCallBackTry, this);
-
+      this._keyDownCbTry = __bind(this._keyDownCbTry, this);
       this._toggleTaskCB = __bind(this._toggleTaskCB, this);
-
-      this._hotStringDetectionKeypress = __bind(this._hotStringDetectionKeypress, this);
-
       this._pasteCB = __bind(this._pasteCB, this);
-
       this._clickCB = __bind(this._clickCB, this);
-
-      this._keyupCast = __bind(this._keyupCast, this);
-
-      this._mouseupCB = __bind(this._mouseupCB, this);
-
+      this._mouseupCb = __bind(this._mouseupCb, this);
+      this._mousedownCb = __bind(this._mousedownCb, this);
       this.loadEditor = __bind(this.loadEditor, this);
-
       var _this = this;
+
       this.editorTarget = editorTarget;
       this.editorTarget$ = $(this.editorTarget);
       this.callBack = callBack;
@@ -22327,6 +26801,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.loadEditor = function() {
       var HISTORY_SIZE, cssLink, editor_head$, editor_html$, linesDiv;
+
       if (this.isInIframe) {
         editor_html$ = this.editorTarget$.contents().find("html");
         this.editorBody$ = editor_html$.find("body");
@@ -22355,13 +26830,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       }
       this._initClipBoard();
       this._initUrlPopover();
-      this._auto = new AutoComplete(linesDiv, this);
+      this._hotString = new HotString(this);
       this._lines = {};
       this.newPosition = true;
       this._highestId = 0;
       this._deepest = 1;
       this._firstLine = null;
-      this.hotString = '';
       HISTORY_SIZE = 100;
       this.HISTORY_SIZE = HISTORY_SIZE;
       this._history = {
@@ -22384,24 +26858,51 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return this.callBack.call(this);
     };
 
-    CNeditor.prototype._mouseupCB = function() {
-      return this.newPosition = true;
+    CNeditor.prototype._mousedownCb = function(e) {
+      if (this._hotString.isPreparing) {
+        return this._hotString.mouseDownCb(e);
+      }
     };
 
-    CNeditor.prototype._keyupCast = function(e) {
-      var keyCode, metaKeyCode, shortcut, _ref;
-      _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
-      shortcut = metaKeyCode + '-' + keyCode;
-      switch (shortcut) {
-        case 'Ctrl-S':
-        case 'Ctrl-other':
-          return;
+    /**
+     * When the user click in the editor, moueup event will set @newPosition to
+     * true.
+    */
+
+
+    CNeditor.prototype._mouseupCb = function(e) {
+      var endSeg, rg, startSeg, _ref;
+
+      this.newPosition = true;
+      if (this._hotString.isPreparing) {
+        if (this._hotString.isInAuto(e.target)) {
+          this._hotString.mouseUpInAutoCb(e);
+          return true;
+        }
       }
-      return this.editorTarget$.trigger(jQuery.Event("onKeyUp"));
+      _ref = this.putSelectionInOrOutMetaSegment(), startSeg = _ref[0], endSeg = _ref[1];
+      if (this._hotString.isPreparing && startSeg !== this._hotString._hsSegment) {
+        this._hotString.reset(false);
+      }
+      if (startSeg.dataset.type === 'taskBtn') {
+        this._setCaret(startSeg.nextSibling, 0);
+      } else if (endSeg.dataset.type === 'taskBtn') {
+        this._setCaret(endSeg.nextSibling, 0);
+      }
+      switch (startSeg.dataset.type) {
+        case 'contact':
+        case 'reminder':
+        case 'htag':
+          if (!this._hotString.isPreparing) {
+            rg = this.document.getSelection().getRangeAt(0);
+            return this._hotString.edit(startSeg, rg);
+          }
+      }
     };
 
     CNeditor.prototype._clickCB = function(e) {
       var segments, url;
+
       this._lastKey = null;
       this.updateCurrentSel();
       segments = this._getLinkSegments();
@@ -22409,13 +26910,17 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         if (e.ctrlKey) {
           url = segments[0].href;
           window.open(url, '_blank');
-          return e.preventDefault();
+          e.preventDefault();
         } else {
           this._showUrlPopover(segments, false);
           e.stopPropagation();
-          return e.preventDefault();
+          e.preventDefault();
         }
       }
+      if (this.hotString.isPreparing) {
+        this.hotString.reInit();
+      }
+      return true;
     };
 
     CNeditor.prototype._pasteCB = function(event) {
@@ -22423,21 +26928,21 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     CNeditor.prototype._registerEventListeners = function() {
-      this.linesDiv.addEventListener('keydown', this._keyDownCallBackTry, true);
-      this.linesDiv.addEventListener('keyup', this._keyUpCorrection, false);
-      this.linesDiv.addEventListener('mouseup', this._mouseupCB, true);
-      this.editorBody$.on('keyup', this._keyupCast);
+      this.linesDiv.addEventListener('keydown', this._keyDownCbTry, true);
+      this.linesDiv.addEventListener('keyup', this._keyupCb, false);
+      this.linesDiv.addEventListener('keypress', this._keypressCb);
+      this.linesDiv.addEventListener('mouseup', this._mouseupCb, true);
+      this.linesDiv.addEventListener('mousedown', this._mousedownCb, true);
       this.editorBody$.on('click', this._clickCB);
-      this.editorBody$.on('paste', this._pasteCB);
-      this.editorBody.addEventListener('keypress', this._hotStringDetectionKeypress);
-      return this.editorBody.addEventListener('keydown', this._hotStringDetectionKeydown);
+      return this.editorBody$.on('paste', this._pasteCB);
     };
 
     CNeditor.prototype._unRegisterEventListeners = function() {
-      this.linesDiv.removeEventListener('keydown', this._keyDownCallBackTry, true);
-      this.linesDiv.removeEventListener('keyup', this._keyUpCorrection, false);
-      this.linesDiv.removeEventListener('mouseup', this._mouseupCB, true);
-      this.editorBody$.off('keyup', this._keyupCast);
+      this.linesDiv.removeEventListener('keydown', this._keyDownCbTry, true);
+      this.linesDiv.removeEventListener('keyup', this._keyupCb, false);
+      this.linesDiv.removeEventListener('keypress', this._keypressCb);
+      this.linesDiv.removeEventListener('mouseup', this._mouseupCb, true);
+      this.linesDiv.removeEventListener('mousedown', this._mousedownCb, true);
       this.editorBody$.off('click', this._clickCB);
       return this.editorBody$.off('paste', this._pasteCB);
     };
@@ -22476,8 +26981,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     /** -----------------------------------------------------------------------
      * this method is modified during construction if the editor target is not
      * an iframe
-     * @return {String} Returns the serialized current selection within the 
-     *                  editor. In case serialisation is impossible (for 
+     * @return {String} Returns the serialized current selection within the
+     *                  editor. In case serialisation is impossible (for
      *                  instance if there is no selectio within editor), then
      *                  false is returned.
     */
@@ -22485,6 +26990,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.saveEditorSelection = function() {
       var sel;
+
       sel = this.document.getSelection();
       if (sel.rangeCount === 0) {
         return false;
@@ -22492,167 +26998,9 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return this.serializeRange(sel.getRangeAt(0));
     };
 
-    CNeditor.prototype.isNormalChar = function(e) {
-      var keyCode, res;
-      keyCode = e.which;
-      res = !e.altKey && !e.ctrlKey && !e.shiftKey && (96 < keyCode && keyCode < 123) || (63 < keyCode && keyCode < 91) || (47 < keyCode && keyCode < 58) || (keyCode === 43);
-      return res;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Update the current "hotString" typed by the user. This function is called
-     * by keypress event, and detects keys such as '@' and "normal caracters". 
-     * Arrows, return, baskspace etc are manage in _keyDownCallBack()
-     * @param  {[type]} e [description]
-     * @return {[type]}   [description]
-    */
-
-
-    CNeditor.prototype._hotStringDetectionKeypress = function(e) {
-      var char, sel;
-      char = String.fromCharCode(e.which);
-      if (e.which === 64) {
-        if (this.hotString === ' ' || this._isStartingWord()) {
-          this.hotString = ' @';
-          sel = this.updateCurrentSel();
-          if (sel.startLineDiv.dataset.type === 'task') {
-            this._auto.setModes(['contact', 'event', 'reminder', 'tag']);
-          } else {
-            this._auto.setModes(['contact', 'todo', 'event', 'reminder', 'tag']);
-          }
-          this._auto.show(sel, '', sel.startLineDiv);
-          return;
-        }
-      }
-      if (e.which === 35) {
-        if (this.hotString === ' ' || this._isStartingWord()) {
-          this.hotString = ' #';
-          sel = this.updateCurrentSel();
-          this._auto.setModes(['tag']);
-          this._auto.show(sel, '', sel.startLineDiv);
-          return;
-        }
-      }
-      if (this.isNormalChar(e)) {
-        if (this.hotString.length > 1) {
-          this.hotString += String.fromCharCode(e.which);
-          this._auto.update(this.hotString.slice(2));
-          if (this._doHotStringAction()) {
-            return e.preventDefault();
-          }
-        } else {
-          this.hotString = '';
-          return this._auto.hide();
-        }
-      }
-    };
-
-    CNeditor.prototype._isAHotString = function(txt) {
-      switch (txt.slice(2)) {
-        case 'reminder':
-        case '@':
-          return {
-            text: 'reminder',
-            type: 'ttag'
-          };
-        case 'todo':
-          return {
-            text: 'todo',
-            type: 'ttag'
-          };
-      }
-    };
-
-    CNeditor.prototype._doHotStringAction = function(autoItem, lineDiv) {
-      var d, date, format, h, lastSeg, m, mn, newSeg, reg, rg, taskDiv, txt, y;
-      if (!autoItem) {
-        autoItem = this._isAHotString(this.hotString);
-        if (!autoItem) {
-          return false;
-        }
-      }
-      switch (autoItem.type) {
-        case 'ttag':
-          switch (autoItem.text) {
-            case 'todo':
-              taskDiv = this._turnIntoTask();
-              if (taskDiv) {
-                txt = taskDiv.textContent.trim();
-                reg = new RegExp('^ *@?t?o?d?o? *$', 'i');
-                if (txt.match(reg)) {
-                  this._initTaskContent(taskDiv);
-                } else {
-                  this._forceUserHotString('');
-                }
-                this.hotString = '';
-                this._auto.hide();
-                return true;
-              }
-              break;
-            case 'reminder':
-              this._auto.hide();
-              this._forceUserHotString(' @@', true);
-              this.hotString = ' @@';
-              this._auto.setModes(['reminder']);
-              this._auto.show(null, this.hotString.slice(2), null);
-              return true;
-            case 'tag':
-              this._auto.hide();
-              this._forceUserHotString(' #', true);
-              this.hotString = ' #';
-              this._auto.setModes(['tag']);
-              this._auto.show(null, this.hotString.slice(2), null);
-              return true;
-          }
-          break;
-        case 'contact':
-          this._forceUserHotString(autoItem.text);
-          rg = this._applyMetaDataOnSelection('CNE_contact');
-          lastSeg = selection.getSegment(rg.endContainer, 0);
-          newSeg = this._insertSegmentAfterSeg(lastSeg);
-          this._setCaret(newSeg, 1);
-          this.hotString = '';
-          this._auto.hide();
-          return true;
-        case 'htag':
-          this._forceUserHotString(autoItem.text);
-          rg = this._applyMetaDataOnSelection('CNE_htag');
-          lastSeg = selection.getSegment(rg.endContainer, 0);
-          newSeg = this._insertSegmentAfterSeg(lastSeg);
-          this._setCaret(newSeg, 1);
-          this.hotString = '';
-          this._auto.hide();
-          return true;
-        case 'reminder':
-          format = function(n) {
-            if (n.toString().length === 1) {
-              return '0' + n;
-            } else {
-              return n;
-            }
-          };
-          date = autoItem.text;
-          d = format(date.getDate());
-          m = format(date.getMonth());
-          y = format(date.getFullYear());
-          h = format(date.getHours());
-          mn = format(date.getMinutes());
-          txt = d + '/' + m + '/' + y + '  ' + h + ':' + mn;
-          this._forceUserHotString(txt);
-          rg = this._applyMetaDataOnSelection('CNE_reminder');
-          lastSeg = selection.getSegment(rg.endContainer, 0);
-          newSeg = this._insertSegmentAfterSeg(lastSeg);
-          this._setCaret(newSeg, 1);
-          this.hotString = '';
-          this._auto.hide();
-          return true;
-      }
-      this._auto.hide();
-      return false;
-    };
-
     CNeditor.prototype._initTaskContent = function(taskDiv) {
       var segment, span, txt;
+
       segment = taskDiv.firstChild.nextSibling;
       while (segment.nodeName !== 'BR') {
         segment = segment.nextSibling;
@@ -22666,23 +27014,9 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return this._setSelectionOnNode(txt);
     };
 
-    CNeditor.prototype._forceUserHotString = function(newHotString, setEnd) {
-      var index, rg, textContent, textNode, txt;
-      rg = this.updateCurrentSel().theoricalRange;
-      textNode = rg.startContainer;
-      textContent = textNode.textContent;
-      index = rg.startOffset - this.hotString.length + 1;
-      txt = textContent.slice(0, index) + newHotString + textContent.slice(rg.startOffset);
-      textNode.textContent = txt;
-      if (setEnd) {
-        return this._setCaret(textNode, index + newHotString.length);
-      } else {
-        return this._setSelection(textNode, index, textNode, index + newHotString.length);
-      }
-    };
-
     CNeditor.prototype._turnIntoTask = function(lineDiv) {
       var currSel;
+
       if (!lineDiv) {
         currSel = this.updateCurrentSel();
         lineDiv = currSel.startLine.line$[0];
@@ -22692,13 +27026,18 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._turneLineIntoTask = function(lineDiv) {
       var btn, text;
+
       if (!this.taskCanBeUsed) {
         return false;
       }
       btn = this.document.createElement('SPAN');
       btn.className = 'CNE_task_btn';
       btn.dataset.type = 'taskBtn';
-      text = this.document.createTextNode('\u00a0');
+      if (this.isChromeOrSafari) {
+        text = this.document.createTextNode(' ');
+      } else {
+        text = this.document.createTextNode('\u00a0');
+      }
       btn.appendChild(text);
       btn.addEventListener('click', this._toggleTaskCB);
       lineDiv.insertBefore(btn, lineDiv.firstChild);
@@ -22710,6 +27049,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._turneTaskIntoLine = function(taskDiv) {
       var btn;
+
       btn = taskDiv.firstChild;
       btn.removeEventListener('click', this._toggleTaskCB);
       taskDiv.removeChild(btn);
@@ -22722,6 +27062,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._toggleTaskCB = function(e) {
       var btn, lineDiv;
+
       lineDiv = this._getSelectedLineDiv();
       btn = lineDiv.firstChild;
       if (lineDiv.dataset.state === 'done') {
@@ -22738,6 +27079,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._detectTaskChange = function() {
       var isTask, lineDiv, sel;
+
       lineDiv = this.currentSel.startLineDiv;
       if (lineDiv) {
         isTask = this.currentSel.isStartInTask;
@@ -22762,14 +27104,15 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._createTaskForLine = function(lineDiv) {
       var t;
+
       t = new Task({
         description: lineDiv.textContent
       });
       lineDiv.task = t;
       console.log('create task  ', t);
-      this._stackTaskChange(t, 'create');
       this._internalTaskCounter += 1;
       t.internalId = 'CNE_task_id_' + this._internalTaskCounter;
+      this._stackTaskChange(t, 'create');
       lineDiv.dataset.id = t.internalId;
       t.lineDiv = lineDiv;
       this._taskList.push(t);
@@ -22779,6 +27122,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     CNeditor.prototype._setTaskToLine = function(lineDiv) {
       var id, t, _i, _len, _ref,
         _this = this;
+
       id = lineDiv.dataset.id;
       _ref = this._taskList;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -22791,6 +27135,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       }
       if (id.slice(0, 12) === 'CNE_task_id_') {
         this._createTaskForLine(lineDiv);
+        this.editorTarget$.trigger(jQuery.Event('onChange'));
       } else {
         t = new Task({
           id: id
@@ -22801,7 +27146,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           silent: true
         }).done(function() {
           console.log("editor : t.fetch.done()", t.id);
-          realtimer.watch(t);
+          realtimer.watchOne(t);
           return _this._updateTaskLine(t);
         });
         t.on('change', function(t) {
@@ -22817,6 +27162,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._updateTaskLine = function(t) {
       var currentTaskState, newState;
+
       if (this._isTaskUnchanged(t)) {
         return;
       }
@@ -22846,7 +27192,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             a: action
           };
         case 'modified':
-          if (!(this._tasksModifStacks[task.internalId] != null)) {
+          if (this._tasksModifStacks[task.internalId] == null) {
             return this._tasksModifStacks[task.internalId] = {
               t: task,
               a: action
@@ -22864,10 +27210,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     CNeditor.prototype.saveTasks = function() {
       var id, l, t, _ref,
         _this = this;
+
       _ref = this._tasksModifStacks;
       for (id in _ref) {
         t = _ref[id];
-        console.log('save :', id, t);
+        console.log('saveTask, action', t.a, id, t);
         if (t.a === 'create') {
           t = t.t;
           l = t.lineDiv;
@@ -22875,16 +27222,19 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             done: l.dataset.state === 'done',
             description: l.textContent.slice(1)
           }, {
-            silent: true
-          }).done(function() {
-            console.log("editor t.save.done()", t.id);
-            realtimer.watch(t);
-            l.dataset.id = t.id;
-            return t.on('change', function() {
-              console.log("onchange from save", t.id);
-              console.log(t.changedAttributes());
-              return _this._updateTaskLine(t);
-            });
+            ignoreMySocketNotification: true,
+            silent: true,
+            success: function(t) {
+              console.log("editor t.save.done()", t.id);
+              realtimer.watchOne(t);
+              t.lineDiv.dataset.id = t.id;
+              _this.editorTarget$.trigger(jQuery.Event('onChange'));
+              return t.on('change', function() {
+                console.log("onchange from save", t.id);
+                console.log(t.changedAttributes());
+                return _this._updateTaskLine(t);
+              });
+            }
           });
         } else {
           t = t.t;
@@ -22893,6 +27243,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             done: l.dataset.state === 'done',
             description: l.textContent.slice(1)
           }, {
+            ignoreMySocketNotification: true,
             silent: true
           });
         }
@@ -22902,6 +27253,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._isTaskUnchanged = function(task) {
       var line, res;
+
       res = true;
       line = task.lineDiv;
       res = res && task.get('done') === (line.dataset.state === 'done');
@@ -22911,6 +27263,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._isStartingWord = function() {
       var char, rg, rg2, sel, txt;
+
       sel = this.updateCurrentSelIsStartIsEnd();
       rg = sel.theoricalRange;
       if (sel.rangeIsStartLine) {
@@ -22918,11 +27271,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       } else {
         if (rg.startOffset === 0) {
           rg2 = rg.cloneRange();
-          txt = rg.toString();
+          rg2.collapse();
+          rg2.setStart(selection._getLineDiv(rg2.startContainer), 0);
+          txt = rg2.toString();
           if (txt.length === 0) {
             return true;
+          } else {
+            char = text.slice(-1);
           }
-          char = txt[txt.length];
         } else {
           char = rg.startContainer.textContent.substr(rg.startOffset - 1, 1);
         }
@@ -22934,9 +27290,20 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       }
     };
 
+    CNeditor.prototype.getCurrentAllowedInsertions = function() {
+      var sel;
+
+      sel = this.updateCurrentSel();
+      if (sel.startLineDiv.dataset.type === 'task') {
+        return ['contact', 'event', 'reminder', 'tag'];
+      } else {
+        return ['contact', 'todo', 'event', 'reminder', 'tag'];
+      }
+    };
+
     /* ------------------------------------------------------------------------
     # EXTENSION : _updateDeepest
-    # 
+    #
     # Find the maximal deep (thus the deepest line) of the text
     # TODO: improve it so it only calculates the new depth from the modified
     #       lines (not all of them)
@@ -22948,6 +27315,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._updateDeepest = function() {
       var c, lines, max;
+
       max = 1;
       lines = this._lines;
       for (c in lines) {
@@ -22968,7 +27336,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     /** -----------------------------------------------------------------------
      * Initialize the editor content from a html string
      * The html string should not been pretified because of the spaces and
-     * charriage return. 
+     * charriage return.
      * If unPretify = true then a regex tries to set up things
     */
 
@@ -22994,26 +27362,50 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.deleteContent = function() {
       var emptyLine;
+
       emptyLine = '<div id="CNID_1" class="Tu-1"><span></span><br></div>';
       return this.replaceContent(emptyLine);
     };
 
     /* ------------------------------------------------------------------------
-    # Returns a markdown string representing the editor content
+    # Returns an html string representing the editor content
     */
 
 
     CNeditor.prototype.getEditorContent = function() {
-      var txt;
-      if (this._auto.isVisible) {
-        this.linesDiv.removeChild(this._auto.el);
-      }
-      txt = this.linesDiv.innerHTML;
-      if (this._auto.isVisible) {
-        this.linesDiv.appendChild(this._auto.el);
-      }
-      if (this.isUrlPopoverOn) {
-        txt = txt.replace('<div[=":;\w ]*CNE_urlPopover[\w\W]*', '');
+      var clone, lineDiv, seg, segment, segments, txt, _i, _j, _len, _len1;
+
+      if (this._hotString.isPreparing || this.isUrlPopoverOn) {
+        clone = this.linesDiv.cloneNode(true);
+        if (this._hotString.isPreparing) {
+          segment = clone.querySelector('.CNE_hot_string');
+          segment.classList.remove('CNE_hot_string');
+          lineDiv = segment.parentElement;
+          segment.textContent = '';
+          this._fusionSimilarSegments(lineDiv, []);
+          segment = clone.querySelector('#CNE_autocomplete');
+          segment.parentElement.removeChild(segment);
+        }
+        if (this.isUrlPopoverOn) {
+          segment = clone.querySelector('#CNE_urlPopover');
+          segment.parentElement.removeChild(segment);
+          segments = clone.querySelectorAll('.CNE_url_in_edition');
+          for (_i = 0, _len = segments.length; _i < _len; _i++) {
+            seg = segments[_i];
+            seg.classList.remove('CNE_url_in_edition');
+          }
+          if (this.urlPopover.isLinkCreation) {
+            lineDiv = selection._getLineDiv(segments[0]);
+            for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
+              seg = segments[_j];
+              this._applyAhrefToSegments(seg, seg, [], false, '');
+            }
+            this._fusionSimilarSegments(lineDiv, []);
+          }
+        }
+        txt = clone.innerHTML;
+      } else {
+        txt = this.linesDiv.innerHTML;
       }
       return txt;
     };
@@ -23035,6 +27427,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.setEditorContentFromMD = function(mdContent) {
       var cozyContent;
+
       cozyContent = md2cozy.md2cozy(mdContent);
       return this.replaceContent(cozyContent);
     };
@@ -23046,6 +27439,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.replaceCSS = function(path) {
       var document, linkElm;
+
       document = this.document;
       linkElm = document.querySelector('#editorCSS');
       linkElm.setAttribute('href', path);
@@ -23053,13 +27447,13 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Return [metaKeyCode,keyCode] corresponding to the key strike combinaison. 
+     * Return [metaKeyCode,keyCode] corresponding to the key strike combinaison.
      * the string structure = [meta key]-[key]
      *   * [metaKeyCode] : (Alt)*(Ctrl)*(Shift)*
-     *   * [keyCode] : (return|end|...|A|S|V|Y|Z)|(other) 
-     * ex : 
-     *   * "AltShift" & "up" 
-     *   * "AltCtrl" & "down" 
+     *   * [keyCode] : (return|end|...|A|S|V|Y|Z)|(other)
+     * ex :
+     *   * "AltShift" & "up"
+     *   * "AltCtrl" & "down"
      *   * "Shift" & "A"
      *   * "Ctrl" & "S"
      *   * "" & "other"
@@ -23069,97 +27463,121 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
 
     CNeditor.prototype.getShortCut = function(e) {
-      var keyCode, metaKeyCode, shortcut;
-      metaKeyCode = (e.altKey ? "Alt" : "") + 
-                                (e.ctrlKey ? "Ctrl" : "") + 
+      var isAction, key, keyCode, metaKey, shortcut;
+
+      metaKey = (e.altKey ? "Alt" : "") +
+                                (e.ctrlKey ? "Ctrl" : "") +
                                 (e.shiftKey ? "Shift" : "");
-      switch (e.keyCode) {
+      keyCode = e.keyCode;
+      switch (keyCode) {
         case 13:
-          keyCode = 'return';
+          key = 'return';
+          isAction = true;
           break;
         case 35:
-          keyCode = 'end';
+          key = 'end';
+          isAction = true;
           break;
         case 36:
-          keyCode = 'home';
+          key = 'home';
+          isAction = true;
           break;
         case 33:
-          keyCode = 'pgUp';
+          key = 'pgUp';
+          isAction = true;
           break;
         case 34:
-          keyCode = 'pgDwn';
+          key = 'pgDwn';
+          isAction = true;
           break;
         case 37:
-          keyCode = 'left';
+          key = 'left';
+          isAction = true;
           break;
         case 38:
-          keyCode = 'up';
+          key = 'up';
+          isAction = true;
           break;
         case 39:
-          keyCode = 'right';
+          key = 'right';
+          isAction = true;
           break;
         case 40:
-          keyCode = 'down';
+          key = 'down';
+          isAction = true;
           break;
         case 9:
-          keyCode = 'tab';
+          key = 'tab';
+          isAction = true;
           break;
         case 8:
-          keyCode = 'backspace';
+          key = 'backspace';
+          isAction = true;
           break;
         case 32:
-          keyCode = 'space';
+          key = 'space';
+          isAction = true;
           break;
         case 27:
-          keyCode = 'esc';
+          key = 'esc';
+          isAction = true;
           break;
         case 46:
-          keyCode = 'suppr';
+          key = 'suppr';
+          isAction = true;
           break;
         default:
-          switch (e.which) {
+          isAction = false;
+          keyCode = e.which;
+          switch (keyCode) {
             case 32:
-              keyCode = 'space';
+              key = 'space';
               break;
             case 8:
-              keyCode = 'backspace';
+              key = 'backspace';
               break;
             case 65:
-              keyCode = 'A';
+              key = 'A';
               break;
             case 66:
-              keyCode = 'B';
+              key = 'B';
               break;
             case 85:
-              keyCode = 'U';
+              key = 'U';
               break;
             case 75:
-              keyCode = 'K';
+              key = 'K';
               break;
             case 76:
-              keyCode = 'L';
+              key = 'L';
               break;
             case 83:
-              keyCode = 'S';
+              key = 'S';
               break;
             case 86:
-              keyCode = 'V';
+              key = 'V';
               break;
             case 89:
-              keyCode = 'Y';
+              key = 'Y';
               break;
             case 90:
-              keyCode = 'Z';
+              key = 'Z';
               break;
             default:
-              keyCode = 'other';
+              key = 'other';
           }
       }
-      shortcut = metaKeyCode + '-' + keyCode;
-      if (metaKeyCode === '' && (keyCode === 'A' || keyCode === 'B' || keyCode === 'U' || keyCode === 'K' || keyCode === 'L' || keyCode === 'S' || keyCode === 'V' || keyCode === 'Y' || keyCode === 'Z')) {
-        keyCode = 'other';
+      shortcut = metaKey + '-' + key;
+      if (metaKey === '' && (key === 'A' || key === 'B' || key === 'U' || key === 'K' || key === 'L' || key === 'S' || key === 'V' || key === 'Y' || key === 'Z')) {
+        key = 'other';
       }
-      return [metaKeyCode, keyCode];
+      return this._shortcut = {
+        meta: metaKey,
+        key: key,
+        isAction: isAction,
+        shortcut: shortcut,
+        keyCode: keyCode
+      };
     };
 
     /** -----------------------------------------------------------------------
@@ -23170,11 +27588,15 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     */
 
 
-    CNeditor.prototype._keyDownCallBackTry = function(e) {
+    CNeditor.prototype._keyDownCbTry = function(e) {
+      var error;
+
       try {
-        return this._keyDownCallBack(e);
-      } catch (error) {
-        alert('A bug occured, we prefer to undo your last action not to take any risk.\n\nMessage :\n' + error);
+        return this._keyDownCb(e);
+      } catch (_error) {
+        error = _error;
+        alert('A bug occured, we prefer to undo your last action not to take\
+                   any risk.\n\nMessage :\n' + error);
         e.preventDefault();
         return this.unDo();
       }
@@ -23182,58 +27604,53 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * Change the callback called by keydown event for the "test" callback.
-     * The aim is that during test we don't want to intercept errors so that 
+     * The aim is that during test we don't want to intercept errors so that
      * the test can detect the error.
     */
 
 
     CNeditor.prototype.registerKeyDownCbForTest = function() {
-      this.linesDiv.removeEventListener('keydown', this._keyDownCallBackTry, true);
-      this._keyDownCallBackTry = this._keyDownCallBack;
-      return this.linesDiv.addEventListener('keydown', this._keyDownCallBackTry, true);
+      this.linesDiv.removeEventListener('keydown', this._keyDownCbTry, true);
+      this._keyDownCbTry = this._keyDownCb;
+      return this.linesDiv.addEventListener('keydown', this._keyDownCbTry, true);
     };
 
-    /* ------------------------------------------------------------------------
-    #   _keyDownCallBack
-    # 
-    # The listener of keyPress event on the editor's iframe... the king !
+    /**------------------------------------------------------------------------
+     *
+     * The listener of keyPress event on the editor's iframe... the king !
+     *
+     * Params :
+     * e : the event object. Interesting attributes :
+     *   .which
+     *   .altKey
+     *   .ctrlKey
+     *   .metaKey
+     *   .shiftKey
+     *   .keyCode
+     *
+     * SHORTCUT
+     *
+     * Definition of a shortcut :
+     *   a combination alt,ctrl,shift,meta
+     *   + one caracter(.which)
+     *   or
+     *     arrow (.keyCode=dghb:) or
+     *     return(keyCode:13) or
+     *     bckspace (which:8) or
+     *     tab(keyCode:9)
+     *   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
+     *                   'Ctrl-'
     */
 
 
-    /*
-        # SHORTCUT
-        #
-        # Definition of a shortcut : 
-        #   a combination alt,ctrl,shift,meta
-        #   + one caracter(.which) 
-        #   or 
-        #     arrow (.keyCode=dghb:) or 
-        #     return(keyCode:13) or 
-        #     bckspace (which:8) or 
-        #     tab(keyCode:9)
-        #   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
-        #                   'Ctrl-'
-    */
+    CNeditor.prototype._keyDownCb = function(e) {
+      var sel, shortcut;
 
-
-    CNeditor.prototype._keyDownCallBack = function(e) {
-      var item, keyCode, metaKeyCode, sel, shortcut, _ref;
       if (!this.isEnabled) {
         return true;
       }
-      _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
-      shortcut = metaKeyCode + '-' + keyCode;
-      switch (e.keyCode) {
-        case 16:
-          e.preventDefault();
-          return;
-        case 17:
-          e.preventDefault();
-          return;
-        case 18:
-          e.preventDefault();
-          return;
-      }
+      this.getShortCut(e);
+      shortcut = this._shortcut.shortcut;
       if (this._lastKey !== shortcut && (shortcut === '-return' || shortcut === '-backspace' || shortcut === '-suppr' || shortcut === 'CtrlShift-down' || shortcut === 'CtrlShift-up' || shortcut === 'CtrlShift-left' || shortcut === 'CtrlShift-right' || shortcut === 'Ctrl-V' || shortcut === '-space' || shortcut === '-other')) {
         this._addHistory();
       }
@@ -23248,27 +27665,20 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         startBP: null,
         endBP: null
       };
+      if (this._hotString.isPreparing) {
+        if (this._hotString.keyDownCb(shortcut)) {
+          e.preventDefault();
+          return false;
+        }
+      }
       switch (shortcut) {
         case '-return':
-          if (this._auto.isVisible) {
-            item = this._auto.hide();
-            this._doHotStringAction(item);
-            return e.preventDefault();
-          } else {
-            this.updateCurrentSelIsStartIsEnd();
-            this._return();
-            this.newPosition = false;
-            e.preventDefault();
-            return this.editorTarget$.trigger(jQuery.Event('onChange'));
-          }
-          break;
+          this.updateCurrentSelIsStartIsEnd();
+          this._return();
+          this.newPosition = false;
+          e.preventDefault();
+          return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case '-backspace':
-          this.hotString = this.hotString.slice(0, -1);
-          if (this.hotString.length < 2) {
-            this._auto.hide();
-          } else {
-            this._auto.update(this.hotString.slice(2));
-          }
           this.updateCurrentSelIsStartIsEnd();
           this._backspace();
           this.newPosition = true;
@@ -23287,41 +27697,22 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           this._suppr(e);
           e.preventDefault();
           this.newPosition = true;
-          this.editorTarget$.trigger(jQuery.Event('onChange'));
-          this.hotString = '';
-          return this._auto.hide();
+          return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case 'CtrlShift-down':
           return e.preventDefault();
         case 'CtrlShift-up':
           return e.preventDefault();
         case '-up':
-          if (this._auto.isVisible) {
-            this._auto.up();
-            return e.preventDefault();
-          } else {
-            this._previousLineDiv = this.updateCurrentSel().startLineDiv;
-            this.newPosition = true;
-            return this.hotString = '';
-          }
-          break;
+          return this.newPosition = true;
         case '-down':
-          if (this._auto.isVisible) {
-            this._auto.down();
-            return e.preventDefault();
-          } else {
-            this.newPosition = true;
-            return this.hotString = '';
-          }
-          break;
+          return this.newPosition = true;
         case '-left':
         case '-right':
         case '-pgUp':
         case '-pgDwn':
         case '-end':
         case '-home':
-          this.newPosition = true;
-          this.hotString = '';
-          return this._auto.hide();
+          return this.newPosition = true;
         case 'Ctrl-A':
           selection.selectAll(this);
           return e.preventDefault();
@@ -23343,11 +27734,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             this.newPosition = false;
           }
           this.editorTarget$.trigger(jQuery.Event('onChange'));
-          this._detectTaskChange();
-          if (shortcut === '-space') {
-            return this.hotString = ' ';
-          }
-          break;
+          return this._detectTaskChange();
         case 'Ctrl-V':
           this.editorTarget$.trigger(jQuery.Event('onChange'));
           return true;
@@ -23369,9 +27756,120 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           this.reDo();
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case '-esc':
-          return this._auto.hide();
       }
+    };
+
+    CNeditor.prototype._keypressCb = function(e) {
+      return this._hotString.keypressCb(e);
+    };
+
+    /** -----------------------------------------------------------------------
+     * Detects where the carret is after a keyup in order to launch required
+     * actions :
+     * A/ correct the 2 following problems :
+     *   a- in order to keep the navigation with arrows working, we have to
+     *   insert a text in the buttons of tasks. That's why we have to remove the
+     *   carret from the button when the browser put it in a button.
+     *   b- in Chrome, the insertion of a caracter by the browser may be out of
+     *   a span.
+     *   This is du to a bug in Chrome : you can create a range with its start
+     *   break point in an empty span. But if you add this range to the
+     *   selection, then this latter will not respect your range and its start
+     *   break point will be outside the range. When a key is pressed to insert
+     *   a caracter, the browser inserts it at the start break point, ie outside
+     *   the span... this function detects after each keyup is there is a text
+     *   node outside a span and move its content and the carret.
+     * B/ edit meta data
+     * C/ Fire the editor onKeyUp event
+     * @param  {Event} e The key event
+    */
+
+
+    CNeditor.prototype._keyupCb = function(e) {
+      var brNode, curSel, endSeg, i, l, line, newCont, newSpan, node, nodes, rg, startSeg, t, _ref, _ref1, _ref2, _ref3;
+
+      if (this.isChromeOrSafari) {
+        curSel = this.updateCurrentSel();
+        line = curSel.startLine.line$[0];
+        nodes = line.childNodes;
+        l = nodes.length;
+        i = 0;
+        while (i < l) {
+          node = nodes[i];
+          if (node.nodeName === '#text') {
+            t = node.textContent;
+            if (node.previousSibling) {
+              if ((_ref = node.previousSibling.nodeName) === 'SPAN' || _ref === 'A') {
+                node.previousSibling.textContent += t;
+              } else {
+                throw new Error('A line should be constituted of\
+                                only <span> and <a>');
+              }
+            } else if (node.nextSibling) {
+              if ((_ref1 = node.nextSibling.nodeName) === 'SPAN' || _ref1 === 'A') {
+                node.nextSibling.textContent = t + node.nextSibling.textContent;
+              } else if ((_ref2 = node.nextSibling.nodeName) === 'BR') {
+                newSpan = document.createElement('span');
+                newSpan.textContent = t;
+                line.replaceChild(newSpan, node);
+                l += 1;
+                i += 1;
+              } else {
+                throw new Error('A line should be constituted of\
+                                only <span> and <a>');
+              }
+            } else {
+              throw new Error('A line should be constituted of a final\
+                                <br/>');
+            }
+            line.removeChild(node);
+            l -= 1;
+          } else {
+            i += 1;
+          }
+        }
+        if (nodes[l - 1].nodeName !== 'BR') {
+          brNode = document.createElement('br');
+          line.appendChild(brNode);
+        }
+      }
+      _ref3 = this.putSelectionInOrOutMetaSegment(), startSeg = _ref3[0], endSeg = _ref3[1], rg = _ref3[2];
+      switch (startSeg.dataset.type) {
+        case 'taskBtn':
+          if (e.keyCode === 37) {
+            line = selection.getLineDiv(startSeg, 0).previousSibling;
+            if (line) {
+              newCont = line.lastChild.previousSibling;
+              this._setCaret(newCont, newCont.childNodes.length);
+            } else {
+              this._setCaret(startSeg.nextSibling, 0);
+            }
+          } else {
+            this._setCaret(startSeg.nextSibling, 0);
+          }
+          break;
+        case 'contact':
+        case 'reminder':
+        case 'htag':
+          if (!this._hotString.isPreparing) {
+            this._hotString.edit(startSeg, rg);
+          }
+      }
+      if (this._hotString.isPreparing) {
+        if (startSeg === this._hotString._hsSegment) {
+          this._hotString.updateHs();
+        } else {
+          this._hotString.updateHs();
+          this._hotString.reset('current');
+        }
+      }
+      switch (this._shortcut.shortcut) {
+        case 'Ctrl-S':
+        case 'Ctrl-other':
+          return;
+      }
+      this.editorTarget$.trigger(jQuery.Event("onKeyUp"));
+      return true;
     };
 
     /** -----------------------------------------------------------------------
@@ -23383,14 +27881,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             startLineDiv     : the element corresponding to startLine
             endLineDiv       : the element corresponding to endLine
             isStartInTask    : {Boolean} True if the startLine is a task
-            rangeIsStartLine : {boolean} true if the selection ends at 
+            rangeIsStartLine : {boolean} true if the selection ends at
                                the end of its line : NOT UPDATE HERE - see
                                updateCurrentSelIsStartIsEnd
-            rangeIsEndLine   : {boolean} true if the selection starts at 
+            rangeIsEndLine   : {boolean} true if the selection starts at
                                the start of its line : NOT UPDATE HERE - see
                                updateCurrentSelIsStartIsEnd
-            theoricalRange   : theoricalRange : normalization of the selection 
-                               should put each break points in a node text. It 
+            theoricalRange   : theoricalRange : normalization of the selection
+                               should put each break points in a node text. It
                                doesn't work in chrome due to a bug. We therefore
                                store here the "theorical range" that the
                                selection should match. It means that if you are
@@ -23405,6 +27903,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.updateCurrentSel = function() {
       var endLine, endLineDiv, isStartInTask, newEndBP, newStartBP, range, sel, startLine, startLineDiv, theoricalRange, _ref;
+
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       if (this.newPosition || this.isChromeOrSafari) {
@@ -23437,7 +27936,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * updates @currentSel and check if range is at the start of begin of the
-     * corresponding line. 
+     * corresponding line.
      * @currentSel =
             sel              : {Selection} of the editor's document
             range            : sel.getRangeAt(0)
@@ -23446,12 +27945,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             startLineDiv     : the element corresponding to startLine
             endLineDiv       : the element corresponding to endLine
             isStartInTask    : {Boolean} True if the startLine is a task
-            rangeIsStartLine : {boolean} true if the selection ends at 
+            rangeIsStartLine : {boolean} true if the selection ends at
                                the end of its line.
-            rangeIsEndLine   : {boolean} true if the selection starts at 
+            rangeIsEndLine   : {boolean} true if the selection starts at
                                the start of its line.
-            theoricalRange   : theoricalRange : normalization of the selection 
-                               should put each break points in a node text. It 
+            theoricalRange   : theoricalRange : normalization of the selection
+                               should put each break points in a node text. It
                                doesn't work in chrome due to a bug. We therefore
                                store here the "theorical range" that the
                                selection should match. It means that if you are
@@ -23466,6 +27965,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.updateCurrentSelIsStartIsEnd = function() {
       var div, endContainer, endDiv, endLine, firstLineIsEnd, initialEndOffset, initialStartOffset, isEnd, isStart, isStartInTask, lastLineIsStart, newEndBP, newStartBP, range, rangeIsEndLine, rangeIsStartLine, sel, startContainer, startDiv, startLine, theoricalRange, _ref, _ref1, _ref2;
+
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       if (this.newPosition || this.isChromeOrSafari) {
@@ -23509,91 +28009,6 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * This function is called two correct 2 problems :
-     * A/ in order to keep the navigation with arrows working, we have to insert
-     * a text in the buttons of tasks. That's why we have to remove the carret 
-     * from the button when the browser put it in a button.
-     * B/ in Chrome, the insertion of a caracter by the browser may be out of a 
-     * span. 
-     * This is du to a bug in Chrome : you can create a range with its start 
-     * break point in an empty span. But if you add this range to the selection,
-     * then this latter will not respect your range and its start break point 
-     * will be outside the range. When a key is pressed to insert a caracter,
-     * the browser inserts it at the start break point, ie outside the span...
-     * this function detects after each keyup is there is a text node outside a
-     * span and move its content and the carret.
-     * @param  {Event} e The key event
-    */
-
-
-    CNeditor.prototype._keyUpCorrection = function(e) {
-      var brNode, container, curSel, i, l, line, newCont, newSpan, node, nodes, t, _ref, _ref1, _ref2;
-      container = this.document.getSelection().getRangeAt(0).startContainer;
-      if (container.nodeName !== 'SPAN') {
-        container = container.parentElement;
-      }
-      if (container.className === 'CNE_task_btn') {
-        if (e.keyCode === 37) {
-          line = selection.getLineDiv(container, 0).previousSibling;
-          if (line) {
-            newCont = line.lastChild.previousSibling;
-            this._setCaret(newCont, newCont.childNodes.length);
-          } else {
-            this._setCaret(container.nextSibling, 0);
-          }
-        } else {
-          this._setCaret(container.nextSibling, 0);
-        }
-      }
-      if (this.isChromeOrSafari) {
-        curSel = this.updateCurrentSel();
-        line = curSel.startLine.line$[0];
-        nodes = line.childNodes;
-        l = nodes.length;
-        i = 0;
-        while (i < l) {
-          node = nodes[i];
-          if (node.nodeName === '#text') {
-            t = node.textContent;
-            if (node.previousSibling) {
-              if ((_ref = node.previousSibling.nodeName) === 'SPAN' || _ref === 'A') {
-                node.previousSibling.textContent += t;
-              } else {
-                throw new Error('A line should be constituted of \
-                                  only <span> and <a>');
-              }
-            } else if (node.nextSibling) {
-              if ((_ref1 = node.nextSibling.nodeName) === 'SPAN' || _ref1 === 'A') {
-                node.nextSibling.textContent = t + node.nextSibling.textContent;
-              } else if ((_ref2 = node.nextSibling.nodeName) === 'BR') {
-                newSpan = document.createElement('span');
-                newSpan.textContent = t;
-                line.replaceChild(newSpan, node);
-                l += 1;
-                i += 1;
-              } else {
-                throw new Error('A line should be constituted of \
-                                  only <span> and <a>');
-              }
-            } else {
-              throw new Error('A line should be constituted of a final\
-                                  <br/>');
-            }
-            line.removeChild(node);
-            l -= 1;
-          } else {
-            i += 1;
-          }
-        }
-        if (nodes[l - 1].nodeName !== 'BR') {
-          brNode = document.createElement('br');
-          line.appendChild(brNode);
-        }
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
      * Check if the first range of the selection is NOT in the editor
      * @param  {Boolean}  expectWide [optional] If true, tests if the first
      *                               range of the selection is collapsed. If it
@@ -23604,6 +28019,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.hasNoSelection = function(expectWide) {
       var cont, rg, sel;
+
       sel = this.document.getSelection();
       if (sel.rangeCount > 0) {
         rg = sel.getRangeAt(0);
@@ -23644,6 +28060,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.strong = function() {
       var rg;
+
       if (!this.isEnabled || this.hasNoSelection(true)) {
         return true;
       }
@@ -23658,6 +28075,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.underline = function() {
       var rg;
+
       if (!this.isEnabled || this.hasNoSelection(true)) {
         return true;
       }
@@ -23672,6 +28090,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.linkifySelection = function() {
       var currentSel, range, rg, segments;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -23709,11 +28128,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     CNeditor.prototype._initUrlPopover = function() {
       var btnCancel, btnDelete, btnOK, pop, textInput, urlInput, _ref, _ref1,
         _this = this;
+
       pop = document.createElement('div');
       pop.id = 'CNE_urlPopover';
       pop.className = 'CNE_urlpop';
       pop.setAttribute('contenteditable', 'false');
-      pop.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">(Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
+      pop.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">\n        (Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
       pop.titleElt = pop.firstChild;
       pop.link = pop.getElementsByTagName('A')[0];
       _ref = pop.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
@@ -23741,7 +28161,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * Show, positionate and initialise the popover for link edition.
-     * @param  {array} segments  An array with the segments of 
+     * @param  {array} segments  An array with the segments of
      *                           the link [<a>,...<a>]. Must be created even if
      *                           it is a creation in order to put a background
      *                           on the segment where the link will be.
@@ -23753,6 +28173,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._showUrlPopover = function(segments, isLinkCreation) {
       var href, pop, seg, txt, _i, _j, _len, _len1;
+
       pop = this.urlPopover;
       this.disable();
       this.isUrlPopoverOn = true;
@@ -23788,7 +28209,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       pop.urlInput.focus();
       for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
         seg = segments[_j];
-        seg.style.backgroundColor = '#dddddd';
+        seg.classList.add('CNE_url_in_edition');
       }
       return true;
     };
@@ -23800,6 +28221,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._detectClickOutUrlPopover = function(e) {
       var isOut;
+
       isOut = e.target !== this.urlPopover && $(e.target).parents('#CNE_urlPopover').length === 0;
       if (isOut) {
         return this._cancelUrlPopover(true);
@@ -23810,13 +28232,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * Close the popover and revert modifications if isLinkCreation == true
      * @param  {boolean} doNotRestoreOginalSel If true, lets the caret at its
      *                                         position (used when you click
-     *                                         outside url popover in order not 
+     *                                         outside url popover in order not
      *                                         to loose the new selection)
     */
 
 
     CNeditor.prototype._cancelUrlPopover = function(doNotRestoreOginalSel) {
-      var pop, seg, segments, sel, serial, _i, _len;
+      var bp1, bp2, bps, lineDiv, pop, s0, s1, seg, segments, sel, _i, _len;
+
       pop = this.urlPopover;
       segments = pop.segments;
       this.editorBody.removeEventListener('mouseup', this._detectClickOutUrlPopover);
@@ -23824,17 +28247,26 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this.isUrlPopoverOn = false;
       for (_i = 0, _len = segments.length; _i < _len; _i++) {
         seg = segments[_i];
-        seg.style.removeProperty('background-color');
+        seg.classList.remove('CNE_url_in_edition');
       }
       if (pop.isLinkCreation) {
-        if (doNotRestoreOginalSel) {
-          serial = this.serializeSel();
-          this._forceUndo();
-          if (serial) {
-            this.deSerializeSelection(serial);
-          }
-        } else {
-          this._forceUndo();
+        s0 = segments[0];
+        s1 = segments[segments.length - 1];
+        bp1 = {
+          cont: s0,
+          offset: 0
+        };
+        bp2 = {
+          cont: s1,
+          offset: s1.childNodes.length
+        };
+        bps = [bp1, bp2];
+        selection.normalizeBPs(bps);
+        lineDiv = selection._getLineDiv(s0);
+        this._applyAhrefToSegments(s0, s1, bps, false, '');
+        this._fusionSimilarSegments(lineDiv, bps);
+        if (!doNotRestoreOginalSel) {
+          this.setSelectionBp(bp1, bp2);
         }
       } else if (!doNotRestoreOginalSel) {
         sel = this.document.getSelection();
@@ -23863,6 +28295,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._validateUrlPopover = function(event) {
       var bp, bp1, bp2, bps, i, l, lastSeg, lineDiv, parent, pop, rg, seg, segments, sel, _i, _j, _k, _len, _len1, _ref;
+
       if (event) {
         event.stopPropagation();
       }
@@ -23877,7 +28310,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this.isUrlPopoverOn = false;
       for (_i = 0, _len = segments.length; _i < _len; _i++) {
         seg = segments[_i];
-        seg.style.removeProperty('background-color');
+        seg.classList.remove('CNE_url_in_edition');
       }
       if (!pop.isLinkCreation) {
         sel = this.document.getSelection();
@@ -23935,6 +28368,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       i = i[1];
       bp = selection.normalizeBP(lineDiv, i + 1);
       this._fusionSimilarSegments(lineDiv, [bp]);
+      bp = this.insertSpaceAfterUrl(selection.getNestedSegment(bp.cont));
       this._setCaret(bp.cont, bp.offset);
       this.setFocus();
       this.enable();
@@ -23945,8 +28379,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Tests if a the start break point of the selection or of a range is in a 
-     * segment being a link. If yes returns the array of the segments 
+     * Tests if a the start break point of the selection or of a range is in a
+     * segment being a link. If yes returns the array of the segments
      * corresponding to the link starting in this bp, false otherwise.
      * The link can be composed of several segments, but they are on a single
      * line. Only the start break point is taken into account, not the end bp.
@@ -23959,6 +28393,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._getLinkSegments = function(rg) {
       var segment1, segments, sibling;
+
       if (!rg) {
         rg = this.currentSel.theoricalRange;
       }
@@ -23987,13 +28422,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * Applies a metadata such as STRONG, UNDERLINED, A/href etc... on the
      * selected text. The selection must not be collapsed.
      * @param  {string} metaData  The css class of the meta data or 'A' if link
-     * @param  {string} others... Other params if metadata requires 
+     * @param  {string} others... Other params if metadata requires
      *                            some (href for instance)
     */
 
 
     CNeditor.prototype._applyMetaDataOnSelection = function() {
-      var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, others, range, rg, rgEnd, rgStart, sel, _i, _j, _len, _len1;
+      var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, nextSegment, others, prevSegment, range, rangeIsToNormalize, rg, rgEnd, rgStart, seg, sel, _i, _j, _len, _len1;
+
       metaData = arguments[0], others = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
       currentSel = this.updateCurrentSelIsStartIsEnd();
       range = currentSel.theoricalRange;
@@ -24002,30 +28438,43 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       }
       line = currentSel.startLine;
       endLine = currentSel.endLine;
-      if (currentSel.firstLineIsEnd) {
-        if (line.line$[0].textContent !== '') {
+      if (range.startContainer.length !== 0 && range.startContainer.length === range.startOffset) {
+        seg = selection.getNestedSegment(range.startContainer);
+        nextSegment = selection.getNextSegment(seg);
+        if (nextSegment) {
+          range.setStartBefore(nextSegment.firstChild);
+          rangeIsToNormalize = true;
+        } else {
           line = line.lineNext;
           if (line === null) {
             return;
           }
           range.setStartBefore(line.line$[0].firstChild);
-          selection.normalize(range);
+          rangeIsToNormalize = true;
+        }
+      }
+      if (range.endContainer.length !== 0 && range.endOffset === 0) {
+        seg = selection.getNestedSegment(range.endContainer);
+        prevSegment = selection.getPrevSegment(seg);
+        if (prevSegment) {
+          range.setEndAfter(prevSegment.lastChild);
+          rangeIsToNormalize = true;
+        } else {
+          endLine = endLine.linePrev;
+          if (endLine === null) {
+            return;
+          }
+          range.setEndAfter(endLine.line$[0].lastChild);
+          rangeIsToNormalize = true;
           if (range.collapsed) {
             return;
           }
         }
       }
-      if (currentSel.lastLineIsStart) {
-        if (endLine.line$[0].textContent !== '') {
-          endLine = endLine.linePrev;
-          if (endLine === null) {
-            return;
-          }
-          range.setEndBefore(endLine.line$[0].lastChild);
-          selection.normalize(range);
-          if (range.collapsed) {
-            return;
-          }
+      if (rangeIsToNormalize) {
+        selection.normalize(range);
+        if (range.collapsed) {
+          return;
         }
       }
       if (metaData === 'A' && line !== endLine) {
@@ -24079,16 +28528,16 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Walk though the segments delimited by the range (which must be in a 
+     * Walk though the segments delimited by the range (which must be in a
      * single line) to check if the meta si on all of them.
      * @param  {range} range a range contained within a line. The range must be
      *                 normalized, ie its breakpoints must be in text nodes.
      * @param  {string} meta  The name of the meta data to look for. It can be
      *                        a css class ('CNE_strong' for instance), or a
      *                        metadata type ('A' for instance)
-     * @param  {string} href  Others parameters of the meta data type if 
+     * @param  {string} href  Others parameters of the meta data type if
      *                        required (href value for a 'A' meta)
-     * @return {boolean}       true if the meta data is already on all the 
+     * @return {boolean}       true if the meta data is already on all the
      *                         segments delimited by the range.
     */
 
@@ -24103,6 +28552,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._checkIfCSSIsEverywhere = function(range, CssClass) {
       var endSegment, segment, stopNext;
+
       segment = range.startContainer.parentNode;
       endSegment = range.endContainer.parentNode;
       stopNext = segment === endSegment;
@@ -24121,6 +28571,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._checkIfAhrefIsEverywhere = function(range, href) {
       var endSegment, segment, stopNext;
+
       segment = range.startContainer.parentNode;
       endSegment = range.endContainer.parentNode;
       stopNext = segment === endSegment;
@@ -24140,20 +28591,20 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     /** -----------------------------------------------------------------------
      * Add or remove a meta data to the segments delimited by the range. The
      * range must be within a single line and normalized (its breakpoints must
-     * be in text nodes). 
-     * @param  {range} range    The range on which we want to apply the 
+     * be in text nodes).
+     * @param  {range} range    The range on which we want to apply the
      *                          metadata. The range must be within a single line
      *                          and normalized (its breakpoints must be in text
      *                          nodes). The start breakpoint can not be at the
-     *                          end of the line, except in the case of an empty 
-     *                          line fully selected. Same for end breakpoint : 
-     *                          it can not be at the beginning of the line, 
-     *                          except in the case of an empty line fully 
+     *                          end of the line, except in the case of an empty
+     *                          line fully selected. Same for end breakpoint :
+     *                          it can not be at the beginning of the line,
+     *                          except in the case of an empty line fully
      *                          selected.
-     * @param  {boolean} addMeta  True if the action is to add the metaData, 
+     * @param  {boolean} addMeta  True if the action is to add the metaData,
      *                            False if the action is to remove it.
      * @param  {string} metaData The name of the meta data to look for. It can
-     *                           be a css class ('CNE_strong' for instance), 
+     *                           be a css class ('CNE_strong' for instance),
      *                           or a metadata type ('A' for instance)
      * @param {array} others Array of others params fot meta, can be [] but not
      *                       null (not optionnal)
@@ -24163,10 +28614,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
 
     CNeditor.prototype._applyMetaOnLineRange = function(range, addMeta, metaData, others) {
-      var bp1, bp2, bps, breakPoints, endSegment, frag1, frag2, isAlreadyMeta, lineDiv, rg, span, startSegment;
+      var bp1, bp2, bps, breakPoints, endSeg, frag1, frag2, isAlreadyMeta, lineDiv, rg, span, startSeg;
+
       lineDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-      startSegment = range.startContainer.parentNode;
-      endSegment = range.endContainer.parentNode;
+      startSeg = range.startContainer.parentNode;
+      endSeg = range.endContainer.parentNode;
       bp1 = {
         cont: range.startContainer,
         offset: range.startOffset
@@ -24179,42 +28631,42 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       if (bp1.offset === 0) {
 
       } else if (bp1.offset === bp1.cont.length) {
-        startSegment = startSegment.nextSibling;
-        if (startSegment === null || startSegment.nodeName === 'BR') {
+        startSeg = startSeg.nextSibling;
+        if (startSeg === null || startSeg.nodeName === 'BR') {
           return;
         }
       } else {
-        isAlreadyMeta = this._isAlreadyMeta(startSegment, metaData, others);
+        isAlreadyMeta = this._isAlreadyMeta(startSeg, metaData, others);
         if (isAlreadyMeta && !addMeta || !isAlreadyMeta && addMeta) {
           rg = range.cloneRange();
-          if (endSegment === startSegment) {
+          if (endSeg === startSeg) {
             frag1 = rg.extractContents();
-            span = document.createElement(startSegment.nodeName);
-            if (startSegment.className !== '') {
-              span.className = startSegment.className;
+            span = document.createElement(startSeg.nodeName);
+            if (startSeg.className !== '') {
+              span.className = startSeg.className;
             }
-            if (startSegment.nodeName === 'A') {
-              span.href = startSegment.href;
+            if (startSeg.nodeName === 'A') {
+              span.href = startSeg.href;
             }
             span = frag1.appendChild(span);
             span.appendChild(frag1.firstChild);
-            rg.setEndAfter(startSegment);
+            rg.setEndAfter(startSeg);
             frag2 = rg.extractContents();
             if (frag2.textContent !== '') {
               rg.insertNode(frag2);
             }
             rg.insertNode(frag1);
-            startSegment = span;
-            endSegment = startSegment;
-            bp1.cont = startSegment.firstChild;
+            startSeg = span;
+            endSeg = startSeg;
+            bp1.cont = startSeg.firstChild;
             bp1.offset = 0;
-            bp2.cont = endSegment.lastChild;
-            bp2.offset = endSegment.lastChild.length;
+            bp2.cont = endSeg.lastChild;
+            bp2.offset = endSeg.lastChild.length;
           } else {
-            rg.setEndAfter(startSegment);
+            rg.setEndAfter(startSeg);
             frag1 = rg.extractContents();
-            startSegment = frag1.firstChild;
-            bp1.cont = startSegment.firstChild;
+            startSeg = frag1.firstChild;
+            bp1.cont = startSeg.firstChild;
             bp1.offset = 0;
             rg.insertNode(frag1);
           }
@@ -24223,32 +28675,32 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       if (bp2.offset === bp2.cont.length) {
 
       } else if (bp2.offset === 0) {
-        endSegment = endSegment.previousSibling;
-        if (endSegment === null) {
+        endSeg = endSeg.previousSibling;
+        if (endSeg === null) {
           return;
         }
       } else {
-        isAlreadyMeta = this._isAlreadyMeta(endSegment, metaData, others);
+        isAlreadyMeta = this._isAlreadyMeta(endSeg, metaData, others);
         if (isAlreadyMeta && !addMeta || !isAlreadyMeta && addMeta) {
           rg = range.cloneRange();
-          rg.setStartBefore(endSegment);
+          rg.setStartBefore(endSeg);
           frag1 = rg.extractContents();
-          if (endSegment === startSegment) {
-            startSegment = frag1.firstChild;
-            bp1.cont = startSegment.firstChild;
+          if (endSeg === startSeg) {
+            startSeg = frag1.firstChild;
+            bp1.cont = startSeg.firstChild;
             bp1.offset = 0;
           }
-          endSegment = frag1.firstChild;
-          bp2.cont = endSegment.lastChild;
-          bp2.offset = endSegment.lastChild.length;
+          endSeg = frag1.firstChild;
+          bp2.cont = endSeg.lastChild;
+          bp2.offset = endSeg.lastChild.length;
           rg.insertNode(frag1);
         }
       }
       if (metaData === 'A') {
         bps = [bp1, bp2];
-        this._applyAhrefToSegments(startSegment, endSegment, bps, addMeta, others[0]);
+        this._applyAhrefToSegments(startSeg, endSeg, bps, addMeta, others[0]);
       } else {
-        this._applyCssToSegments(startSegment, endSegment, addMeta, metaData);
+        this._applyCssToSegments(startSeg, endSeg, addMeta, metaData);
       }
       this._fusionSimilarSegments(lineDiv, breakPoints);
       if (lineDiv.dataset.type === 'task') {
@@ -24260,12 +28712,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Test if a segment already has the meta : same type, same class and other 
+     * Test if a segment already has the meta : same type, same class and other
      * for complex meta (for instance href for <a>)
      * @param  {element}  segment  The segment to test
      * @param  {string}  metaData the type of meta data : A or a CSS class
      * @param  {array}  others   An array of the other parameter of the meta,
-     *                           for instance si metaData == 'A', 
+     *                           for instance si metaData == 'A',
      *                           others[0] == href
      * @return {Boolean}          True if the segment already have the meta data
     */
@@ -24280,14 +28732,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Applies or remove a meta data of type "A" (link) on a succession of 
+     * Applies or remove a meta data of type "A" (link) on a succession of
      * segments (from startSegment to endSegment which must be on the same line)
      * This fuction may let similar segments contiguous, the decision to fusion
      * is to be taken by the caller.
      * @param  {element} startSegment The first segment to modify
      * @param  {element} endSegment   The last segment to modify (must be in the
      *                                same line as startSegment)
-     * @param  {Array} bps          [{cont,offset}...] An array of breakpoints 
+     * @param  {Array} bps          [{cont,offset}...] An array of breakpoints
      *                              to update if their container is modified
      *                              while applying the meta data.
      * @param  {Boolean} addMeta      True to apply the meta, False to remove
@@ -24297,6 +28749,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._applyAhrefToSegments = function(startSegment, endSegment, bps, addMeta, href) {
       var a, bp, segment, span, stopNext, _i, _j, _len, _len1;
+
       segment = startSegment;
       stopNext = segment === endSegment;
       while (true) {
@@ -24340,7 +28793,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Applies or remove a CSS class to a succession of segments (from 
+     * Applies or remove a CSS class to a succession of segments (from
      * startsegment to endSegment which must be on the same line)
      * @param  {element} startSegment The first segment to modify
      * @param  {element} endSegment   The last segment to modify (must be in the
@@ -24352,6 +28805,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._applyCssToSegments = function(startSegment, endSegment, addMeta, cssClass) {
       var segment, stopNext;
+
       segment = startSegment;
       stopNext = segment === endSegment;
       while (true) {
@@ -24371,19 +28825,19 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * Walk through a line div in order to :
-     *   * Concatenate successive similar segments. Similar == same nodeName, 
+     *   * Concatenate successive similar segments. Similar == same nodeName,
      *     class and if required href.
      *   * Remove empty segments.
      * @param  {element} lineDiv     the DIV containing the line
-     * @param  {Array} breakPoints [{con,offset}...] array of respectively the 
-     *                              container and offset of the breakpoint to 
-     *                              update if cont is in a segment modified by 
-     *                              the fusion. 
-     *                              /!\ The breakpoint must be normalized, ie 
+     * @param  {Array} breakPoints [{cont,offset}...] array of respectively the
+     *                              container and offset of the breakpoint to
+     *                              update if cont is in a segment modified by
+     *                              the fusion.
+     *                              /!\ The breakpoint must be normalized, ie
      *                              containers must be in textnodes.
      *                              If the contener of a bp is deleted, then it
      *                              is put before the deleted segment. At the
-     *                              bp might be between segments, ie NOT 
+     *                              bp might be between segments, ie NOT
      *                              normalized since not in a textNode.
      * @return {Array}             A reference to the updated breakpoint.
     */
@@ -24391,6 +28845,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._fusionSimilarSegments = function(lineDiv, breakPoints) {
       var nextSegment, segment;
+
       segment = lineDiv.firstChild;
       nextSegment = segment.nextSibling;
       if (nextSegment.nodeName === 'BR') {
@@ -24420,20 +28875,21 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Removes a segment and returns a reference to previous sibling or, 
+     * Removes a segment and returns a reference to previous sibling or,
      * if doesn't exist, to the next sibling.
      * @param  {element} segment     The segment to remove. Must be in a line.
      * @param  {Array} breakPoints An Array of breakpoint to preserve : if its
      *                             is deleted, the bp is put before the deleted
      *                             segment (it is NOT normalized, since not in a
      *                             textNode)
-     * @return {element}       A reference to the previous sibling or, 
+     * @return {element}       A reference to the previous sibling or,
      *                         if doesn't exist, to the next sibling.
     */
 
 
     CNeditor.prototype._removeSegment = function(segment, breakPoints) {
       var bp, newRef, offset, _i, _j, _len, _len1;
+
       if (breakPoints.length > 0) {
         for (_i = 0, _len = breakPoints.length; _i < _len; _i++) {
           bp = breakPoints[_i];
@@ -24460,10 +28916,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * Imports the content of segment2 in segment1 and updates the breakpoint if
      * this on is  inside segment2
      * @param  {element} segment1    the segment in which the fusion operates
-     * @param  {element} segment2    the segement that will be imported in segment1
-     * @param  {Array} breakPoints [{con,offset}...] array of respectively the 
-     *                              container and offset of the breakpoint to 
-     *                              update if cont is in segment2. /!\ The 
+     * @param  {element} segment2    the segement that will be imported in
+     *                               segment1
+     * @param  {Array} breakPoints [{con,offset}...] array of respectively the
+     *                              container and offset of the breakpoint to
+     *                              update if cont is in segment2. /!\ The
      *                              breakpoint must be normalized, ie containers
      *                              must be in textnodes.
     */
@@ -24471,6 +28928,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._fusionSegments = function(segment1, segment2, breakPoints) {
       var bp, child, children, txtNode1, txtNode2, _i, _j, _len, _len1, _ref;
+
       children = Array.prototype.slice.call(segment2.childNodes);
       _ref = segment2.childNodes;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -24502,6 +28960,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._haveSameMeta = function(segment1, segment2) {
       var clas, list1, list2, _i, _len;
+
       if (segment1.nodeName !== segment2.nodeName) {
         return false;
       } else if (segment1.nodeName === 'A') {
@@ -24528,20 +28987,22 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     #  _suppr :
-    # 
+    #
     # Manage deletions when suppr key is pressed
     */
 
 
     CNeditor.prototype._suppr = function() {
       var bp, result, sel, startLine, startOffset, textNode, txt;
+
       sel = this.currentSel;
       startLine = sel.startLine;
       if (sel.range.collapsed) {
         if (sel.rangeIsEndLine) {
           if (startLine.lineNext !== null) {
             if (sel.startLineDiv.nextSibling.dataset.type === 'task') {
-              result = window.confirm('Do you want to remove the task ?');
+              result = window.confirm('Do you want to remove\
+                            the task ?');
               if (result) {
                 this._turneTaskIntoLine(sel.startLineDiv.nextSibling);
               } else {
@@ -24596,20 +29057,22 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     #  _backspace
-    # 
+    #
     # Manage deletions when backspace key is pressed
     */
 
 
     CNeditor.prototype._backspace = function() {
       var bp, cloneRg, result, sel, startLine, startOffset, textNode, txt;
+
       sel = this.currentSel;
       startLine = sel.startLine;
       if (sel.range.collapsed) {
         if (sel.rangeIsStartLine) {
           if (startLine.linePrev !== null) {
             if (sel.isStartInTask) {
-              result = window.confirm('Do you want to remove the task ?');
+              result = window.confirm('Do you want to remove the\
+                                                 task ?');
               if (result) {
                 this._turneTaskIntoLine(sel.startLineDiv);
                 this._setCaret(sel.startLineDiv, 0);
@@ -24671,6 +29134,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.titleList = function(l) {
       var endDiv, endLineID, line, range, startDiv, startDivID, _results;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -24709,7 +29173,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Turn selected lines or the one given in parameter in a 
+     * Turn selected lines or the one given in parameter in a
      * Marker List line (Tu)
      * @param  {Line} l [optional] The line to turn in to a Tu
     */
@@ -24717,6 +29181,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.markerList = function(l) {
       var endDiv, endLineID, line, range, startDiv, startDivID, _results;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -24756,7 +29221,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     #  _findDepthRel
-    # 
+    #
     # Calculates the relative depth of the line
     #   usage   : cycle : Tu => To => Lx => Th
     #   param   : line : the line we want to find the relative depth
@@ -24767,6 +29232,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findDepthRel = function(line) {
       var linePrev;
+
       if (line.lineDepthAbs === 1) {
         if (line.lineType[1] === "h") {
           return 0;
@@ -24796,6 +29262,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.toggleType = function() {
       var currentDepth, depthIsTreated, done, endDiv, endLineID, line, range, sel, startDiv;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -24829,6 +29296,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._toggleLineType = function(line) {
       var l, lineTypeTarget;
+
       switch (line.lineType) {
         case 'Tu':
           lineTypeTarget = 'Th';
@@ -24902,7 +29370,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Indent selection. History is incremented. 
+     * Indent selection. History is incremented.
      * @param  {[type]} l [description]
      * @return {[type]}   [description]
     */
@@ -24910,6 +29378,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.tab = function(l) {
       var endDiv, endLineID, line, range, sel, startDiv, _results;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -24939,6 +29408,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._tabLine = function(line) {
       var depthAbsTarget, nextSib, nextSibType, prevSib, prevSibType, prevSibling, typeTarget;
+
       switch (line.lineType) {
         case 'Tu':
         case 'Th':
@@ -24978,6 +29448,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._chooseTypeTarget = function(prevSibType, nextSibType) {
       var typeTarget;
+
       if ((prevSibType === nextSibType && nextSibType === null)) {
         typeTarget = 'Tu';
       } else if (prevSibType === nextSibType) {
@@ -25000,6 +29471,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.shiftTab = function(range) {
       var endDiv, endLineID, line, sel, startDiv;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -25030,16 +29502,17 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
 
     CNeditor.prototype._shiftTabLine = function(line) {
-      var depthAbsTarget, nextL, nextSib, nextSibType, parent, prevSib, prevSibType, typeTarget;
+      var depthAbsTarget, nextL, nextSib, nextSibType, parnt, prevSib, prevSibType, typeTarget;
+
       switch (line.lineType) {
         case 'Tu':
         case 'Th':
         case 'To':
-          parent = line.linePrev;
-          while (parent !== null && parent.lineDepthAbs >= line.lineDepthAbs) {
-            parent = parent.linePrev;
+          parnt = line.linePrev;
+          while (parnt !== null && parnt.lineDepthAbs >= line.lineDepthAbs) {
+            parnt = parnt.linePrev;
           }
-          if (parent === null) {
+          if (parnt === null) {
             return;
           }
           if ((line.lineNext != null) && line.lineNext.lineType[0] === 'L' && line.lineNext.lineDepthAbs === line.lineDepthAbs) {
@@ -25056,10 +29529,10 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
               nextL.setType('T' + nextL.lineType[1]);
             }
           }
-          typeTarget = parent.lineType;
+          typeTarget = parnt.lineType;
           typeTarget = "L" + typeTarget.charAt(1);
           line.lineDepthAbs -= 1;
-          line.lineDepthRel -= parent.lineDepthRel;
+          line.lineDepthRel -= parnt.lineDepthRel;
           break;
         case 'Lh':
         case 'Lu':
@@ -25077,6 +29550,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.adjustSiblingsToType = function(line) {
       var lineIt, _results;
+
       lineIt = line;
       _results = [];
       while (true) {
@@ -25096,13 +29570,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Return on the carret position. Selection must be normalized but not 
+     * Return on the carret position. Selection must be normalized but not
      * necessarily collapsed.
     */
 
 
     CNeditor.prototype._return = function() {
       var bp1, currSel, dh, endLine, endOfLineFragment, isInTask, l, newLine, p, rg, startLine, _ref;
+
       currSel = this.currentSel;
       startLine = currSel.startLine;
       endLine = currSel.endLine;
@@ -25183,13 +29658,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._getSelectedLineDiv = function() {
       var cont;
+
       cont = this.document.getSelection().getRangeAt(0).startContainer;
       return selection.getLineDiv(cont);
     };
 
     /* ------------------------------------------------------------------------
     #  _findParent1stSibling
-    # 
+    #
     # find the sibling line of the parent of line that is the first of the list
     # ex :
     #   . Sibling1 <= _findParent1stSibling(line)
@@ -25204,6 +29680,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findParent1stSibling = function(line) {
       var lineDepthAbs, linePrev;
+
       lineDepthAbs = line.lineDepthAbs;
       linePrev = line.linePrev;
       if (linePrev === null) {
@@ -25235,7 +29712,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findNextSibling = function(line, depth) {
       var nextSib;
-      if (!(depth != null)) {
+
+      if (depth == null) {
         depth = line.lineDepthAbs;
       }
       nextSib = line.lineNext;
@@ -25264,6 +29742,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findPrevSiblingT = function(line, depth) {
       var prevSib;
+
       if (!depth) {
         depth = line.lineDepthAbs;
       }
@@ -25292,6 +29771,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findPrevSibling = function(line, depth) {
       var prevSib;
+
       if (!depth) {
         depth = line.lineDepthAbs;
       }
@@ -25309,25 +29789,28 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-    # Delete the user multi line selection :
-    #    * The 2 lines (selected or given in param) must be distinct
-    #    * If no params :
-    #        - @currentSel.theoricalRange will the range used to find the  
-    #          lines to delete. 
-    #        - Only the range is deleted, not the beginning of startline nor the
-    #          end of endLine
-    #        - the caret is positionned at the firts break point of range.
-    #    * if startLine and endLine is given
-    #       - the whole lines from start and endLine are deleted, both included.
-    #       - the caret position is not updated by this function.
-    # @param  {[line]} startLine [optional] if exists, the whole line will be deleted
-    # @param  {[line]} endLine   [optional] if exists, the whole line will be deleted
-    # @return {[none]}           [nothing]
+     * Delete the user multi line selection :
+     *   * The 2 lines (selected or given in param) must be distinct
+     *   * If no params :
+     *       - @currentSel.theoricalRange will the range used to find the
+     *         lines to delete.
+     *       - Only the range is deleted, not the beginning of startline nor the
+     *         end of endLine
+     *       - the caret is positionned at the firts break point of range.
+     *   * if startLine and endLine is given
+     *      - the whole lines from start and endLine are deleted, both included.
+     *      - the caret position is not updated by this function.
+     * @param  {[line]} startLine [optional] if exists, the whole line will be
+     *                                       deleted
+     * @param  {[line]} endLine   [optional] if exists, the whole line will be
+     *                                       deleted
+     * @return {[none]}           [nothing]
     */
 
 
     CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
       var bp, currentDelta, deltaInserted, endLineDepth, endOfLineFragment, firstNextLine, firstNextLineDepth, line, range, replaceCaret, startContainer, startLineDepth, startOffset;
+
       if (startLine === null || endLine === null) {
         throw new Error('CEeditor._deleteMultiLinesSelections called with a null param');
       }
@@ -25388,18 +29871,19 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * This function goes throught these lines to correct their depth.
      * @param  {Line} startLine     The first line after the bloc of inserted or
      *                              deleted lines
-     * @param  {Number} deltaInserted Delta of depth between the first line of 
+     * @param  {Number} deltaInserted Delta of depth between the first line of
      *                                the block and its last one.
-     * @param  {number} currentDelta  Delta of depth between the last line of 
+     * @param  {number} currentDelta  Delta of depth between the last line of
      *                                the block (startLine) and the following.
-     * @param  {Number} minDepth      The depth under wich (this one included) 
-     *                                we are sure the structure is valid and 
+     * @param  {Number} minDepth      The depth under wich (this one included)
+     *                                we are sure the structure is valid and
      *                                there is no need to check.
     */
 
 
     CNeditor.prototype._adaptDepth = function(startLine, deltaInserted, currentDelta, minDepth) {
       var firstNextLine, lineIt;
+
       if (startLine.lineNext === null) {
         return;
       }
@@ -25416,6 +29900,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._adaptType = function(startLine) {
       var lineIt, prev;
+
       lineIt = startLine.lineNext;
       while (lineIt !== null) {
         prev = this._findPrevSibling(lineIt);
@@ -25433,6 +29918,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._unIndentBlock = function(firstLine, delta) {
       var firstLineDepth, line, newDepth;
+
       line = firstLine;
       firstLineDepth = firstLine.lineDepthAbs;
       newDepth = Math.max(1, line.lineDepthAbs - delta);
@@ -25447,6 +29933,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._addMissingFragment = function(line, fragment) {
       var lastNode, lineEl, newText, node, startFrag, startOffset, _ref;
+
       startFrag = fragment.childNodes[0];
       lineEl = line.line$[0];
       if (lineEl.lastChild === null) {
@@ -25480,6 +29967,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._adaptEndLineType = function(startLine, endLine, endLineDepthAbs) {
       var deltaDepth, endType, line, newDepth, startType, _results, _results1, _results2;
+
       endType = endLine.lineType;
       startType = startLine.lineType;
       deltaDepth = endLineDepthAbs - startLine.lineDepthAbs;
@@ -25522,19 +30010,20 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Put caret at given position. The break point will be normalized (ie put 
+     * Put caret at given position. The break point will be normalized (ie put
      * in the closest text node).
      * @param {element} startContainer Container of the break point
      * @param {number} startOffset    Offset of the break point
-     * @param  {boolean} preferNext [optional] if true, in case BP8, we will choose
-     *                              to go in next sibling - if it exists - rather 
-     *                              than in the previous one.
+     * @param  {boolean} preferNext [optional] if true, in case BP8, we will
+     *                              choose to go in next sibling - if exists -
+     *                              rather than in the previous one.
      * @return {Object} {cont,offset} the normalized break point
     */
 
 
     CNeditor.prototype._setCaret = function(startContainer, startOffset, preferNext) {
       var bp, range, sel;
+
       bp = selection.normalizeBP(startContainer, startOffset, preferNext);
       range = this.document.createRange();
       range.setStart(bp.cont, bp.offset);
@@ -25547,6 +30036,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._setCaretAfter = function(elemt) {
       var index, nextEl, parent;
+
       nextEl = elemt;
       while (nextEl.nextSibling === null) {
         nextEl = nextEl.parentElement;
@@ -25566,6 +30056,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._setSelectionOnNode = function(node) {
       var range, sel;
+
       range = this.document.createRange();
       range.selectNodeContents(node);
       selection.normalize(range);
@@ -25575,8 +30066,9 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return true;
     };
 
-    CNeditor.prototype._setSelection = function(startContainer, startOffset, endContainer, endOffset) {
+    CNeditor.prototype.setSelection = function(startContainer, startOffset, endContainer, endOffset) {
       var range, sel;
+
       range = this.document.createRange();
       range.setStart(startContainer, startOffset);
       range.setEnd(endContainer, endOffset);
@@ -25587,13 +30079,62 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return true;
     };
 
+    CNeditor.prototype.setSelectionFromRg = function(range, preferNext) {
+      var sel;
+
+      selection.normalize(range, preferNext);
+      sel = this.document.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return true;
+    };
+
+    CNeditor.prototype.setSelectionBp = function(bp1, bp2) {
+      var range, sel;
+
+      range = this.document.createRange();
+      range.setStart(bp1.cont, bp1.offset);
+      range.setEnd(bp2.cont, bp2.offset);
+      selection.normalize(range);
+      sel = this.document.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return true;
+    };
+
+    CNeditor.prototype.putSelectionInOrOutMetaSegment = function() {
+      var endSeg, rg, selIsChanged, startSeg;
+
+      rg = this.document.getSelection().getRangeAt(0);
+      startSeg = selection.getSegment(rg.startContainer);
+      endSeg = selection.getSegment(rg.endContainer);
+      if (startSeg.dataset.type) {
+        if (startSeg !== endSeg) {
+          rg.setStartBefore(startSeg);
+          selIsChanged = true;
+        }
+      }
+      if (endSeg.dataset.type) {
+        if (endSeg !== startSeg) {
+          rg.setEndAfter(endSeg);
+          selIsChanged = true;
+        }
+      }
+      if (selIsChanged) {
+        this.setSelectionFromRg(rg, true);
+        startSeg = selection.getSegment(rg.startContainer);
+        endSeg = selection.getSegment(rg.endContainer);
+      }
+      return [startSeg, endSeg, rg];
+    };
+
     /* ------------------------------------------------------------------------
     #  _insertLineAfter
-    # 
+    #
     # Insert a line after a source line
-    # The line will be inserted in the parent of the source line (which can be 
+    # The line will be inserted in the parent of the source line (which can be
     # the editor or a fragment in the case of the paste for instance)
-    # p = 
+    # p =
     #     sourceLine         : line after which the line will be added
     #     fragment           : [optionnal] - an html fragment that will be added
     #                          in the div of the line.
@@ -25607,15 +30148,16 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertLineAfter = function(p) {
       var newLine;
+
       newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, p.sourceLine, null, p.fragment);
       return newLine;
     };
 
     /* ------------------------------------------------------------------------
     #  _insertLineBefore
-    # 
+    #
     # Insert a line before a source line
-    # p = 
+    # p =
     #     sourceLine         : Line before which a line will be added
     #     fragment           : [optionnal] - an html fragment that will be added
     #                          the fragment is not supposed to end with a <br>
@@ -25627,19 +30169,21 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertLineBefore = function(p) {
       var newLine;
+
       newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, null, p.sourceLine, p.fragment);
       return newLine;
     };
 
     /*  -----------------------------------------------------------------------
     #   _readHtml
-    # 
+    #
     # Parse a raw html inserted in the iframe in order to update the controller
     */
 
 
     CNeditor.prototype._readHtml = function() {
       var deltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, txt, _i, _len, _ref;
+
       linesDiv$ = $(this.linesDiv).children();
       lineDepthAbs = 0;
       lineDepthRel = 0;
@@ -25687,6 +30231,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           }
         }
         if (htmlLine.dataset.type === 'task') {
+          if (this.isChromeOrSafari) {
+            htmlLine.firstChild.textContent = ' ';
+          } else {
+            htmlLine.firstChild.textContent = '\u00a0';
+          }
           this._setTaskToLine(htmlLine);
         }
       }
@@ -25695,7 +30244,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     # LINES MOTION MANAGEMENT
-    # 
+    #
     # Functions to perform the motion of an entire block of lines
     # BUG : when doubleclicking on an end of line then moving this line
     #       down, selection does not behave as expected :-)
@@ -25729,6 +30278,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._moveLinesDown = function() {
       var cloneLine, endDiv, endLineID, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
+
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
@@ -25829,6 +30379,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._moveLinesUp = function() {
       var cloneLine, endDiv, endLineID, isSecondLine, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
+
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
@@ -25911,18 +30462,18 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /*
-        #  HISTORY MANAGEMENT:
-        # 1. _addHistory (Save html code, selection markers, positions...)
-        # 2. undoPossible (Return true only if unDo can be called)
-        # 3. redoPossible (Return true only if reDo can be called)
-        # 4. unDo (Undo the previous action)
-        # 5. reDo ( Redo a undo-ed action)
-        #
-        # What is saved in the history:
-        #  - current html content
-        #  - current selection
-        #  - current scrollbar position
-        #  - the boolean newPosition
+    #  HISTORY MANAGEMENT:
+    # 1. _addHistory (Save html code, selection markers, positions...)
+    # 2. undoPossible (Return true only if unDo can be called)
+    # 3. redoPossible (Return true only if reDo can be called)
+    # 4. unDo (Undo the previous action)
+    # 5. reDo ( Redo a undo-ed action)
+    #
+    # What is saved in the history:
+    #  - current html content
+    #  - current selection
+    #  - current scrollbar position
+    #  - the boolean newPosition
     */
 
 
@@ -25934,7 +30485,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._addHistory = function() {
       var i, savedScroll, savedSel;
-      if (this.isUrlPopoverOn || this.isAutoCompleteOn) {
+
+      if (this.isUrlPopoverOn || this._hotString.isPreparing) {
         return;
       }
       if (this._history.index < this.HISTORY_SIZE - 1) {
@@ -25968,6 +30520,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._initHistory = function() {
       var HISTORY_SIZE, h;
+
       HISTORY_SIZE = this.HISTORY_SIZE;
       h = this._history;
       h.history = new Array(HISTORY_SIZE);
@@ -25997,11 +30550,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.undoPossible = function() {
       var i;
+
       i = this._history.index;
       return i >= 0 && this._history.historyPos[i] !== void 0;
     };
 
-    /* -------------------------------------------------------------------------
+    /* ------------------------------------------------------------------------
     #  redoPossible
     # Return true only if reDo can be called
     */
@@ -26018,12 +30572,16 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.unDo = function() {
       if (this.undoPossible() && this.isEnabled) {
+        if (this._hotString.isPreparing) {
+          this._hotString.reset(false);
+        }
         return this._forceUndo();
       }
     };
 
     CNeditor.prototype._forceUndo = function() {
       var savedScroll, savedSel, stepIndex;
+
       if (this._history.index === this._history.history.length - 1) {
         this._addHistory();
         this._history.index -= 1;
@@ -26053,6 +30611,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.reDo = function() {
       var i, index, savedSel, xcoord, ycoord;
+
       if (this.redoPossible() && this.isEnabled) {
         index = (this._history.index += 1);
         i = index + 1;
@@ -26081,6 +30640,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.__printHistory = function(txt) {
       var arrow, content, i, step, _i, _len, _ref;
+
       if (!txt) {
         txt = '';
       }
@@ -26112,6 +30672,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.deSerializeRange = function(serial, rootNode) {
       var endCont, endPath, i, offset, parentCont, range, serials, startCont, startPath;
+
       if (!rootNode) {
         rootNode = this.linesDiv;
       }
@@ -26147,7 +30708,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Serialize a range. 
+     * Serialize a range.
      * The breakpoint are 2 strings separated by a comma.
      * Structure of a serialized bp : {offset}{/index}*
      * Global struct : {startOffset}{/index}*,{endOffset}{/index}*
@@ -26156,13 +30717,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      *                            If none, we use the body of the ownerDocument
      *                            of range.startContainer
      * @return {String}          The string, exemple : "10/0/2/1,3/1", or false
-     *                           if the rootNode is not a parent of one of the 
+     *                           if the rootNode is not a parent of one of the
      *                           range's break point.
     */
 
 
     CNeditor.prototype.serializeRange = function(range, rootNode) {
       var i, node, res, sib;
+
       if (!rootNode) {
         rootNode = this.linesDiv;
       }
@@ -26201,6 +30763,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.serializeSel = function() {
       var s;
+
       s = this.document.getSelection();
       if (s.rangeCount === 0) {
         return false;
@@ -26210,6 +30773,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.deSerializeSelection = function(serial) {
       var sel;
+
       sel = this.document.getSelection();
       sel.removeAllRanges();
       return sel.addRange(this.deSerializeRange(serial));
@@ -26217,7 +30781,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     # EXTENSION  :  auto-summary management and upkeep
-    # 
+    #
     # initialization
     # TODO: avoid updating the summary too often
     #       it would be best to make the update faster (rather than reading
@@ -26227,6 +30791,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._initSummary = function() {
       var summary;
+
       summary = this.editorBody$.children("#navi");
       if (summary.length === 0) {
         summary = $(document.createElement('div'));
@@ -26238,12 +30803,13 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._buildSummary = function() {
       var c, lines, summary, _results;
+
       summary = this.initSummary();
       this.editorBody$.children("#navi").children().remove();
       lines = this._lines;
       _results = [];
       for (c in lines) {
-        if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th") {
+        if (this.editorBody$.children('#' + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th") {
           _results.push(lines[c].line$.clone().appendTo(summary));
         } else {
           _results.push(void 0);
@@ -26271,6 +30837,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.paste = function(event) {
       var mySandBox, range, sel;
+
       mySandBox = this.clipboard;
       this.updateCurrentSelIsStartIsEnd();
       range = this.document.createRange();
@@ -26311,6 +30878,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._initClipBoard = function() {
       var clipboardEl, getOffTheScreen;
+
       clipboardEl = document.createElement('div');
       clipboardEl.setAttribute('contenteditable', 'true');
       clipboardEl.id = 'editor-clipboard';
@@ -26332,7 +30900,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * Function that will call itself until the browser has pasted data in the
      * clipboar div
      * @param  {element} sandbox      the div where the browser will paste data
-     * @param  {function} processpaste the function to call back whan paste 
+     * @param  {function} processpaste the function to call back whan paste
      * is ok
     */
 
@@ -26346,13 +30914,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Called when the browser has pasted data in the clipboard div. 
+     * Called when the browser has pasted data in the clipboard div.
      * Its role is to insert the content of the clipboard into the editor.
     */
 
 
     CNeditor.prototype._processPaste = function() {
       var absDepth, bp, br, childNodes, currSel, currentDelta, currentLineFrag, deltaInserted, domWalkContext, dummyLine, endLine, endTargetLineFrag, firstAddedLine, frag, htmlStr, l, lastAdded, lastAddedDepth, lastFragLine, lineElements, lineNextStartLine, n, parendDiv, range, sandbox, secondAddedLine, segToInsert, startLine, startLineDepth, startOffset, targetNode, _i, _j, _len;
+
       sandbox = this.clipboard;
       currSel = this.currentSel;
       sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
@@ -26382,12 +30951,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       sandbox.innerHTML = "";
       frag.removeChild(frag.firstChild);
       /*
-              # TODO : the following steps removes all the styles of the lines in frag
-              # Later this will be removed in order to take into account styles.
+      # TODO : the following steps removes all the styles of the lines in frag
+      # Later this will be removed in order to take into account styles.
       */
 
       /*
-              # END TODO
+      # END TODO
       */
 
       startLine = currSel.startLine;
@@ -26435,8 +31004,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       targetNode = bp.cont;
       startOffset = bp.offset;
       /*
-              # 6- If the clipboard has more than one line, insert the end of target
-              #    line in the last line of frag and delete it
+      # 6- If the clipboard has more than one line, insert the end of target
+      #    line in the last line of frag and delete it
       */
 
       if (frag.childNodes.length > 1) {
@@ -26465,7 +31034,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         }
       }
       /*
-               * remove the firstAddedLine from the fragment
+       * remove the firstAddedLine from the fragment
       */
 
       firstAddedLine = dummyLine.lineNext;
@@ -26477,7 +31046,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         delete this._lines[firstAddedLine.lineID];
       }
       /*
-               * 7- updates nextLine and prevLines, insert frag in the editor
+       * 7- updates nextLine and prevLines, insert frag in the editor
       */
 
       if (secondAddedLine != null) {
@@ -26493,7 +31062,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         }
       }
       /*
-               * 8- Adapt lines depth and type.
+       * 8- Adapt lines depth and type.
       */
 
       lastAdded = domWalkContext.lastAddedLine;
@@ -26506,18 +31075,18 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         this._adaptType(currSel.startLine);
       }
       /*
-               * 9- position caret
+       * 9- position caret
       */
 
       return bp = this._setCaret(bp.cont, bp.offset);
     };
 
     /** -----------------------------------------------------------------------
-     * Insert segment at the position of the breakpoint. 
+     * Insert segment at the position of the breakpoint.
      * /!\ The bp is updated but not normalized. The break point will between 2
      * segments if the insertion splits a segment in two. This is normal. If you
      * want to have a break point normalized (ie in a text node), then you have
-     * to do it afterwards. 
+     * to do it afterwards.
      * /!\ If the inserted segment should be fusionned with its similar sibling,
      * you have to run _fusionSimilarSegments() over the whole line after the
      * insertion.
@@ -26531,6 +31100,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertSegment = function(newSeg, bp) {
       var targetNode, targetSeg;
+
       targetNode = bp.cont;
       targetSeg = selection.getSegment(targetNode);
       if (targetSeg.nodeName === 'DIV') {
@@ -26552,6 +31122,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertTextInSegment = function(txt, bp, targetSeg) {
       var newText, offset, targetText;
+
       if (txt === '') {
         return true;
       }
@@ -26572,6 +31143,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._splitAndInsertSegment = function(newSegment, bp, targetSeg) {
       var children, frag, i, rg;
+
       if (!targetSeg) {
         targetSeg = selection.getSegment(bp.cont);
       }
@@ -26599,6 +31171,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertSegmentAfterSeg = function(seg) {
       var span, txt;
+
       span = document.createElement('SPAN');
       txt = document.createTextNode('\u00a0');
       span.appendChild(txt);
@@ -26606,18 +31179,75 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return span;
     };
 
+    /**
+     * returns a break point, collapsed after a space caracter immediately
+     * following a given segment. A segment will we inserted if required.
+     * @param  {[type]} seg [description]
+     * @return {[type]}     [description]
+    */
+
+
+    CNeditor.prototype.insertSpaceAfterSeg = function(seg) {
+      var bp, c1, index, nextSeg, span, txtNode;
+
+      nextSeg = seg.nextSibling;
+      if (nextSeg.nodeName === 'BR') {
+        span = this._insertSegmentAfterSeg(seg);
+        bp = {
+          cont: span.firstChild,
+          offset: 1
+        };
+      } else {
+        index = selection.getSegmentIndex(seg)[1] + 1;
+        bp = selection.normalizeBP(seg.parentElement, index, true);
+        txtNode = bp.cont;
+        c1 = txtNode.textContent[0];
+        if (!(c1 === ' ' || c1 === '\u00a0')) {
+          txtNode.textContent = '\u00a0' + txtNode.textContent;
+        }
+        bp.offset = 1;
+      }
+      return bp;
+    };
+
+    /**
+     * returns a break point, collapsed after a space caracter immediately
+     * following a given segment. A segment will we inserted if required.
+     * @param  {[type]} seg [description]
+     * @return {Object}     {cont,offset} : the break point
+    */
+
+
+    CNeditor.prototype.insertSpaceAfterUrl = function(seg) {
+      var bp, index, nextSeg, span, txtNode;
+
+      nextSeg = seg.nextSibling;
+      if (nextSeg.nodeName === 'BR') {
+        span = this._insertSegmentAfterSeg(seg);
+        bp = {
+          cont: span.firstChild,
+          offset: 1
+        };
+      } else {
+        index = selection.getSegmentIndex(seg)[1] + 1;
+        bp = selection.normalizeBP(seg.parentElement, index, true);
+        txtNode = bp.cont;
+        bp.offset = 0;
+      }
+      return bp;
+    };
+
     /** -----------------------------------------------------------------------
      * Walks thoug an html tree in order to convert it in a strutured content
      * that fit to a note structure.
      * @param  {html element} elemt   Reference to an html element to be parsed
-     * @param  {object} context _domWalk is recursive and its context of execution
-     *                  is kept in this param instead of using the editor context
-     *                  (quicker and better) isolation
+     * @param  {object} context context of execution of _domWalk (recursive).
     */
 
 
     CNeditor.prototype._domWalk = function(elemt, context) {
       var p;
+
       this.__domWalk(elemt, context);
       if (context.currentLineFrag.childNodes.length > 0) {
         p = {
@@ -26634,17 +31264,18 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     /** -----------------------------------------------------------------------
      * Walks thoug an html tree in order to convert it in a strutured content
      * that fit to a note structure.
-     * @param  {html element} nodeToParse   Reference to an html element to 
+     * @param  {html element} nodeToParse   Reference to an html element to
      *                        be parsed
-     * @param  {object} context __domWalk is recursive and its context of 
-     *                          execution is kept in this param instead of 
-     *                          using the editor context (faster and better 
+     * @param  {object} context __domWalk is recursive and its context of
+     *                          execution is kept in this param instead of
+     *                          using the editor context (faster and better
      *                          isolation)
     */
 
 
     CNeditor.prototype.__domWalk = function(nodeToParse, context) {
       var aNode, absDepth, child, clas, classes, deltaHxLevel, lastInsertedEl, newClass, prevHxLevel, spanEl, spanNode, txtNode, _i, _j, _len, _len1, _ref, _ref1;
+
       absDepth = context.absDepth;
       prevHxLevel = context.prevHxLevel;
       _ref = nodeToParse.childNodes;
@@ -26753,6 +31384,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._appendCurrentLineFrag = function(context, absDepth, relDepth) {
       var p, spanNode;
+
       if (context.currentLineFrag.childNodes.length === 0) {
         spanNode = document.createElement('span');
         spanNode.appendChild(document.createTextNode(''));
@@ -26773,13 +31405,15 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * Insert in the editor a line that was copied in a cozy note editor
-     * @param  {html element} elemt a div ex : <div id="CNID_7" class="Lu-3"> ... </div>
-     * @return {line}        a ref to the line object
+     * @param  {Element} elemt A div
+     *                         ex : <div id="CNID_7" class="Lu-3"> ... </div>
+     * @return {Line}          A ref to the line object
     */
 
 
     CNeditor.prototype._clipBoard_Insert_InternalLine = function(elemt, context) {
       var deltaDepth, elemtFrag, i, lineClass, lineDepthAbs, n, p, seg, span;
+
       lineClass = elemt.className.split('-');
       lineDepthAbs = +lineClass[1];
       lineClass = lineClass[0];
@@ -26818,14 +31452,102 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return context.lastAddedLine = this._insertLineAfter(p);
     };
 
+    /**
+     * Called by the hotString controler when return is hit or when an item of
+     * the auto complete is clicked.
+     * @param  {Object} autoItem {text:'value', type:'reminder'|'contact'|...}
+     * @return {[type]}          [description]
+    */
+
+
+    CNeditor.prototype.doHotStringAction = function(autoItem) {
+      var bp, d, date, format, h, hs, m, mn, reg, taskDiv, txt, y;
+
+      hs = this._hotString;
+      if (!autoItem) {
+        hs.reset(true);
+        return true;
+      }
+      switch (autoItem.type) {
+        case 'ttag':
+          return this.doHotStringAction({
+            type: 'todo'
+          });
+        case 'todo':
+          taskDiv = this._turnIntoTask();
+          if (taskDiv) {
+            txt = taskDiv.textContent.trim();
+            reg = new RegExp('^ *@?t?o?d?o? *$', 'i');
+            if (txt.match(reg)) {
+              this._initTaskContent(taskDiv);
+            } else {
+              hs._forceUserHotString('', []);
+            }
+            hs.reset(false);
+            this.editorTarget$.trigger(jQuery.Event('onChange'));
+            return true;
+          }
+          break;
+        case 'contact':
+          hs._forceUserHotString(autoItem.text, []);
+          hs._hsSegment.classList.add('CNE_contact');
+          hs._hsSegment.dataset.type = 'contact';
+          hs._hsSegment.classList.remove('CNE_hot_string');
+          bp = this.insertSpaceAfterSeg(hs._hsSegment);
+          this._setCaret(bp.cont, 1);
+          hs._auto.hide();
+          hs._reInit();
+          this.editorTarget$.trigger(jQuery.Event('onChange'));
+          return true;
+        case 'htag':
+          hs._forceUserHotString(autoItem.text, []);
+          hs._hsSegment.classList.add('CNE_htag');
+          hs._hsSegment.dataset.type = 'htag';
+          hs._hsSegment.classList.remove('CNE_hot_string');
+          bp = this.insertSpaceAfterSeg(hs._hsSegment);
+          this._setCaret(bp.cont, 1);
+          hs._auto.hide();
+          this.editorTarget$.trigger(jQuery.Event('onChange'));
+          return true;
+        case 'reminder':
+          format = function(n) {
+            if (n.toString().length === 1) {
+              return '0' + n;
+            } else {
+              return n;
+            }
+          };
+          date = autoItem.text;
+          d = format(date.getDate());
+          m = format(date.getMonth());
+          y = format(date.getFullYear());
+          h = format(date.getHours());
+          mn = format(date.getMinutes());
+          txt = d + '/' + m + '/' + y + '  ' + h + ':' + mn;
+          hs._forceUserHotString(txt, []);
+          hs._hsSegment.classList.add('CNE_reminder');
+          hs._hsSegment.dataset.type = 'reminder';
+          hs._hsSegment.classList.remove('CNE_hot_string');
+          bp = this.insertSpaceAfterSeg(hs._hsSegment);
+          this._setCaret(bp.cont, 1);
+          hs._auto.hide();
+          hs._reInit();
+          this.editorTarget$.trigger(jQuery.Event('onChange'));
+          return true;
+      }
+      this.editorTarget$.trigger(jQuery.Event('onChange'));
+      this._auto.hide();
+      return false;
+    };
+
     /* ------------------------------------------------------------------------
     # EXTENSION  :  cleaned up HTML parsing
     #
     #  (TODO)
-    # 
+    #
     # We suppose the html treated here has already been sanitized so the DOM
     #  structure is coherent and not twisted
-    # 
+    #
     # _parseHtml:
     #  Parse an html string and return the matching html in the editor's format
     # We try to restitute the very structure the initial fragment :
@@ -26836,7 +31558,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     #   > textuals enhancements (bold, underlined, italic)
     #   > titles
     #   > line return
-    # 
+    #
     # Ideas to do that :
     #  0- textContent is always kept
     #  1- A, IMG keep their specific attributes
@@ -26852,18 +31574,545 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     */
 
 
-    CNeditor.prototype.logKeyPress = function(e) {};
-
     return CNeditor;
 
   })();
 
   CNeditor = exports.CNeditor;
   
-}});
+});
+window.require.register("CNeditor/hot-string", function(exports, require, module) {
+  var AutoComplete, HotString, selection,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-window.require.define({"CNeditor/request": function(exports, require, module) {
+  AutoComplete = require('./autocomplete').AutoComplete;
+
+  selection = require('./selection').selection;
+
+  module.exports = HotString = (function() {
+    function HotString(editor) {
+      this._tryHighlight = __bind(this._tryHighlight, this);    this.editor = editor;
+      this._isEdit = false;
+      this.container = editor.linesDiv;
+      this._auto = new AutoComplete(editor.linesDiv, editor);
+      this._hsTypes = ['@', '@@', '#'];
+      this._modes = {
+        '@': 'contact',
+        '@@': 'reminder',
+        '#': 'tag'
+      };
+      this.isPreparing = false;
+      this._hsType = '';
+      this._hsRight = '';
+      this._hsLeft = '';
+      this._hsString = '';
+      this._currentMode = '';
+      this._getShortCut = editor.getShortCut;
+      this._autoToBeShowed = false;
+      this.container.addEventListener('keyup', this._tryHighlight);
+    }
+
+    /** -----------------------------------------------------------------------
+     * Called by the editor keydown call back.
+     * @param  {Object} shortcut cf editor.getShortcut(e)
+     * @return {Boolean}          True if keydown should be preventDefaulted
+    */
+
+
+    HotString.prototype.keyDownCb = function(shortcut) {
+      var item, preventDefault;
+
+      switch (shortcut) {
+        case '-return':
+          item = this._auto.hide();
+          this.isPreparing = false;
+          this.editor.doHotStringAction(item);
+          preventDefault = true;
+          break;
+        case '-up':
+          this._auto.up();
+          preventDefault = true;
+          break;
+        case '-down':
+          this._auto.down();
+          preventDefault = true;
+          break;
+        case '-pgUp':
+        case '-pgDwn':
+        case '-end':
+        case '-home':
+          this.reset(false);
+          preventDefault = false;
+          break;
+        case '-space':
+          preventDefault = false;
+          break;
+        case '-esc':
+          this.reset('end');
+          preventDefault = false;
+      }
+      return preventDefault;
+    };
+
+    HotString.prototype.printHotString = function() {
+      return console.log('_hsType = "' + this._hsType + '"', '_hsLeft = "' + this._hsLeft + '"', '_hsRight = "' + this._hsRight + '"');
+    };
+
+    /** -----------------------------------------------------------------------
+     * Update the current "hotString" typed by the user. This function is called
+     * by editor._keypressCb(), and detects keys such as '@' and "normal 
+     * caracters". 
+     * Actions (Arrows, return, baskspace etc...) are managed in newShortCut()
+     * @param  {Event} e The keyboard event
+    */
+
+
+    HotString.prototype.keypressCb = function(e) {
+      var charCode, modes;
+
+      charCode = e.which;
+      if (this.isPreparing) {
+
+      } else if (charCode === 64) {
+        if (this.editor._isStartingWord()) {
+          modes = this.editor.getCurrentAllowedInsertions();
+          if (__indexOf.call(modes, 'contact') >= 0) {
+            this._hsType = '@';
+            this.isPreparing = true;
+            this._auto.setAllowedModes(modes);
+            this._currentMode = 'contact';
+            this._auto.setMode('contact');
+            this._autoToBeShowed = {
+              mode: 'insertion'
+            };
+          }
+        }
+      } else if (charCode === 35) {
+        if (this.editor._isStartingWord()) {
+          modes = this.editor.getCurrentAllowedInsertions();
+          if (__indexOf.call(modes, 'tag') >= 0) {
+            this._hsType = '#';
+            this.isPreparing = true;
+            this._currentMode = 'htag';
+            this._auto.setMode('htag');
+            this._autoToBeShowed = {
+              mode: 'insertion'
+            };
+          }
+        }
+      }
+      return true;
+    };
+
+    /** -----------------------------------------------------------------------
+     * Called by editor._keyupCb() if a hotstring is preparing.
+     * It will check if the content of _hsSegment has change and then take the
+     * appropriate actions (update autocomplete, change mode, reset)
+    */
+
+
+    HotString.prototype.updateHs = function(seg) {
+      var autoItem, hsType, mode, newHotStrg;
+
+      if (!seg) {
+        seg = this._hsSegment;
+      }
+      newHotStrg = this._hsSegment.textContent;
+      if (this._hsType + this._hsString === newHotStrg) {
+        return true;
+      }
+      hsType = newHotStrg.slice(0, 2);
+      if (hsType === '@@') {
+        this._hsString = newHotStrg.slice(2);
+      } else {
+        hsType = hsType[0];
+        if (hsType === '@' || hsType === '#') {
+          this._hsString = newHotStrg.slice(1);
+        } else {
+          this.reset('current', true);
+          return true;
+        }
+      }
+      if (hsType !== this._hsType) {
+        this._hsType = hsType;
+        mode = this._modes[hsType];
+        this._currentMode = mode;
+        this._auto.setMode(mode);
+        return true;
+      } else {
+        autoItem = this._isAHotString(this._hsString);
+        if (autoItem) {
+          this.editor.doHotStringAction(autoItem);
+          return false;
+        }
+        return this._auto.update(this._hsString);
+      }
+    };
+
+    /** -----------------------------------------------------------------------
+     * Called by editor._keyupCb() and editor._mouseupCb() which detect if the
+     * carret enters a meta segment. If yes, then we edit it.
+     * @param  {Element} seg   The segment with meta data (reminder, contact...)
+     * @param  {Range} range The range of the selection
+    */
+
+
+    HotString.prototype.edit = function(seg, range) {
+      var endOffset, modes, rg, segClass, startOffset, type;
+
+      this._isEdit = true;
+      this.isPreparing = true;
+      type = seg.dataset.type;
+      switch (type) {
+        case 'reminder':
+          this._hsType = '@@';
+          segClass = 'CNE_reminder';
+          break;
+        case 'contact':
+          this._hsType = '@';
+          segClass = 'CNE_contact';
+          break;
+        case 'htag':
+          this._hsType = '#';
+          segClass = 'CNE_htag';
+      }
+      this._editedItem = {
+        text: seg.textContent,
+        type: seg.dataset.type,
+        id: seg.dataset.id,
+        value: seg.dataset.value
+      };
+      rg = range.cloneRange();
+      startOffset = range.startOffset + 1;
+      endOffset = range.endOffset + 1;
+      this._hsTextNode = seg.firstChild;
+      this._hsTextNode.textContent = this._hsType + seg.textContent;
+      seg.classList.remove(segClass);
+      seg.dataset.type = '';
+      this.editor.setSelection(seg.firstChild, startOffset, seg.firstChild, endOffset);
+      this._hsString = seg.textContent;
+      modes = this.editor.getCurrentAllowedInsertions();
+      this._auto.setAllowedModes(modes);
+      this._currentMode = type;
+      this._auto.setMode(type);
+      this._autoToBeShowed = {
+        mode: 'edit',
+        segment: seg
+      };
+      this._tryHighlight();
+      return true;
+    };
+
+    HotString.prototype._isNormalChar = function(charCode) {
+      var res;
+
+      res = (96 < charCode && charCode < 123) || (63 < charCode && charCode < 91) || (47 < charCode && charCode < 58) || (charCode === 43);
+      return res;
+    };
+
+    HotString.prototype._tryHighlight = function() {
+      var rg;
+
+      if (!this._autoToBeShowed) {
+        return true;
+      }
+      switch (this._autoToBeShowed.mode) {
+        case 'edit':
+          this._hsSegment = this._autoToBeShowed.segment;
+          this._hsTextNode = this._hsSegment.firstChild;
+          this._hsSegment.classList.add('CNE_hot_string');
+          this._autoToBeShowed = false;
+          this._auto.show(this._hsSegment, this._hsString);
+          break;
+        case 'insertion':
+          rg = this.editor.getEditorSelection().getRangeAt(0);
+          this.editor.setSelection(rg.startContainer, rg.startOffset - this._hsType.length, rg.endContainer, rg.endOffset);
+          rg = this.editor._applyMetaDataOnSelection('CNE_hot_string');
+          this._hsTextNode = rg.startContainer;
+          this._hsSegment = rg.startContainer.parentElement;
+          this.editor._setCaret(this._hsSegment, this._hsSegment.childNodes.length);
+          this._autoToBeShowed = false;
+          this._auto.show(this._hsSegment, '');
+      }
+      return true;
+    };
+
+    HotString.prototype._unhighLight = function(bps) {
+      var seg;
+
+      seg = this._hsSegment;
+      if (seg.parentElement) {
+        seg.classList.remove('CNE_hot_string');
+        this.editor._fusionSimilarSegments(seg.parentElement, bps);
+        this._hsTextNode = null;
+        this._hsSegment = null;
+      }
+      return true;
+    };
+
+    HotString.prototype._forceUserHotString = function(newHotString, bps) {
+      var bp, textNode, _i, _len;
+
+      textNode = this._hsTextNode;
+      textNode.textContent = newHotString;
+      for (_i = 0, _len = bps.length; _i < _len; _i++) {
+        bp = bps[_i];
+        if (bp.cont === textNode) {
+          bp.offset = newHotString.length;
+        }
+      }
+      return bps;
+    };
+
+    /** -----------------------------------------------------------------------
+     * Reset hot string : the segment is removed and autocomplete hidden. In 
+     * case where it was not a creation of a meta but a modification, then the
+     * initial value of the meta is restored. If the hsType ('@', '#' or '@@')
+     * has been deleted then the meta data segment is also removed if editing.
+     * @param  {String} dealCaret  3 values : 1/ 'current'the current caret 
+     *                  position is saved and restored after. 2/ 'end' : the 
+     *                  caret will be set at the end of the segment. 3/ false :
+     *                  the carret is not managed here.
+    */
+
+
+    HotString.prototype.reset = function(dealCaret, hardReset) {
+      var bp, endContainer, endOffset, rg, startContainer, startOffset;
+
+      if (!this.isPreparing) {
+        return true;
+      }
+      if (this._isEdit && !hardReset) {
+        if (dealCaret === 'current') {
+          rg = this.editor.getEditorSelection().getRangeAt(0);
+          startContainer = rg.startContainer;
+          startOffset = rg.startOffset;
+          endContainer = rg.endContainer;
+          endOffset = rg.endOffset;
+          this.editor.doHotStringAction(this._editedItem);
+          this.editor.setSelection(startContainer, startOffset, endContainer, endOffset);
+        } else {
+          this.editor.doHotStringAction(this._editedItem);
+        }
+        return true;
+      }
+      if (dealCaret === 'current') {
+        rg = this.editor.getEditorSelection().getRangeAt(0);
+        bp = {
+          cont: rg.startContainer,
+          offset: rg.startOffset
+        };
+        this._unhighLight([bp]);
+      } else if (dealCaret === 'end') {
+        bp = {
+          cont: this._hsTextNode,
+          offset: this._hsTextNode.length
+        };
+        this._unhighLight([bp]);
+      } else {
+        this._unhighLight([]);
+      }
+      this._reInit();
+      this._auto.hide();
+      if (dealCaret) {
+        this.editor._setCaret(bp.cont, bp.offset);
+      }
+      return true;
+    };
+
+    HotString.prototype._reInit = function() {
+      this._hsType = '';
+      this._hsString = '';
+      this._hsRight = '';
+      this._hsLeft = '';
+      this.isPreparing = false;
+      return this._isEdit = false;
+    };
+
+    HotString.prototype._isAHotString = function(txt) {
+      switch (txt) {
+        case 'reminder':
+          return {
+            text: 'reminder',
+            type: 'ttag',
+            value: 'reminder'
+          };
+        case 'todo':
+          return {
+            text: 'todo',
+            type: 'ttag',
+            value: 'todo'
+          };
+        case 'tag':
+          return {
+            text: 'tag',
+            type: 'ttag',
+            value: 'htag'
+          };
+      }
+    };
+
+    HotString.prototype.mouseDownCb = function(e) {
+      var isOut;
+
+      isOut = e.target !== this.el && $(e.target).parents('#CNE_autocomplete').length === 0;
+      if (!isOut) {
+        return e.preventDefault();
+      }
+    };
+
+    HotString.prototype.mouseUpInAutoCb = function(e) {
+      var selectedLine;
+
+      if (this._currentMode === 'reminder') {
+        return true;
+      }
+      selectedLine = e.target;
+      while (selectedLine && selectedLine.tagName !== 'LI') {
+        selectedLine = selectedLine.parentElement;
+      }
+      if (selectedLine) {
+        return this.editor.doHotStringAction(selectedLine.item);
+      } else {
+        return this.reset('end');
+      }
+    };
+
+    HotString.prototype.isInAuto = function(elt) {
+      return elt === this.el || $(elt).parents('#CNE_autocomplete').length !== 0;
+    };
+
+    return HotString;
+
+  })();
   
+});
+window.require.register("CNeditor/line", function(exports, require, module) {
+  /** -----------------------------------------------------------------------
+   * line$        : 
+   * lineID       : 
+   * lineType     : 
+   * lineDepthAbs : 
+   * lineDepthRel : 
+   * lineNext     : 
+   * linePrev     :
+  */
+
+  var Line;
+
+  Line = (function() {
+    /*
+     * If no arguments, returns an empty object (only methods), otherwise
+     * constructs a full line. The dom element of the line is inserted according
+     * to the previous or next line given in the arguments.
+     * @param  {Array}  Array of parameters :
+     *   [ 
+            editor        , # 
+            type          , # 
+            depthAbs      , # 
+            depthRelative , # 
+            prevLine      , # The prev line, null if nextLine is given
+            nextLine      , # The next line, null if prevLine is given
+            fragment        # [optional] a fragment to insert in the line, will
+                              add a br at the end if none in the fragment.
+          ]
+    */
+    function Line() {
+      var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
+
+      if (arguments.length === 0) {
+        return;
+      } else {
+        editor = arguments[0], type = arguments[1], depthAbs = arguments[2], depthRelative = arguments[3], prevLine = arguments[4], nextLine = arguments[5], fragment = arguments[6];
+      }
+      editor._highestId += 1;
+      lineID = 'CNID_' + editor._highestId;
+      newLineEl = document.createElement('div');
+      newLineEl.setAttribute('class', type + '-' + depthAbs);
+      if (fragment != null) {
+        newLineEl.appendChild(fragment);
+        if (newLineEl.lastChild.nodeName !== 'BR') {
+          newLineEl.appendChild(document.createElement('br'));
+        }
+      } else {
+        node = document.createElement('span');
+        node.appendChild(document.createTextNode(''));
+        newLineEl.appendChild(node);
+        newLineEl.appendChild(document.createElement('br'));
+      }
+      this.line$ = $(newLineEl);
+      if (prevLine != null) {
+        this.linePrev = prevLine;
+        linesDiv = prevLine.line$[0].parentNode;
+        if (prevLine.lineNext != null) {
+          nextL = prevLine.lineNext;
+          linesDiv.insertBefore(newLineEl, nextL.line$[0]);
+          this.lineNext = nextL;
+          nextL.linePrev = this;
+        } else {
+          linesDiv.appendChild(newLineEl);
+          this.lineNext = null;
+        }
+        prevLine.lineNext = this;
+      } else if (nextLine != null) {
+        linesDiv = nextLine.line$[0].parentNode;
+        this.lineNext = nextLine;
+        linesDiv.insertBefore(newLineEl, nextLine.line$[0]);
+        if (nextLine.linePrev != null) {
+          this.linePrev = nextLine.linePrev;
+          nextLine.linePrev.lineNext = this;
+        } else {
+          this.linePrev = null;
+        }
+        nextLine.linePrev = this;
+      }
+      newLineEl.id = lineID;
+      this.lineID = lineID;
+      this.lineType = type;
+      this.lineDepthAbs = depthAbs;
+      this.lineDepthRel = depthRelative;
+      editor._lines[lineID] = this;
+    }
+
+    Line.prototype.setType = function(type) {
+      this.lineType = type;
+      return this.line$.prop('class', "" + type + "-" + this.lineDepthAbs);
+    };
+
+    Line.prototype.setDepthAbs = function(absDepth) {
+      this.lineDepthAbs = absDepth;
+      return this.line$.prop('class', "" + this.lineType + "-" + absDepth);
+    };
+
+    Line.prototype.setTypeDepth = function(type, absDepth) {
+      this.lineType = type;
+      this.lineDepthAbs = absDepth;
+      return this.line$.prop('class', "" + type + "-" + absDepth);
+    };
+
+    return Line;
+
+  })();
+
+  Line.clone = function(line) {
+    var clone;
+
+    clone = new Line();
+    clone.line$ = line.line$.clone();
+    clone.lineID = line.lineID;
+    clone.lineType = line.lineType;
+    clone.lineDepthAbs = line.lineDepthAbs;
+    clone.lineDepthRel = line.lineDepthRel;
+    clone.linePrev = line.linePrev;
+    clone.lineNext = line.lineNext;
+    return clone;
+  };
+
+  module.exports = Line;
+  
+});
+window.require.register("CNeditor/request", function(exports, require, module) {
   exports.request = function(type, url, data, callback) {
     return $.ajax({
       type: type,
@@ -26901,5 +32150,4 @@ window.require.define({"CNeditor/request": function(exports, require, module) {
     return exports.request("DELETE", url, null, callbacks);
   };
   
-}});
-
+});
