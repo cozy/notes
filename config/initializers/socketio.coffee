@@ -1,19 +1,5 @@
 module.exports = (compound) ->
 
-    sio = require 'socket.io'
-    compound.io = sio.listen compound.server
+    cozyRealTime = require 'cozy-realtime-adapter'
 
-    compound.io.set 'log level', 2
-    compound.io.set 'transports', ['websocket']
-
-    redis = require 'redis'
-    client = redis.createClient()
-    console.log ' socket.io initialized !'
-    client.on 'pmessage', (pat, ch, msg) ->
-        console.log ' ====== !'
-        console.log ' ====== >  pmessage !'
-        compound.logger.write "redis #{ch} #{msg}"
-        compound.io.sockets.emit ch, msg
-
-    client.psubscribe 'note.*'
-    client.psubscribe 'task.*'
+    cozyRealTime compound, ['note.*', 'task.*', 'alarm.*']
