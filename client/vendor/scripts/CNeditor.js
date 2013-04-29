@@ -61,20 +61,25 @@
     throw new Error('Cannot find module "' + name + '"');
   };
 
-  var define = function(bundle) {
-    for (var key in bundle) {
-      if (has(bundle, key)) {
-        modules[key] = bundle[key];
+  var define = function(bundle, fn) {
+    if (typeof bundle === 'object') {
+      for (var key in bundle) {
+        if (has(bundle, key)) {
+          modules[key] = bundle[key];
+        }
       }
+    } else {
+      modules[bundle] = fn;
     }
-  }
+  };
 
   globals.require = require;
   globals.require.define = define;
+  globals.require.register = define;
   globals.require.brunch = true;
 })();
 
-window.require.define({"CNeditor/selection": function(exports, require, module) {
+window.require.register("CNeditor/selection", function(exports, require, module) {
   var selection, µ;
 
   µ = {};
@@ -97,6 +102,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.cleanSelection = function(startLine, endLine, range) {
     var endNode, startNode;
+
     if (startLine === null) {
       startLine = endLine;
       endLine = endLine.lineNext;
@@ -113,6 +119,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.selectAll = function(editor) {
     var range, sel;
+
     range = document.createRange();
     range.setStartBefore(editor.linesDiv.firstChild);
     range.setEndAfter(editor.linesDiv.lastChild);
@@ -129,6 +136,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.cloneEndFragment = function(range, endLine) {
     var range4fragment;
+
     range4fragment = rangy.createRangyRange();
     range4fragment.setStart(range.endContainer, range.endOffset);
     range4fragment.setEndAfter(endLine.line$[0].lastChild);
@@ -241,17 +249,18 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
   */
 
 
-  µ.normalize = function(range) {
+  µ.normalize = function(rg, preferNext) {
     var isCollapsed, newEndBP, newStartBP;
-    isCollapsed = range.collapsed;
-    newStartBP = µ.normalizeBP(range.startContainer, range.startOffset);
-    range.setStart(newStartBP.cont, newStartBP.offset);
+
+    isCollapsed = rg.collapsed;
+    newStartBP = µ.normalizeBP(rg.startContainer, rg.startOffset, preferNext);
+    rg.setStart(newStartBP.cont, newStartBP.offset);
     if (isCollapsed) {
-      range.collapse(true);
+      rg.collapse(true);
       newEndBP = newStartBP;
     } else {
-      newEndBP = µ.normalizeBP(range.endContainer, range.endOffset);
-      range.setEnd(newEndBP.cont, newEndBP.offset);
+      newEndBP = µ.normalizeBP(rg.endContainer, rg.endOffset, preferNext);
+      rg.setEnd(newEndBP.cont, newEndBP.offset);
     }
     return [newStartBP, newEndBP];
   };
@@ -269,6 +278,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.normalizeBP = function(cont, offset, preferNext) {
     var newCont, newOffset, res, _ref;
+
     if (cont.nodeName === '#text') {
       res = {
         cont: cont,
@@ -353,6 +363,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.normalizeBPs = function(bps, preferNext) {
     var bp, newBp, _i, _len;
+
     for (_i = 0, _len = bps.length; _i < _len; _i++) {
       bp = bps[_i];
       newBp = µ.normalizeBP(bp.cont, bp.offset, preferNext);
@@ -373,6 +384,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getLineDivIsStartIsEnd = function(cont, offset) {
     var index, isEnd, isStart, n, nodeI, parent, segmentI, _ref;
+
     if (cont.nodeName === 'DIV' && (cont.id != null) && cont.id.substr(0, 5) === 'CNID_') {
       if (cont.textContent === '') {
         return {
@@ -426,6 +438,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.putStartOnStart = function(range, elt) {
     var blank, offset;
+
     if ((elt != null ? elt.firstChild : void 0) != null) {
       offset = elt.firstChild.textContent.length;
       if (offset === 0) {
@@ -441,6 +454,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.putEndOnStart = function(range, elt) {
     var blank, offset;
+
     if ((elt != null ? elt.firstChild : void 0) != null) {
       offset = elt.firstChild.textContent.length;
       if (offset === 0) {
@@ -464,6 +478,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getLineDiv = function(cont, offset) {
     var startDiv;
+
     if (cont.nodeName === 'DIV') {
       if (cont.id === 'editor-lines') {
         startDiv = cont.children[offset];
@@ -478,6 +493,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ._getLineDiv = function(elt) {
     var parent;
+
     parent = elt;
     while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
       parent = parent.parentNode;
@@ -498,6 +514,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getSegment = function(cont, offset) {
     var startDiv;
+
     if (cont.nodeName === 'DIV') {
       if (cont.id === 'editor-lines') {
         startDiv = cont.children[Math.min(offset, cont.children.length - 1)];
@@ -514,6 +531,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getNestedSegment = function(elt) {
     var parent;
+
     parent = elt.parentNode;
     while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
       elt = parent;
@@ -551,6 +569,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.setBpPreviousSegEnd = function(elmt) {
     var bp, index, seg;
+
     seg = µ.getNestedSegment(elmt);
     index = µ.getNodeIndex(seg);
     return bp = µ.normalizeBP(seg.parentNode, index);
@@ -565,6 +584,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.setBpNextSegEnd = function(elmt) {
     var bp, index, seg;
+
     seg = µ.getNestedSegment(elmt);
     index = µ.getNodeIndex(seg) + 1;
     return bp = µ.normalizeBP(seg.parentNode, index, true);
@@ -579,6 +599,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getSegmentIndex = function(segment) {
     var i, segmentI, sibling, _i, _len, _ref;
+
     segmentI = 0;
     _ref = segment.parentNode.childNodes;
     for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
@@ -596,6 +617,7 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   µ.getNodeIndex = function(node) {
     var i, index, sibling, _i, _len, _ref;
+
     _ref = node.parentNode.childNodes;
     for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
       sibling = _ref[i];
@@ -611,9 +633,8 @@ window.require.define({"CNeditor/selection": function(exports, require, module) 
 
   exports.selection = µ;
   
-}});
-
-window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
+});
+window.require.register("CNeditor/md2cozy", function(exports, require, module) {
   /* ------------------------------------------------------------------------
   #  MARKUP LANGUAGE CONVERTERS
   # _cozy2md (Read a string of editor html code format and turns it into a
@@ -640,6 +661,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.cozy2md = function(linesDiv) {
     var line, lineMetaData, lines, markCode, prevLineMetaData, segment, _i, _j, _len, _len1, _ref, _ref1;
+
     md2cozy.currentDepth = 0;
     lines = [];
     prevLineMetaData = null;
@@ -669,6 +691,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.getLineMetadata = function(name) {
     var data, depth, type;
+
     if (name != null) {
       data = name.split("-");
       type = data[0];
@@ -687,6 +710,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
     var blanks, dieses, i, nbBlanks, prefix, _i, _j, _k, _ref, _ref1, _ref2;
+
     blanks = "";
     switch (metadata.type) {
       case 'Th':
@@ -731,6 +755,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.convertInlineEltToMarkdown = function(obj) {
     var alt, classList, href, src, title;
+
     switch (obj[0].nodeName) {
       case 'A':
         title = obj.attr('title') != null ? obj.attr('title') : "";
@@ -764,6 +789,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.md2cozy = function(text) {
     var conv, cozyCode, htmlCode;
+
     conv = new Showdown.converter();
     htmlCode = $(conv.makeHtml(text));
     cozyCode = '';
@@ -780,6 +806,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.parseLine = function(obj) {
     var tag;
+
     tag = obj[0].tagName;
     if ((tag != null) && tag[0] === "H") {
       md2cozy.editorDepth = parseInt(tag[1], 10);
@@ -793,11 +820,13 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.buildEditorLine = function(type, depth, obj) {
     var code;
+
     md2cozy.currentId++;
     code = '';
     if (obj != null) {
       obj.contents().each(function() {
         var name;
+
         name = this.nodeName;
         if (name === "#text") {
           return code += "<span>" + ($(this).text()) + "</span>";
@@ -816,6 +845,7 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   md2cozy.parseList = function(obj) {
     var child, cozyCode, i, nodeName, tag, type, _i, _len, _ref;
+
     tag = obj[0].tagName;
     cozyCode = "";
     if ((tag != null) && tag === "UL") {
@@ -851,197 +881,141 @@ window.require.define({"CNeditor/md2cozy": function(exports, require, module) {
 
   exports.md2cozy = md2cozy;
   
-}});
-
-window.require.define({"CNeditor/task": function(exports, require, module) {
-  var Task, request,
+});
+window.require.register("CNeditor/task", function(exports, require, module) {
+  var Task, request, _ref,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   request = require("./request");
 
-  Task = Task = (function(_super) {
-    var createInboxTodoList, doNothing, findInboxTodoList, isFromNote, isTodo, todoIsInstalled;
+  module.exports = Task = (function(_super) {
+    var checkTodoInstalled, createInbox, getApps, getLists, inboxExists, isFromNote, isTodo, noCallback;
 
     __extends(Task, _super);
 
     function Task() {
-      return Task.__super__.constructor.apply(this, arguments);
+      _ref = Task.__super__.constructor.apply(this, arguments);
+      return _ref;
     }
 
     Task.prototype.url = function() {
       if (this.isNew()) {
         return "/apps/todos/todolists/" + Task.todolistId + "/tasks";
       } else {
-        return "/apps/todos/todolists/" + Task.todolistId + "/tasks/" + this.id;
+        return "/apps/todos/tasks/" + this.id;
       }
     };
 
     Task.prototype.defaults = function() {
       return {
-        done: false,
-        nextTask: null,
-        previousTask: null
+        done: false
       };
     };
 
     Task.prototype.parse = function(data) {
-      if (data.rows != null) {
+      if (data.rows) {
         return data.rows[0];
       } else {
         return data;
       }
     };
 
-    doNothing = function() {};
+    noCallback = function() {};
 
     isTodo = function(app) {
       return app.name === 'todos';
     };
 
     isFromNote = function(todolist) {
-      return todolist.title === 'from notes';
+      return todolist.title === 'Inbox';
     };
 
-    todoIsInstalled = function(callback) {
-      return request.get('/api/applications', function(err, apps) {
-        if (!err && apps.rows.some(isTodo)) {
-          return callback(true);
-        } else {
-          return callback(false);
-        }
-      });
+    getApps = function() {
+      return request.get('/api/applications', noCallback);
     };
 
-    findInboxTodoList = function(callback) {
-      return request.get('/apps/todos/todolists', function(err, lists) {
-        var inboxList;
-        if (err) {
-          return callback(null);
-        } else {
-          inboxList = _.find(lists.rows, isFromNote);
-          return callback(inboxList);
-        }
-      });
+    checkTodoInstalled = function(apps) {
+      if (apps.rows.some(isTodo)) {
+        return true;
+      }
+      return $.Deferred().reject();
     };
 
-    createInboxTodoList = function(callback) {
+    getLists = function() {
+      return request.get('/apps/todos/todolists', noCallback);
+    };
+
+    inboxExists = function(lists) {
+      var inbox;
+
+      inbox = _.find(lists.rows, isFromNote);
+      if (inbox) {
+        return inbox;
+      }
+      return $.Deferred().reject('noinbox');
+    };
+
+    createInbox = function(err) {
       var todolist;
+
+      if (err !== 'noinbox') {
+        return err;
+      }
       todolist = {
-        title: 'from notes',
+        title: 'Inbox',
         parent_id: 'tree-node-all'
       };
-      return request.post('/apps/todos/todolists', todolist, function(err, inboxList) {
-        if (err) {
-          return callback(null);
-        } else {
-          return callback(inboxList);
-        }
-      });
+      return request.post('/apps/todos/todolists', todolist, noCallback);
     };
 
     Task.initialize = function(callback) {
-      if (callback == null) {
-        callback = doNothing;
-      }
-      return todoIsInstalled(function(installed) {
-        if (!installed) {
-          return callback(Task.canBeUsed = false);
-        } else {
-          return findInboxTodoList(function(list) {
-            if (list) {
-              Task.todolistId = list.id;
-              return callback(Task.canBeUsed = true);
-            } else {
-              return createInboxTodoList(function(list) {
-                if (list) {
-                  Task.todolistId = list.id;
-                  return callback(Task.canBeUsed = true);
-                } else {
-                  return callback(Task.canBeUsed = false);
-                }
-              });
-            }
-          });
-        }
+      return getApps().then(checkTodoInstalled).then(getLists).then(inboxExists).then(null, createInbox).done(function(inbox) {
+        Task.todolistId = inbox.id;
+        Task.canBeUsed = true;
+        return callback(true);
+      }).fail(function(err) {
+        Task.canBeUsed = false;
+        return callback(false);
       });
     };
 
     return Task;
 
   })(Backbone.Model);
-
-  module.exports = Task;
   
-}});
+});
+window.require.register("CNeditor/realtimer", function(exports, require, module) {
+  var SocketListener, _ref,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-window.require.define({"CNeditor/realtimer": function(exports, require, module) {
-  var RealTimer;
+  SocketListener = (function(_super) {
+    __extends(SocketListener, _super);
 
-  RealTimer = (function() {
-
-    RealTimer.prototype.events = ['note.create', 'note.update', 'note.delete', 'task.update', 'task.delete'];
-
-    RealTimer.prototype.url = window.location.origin;
-
-    RealTimer.prototype.params = {
-      resource: "" + (window.location.pathname.substring(1)) + "socket.io"
-    };
-
-    RealTimer.prototype.watched = {};
-
-    function RealTimer() {
-      var event, socket, _i, _len, _ref;
-      socket = io.connect(this.url, this.params);
-      _ref = this.events;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        event = _ref[_i];
-        socket.on(event, this.callbackFactory(event));
-      }
+    function SocketListener() {
+      _ref = SocketListener.__super__.constructor.apply(this, arguments);
+      return _ref;
     }
 
-    RealTimer.prototype.callbackFactory = function(event) {
-      var _this = this;
-      return function(id) {
-        var doctype, operation, _ref;
-        _ref = event.split('.'), doctype = _ref[0], operation = _ref[1];
-        return _this.callback(doctype, operation, id);
-      };
+    SocketListener.prototype.models = {
+      'task': require('CNeditor/task'),
+      'alarm': require('CNeditor/alarm')
     };
 
-    RealTimer.prototype.callback = function(doctype, operation, id) {
-      var method;
-      console.log('RealTimer', doctype, operation, id);
-      if (doctype === 'note') {
+    SocketListener.prototype.events = ['alarm.update', 'alarm.delete', 'task.update', 'task.delete'];
 
-      } else if (doctype === 'task' && (this.watched[id] != null)) {
-        method = operation === 'update' ? 'fetch' : 'destroy';
-        return this.watched[id][method]();
-      }
+    SocketListener.prototype.onRemoteDelete = function(model) {
+      return model.trigger('destroy');
     };
 
-    RealTimer.prototype.watch = function(model) {
-      var _this = this;
-      this.watched[model.id] = model;
-      return model.on('destroy', function() {
-        return _this.stopWatching(model);
-      });
-    };
+    return SocketListener;
 
-    RealTimer.prototype.stopWatching = function(model) {
-      if (this.watched[model.id] === model) {
-        return delete this.watched[model.id];
-      }
-    };
+  })(CozySocketListener);
 
-    return RealTimer;
-
-  })();
-
-  module.exports = new RealTimer();
+  module.exports = new SocketListener();
   
-}});
-
+});
 /*!
  * jQuery JavaScript Library v1.8.2
  * http://jquery.com/
@@ -10483,7 +10457,6 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 })( window );
 ;
-
 /**
  * @license Rangy, a cross-browser JavaScript range and selection library
  * http://code.google.com/p/rangy/
@@ -13709,7 +13682,6 @@ rangy.createModule("DomUtil", function(api, module) {
     });
 });
 ;
-
 /*
  Serializer module for Rangy.
  Serializes Ranges and Selections. An example use would be to store a user's selection on a particular page in a
@@ -13733,7 +13705,6 @@ c.split("|");for(var e=g.getSelection(b),d=[],f=0,h=c.length;f<h;++f)d[f]=q(c[f]
 b.push(f>>12|224,f>>6&63|128,f&63|128)}a=-1;if(!c){e=[];d=0;for(var h;d<256;++d){h=d;for(f=8;f--;)if((h&1)==1)h=h>>>1^3988292384;else h>>>=1;e[d]=h>>>0}c=e}e=c;d=0;for(f=b.length;d<f;++d){h=(a^b[d])&255;a=a>>>8^e[h]}return(a^-1)>>>0}}(),i=g.dom;g.serializePosition=l;g.deserializePosition=m;g.serializeRange=p;g.deserializeRange=q;g.canDeserializeRange=r;g.serializeSelection=s;g.deserializeSelection=t;g.canDeserializeSelection=function(c,a,b){var e;if(a)e=b?b.document:i.getDocument(a);else{b=b||window;
 a=b.document.documentElement}c=c.split("|");b=0;for(var d=c.length;b<d;++b)if(!r(c[b],a,e))return false;return true};g.restoreSelectionFromCookie=function(c){c=c||window;var a;a:{a=c.document.cookie.split(/[;,]/);for(var b=0,e=a.length,d;b<e;++b){d=a[b].split("=");if(d[0].replace(/^\s+/,"")=="rangySerializedSelection")if(d=d[1]){a=decodeURIComponent(d.replace(/\s+$/,""));break a}}a=null}a&&t(a,c.doc)};g.saveSelectionCookie=function(c,a){c=c||window;a=typeof a=="object"?a:{};var b=a.expires?";expires="+
 a.expires.toUTCString():"",e=a.path?";path="+a.path:"",d=a.domain?";domain="+a.domain:"",f=a.secure?";secure":"",h=s(g.getSelection(c));c.document.cookie=encodeURIComponent("rangySerializedSelection")+"="+encodeURIComponent(h)+b+e+d+f};g.getElementChecksum=j});;
-
 //
 // showdown.js -- A javascript port of Markdown.
 //
@@ -15075,7 +15046,6 @@ var escapeCharacters_callback = function(wholeMatch,m1) {
 
 // export
 if (typeof module !== 'undefined') module.exports = Showdown;;
-
 /*
  *  Sugar Library v1.3.9
  *
@@ -19631,7 +19601,6 @@ Date.addLocale('zh-TW', {
   });
 
 })();;
-
 //     Backbone.js 1.0.0
 
 //     (c) 2010-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -21204,7 +21173,6 @@ Date.addLocale('zh-TW', {
 
 }).call(this);
 ;
-
 /*
 
  CSS Beautifier
@@ -21404,7 +21372,6 @@ function css_beautify(source_text, options) {
 if (typeof exports !== "undefined")
     exports.css_beautify = css_beautify;
 ;
-
 /*
 
  Style HTML
@@ -21943,7 +21910,6 @@ function style_html(html_source, options) {
   return multi_parser.output.join('');
 }
 ;
-
 /*jslint onevar: false, plusplus: false */
 /*
 
@@ -23164,14 +23130,12 @@ function js_beautify(js_source_text, options) {
 if (typeof exports !== "undefined")
     exports.js_beautify = js_beautify;
 ;
-
 /*!
 * Bootstrap.js by @fat & @mdo
 * Copyright 2012 Twitter, Inc.
 * http://www.apache.org/licenses/LICENSE-2.0.txt
 */
 !function($){"use strict";$(function(){$.support.transition=function(){var transitionEnd=function(){var name,el=document.createElement("bootstrap"),transEndEventNames={WebkitTransition:"webkitTransitionEnd",MozTransition:"transitionend",OTransition:"oTransitionEnd otransitionend",transition:"transitionend"};for(name in transEndEventNames)if(void 0!==el.style[name])return transEndEventNames[name]}();return transitionEnd&&{end:transitionEnd}}()})}(window.jQuery),!function($){"use strict";var dismiss='[data-dismiss="alert"]',Alert=function(el){$(el).on("click",dismiss,this.close)};Alert.prototype.close=function(e){function removeElement(){$parent.trigger("closed").remove()}var $parent,$this=$(this),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),e&&e.preventDefault(),$parent.length||($parent=$this.hasClass("alert")?$this:$this.parent()),$parent.trigger(e=$.Event("close")),e.isDefaultPrevented()||($parent.removeClass("in"),$.support.transition&&$parent.hasClass("fade")?$parent.on($.support.transition.end,removeElement):removeElement())};var old=$.fn.alert;$.fn.alert=function(option){return this.each(function(){var $this=$(this),data=$this.data("alert");data||$this.data("alert",data=new Alert(this)),"string"==typeof option&&data[option].call($this)})},$.fn.alert.Constructor=Alert,$.fn.alert.noConflict=function(){return $.fn.alert=old,this},$(document).on("click.alert.data-api",dismiss,Alert.prototype.close)}(window.jQuery),!function($){"use strict";var Button=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.button.defaults,options)};Button.prototype.setState=function(state){var d="disabled",$el=this.$element,data=$el.data(),val=$el.is("input")?"val":"html";state+="Text",data.resetText||$el.data("resetText",$el[val]()),$el[val](data[state]||this.options[state]),setTimeout(function(){"loadingText"==state?$el.addClass(d).attr(d,d):$el.removeClass(d).removeAttr(d)},0)},Button.prototype.toggle=function(){var $parent=this.$element.closest('[data-toggle="buttons-radio"]');$parent&&$parent.find(".active").removeClass("active"),this.$element.toggleClass("active")};var old=$.fn.button;$.fn.button=function(option){return this.each(function(){var $this=$(this),data=$this.data("button"),options="object"==typeof option&&option;data||$this.data("button",data=new Button(this,options)),"toggle"==option?data.toggle():option&&data.setState(option)})},$.fn.button.defaults={loadingText:"loading..."},$.fn.button.Constructor=Button,$.fn.button.noConflict=function(){return $.fn.button=old,this},$(document).on("click.button.data-api","[data-toggle^=button]",function(e){var $btn=$(e.target);$btn.hasClass("btn")||($btn=$btn.closest(".btn")),$btn.button("toggle")})}(window.jQuery),!function($){"use strict";var Carousel=function(element,options){this.$element=$(element),this.options=options,"hover"==this.options.pause&&this.$element.on("mouseenter",$.proxy(this.pause,this)).on("mouseleave",$.proxy(this.cycle,this))};Carousel.prototype={cycle:function(e){return e||(this.paused=!1),this.options.interval&&!this.paused&&(this.interval=setInterval($.proxy(this.next,this),this.options.interval)),this},to:function(pos){var $active=this.$element.find(".item.active"),children=$active.parent().children(),activePos=children.index($active),that=this;if(!(pos>children.length-1||0>pos))return this.sliding?this.$element.one("slid",function(){that.to(pos)}):activePos==pos?this.pause().cycle():this.slide(pos>activePos?"next":"prev",$(children[pos]))},pause:function(e){return e||(this.paused=!0),this.$element.find(".next, .prev").length&&$.support.transition.end&&(this.$element.trigger($.support.transition.end),this.cycle()),clearInterval(this.interval),this.interval=null,this},next:function(){return this.sliding?void 0:this.slide("next")},prev:function(){return this.sliding?void 0:this.slide("prev")},slide:function(type,next){var e,$active=this.$element.find(".item.active"),$next=next||$active[type](),isCycling=this.interval,direction="next"==type?"left":"right",fallback="next"==type?"first":"last",that=this;if(this.sliding=!0,isCycling&&this.pause(),$next=$next.length?$next:this.$element.find(".item")[fallback](),e=$.Event("slide",{relatedTarget:$next[0]}),!$next.hasClass("active")){if($.support.transition&&this.$element.hasClass("slide")){if(this.$element.trigger(e),e.isDefaultPrevented())return;$next.addClass(type),$next[0].offsetWidth,$active.addClass(direction),$next.addClass(direction),this.$element.one($.support.transition.end,function(){$next.removeClass([type,direction].join(" ")).addClass("active"),$active.removeClass(["active",direction].join(" ")),that.sliding=!1,setTimeout(function(){that.$element.trigger("slid")},0)})}else{if(this.$element.trigger(e),e.isDefaultPrevented())return;$active.removeClass("active"),$next.addClass("active"),this.sliding=!1,this.$element.trigger("slid")}return isCycling&&this.cycle(),this}}};var old=$.fn.carousel;$.fn.carousel=function(option){return this.each(function(){var $this=$(this),data=$this.data("carousel"),options=$.extend({},$.fn.carousel.defaults,"object"==typeof option&&option),action="string"==typeof option?option:options.slide;data||$this.data("carousel",data=new Carousel(this,options)),"number"==typeof option?data.to(option):action?data[action]():options.interval&&data.cycle()})},$.fn.carousel.defaults={interval:5e3,pause:"hover"},$.fn.carousel.Constructor=Carousel,$.fn.carousel.noConflict=function(){return $.fn.carousel=old,this},$(document).on("click.carousel.data-api","[data-slide]",function(e){var href,$this=$(this),$target=$($this.attr("data-target")||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")),options=$.extend({},$target.data(),$this.data());$target.carousel(options),e.preventDefault()})}(window.jQuery),!function($){"use strict";var Collapse=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.collapse.defaults,options),this.options.parent&&(this.$parent=$(this.options.parent)),this.options.toggle&&this.toggle()};Collapse.prototype={constructor:Collapse,dimension:function(){var hasWidth=this.$element.hasClass("width");return hasWidth?"width":"height"},show:function(){var dimension,scroll,actives,hasData;if(!this.transitioning){if(dimension=this.dimension(),scroll=$.camelCase(["scroll",dimension].join("-")),actives=this.$parent&&this.$parent.find("> .accordion-group > .in"),actives&&actives.length){if(hasData=actives.data("collapse"),hasData&&hasData.transitioning)return;actives.collapse("hide"),hasData||actives.data("collapse",null)}this.$element[dimension](0),this.transition("addClass",$.Event("show"),"shown"),$.support.transition&&this.$element[dimension](this.$element[0][scroll])}},hide:function(){var dimension;this.transitioning||(dimension=this.dimension(),this.reset(this.$element[dimension]()),this.transition("removeClass",$.Event("hide"),"hidden"),this.$element[dimension](0))},reset:function(size){var dimension=this.dimension();return this.$element.removeClass("collapse")[dimension](size||"auto")[0].offsetWidth,this.$element[null!==size?"addClass":"removeClass"]("collapse"),this},transition:function(method,startEvent,completeEvent){var that=this,complete=function(){"show"==startEvent.type&&that.reset(),that.transitioning=0,that.$element.trigger(completeEvent)};this.$element.trigger(startEvent),startEvent.isDefaultPrevented()||(this.transitioning=1,this.$element[method]("in"),$.support.transition&&this.$element.hasClass("collapse")?this.$element.one($.support.transition.end,complete):complete())},toggle:function(){this[this.$element.hasClass("in")?"hide":"show"]()}};var old=$.fn.collapse;$.fn.collapse=function(option){return this.each(function(){var $this=$(this),data=$this.data("collapse"),options="object"==typeof option&&option;data||$this.data("collapse",data=new Collapse(this,options)),"string"==typeof option&&data[option]()})},$.fn.collapse.defaults={toggle:!0},$.fn.collapse.Constructor=Collapse,$.fn.collapse.noConflict=function(){return $.fn.collapse=old,this},$(document).on("click.collapse.data-api","[data-toggle=collapse]",function(e){var href,$this=$(this),target=$this.attr("data-target")||e.preventDefault()||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,""),option=$(target).data("collapse")?"toggle":$this.data();$this[$(target).hasClass("in")?"addClass":"removeClass"]("collapsed"),$(target).collapse(option)})}(window.jQuery),!function($){"use strict";function clearMenus(){$(toggle).each(function(){getParent($(this)).removeClass("open")})}function getParent($this){var $parent,selector=$this.attr("data-target");return selector||(selector=$this.attr("href"),selector=selector&&/#/.test(selector)&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),$parent.length||($parent=$this.parent()),$parent}var toggle="[data-toggle=dropdown]",Dropdown=function(element){var $el=$(element).on("click.dropdown.data-api",this.toggle);$("html").on("click.dropdown.data-api",function(){$el.parent().removeClass("open")})};Dropdown.prototype={constructor:Dropdown,toggle:function(){var $parent,isActive,$this=$(this);if(!$this.is(".disabled, :disabled"))return $parent=getParent($this),isActive=$parent.hasClass("open"),clearMenus(),isActive||$parent.toggleClass("open"),$this.focus(),!1},keydown:function(e){var $this,$items,$parent,isActive,index;if(/(38|40|27)/.test(e.keyCode)&&($this=$(this),e.preventDefault(),e.stopPropagation(),!$this.is(".disabled, :disabled"))){if($parent=getParent($this),isActive=$parent.hasClass("open"),!isActive||isActive&&27==e.keyCode)return $this.click();$items=$("[role=menu] li:not(.divider):visible a",$parent),$items.length&&(index=$items.index($items.filter(":focus")),38==e.keyCode&&index>0&&index--,40==e.keyCode&&$items.length-1>index&&index++,~index||(index=0),$items.eq(index).focus())}}};var old=$.fn.dropdown;$.fn.dropdown=function(option){return this.each(function(){var $this=$(this),data=$this.data("dropdown");data||$this.data("dropdown",data=new Dropdown(this)),"string"==typeof option&&data[option].call($this)})},$.fn.dropdown.Constructor=Dropdown,$.fn.dropdown.noConflict=function(){return $.fn.dropdown=old,this},$(document).on("click.dropdown.data-api touchstart.dropdown.data-api",clearMenus).on("click.dropdown touchstart.dropdown.data-api",".dropdown form",function(e){e.stopPropagation()}).on("touchstart.dropdown.data-api",".dropdown-menu",function(e){e.stopPropagation()}).on("click.dropdown.data-api touchstart.dropdown.data-api",toggle,Dropdown.prototype.toggle).on("keydown.dropdown.data-api touchstart.dropdown.data-api",toggle+", [role=menu]",Dropdown.prototype.keydown)}(window.jQuery),!function($){"use strict";var Modal=function(element,options){this.options=options,this.$element=$(element).delegate('[data-dismiss="modal"]',"click.dismiss.modal",$.proxy(this.hide,this)),this.options.remote&&this.$element.find(".modal-body").load(this.options.remote)};Modal.prototype={constructor:Modal,toggle:function(){return this[this.isShown?"hide":"show"]()},show:function(){var that=this,e=$.Event("show");this.$element.trigger(e),this.isShown||e.isDefaultPrevented()||(this.isShown=!0,this.escape(),this.backdrop(function(){var transition=$.support.transition&&that.$element.hasClass("fade");that.$element.parent().length||that.$element.appendTo(document.body),that.$element.show(),transition&&that.$element[0].offsetWidth,that.$element.addClass("in").attr("aria-hidden",!1),that.enforceFocus(),transition?that.$element.one($.support.transition.end,function(){that.$element.focus().trigger("shown")}):that.$element.focus().trigger("shown")}))},hide:function(e){e&&e.preventDefault(),e=$.Event("hide"),this.$element.trigger(e),this.isShown&&!e.isDefaultPrevented()&&(this.isShown=!1,this.escape(),$(document).off("focusin.modal"),this.$element.removeClass("in").attr("aria-hidden",!0),$.support.transition&&this.$element.hasClass("fade")?this.hideWithTransition():this.hideModal())},enforceFocus:function(){var that=this;$(document).on("focusin.modal",function(e){that.$element[0]===e.target||that.$element.has(e.target).length||that.$element.focus()})},escape:function(){var that=this;this.isShown&&this.options.keyboard?this.$element.on("keyup.dismiss.modal",function(e){27==e.which&&that.hide()}):this.isShown||this.$element.off("keyup.dismiss.modal")},hideWithTransition:function(){var that=this,timeout=setTimeout(function(){that.$element.off($.support.transition.end),that.hideModal()},500);this.$element.one($.support.transition.end,function(){clearTimeout(timeout),that.hideModal()})},hideModal:function(){this.$element.hide().trigger("hidden"),this.backdrop()},removeBackdrop:function(){this.$backdrop.remove(),this.$backdrop=null},backdrop:function(callback){var animate=this.$element.hasClass("fade")?"fade":"";if(this.isShown&&this.options.backdrop){var doAnimate=$.support.transition&&animate;this.$backdrop=$('<div class="modal-backdrop '+animate+'" />').appendTo(document.body),this.$backdrop.click("static"==this.options.backdrop?$.proxy(this.$element[0].focus,this.$element[0]):$.proxy(this.hide,this)),doAnimate&&this.$backdrop[0].offsetWidth,this.$backdrop.addClass("in"),doAnimate?this.$backdrop.one($.support.transition.end,callback):callback()}else!this.isShown&&this.$backdrop?(this.$backdrop.removeClass("in"),$.support.transition&&this.$element.hasClass("fade")?this.$backdrop.one($.support.transition.end,$.proxy(this.removeBackdrop,this)):this.removeBackdrop()):callback&&callback()}};var old=$.fn.modal;$.fn.modal=function(option){return this.each(function(){var $this=$(this),data=$this.data("modal"),options=$.extend({},$.fn.modal.defaults,$this.data(),"object"==typeof option&&option);data||$this.data("modal",data=new Modal(this,options)),"string"==typeof option?data[option]():options.show&&data.show()})},$.fn.modal.defaults={backdrop:!0,keyboard:!0,show:!0},$.fn.modal.Constructor=Modal,$.fn.modal.noConflict=function(){return $.fn.modal=old,this},$(document).on("click.modal.data-api",'[data-toggle="modal"]',function(e){var $this=$(this),href=$this.attr("href"),$target=$($this.attr("data-target")||href&&href.replace(/.*(?=#[^\s]+$)/,"")),option=$target.data("modal")?"toggle":$.extend({remote:!/#/.test(href)&&href},$target.data(),$this.data());e.preventDefault(),$target.modal(option).one("hide",function(){$this.focus()})})}(window.jQuery),!function($){"use strict";var Tooltip=function(element,options){this.init("tooltip",element,options)};Tooltip.prototype={constructor:Tooltip,init:function(type,element,options){var eventIn,eventOut;this.type=type,this.$element=$(element),this.options=this.getOptions(options),this.enabled=!0,"click"==this.options.trigger?this.$element.on("click."+this.type,this.options.selector,$.proxy(this.toggle,this)):"manual"!=this.options.trigger&&(eventIn="hover"==this.options.trigger?"mouseenter":"focus",eventOut="hover"==this.options.trigger?"mouseleave":"blur",this.$element.on(eventIn+"."+this.type,this.options.selector,$.proxy(this.enter,this)),this.$element.on(eventOut+"."+this.type,this.options.selector,$.proxy(this.leave,this))),this.options.selector?this._options=$.extend({},this.options,{trigger:"manual",selector:""}):this.fixTitle()},getOptions:function(options){return options=$.extend({},$.fn[this.type].defaults,options,this.$element.data()),options.delay&&"number"==typeof options.delay&&(options.delay={show:options.delay,hide:options.delay}),options},enter:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return self.options.delay&&self.options.delay.show?(clearTimeout(this.timeout),self.hoverState="in",this.timeout=setTimeout(function(){"in"==self.hoverState&&self.show()},self.options.delay.show),void 0):self.show()},leave:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return this.timeout&&clearTimeout(this.timeout),self.options.delay&&self.options.delay.hide?(self.hoverState="out",this.timeout=setTimeout(function(){"out"==self.hoverState&&self.hide()},self.options.delay.hide),void 0):self.hide()},show:function(){var $tip,inside,pos,actualWidth,actualHeight,placement,tp;if(this.hasContent()&&this.enabled){switch($tip=this.tip(),this.setContent(),this.options.animation&&$tip.addClass("fade"),placement="function"==typeof this.options.placement?this.options.placement.call(this,$tip[0],this.$element[0]):this.options.placement,inside=/in/.test(placement),$tip.detach().css({top:0,left:0,display:"block"}).insertAfter(this.$element),pos=this.getPosition(inside),actualWidth=$tip[0].offsetWidth,actualHeight=$tip[0].offsetHeight,inside?placement.split(" ")[1]:placement){case"bottom":tp={top:pos.top+pos.height,left:pos.left+pos.width/2-actualWidth/2};break;case"top":tp={top:pos.top-actualHeight,left:pos.left+pos.width/2-actualWidth/2};break;case"left":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left-actualWidth};break;case"right":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left+pos.width}}$tip.offset(tp).addClass(placement).addClass("in")}},setContent:function(){var $tip=this.tip(),title=this.getTitle();$tip.find(".tooltip-inner")[this.options.html?"html":"text"](title),$tip.removeClass("fade in top bottom left right")},hide:function(){function removeWithAnimation(){var timeout=setTimeout(function(){$tip.off($.support.transition.end).detach()},500);$tip.one($.support.transition.end,function(){clearTimeout(timeout),$tip.detach()})}var $tip=this.tip();return $tip.removeClass("in"),$.support.transition&&this.$tip.hasClass("fade")?removeWithAnimation():$tip.detach(),this},fixTitle:function(){var $e=this.$element;($e.attr("title")||"string"!=typeof $e.attr("data-original-title"))&&$e.attr("data-original-title",$e.attr("title")||"").removeAttr("title")},hasContent:function(){return this.getTitle()},getPosition:function(inside){return $.extend({},inside?{top:0,left:0}:this.$element.offset(),{width:this.$element[0].offsetWidth,height:this.$element[0].offsetHeight})},getTitle:function(){var title,$e=this.$element,o=this.options;return title=$e.attr("data-original-title")||("function"==typeof o.title?o.title.call($e[0]):o.title)},tip:function(){return this.$tip=this.$tip||$(this.options.template)},validate:function(){this.$element[0].parentNode||(this.hide(),this.$element=null,this.options=null)},enable:function(){this.enabled=!0},disable:function(){this.enabled=!1},toggleEnabled:function(){this.enabled=!this.enabled},toggle:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);self[self.tip().hasClass("in")?"hide":"show"]()},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}};var old=$.fn.tooltip;$.fn.tooltip=function(option){return this.each(function(){var $this=$(this),data=$this.data("tooltip"),options="object"==typeof option&&option;data||$this.data("tooltip",data=new Tooltip(this,options)),"string"==typeof option&&data[option]()})},$.fn.tooltip.Constructor=Tooltip,$.fn.tooltip.defaults={animation:!0,placement:"top",selector:!1,template:'<div class="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',trigger:"hover",title:"",delay:0,html:!1},$.fn.tooltip.noConflict=function(){return $.fn.tooltip=old,this}}(window.jQuery),!function($){"use strict";var Popover=function(element,options){this.init("popover",element,options)};Popover.prototype=$.extend({},$.fn.tooltip.Constructor.prototype,{constructor:Popover,setContent:function(){var $tip=this.tip(),title=this.getTitle(),content=this.getContent();$tip.find(".popover-title")[this.options.html?"html":"text"](title),$tip.find(".popover-content")[this.options.html?"html":"text"](content),$tip.removeClass("fade top bottom left right in")},hasContent:function(){return this.getTitle()||this.getContent()},getContent:function(){var content,$e=this.$element,o=this.options;return content=$e.attr("data-content")||("function"==typeof o.content?o.content.call($e[0]):o.content)},tip:function(){return this.$tip||(this.$tip=$(this.options.template)),this.$tip},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}});var old=$.fn.popover;$.fn.popover=function(option){return this.each(function(){var $this=$(this),data=$this.data("popover"),options="object"==typeof option&&option;data||$this.data("popover",data=new Popover(this,options)),"string"==typeof option&&data[option]()})},$.fn.popover.Constructor=Popover,$.fn.popover.defaults=$.extend({},$.fn.tooltip.defaults,{placement:"right",trigger:"click",content:"",template:'<div class="popover"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"></div></div></div>'}),$.fn.popover.noConflict=function(){return $.fn.popover=old,this}}(window.jQuery),!function($){"use strict";function ScrollSpy(element,options){var href,process=$.proxy(this.process,this),$element=$(element).is("body")?$(window):$(element);this.options=$.extend({},$.fn.scrollspy.defaults,options),this.$scrollElement=$element.on("scroll.scroll-spy.data-api",process),this.selector=(this.options.target||(href=$(element).attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")||"")+" .nav li > a",this.$body=$("body"),this.refresh(),this.process()}ScrollSpy.prototype={constructor:ScrollSpy,refresh:function(){var $targets,self=this;this.offsets=$([]),this.targets=$([]),$targets=this.$body.find(this.selector).map(function(){var $el=$(this),href=$el.data("target")||$el.attr("href"),$href=/^#\w/.test(href)&&$(href);return $href&&$href.length&&[[$href.position().top+self.$scrollElement.scrollTop(),href]]||null}).sort(function(a,b){return a[0]-b[0]}).each(function(){self.offsets.push(this[0]),self.targets.push(this[1])})},process:function(){var i,scrollTop=this.$scrollElement.scrollTop()+this.options.offset,scrollHeight=this.$scrollElement[0].scrollHeight||this.$body[0].scrollHeight,maxScroll=scrollHeight-this.$scrollElement.height(),offsets=this.offsets,targets=this.targets,activeTarget=this.activeTarget;if(scrollTop>=maxScroll)return activeTarget!=(i=targets.last()[0])&&this.activate(i);for(i=offsets.length;i--;)activeTarget!=targets[i]&&scrollTop>=offsets[i]&&(!offsets[i+1]||offsets[i+1]>=scrollTop)&&this.activate(targets[i])},activate:function(target){var active,selector;this.activeTarget=target,$(this.selector).parent(".active").removeClass("active"),selector=this.selector+'[data-target="'+target+'"],'+this.selector+'[href="'+target+'"]',active=$(selector).parent("li").addClass("active"),active.parent(".dropdown-menu").length&&(active=active.closest("li.dropdown").addClass("active")),active.trigger("activate")}};var old=$.fn.scrollspy;$.fn.scrollspy=function(option){return this.each(function(){var $this=$(this),data=$this.data("scrollspy"),options="object"==typeof option&&option;data||$this.data("scrollspy",data=new ScrollSpy(this,options)),"string"==typeof option&&data[option]()})},$.fn.scrollspy.Constructor=ScrollSpy,$.fn.scrollspy.defaults={offset:10},$.fn.scrollspy.noConflict=function(){return $.fn.scrollspy=old,this},$(window).on("load",function(){$('[data-spy="scroll"]').each(function(){var $spy=$(this);$spy.scrollspy($spy.data())})})}(window.jQuery),!function($){"use strict";var Tab=function(element){this.element=$(element)};Tab.prototype={constructor:Tab,show:function(){var previous,$target,e,$this=this.element,$ul=$this.closest("ul:not(.dropdown-menu)"),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$this.parent("li").hasClass("active")||(previous=$ul.find(".active:last a")[0],e=$.Event("show",{relatedTarget:previous}),$this.trigger(e),e.isDefaultPrevented()||($target=$(selector),this.activate($this.parent("li"),$ul),this.activate($target,$target.parent(),function(){$this.trigger({type:"shown",relatedTarget:previous})})))},activate:function(element,container,callback){function next(){$active.removeClass("active").find("> .dropdown-menu > .active").removeClass("active"),element.addClass("active"),transition?(element[0].offsetWidth,element.addClass("in")):element.removeClass("fade"),element.parent(".dropdown-menu")&&element.closest("li.dropdown").addClass("active"),callback&&callback()}var $active=container.find("> .active"),transition=callback&&$.support.transition&&$active.hasClass("fade");transition?$active.one($.support.transition.end,next):next(),$active.removeClass("in")}};var old=$.fn.tab;$.fn.tab=function(option){return this.each(function(){var $this=$(this),data=$this.data("tab");data||$this.data("tab",data=new Tab(this)),"string"==typeof option&&data[option]()})},$.fn.tab.Constructor=Tab,$.fn.tab.noConflict=function(){return $.fn.tab=old,this},$(document).on("click.tab.data-api",'[data-toggle="tab"], [data-toggle="pill"]',function(e){e.preventDefault(),$(this).tab("show")})}(window.jQuery),!function($){"use strict";var Typeahead=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.typeahead.defaults,options),this.matcher=this.options.matcher||this.matcher,this.sorter=this.options.sorter||this.sorter,this.highlighter=this.options.highlighter||this.highlighter,this.updater=this.options.updater||this.updater,this.source=this.options.source,this.$menu=$(this.options.menu),this.shown=!1,this.listen()};Typeahead.prototype={constructor:Typeahead,select:function(){var val=this.$menu.find(".active").attr("data-value");return this.$element.val(this.updater(val)).change(),this.hide()},updater:function(item){return item},show:function(){var pos=$.extend({},this.$element.position(),{height:this.$element[0].offsetHeight});return this.$menu.insertAfter(this.$element).css({top:pos.top+pos.height,left:pos.left}).show(),this.shown=!0,this},hide:function(){return this.$menu.hide(),this.shown=!1,this},lookup:function(){var items;return this.query=this.$element.val(),!this.query||this.query.length<this.options.minLength?this.shown?this.hide():this:(items=$.isFunction(this.source)?this.source(this.query,$.proxy(this.process,this)):this.source,items?this.process(items):this)},process:function(items){var that=this;return items=$.grep(items,function(item){return that.matcher(item)}),items=this.sorter(items),items.length?this.render(items.slice(0,this.options.items)).show():this.shown?this.hide():this},matcher:function(item){return~item.toLowerCase().indexOf(this.query.toLowerCase())},sorter:function(items){for(var item,beginswith=[],caseSensitive=[],caseInsensitive=[];item=items.shift();)item.toLowerCase().indexOf(this.query.toLowerCase())?~item.indexOf(this.query)?caseSensitive.push(item):caseInsensitive.push(item):beginswith.push(item);return beginswith.concat(caseSensitive,caseInsensitive)},highlighter:function(item){var query=this.query.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g,"\\$&");return item.replace(RegExp("("+query+")","ig"),function($1,match){return"<strong>"+match+"</strong>"})},render:function(items){var that=this;return items=$(items).map(function(i,item){return i=$(that.options.item).attr("data-value",item),i.find("a").html(that.highlighter(item)),i[0]}),items.first().addClass("active"),this.$menu.html(items),this},next:function(){var active=this.$menu.find(".active").removeClass("active"),next=active.next();next.length||(next=$(this.$menu.find("li")[0])),next.addClass("active")},prev:function(){var active=this.$menu.find(".active").removeClass("active"),prev=active.prev();prev.length||(prev=this.$menu.find("li").last()),prev.addClass("active")},listen:function(){this.$element.on("blur",$.proxy(this.blur,this)).on("keypress",$.proxy(this.keypress,this)).on("keyup",$.proxy(this.keyup,this)),this.eventSupported("keydown")&&this.$element.on("keydown",$.proxy(this.keydown,this)),this.$menu.on("click",$.proxy(this.click,this)).on("mouseenter","li",$.proxy(this.mouseenter,this))},eventSupported:function(eventName){var isSupported=eventName in this.$element;return isSupported||(this.$element.setAttribute(eventName,"return;"),isSupported="function"==typeof this.$element[eventName]),isSupported},move:function(e){if(this.shown){switch(e.keyCode){case 9:case 13:case 27:e.preventDefault();break;case 38:e.preventDefault(),this.prev();break;case 40:e.preventDefault(),this.next()}e.stopPropagation()}},keydown:function(e){this.suppressKeyPressRepeat=~$.inArray(e.keyCode,[40,38,9,13,27]),this.move(e)},keypress:function(e){this.suppressKeyPressRepeat||this.move(e)},keyup:function(e){switch(e.keyCode){case 40:case 38:case 16:case 17:case 18:break;case 9:case 13:if(!this.shown)return;this.select();break;case 27:if(!this.shown)return;this.hide();break;default:this.lookup()}e.stopPropagation(),e.preventDefault()},blur:function(){var that=this;setTimeout(function(){that.hide()},150)},click:function(e){e.stopPropagation(),e.preventDefault(),this.select()},mouseenter:function(e){this.$menu.find(".active").removeClass("active"),$(e.currentTarget).addClass("active")}};var old=$.fn.typeahead;$.fn.typeahead=function(option){return this.each(function(){var $this=$(this),data=$this.data("typeahead"),options="object"==typeof option&&option;data||$this.data("typeahead",data=new Typeahead(this,options)),"string"==typeof option&&data[option]()})},$.fn.typeahead.defaults={source:[],items:8,menu:'<ul class="typeahead dropdown-menu"></ul>',item:'<li><a href="#"></a></li>',minLength:1},$.fn.typeahead.Constructor=Typeahead,$.fn.typeahead.noConflict=function(){return $.fn.typeahead=old,this},$(document).on("focus.typeahead.data-api",'[data-provide="typeahead"]',function(e){var $this=$(this);$this.data("typeahead")||(e.preventDefault(),$this.typeahead($this.data()))})}(window.jQuery),!function($){"use strict";var Affix=function(element,options){this.options=$.extend({},$.fn.affix.defaults,options),this.$window=$(window).on("scroll.affix.data-api",$.proxy(this.checkPosition,this)).on("click.affix.data-api",$.proxy(function(){setTimeout($.proxy(this.checkPosition,this),1)},this)),this.$element=$(element),this.checkPosition()};Affix.prototype.checkPosition=function(){if(this.$element.is(":visible")){var affix,scrollHeight=$(document).height(),scrollTop=this.$window.scrollTop(),position=this.$element.offset(),offset=this.options.offset,offsetBottom=offset.bottom,offsetTop=offset.top,reset="affix affix-top affix-bottom";"object"!=typeof offset&&(offsetBottom=offsetTop=offset),"function"==typeof offsetTop&&(offsetTop=offset.top()),"function"==typeof offsetBottom&&(offsetBottom=offset.bottom()),affix=null!=this.unpin&&scrollTop+this.unpin<=position.top?!1:null!=offsetBottom&&position.top+this.$element.height()>=scrollHeight-offsetBottom?"bottom":null!=offsetTop&&offsetTop>=scrollTop?"top":!1,this.affixed!==affix&&(this.affixed=affix,this.unpin="bottom"==affix?position.top-scrollTop:null,this.$element.removeClass(reset).addClass("affix"+(affix?"-"+affix:"")))}};var old=$.fn.affix;$.fn.affix=function(option){return this.each(function(){var $this=$(this),data=$this.data("affix"),options="object"==typeof option&&option;data||$this.data("affix",data=new Affix(this,options)),"string"==typeof option&&data[option]()})},$.fn.affix.Constructor=Affix,$.fn.affix.defaults={offset:0},$.fn.affix.noConflict=function(){return $.fn.affix=old,this},$(window).on("load",function(){$('[data-spy="affix"]').each(function(){var $spy=$(this),data=$spy.data();data.offset=data.offset||{},data.offsetBottom&&(data.offset.bottom=data.offsetBottom),data.offsetTop&&(data.offset.top=data.offsetTop),$spy.affix(data)})})}(window.jQuery);;
-
 
 jade = (function(exports){
 /*!
@@ -23352,7 +23316,6 @@ exports.rethrow = function rethrow(err, filename, lineno){
 
 })({});
 ;
-
 /*! jQuery UI - v1.8.23 - 2012-08-15
 * https://github.com/jquery/jquery-ui
 * Includes: jquery.ui.core.js
@@ -23370,7 +23333,6 @@ exports.rethrow = function rethrow(err, filename, lineno){
 * Includes: jquery.ui.draggable.js
 * Copyright (c) 2012 AUTHORS.txt; Licensed MIT, GPL */
 (function(a,b){a.widget("ui.draggable",a.ui.mouse,{widgetEventPrefix:"drag",options:{addClasses:!0,appendTo:"parent",axis:!1,connectToSortable:!1,containment:!1,cursor:"auto",cursorAt:!1,grid:!1,handle:!1,helper:"original",iframeFix:!1,opacity:!1,refreshPositions:!1,revert:!1,revertDuration:500,scope:"default",scroll:!0,scrollSensitivity:20,scrollSpeed:20,snap:!1,snapMode:"both",snapTolerance:20,stack:!1,zIndex:!1},_create:function(){this.options.helper=="original"&&!/^(?:r|a|f)/.test(this.element.css("position"))&&(this.element[0].style.position="relative"),this.options.addClasses&&this.element.addClass("ui-draggable"),this.options.disabled&&this.element.addClass("ui-draggable-disabled"),this._mouseInit()},destroy:function(){if(!this.element.data("draggable"))return;return this.element.removeData("draggable").unbind(".draggable").removeClass("ui-draggable ui-draggable-dragging ui-draggable-disabled"),this._mouseDestroy(),this},_mouseCapture:function(b){var c=this.options;return this.helper||c.disabled||a(b.target).is(".ui-resizable-handle")?!1:(this.handle=this._getHandle(b),this.handle?(c.iframeFix&&a(c.iframeFix===!0?"iframe":c.iframeFix).each(function(){a('<div class="ui-draggable-iframeFix" style="background: #fff;"></div>').css({width:this.offsetWidth+"px",height:this.offsetHeight+"px",position:"absolute",opacity:"0.001",zIndex:1e3}).css(a(this).offset()).appendTo("body")}),!0):!1)},_mouseStart:function(b){var c=this.options;return this.helper=this._createHelper(b),this.helper.addClass("ui-draggable-dragging"),this._cacheHelperProportions(),a.ui.ddmanager&&(a.ui.ddmanager.current=this),this._cacheMargins(),this.cssPosition=this.helper.css("position"),this.scrollParent=this.helper.scrollParent(),this.offset=this.positionAbs=this.element.offset(),this.offset={top:this.offset.top-this.margins.top,left:this.offset.left-this.margins.left},a.extend(this.offset,{click:{left:b.pageX-this.offset.left,top:b.pageY-this.offset.top},parent:this._getParentOffset(),relative:this._getRelativeOffset()}),this.originalPosition=this.position=this._generatePosition(b),this.originalPageX=b.pageX,this.originalPageY=b.pageY,c.cursorAt&&this._adjustOffsetFromHelper(c.cursorAt),c.containment&&this._setContainment(),this._trigger("start",b)===!1?(this._clear(),!1):(this._cacheHelperProportions(),a.ui.ddmanager&&!c.dropBehaviour&&a.ui.ddmanager.prepareOffsets(this,b),this._mouseDrag(b,!0),a.ui.ddmanager&&a.ui.ddmanager.dragStart(this,b),!0)},_mouseDrag:function(b,c){this.position=this._generatePosition(b),this.positionAbs=this._convertPositionTo("absolute");if(!c){var d=this._uiHash();if(this._trigger("drag",b,d)===!1)return this._mouseUp({}),!1;this.position=d.position}if(!this.options.axis||this.options.axis!="y")this.helper[0].style.left=this.position.left+"px";if(!this.options.axis||this.options.axis!="x")this.helper[0].style.top=this.position.top+"px";return a.ui.ddmanager&&a.ui.ddmanager.drag(this,b),!1},_mouseStop:function(b){var c=!1;a.ui.ddmanager&&!this.options.dropBehaviour&&(c=a.ui.ddmanager.drop(this,b)),this.dropped&&(c=this.dropped,this.dropped=!1);var d=this.element[0],e=!1;while(d&&(d=d.parentNode))d==document&&(e=!0);if(!e&&this.options.helper==="original")return!1;if(this.options.revert=="invalid"&&!c||this.options.revert=="valid"&&c||this.options.revert===!0||a.isFunction(this.options.revert)&&this.options.revert.call(this.element,c)){var f=this;a(this.helper).animate(this.originalPosition,parseInt(this.options.revertDuration,10),function(){f._trigger("stop",b)!==!1&&f._clear()})}else this._trigger("stop",b)!==!1&&this._clear();return!1},_mouseUp:function(b){return this.options.iframeFix===!0&&a("div.ui-draggable-iframeFix").each(function(){this.parentNode.removeChild(this)}),a.ui.ddmanager&&a.ui.ddmanager.dragStop(this,b),a.ui.mouse.prototype._mouseUp.call(this,b)},cancel:function(){return this.helper.is(".ui-draggable-dragging")?this._mouseUp({}):this._clear(),this},_getHandle:function(b){var c=!this.options.handle||!a(this.options.handle,this.element).length?!0:!1;return a(this.options.handle,this.element).find("*").andSelf().each(function(){this==b.target&&(c=!0)}),c},_createHelper:function(b){var c=this.options,d=a.isFunction(c.helper)?a(c.helper.apply(this.element[0],[b])):c.helper=="clone"?this.element.clone().removeAttr("id"):this.element;return d.parents("body").length||d.appendTo(c.appendTo=="parent"?this.element[0].parentNode:c.appendTo),d[0]!=this.element[0]&&!/(fixed|absolute)/.test(d.css("position"))&&d.css("position","absolute"),d},_adjustOffsetFromHelper:function(b){typeof b=="string"&&(b=b.split(" ")),a.isArray(b)&&(b={left:+b[0],top:+b[1]||0}),"left"in b&&(this.offset.click.left=b.left+this.margins.left),"right"in b&&(this.offset.click.left=this.helperProportions.width-b.right+this.margins.left),"top"in b&&(this.offset.click.top=b.top+this.margins.top),"bottom"in b&&(this.offset.click.top=this.helperProportions.height-b.bottom+this.margins.top)},_getParentOffset:function(){this.offsetParent=this.helper.offsetParent();var b=this.offsetParent.offset();this.cssPosition=="absolute"&&this.scrollParent[0]!=document&&a.ui.contains(this.scrollParent[0],this.offsetParent[0])&&(b.left+=this.scrollParent.scrollLeft(),b.top+=this.scrollParent.scrollTop());if(this.offsetParent[0]==document.body||this.offsetParent[0].tagName&&this.offsetParent[0].tagName.toLowerCase()=="html"&&a.browser.msie)b={top:0,left:0};return{top:b.top+(parseInt(this.offsetParent.css("borderTopWidth"),10)||0),left:b.left+(parseInt(this.offsetParent.css("borderLeftWidth"),10)||0)}},_getRelativeOffset:function(){if(this.cssPosition=="relative"){var a=this.element.position();return{top:a.top-(parseInt(this.helper.css("top"),10)||0)+this.scrollParent.scrollTop(),left:a.left-(parseInt(this.helper.css("left"),10)||0)+this.scrollParent.scrollLeft()}}return{top:0,left:0}},_cacheMargins:function(){this.margins={left:parseInt(this.element.css("marginLeft"),10)||0,top:parseInt(this.element.css("marginTop"),10)||0,right:parseInt(this.element.css("marginRight"),10)||0,bottom:parseInt(this.element.css("marginBottom"),10)||0}},_cacheHelperProportions:function(){this.helperProportions={width:this.helper.outerWidth(),height:this.helper.outerHeight()}},_setContainment:function(){var b=this.options;b.containment=="parent"&&(b.containment=this.helper[0].parentNode);if(b.containment=="document"||b.containment=="window")this.containment=[b.containment=="document"?0:a(window).scrollLeft()-this.offset.relative.left-this.offset.parent.left,b.containment=="document"?0:a(window).scrollTop()-this.offset.relative.top-this.offset.parent.top,(b.containment=="document"?0:a(window).scrollLeft())+a(b.containment=="document"?document:window).width()-this.helperProportions.width-this.margins.left,(b.containment=="document"?0:a(window).scrollTop())+(a(b.containment=="document"?document:window).height()||document.body.parentNode.scrollHeight)-this.helperProportions.height-this.margins.top];if(!/^(document|window|parent)$/.test(b.containment)&&b.containment.constructor!=Array){var c=a(b.containment),d=c[0];if(!d)return;var e=c.offset(),f=a(d).css("overflow")!="hidden";this.containment=[(parseInt(a(d).css("borderLeftWidth"),10)||0)+(parseInt(a(d).css("paddingLeft"),10)||0),(parseInt(a(d).css("borderTopWidth"),10)||0)+(parseInt(a(d).css("paddingTop"),10)||0),(f?Math.max(d.scrollWidth,d.offsetWidth):d.offsetWidth)-(parseInt(a(d).css("borderLeftWidth"),10)||0)-(parseInt(a(d).css("paddingRight"),10)||0)-this.helperProportions.width-this.margins.left-this.margins.right,(f?Math.max(d.scrollHeight,d.offsetHeight):d.offsetHeight)-(parseInt(a(d).css("borderTopWidth"),10)||0)-(parseInt(a(d).css("paddingBottom"),10)||0)-this.helperProportions.height-this.margins.top-this.margins.bottom],this.relative_container=c}else b.containment.constructor==Array&&(this.containment=b.containment)},_convertPositionTo:function(b,c){c||(c=this.position);var d=b=="absolute"?1:-1,e=this.options,f=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,g=/(html|body)/i.test(f[0].tagName);return{top:c.top+this.offset.relative.top*d+this.offset.parent.top*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollTop():g?0:f.scrollTop())*d),left:c.left+this.offset.relative.left*d+this.offset.parent.left*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():g?0:f.scrollLeft())*d)}},_generatePosition:function(b){var c=this.options,d=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,e=/(html|body)/i.test(d[0].tagName),f=b.pageX,g=b.pageY;if(this.originalPosition){var h;if(this.containment){if(this.relative_container){var i=this.relative_container.offset();h=[this.containment[0]+i.left,this.containment[1]+i.top,this.containment[2]+i.left,this.containment[3]+i.top]}else h=this.containment;b.pageX-this.offset.click.left<h[0]&&(f=h[0]+this.offset.click.left),b.pageY-this.offset.click.top<h[1]&&(g=h[1]+this.offset.click.top),b.pageX-this.offset.click.left>h[2]&&(f=h[2]+this.offset.click.left),b.pageY-this.offset.click.top>h[3]&&(g=h[3]+this.offset.click.top)}if(c.grid){var j=c.grid[1]?this.originalPageY+Math.round((g-this.originalPageY)/c.grid[1])*c.grid[1]:this.originalPageY;g=h?j-this.offset.click.top<h[1]||j-this.offset.click.top>h[3]?j-this.offset.click.top<h[1]?j+c.grid[1]:j-c.grid[1]:j:j;var k=c.grid[0]?this.originalPageX+Math.round((f-this.originalPageX)/c.grid[0])*c.grid[0]:this.originalPageX;f=h?k-this.offset.click.left<h[0]||k-this.offset.click.left>h[2]?k-this.offset.click.left<h[0]?k+c.grid[0]:k-c.grid[0]:k:k}}return{top:g-this.offset.click.top-this.offset.relative.top-this.offset.parent.top+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollTop():e?0:d.scrollTop()),left:f-this.offset.click.left-this.offset.relative.left-this.offset.parent.left+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():e?0:d.scrollLeft())}},_clear:function(){this.helper.removeClass("ui-draggable-dragging"),this.helper[0]!=this.element[0]&&!this.cancelHelperRemoval&&this.helper.remove(),this.helper=null,this.cancelHelperRemoval=!1},_trigger:function(b,c,d){return d=d||this._uiHash(),a.ui.plugin.call(this,b,[c,d]),b=="drag"&&(this.positionAbs=this._convertPositionTo("absolute")),a.Widget.prototype._trigger.call(this,b,c,d)},plugins:{},_uiHash:function(a){return{helper:this.helper,position:this.position,originalPosition:this.originalPosition,offset:this.positionAbs}}}),a.extend(a.ui.draggable,{version:"1.8.23"}),a.ui.plugin.add("draggable","connectToSortable",{start:function(b,c){var d=a(this).data("draggable"),e=d.options,f=a.extend({},c,{item:d.element});d.sortables=[],a(e.connectToSortable).each(function(){var c=a.data(this,"sortable");c&&!c.options.disabled&&(d.sortables.push({instance:c,shouldRevert:c.options.revert}),c.refreshPositions(),c._trigger("activate",b,f))})},stop:function(b,c){var d=a(this).data("draggable"),e=a.extend({},c,{item:d.element});a.each(d.sortables,function(){this.instance.isOver?(this.instance.isOver=0,d.cancelHelperRemoval=!0,this.instance.cancelHelperRemoval=!1,this.shouldRevert&&(this.instance.options.revert=!0),this.instance._mouseStop(b),this.instance.options.helper=this.instance.options._helper,d.options.helper=="original"&&this.instance.currentItem.css({top:"auto",left:"auto"})):(this.instance.cancelHelperRemoval=!1,this.instance._trigger("deactivate",b,e))})},drag:function(b,c){var d=a(this).data("draggable"),e=this,f=function(b){var c=this.offset.click.top,d=this.offset.click.left,e=this.positionAbs.top,f=this.positionAbs.left,g=b.height,h=b.width,i=b.top,j=b.left;return a.ui.isOver(e+c,f+d,i,j,g,h)};a.each(d.sortables,function(f){this.instance.positionAbs=d.positionAbs,this.instance.helperProportions=d.helperProportions,this.instance.offset.click=d.offset.click,this.instance._intersectsWith(this.instance.containerCache)?(this.instance.isOver||(this.instance.isOver=1,this.instance.currentItem=a(e).clone().removeAttr("id").appendTo(this.instance.element).data("sortable-item",!0),this.instance.options._helper=this.instance.options.helper,this.instance.options.helper=function(){return c.helper[0]},b.target=this.instance.currentItem[0],this.instance._mouseCapture(b,!0),this.instance._mouseStart(b,!0,!0),this.instance.offset.click.top=d.offset.click.top,this.instance.offset.click.left=d.offset.click.left,this.instance.offset.parent.left-=d.offset.parent.left-this.instance.offset.parent.left,this.instance.offset.parent.top-=d.offset.parent.top-this.instance.offset.parent.top,d._trigger("toSortable",b),d.dropped=this.instance.element,d.currentItem=d.element,this.instance.fromOutside=d),this.instance.currentItem&&this.instance._mouseDrag(b)):this.instance.isOver&&(this.instance.isOver=0,this.instance.cancelHelperRemoval=!0,this.instance.options.revert=!1,this.instance._trigger("out",b,this.instance._uiHash(this.instance)),this.instance._mouseStop(b,!0),this.instance.options.helper=this.instance.options._helper,this.instance.currentItem.remove(),this.instance.placeholder&&this.instance.placeholder.remove(),d._trigger("fromSortable",b),d.dropped=!1)})}}),a.ui.plugin.add("draggable","cursor",{start:function(b,c){var d=a("body"),e=a(this).data("draggable").options;d.css("cursor")&&(e._cursor=d.css("cursor")),d.css("cursor",e.cursor)},stop:function(b,c){var d=a(this).data("draggable").options;d._cursor&&a("body").css("cursor",d._cursor)}}),a.ui.plugin.add("draggable","opacity",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("opacity")&&(e._opacity=d.css("opacity")),d.css("opacity",e.opacity)},stop:function(b,c){var d=a(this).data("draggable").options;d._opacity&&a(c.helper).css("opacity",d._opacity)}}),a.ui.plugin.add("draggable","scroll",{start:function(b,c){var d=a(this).data("draggable");d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"&&(d.overflowOffset=d.scrollParent.offset())},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=!1;if(d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"){if(!e.axis||e.axis!="x")d.overflowOffset.top+d.scrollParent[0].offsetHeight-b.pageY<e.scrollSensitivity?d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop+e.scrollSpeed:b.pageY-d.overflowOffset.top<e.scrollSensitivity&&(d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop-e.scrollSpeed);if(!e.axis||e.axis!="y")d.overflowOffset.left+d.scrollParent[0].offsetWidth-b.pageX<e.scrollSensitivity?d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft+e.scrollSpeed:b.pageX-d.overflowOffset.left<e.scrollSensitivity&&(d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft-e.scrollSpeed)}else{if(!e.axis||e.axis!="x")b.pageY-a(document).scrollTop()<e.scrollSensitivity?f=a(document).scrollTop(a(document).scrollTop()-e.scrollSpeed):a(window).height()-(b.pageY-a(document).scrollTop())<e.scrollSensitivity&&(f=a(document).scrollTop(a(document).scrollTop()+e.scrollSpeed));if(!e.axis||e.axis!="y")b.pageX-a(document).scrollLeft()<e.scrollSensitivity?f=a(document).scrollLeft(a(document).scrollLeft()-e.scrollSpeed):a(window).width()-(b.pageX-a(document).scrollLeft())<e.scrollSensitivity&&(f=a(document).scrollLeft(a(document).scrollLeft()+e.scrollSpeed))}f!==!1&&a.ui.ddmanager&&!e.dropBehaviour&&a.ui.ddmanager.prepareOffsets(d,b)}}),a.ui.plugin.add("draggable","snap",{start:function(b,c){var d=a(this).data("draggable"),e=d.options;d.snapElements=[],a(e.snap.constructor!=String?e.snap.items||":data(draggable)":e.snap).each(function(){var b=a(this),c=b.offset();this!=d.element[0]&&d.snapElements.push({item:this,width:b.outerWidth(),height:b.outerHeight(),top:c.top,left:c.left})})},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=e.snapTolerance,g=c.offset.left,h=g+d.helperProportions.width,i=c.offset.top,j=i+d.helperProportions.height;for(var k=d.snapElements.length-1;k>=0;k--){var l=d.snapElements[k].left,m=l+d.snapElements[k].width,n=d.snapElements[k].top,o=n+d.snapElements[k].height;if(!(l-f<g&&g<m+f&&n-f<i&&i<o+f||l-f<g&&g<m+f&&n-f<j&&j<o+f||l-f<h&&h<m+f&&n-f<i&&i<o+f||l-f<h&&h<m+f&&n-f<j&&j<o+f)){d.snapElements[k].snapping&&d.options.snap.release&&d.options.snap.release.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=!1;continue}if(e.snapMode!="inner"){var p=Math.abs(n-j)<=f,q=Math.abs(o-i)<=f,r=Math.abs(l-h)<=f,s=Math.abs(m-g)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n-d.helperProportions.height,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l-d.helperProportions.width}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m}).left-d.margins.left)}var t=p||q||r||s;if(e.snapMode!="outer"){var p=Math.abs(n-i)<=f,q=Math.abs(o-j)<=f,r=Math.abs(l-g)<=f,s=Math.abs(m-h)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o-d.helperProportions.height,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m-d.helperProportions.width}).left-d.margins.left)}!d.snapElements[k].snapping&&(p||q||r||s||t)&&d.options.snap.snap&&d.options.snap.snap.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=p||q||r||s||t}}}),a.ui.plugin.add("draggable","stack",{start:function(b,c){var d=a(this).data("draggable").options,e=a.makeArray(a(d.stack)).sort(function(b,c){return(parseInt(a(b).css("zIndex"),10)||0)-(parseInt(a(c).css("zIndex"),10)||0)});if(!e.length)return;var f=parseInt(e[0].style.zIndex)||0;a(e).each(function(a){this.style.zIndex=f+a}),this[0].style.zIndex=f+e.length}}),a.ui.plugin.add("draggable","zIndex",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("zIndex")&&(e._zIndex=d.css("zIndex")),d.css("zIndex",e.zIndex)},stop:function(b,c){var d=a(this).data("draggable").options;d._zIndex&&a(c.helper).css("zIndex",d._zIndex)}})})(jQuery);;;
-
 /*
  jquery.layout 1.3.0 - Release Candidate 30.62
  $Date: 2012-08-04 08:00:00 (Thu, 23 Aug 2012) $
@@ -23504,7 +23466,254 @@ b.attr("pin");if(!(h&&f===(h=="down"))){var a=a.options[d],h=a.buttonClass+"-pin
 b,d,j)},addOpenBtn:function(b,d,j){return c.addOpen(a,b,d,j)},addCloseBtn:function(b,d){return c.addClose(a,b,d)},addPinBtn:function(b,d){return c.addPin(a,b,d)}});for(var d=0;d<4;d++)a.state[b.layout.config.borderPanes[d]].pins=[];a.options.autoBindCustomButtons&&c.init(a)},_unload:function(){}};b.layout.onLoad.push(b.layout.buttons._load);b.layout.plugins.browserZoom=!0;b.layout.defaults.browserZoomCheckInterval=1E3;b.layout.optionsMap.layout.push("browserZoomCheckInterval");b.layout.browserZoom=
 {_init:function(a){b.layout.browserZoom.ratio()!==false&&b.layout.browserZoom._setTimer(a)},_setTimer:function(a){if(!a.destroyed){var c=a.options,d=a.state,f=a.hasParentLayout?5E3:Math.max(c.browserZoomCheckInterval,100);setTimeout(function(){if(!a.destroyed&&c.resizeWithWindow){var f=b.layout.browserZoom.ratio();if(f!==d.browserZoom){d.browserZoom=f;a.resizeAll()}b.layout.browserZoom._setTimer(a)}},f)}},ratio:function(){function a(a,b){return(parseInt(a,10)/parseInt(b,10)*100).toFixed()}var c=window,
 d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r,y,D;return j.msie&&m>8||!j.msie?false:d.deviceXDPI?a(d.deviceXDPI,d.systemXDPI):j.webkit&&(r=f.body.getBoundingClientRect)?a(r.left-r.right,f.body.offsetWidth):j.webkit&&(y=c.outerWidth)?a(y,c.innerWidth):(y=d.width)&&(D=h.clientWidth)?a(y,D):false}};b.layout.onReady.push(b.layout.browserZoom._init)})(jQuery);;
+// Generated by CoffeeScript 1.6.2
+(function() {
+  var CozySocketListener, global,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
+  CozySocketListener = (function() {
+    CozySocketListener.prototype.models = {};
+
+    CozySocketListener.prototype.events = [];
+
+    CozySocketListener.prototype.shouldFetchCreated = function(id) {
+      return true;
+    };
+
+    CozySocketListener.prototype.onRemoteCreate = function(model) {};
+
+    CozySocketListener.prototype.onRemoteUpdate = function(model, collection) {};
+
+    CozySocketListener.prototype.onRemoteDelete = function(model, collection) {};
+
+    function CozySocketListener() {
+      this.processStack = __bind(this.processStack, this);
+      this.callbackFactory = __bind(this.callbackFactory, this);
+      this.resume = __bind(this.resume, this);
+      this.pause = __bind(this.pause, this);
+      var err;
+
+      try {
+        this.connect();
+      } catch (_error) {
+        err = _error;
+        console.log("Error while connecting to socket.io");
+        console.log(err.stack);
+      }
+      this.collections = [];
+      this.singlemodels = new Backbone.Collection();
+      this.stack = [];
+      this.ignore = [];
+      this.paused = 0;
+    }
+
+    CozySocketListener.prototype.connect = function() {
+      var event, pathToSocketIO, socket, url, _i, _len, _ref, _results;
+
+      url = window.location.origin;
+      pathToSocketIO = "" + (window.location.pathname.substring(1)) + "socket.io";
+      socket = io.connect(url, {
+        resource: pathToSocketIO
+      });
+      _ref = this.events;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        event = _ref[_i];
+        _results.push(socket.on(event, this.callbackFactory(event)));
+      }
+      return _results;
+    };
+
+    CozySocketListener.prototype.watch = function(collection) {
+      if (this.collections.length === 0) {
+        this.collection = collection;
+      }
+      this.collections.push(collection);
+      collection.socketListener = this;
+      return this.watchOne(collection);
+    };
+
+    CozySocketListener.prototype.stopWatching = function(toRemove) {
+      var collection, i, _i, _len, _ref;
+
+      _ref = this.collections;
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        collection = _ref[i];
+        if (collection === toRemove) {
+          return this.collections.splice(i, 1);
+        }
+      }
+    };
+
+    CozySocketListener.prototype.watchOne = function(model) {
+      this.singlemodels.add(model);
+      model.on('request', this.pause);
+      model.on('sync', this.resume);
+      model.on('destroy', this.resume);
+      return model.on('error', this.resume);
+    };
+
+    CozySocketListener.prototype.pause = function(model, xhr, options) {
+      var doctype, operation;
+
+      if (options.ignoreMySocketNotification) {
+        operation = model.isNew() ? 'create' : 'update';
+        doctype = this.getDoctypeOf(model);
+        if (doctype == null) {
+          return;
+        }
+        this.ignore.push({
+          doctype: doctype,
+          operation: operation,
+          model: model
+        });
+        return this.paused = this.paused + 1;
+      }
+    };
+
+    CozySocketListener.prototype.resume = function(model, resp, options) {
+      if (options.ignoreMySocketNotification) {
+        this.paused = this.paused - 1;
+        if (this.paused <= 0) {
+          this.processStack();
+          return this.paused = 0;
+        }
+      }
+    };
+
+    CozySocketListener.prototype.getDoctypeOf = function(model) {
+      var Model, key, _ref;
+
+      _ref = this.models;
+      for (key in _ref) {
+        Model = _ref[key];
+        if (model instanceof Model) {
+          return key;
+        }
+      }
+    };
+
+    CozySocketListener.prototype.cleanStack = function() {
+      var ignoreEvent, ignoreIndex, removed, stackEvent, stackIndex, _results;
+
+      ignoreIndex = 0;
+      _results = [];
+      while (ignoreIndex < this.ignore.length) {
+        removed = false;
+        stackIndex = 0;
+        ignoreEvent = this.ignore[ignoreIndex];
+        while (stackIndex < this.stack.length) {
+          stackEvent = this.stack[stackIndex];
+          if (stackEvent.operation === ignoreEvent.operation && stackEvent.id === ignoreEvent.model.id) {
+            this.stack.splice(stackIndex, 1);
+            removed = true;
+            break;
+          } else {
+            stackIndex++;
+          }
+        }
+        if (removed) {
+          _results.push(this.ignore.splice(ignoreIndex, 1));
+        } else {
+          _results.push(ignoreIndex++);
+        }
+      }
+      return _results;
+    };
+
+    CozySocketListener.prototype.callbackFactory = function(event) {
+      var _this = this;
+
+      return function(id) {
+        var doctype, fullevent, operation, _ref;
+
+        _ref = event.split('.'), doctype = _ref[0], operation = _ref[1];
+        fullevent = {
+          id: id,
+          doctype: doctype,
+          operation: operation
+        };
+        _this.stack.push(fullevent);
+        if (_this.paused === 0) {
+          return _this.processStack();
+        }
+      };
+    };
+
+    CozySocketListener.prototype.processStack = function() {
+      var _results;
+
+      this.cleanStack();
+      _results = [];
+      while (this.stack.length > 0) {
+        _results.push(this.process(this.stack.shift()));
+      }
+      return _results;
+    };
+
+    CozySocketListener.prototype.process = function(event) {
+      var doctype, id, model, operation,
+        _this = this;
+
+      doctype = event.doctype, operation = event.operation, id = event.id;
+      switch (operation) {
+        case 'create':
+          if (!this.shouldFetchCreated(id)) {
+            return;
+          }
+          model = new this.models[doctype]({
+            id: id
+          });
+          return model.fetch({
+            success: function(fetched) {
+              return _this.onRemoteCreate(fetched);
+            }
+          });
+        case 'update':
+          if (model = this.singlemodels.get(id)) {
+            model.fetch({
+              success: function(fetched) {
+                if (fetched.changedAttributes()) {
+                  return _this.onRemoteUpdate(fetched, null);
+                }
+              }
+            });
+          }
+          return this.collections.forEach(function(collection) {
+            if (!(model = collection.get(id))) {
+              return;
+            }
+            return model.fetch({
+              success: function(fetched) {
+                if (fetched.changedAttributes()) {
+                  return _this.onRemoteUpdate(fetched, collection);
+                }
+              }
+            });
+          });
+        case 'delete':
+          if (model = this.singlemodels.get(id)) {
+            model.trigger('destroy');
+          }
+          return this.collections.forEach(function(collection) {
+            if (!(model = collection.get(id))) {
+              return;
+            }
+            return _this.onRemoteDelete(model, collection);
+          });
+      }
+    };
+
+    return CozySocketListener;
+
+  })();
+
+  global = (typeof module !== "undefined" && module !== null ? module.exports : void 0) || window;
+
+  global.CozySocketListener = CozySocketListener;
+
+}).call(this);
+;
 // Underscore.js 1.4.4
 // ===================
 
@@ -24733,7 +24942,6 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
 
 }).call(this);
 ;
-
 /*!
  * Copyright (c) 2010 Chris O'Hara <cohara87@gmail.com>
  *
@@ -24756,8 +24964,102 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);;
+window.require.register("CNeditor/alarm", function(exports, require, module) {
+  var Alarm, request, _ref,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-window.require.define({"CNeditor/autocomplete": function(exports, require, module) {
+  request = require("./request");
+
+  module.exports = Alarm = (function(_super) {
+    var checkAlarmInstalled, getApps, isAlarm, noCallback;
+
+    __extends(Alarm, _super);
+
+    function Alarm() {
+      _ref = Alarm.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    Alarm.prototype.urlRoot = "/apps/agenda/alarms";
+
+    Alarm.dateFormat = "{Dow} {Mon} {dd} {yyyy} {HH}:{mm}:00";
+
+    Alarm.prototype.validate = function(attrs, options) {
+      var allowedActions, errors;
+
+      errors = [];
+      if (!attrs.description || attrs.description === "") {
+        errors.push({
+          field: 'description',
+          value: "A description must be set."
+        });
+      }
+      if (!attrs.action || attrs.action === "") {
+        errors.push({
+          field: 'action',
+          value: "An action must be set."
+        });
+      }
+      allowedActions = ['DISPLAY', 'EMAIL'];
+      if (allowedActions.indexOf(attrs.action) === -1) {
+        errors.push({
+          field: 'action',
+          value: "A valid action must be set."
+        });
+      }
+      if (!attrs.trigg || !new Date.create(attrs.trigg).isValid()) {
+        errors.push({
+          field: 'triggdate',
+          value: "The date or time format might be invalid. " + "It must be dd/mm/yyyy and hh:mm."
+        });
+      }
+      if (errors.length > 0) {
+        return errors;
+      }
+    };
+
+    Alarm.prototype.getDateObject = function() {
+      return new Date.create(this.get('trigg'));
+    };
+
+    Alarm.prototype.getFormattedDate = function(formatter) {
+      return this.getDateObject().format(formatter);
+    };
+
+    noCallback = function() {};
+
+    isAlarm = function(app) {
+      return app.name === 'agenda';
+    };
+
+    getApps = function() {
+      return request.get('/api/applications', noCallback);
+    };
+
+    checkAlarmInstalled = function(apps) {
+      if (apps.rows.some(isAlarm)) {
+        return true;
+      }
+      return $.Deferred().reject();
+    };
+
+    Alarm.initialize = function(callback) {
+      return getApps().then(checkAlarmInstalled).then(function(inbox) {
+        Alarm.canBeUsed = true;
+        return callback(true);
+      }).fail(function(err) {
+        Alarm.canBeUsed = false;
+        return callback(false);
+      });
+    };
+
+    return Alarm;
+
+  })(Backbone.Model);
+  
+});
+window.require.register("CNeditor/autocomplete", function(exports, require, module) {
   var AutoComplete;
 
   require('./bootstrap-datepicker');
@@ -24765,12 +25067,13 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
   require('./bootstrap-timepicker');
 
   AutoComplete = (function() {
-
-    function AutoComplete(container, editor) {
-      var auto, reminderHTML,
+    function AutoComplete(container, editor, hotString) {
+      var auto, reminderHTML, reminderTitle,
         _this = this;
+
       this.container = container;
       this.editor = editor;
+      this.hotString = hotString;
       this.tTags = [];
       this.tTagsDiv = document.createElement('DIV');
       this.contacts = [];
@@ -24783,6 +25086,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       this.datePick.show();
       this.datePick.on('changeDate', function(ev) {
         var date, nd;
+
         nd = ev.date;
         date = _this._currentDate;
         date.setDate(nd.getDate());
@@ -24795,6 +25099,11 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
         template: 'modal',
         showSeconds: true,
         showMeridian: false
+      });
+      reminderTitle = this.reminderDiv.querySelector('.reminder-title');
+      reminderTitle.addEventListener('click', function() {
+        _this.hotString.validate();
+        return console.log('t');
       });
       this.regexStore = {};
       this.isVisible = false;
@@ -24884,6 +25193,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype.setItems = function(type, items) {
       var it, lines, _i, _len;
+
       switch (type) {
         case 'tTags':
           this.tTags = items;
@@ -24906,6 +25216,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype._createLine = function(item) {
       var c, line, span, t, type, _i, _len;
+
       line = document.createElement('LI');
       type = item.type;
       switch (type) {
@@ -24946,6 +25257,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype.show = function(seg, typedTxt) {
       var edLineDiv;
+
       edLineDiv = seg.parentElement;
       this.isVisible = true;
       this.update(typedTxt);
@@ -24955,6 +25267,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype.setAllowedModes = function(modes) {
       var m, ttag, _i, _j, _len, _len1, _ref;
+
       this._modes = modes;
       _ref = this.tTags;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -24962,7 +25275,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
         ttag.isInMode = false;
         for (_j = 0, _len1 = modes.length; _j < _len1; _j++) {
           m = modes[_j];
-          if (ttag.text === m) {
+          if (ttag.value === m) {
             ttag.isInMode = true;
             break;
           }
@@ -24973,6 +25286,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype.setMode = function(mode) {
       var now;
+
       this._unSelectLine();
       switch (mode) {
         case 'contact':
@@ -25028,16 +25342,19 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
     };
 
     AutoComplete.prototype.update = function(typedTxt) {
-      var dd, dh, dmn, it, items, now, reg1, reg2, reg3, regD, regH, regMn, resReg1, resReg2, resReg3, resRegD, resRegH, resRegMn, ttag, _i, _j, _len, _len1, _ref;
+      var dd, dh, dmn, it, items, nbrOfSuggestions, now, reg1, reg2, reg3, regD, regH, regMn, resReg1, resReg2, resReg3, resRegD, resRegH, resRegMn, ttag, _i, _j, _len, _len1, _ref;
+
       if (!this.isVisible) {
         return;
       }
+      nbrOfSuggestions = 0;
       switch (this._currentMode) {
         case 'contact':
           _ref = this.tTags;
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
             ttag = _ref[_i];
             if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
+              nbrOfSuggestions += 1;
               ttag.line.style.display = 'block';
             } else {
               ttag.line.style.display = 'none';
@@ -25083,12 +25400,14 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       for (_j = 0, _len1 = items.length; _j < _len1; _j++) {
         it = items[_j];
         if (this._shouldDisp(it, typedTxt)) {
+          nbrOfSuggestions += 1;
           it.line.style.display = 'block';
         } else {
           it.line.style.display = 'none';
         }
       }
       this._sortItems();
+      this.nbrOfSuggestions = nbrOfSuggestions;
       return true;
     };
 
@@ -25103,6 +25422,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype._addLine = function(item) {
       var line;
+
       line = document.createElement('LI');
       this._updateLine(line, item);
       this.el.appendChild(line);
@@ -25111,6 +25431,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype._updateLine = function(line, item, typedTxt) {
       var c, span, t, type, _i, _len;
+
       console.log('_updateLine');
       type = item.type;
       switch (type) {
@@ -25147,6 +25468,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype._unSelectLine = function() {
       var line;
+
       line = this._selectedLine;
       if (line) {
         line.classList.remove('SUGG_selected');
@@ -25159,12 +25481,27 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       return this.el.removeChild(line);
     };
 
+    /**
+     * Hide auto complete and returns the current selected item, null if none.
+     * @return {[type]} [description]
+    */
+
+
     AutoComplete.prototype.hide = function() {
-      var date, item;
+      var item;
+
       if (!this.isVisible) {
         return false;
       }
       this.container.removeChild(this.el);
+      this.isVisible = false;
+      item = this.getSelectedItem();
+      return item;
+    };
+
+    AutoComplete.prototype.getSelectedItem = function() {
+      var date, item;
+
       switch (this._currentMode) {
         case 'contact':
           if (this._selectedLine) {
@@ -25188,15 +25525,16 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
           date = this._currentDate;
           item = {
             text: date,
-            type: 'reminder'
+            type: 'reminder',
+            value: this._currentDate
           };
       }
-      this.isVisible = false;
       return item;
     };
 
     AutoComplete.prototype._shouldDisp = function(item, typedTxt) {
       var c, i, l, reg, regText, s, spans, typedCar;
+
       if (this.regexStore[typedTxt]) {
         reg = this.regexStore[typedTxt];
       } else {
@@ -25234,8 +25572,18 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       }
     };
 
+    /**
+     * select previous suggestion in auto complete. Behaviour depends on the
+     * mode (reminder is different from contact for instance)
+    */
+
+
     AutoComplete.prototype.up = function() {
       var line, prev;
+
+      if (this.nbrOfSuggestions === 0) {
+        return;
+      }
       if (!this._selectedLine) {
         this._selectedLine = this.el.lastChild.lastChild;
       } else {
@@ -25259,8 +25607,18 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
       return true;
     };
 
+    /**
+     * select next suggestion in auto complete. Behaviour depends on the mode
+     * (reminder is different from contact for instance)
+    */
+
+
     AutoComplete.prototype.down = function() {
       var line, next;
+
+      if (this.nbrOfSuggestions === 0) {
+        return;
+      }
       if (!this._selectedLine) {
         this._selectedLine = this.el.firstChild.firstChild;
       } else {
@@ -25289,6 +25647,7 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
     AutoComplete.prototype.isInTTags = function(text) {
       var tag, _i, _len, _ref;
+
       _ref = this.tTags;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         tag = _ref[_i];
@@ -25305,9 +25664,8 @@ window.require.define({"CNeditor/autocomplete": function(exports, require, modul
 
   exports.AutoComplete = AutoComplete;
   
-}});
-
-window.require.define({"CNeditor/bootstrap-datepicker": function(exports, require, module) {
+});
+window.require.register("CNeditor/bootstrap-datepicker", function(exports, require, module) {
   /* =========================================================
    * bootstrap-datepicker.js 
    * http://www.eyecon.ro/bootstrap-datepicker
@@ -25654,7 +26012,7 @@ window.require.define({"CNeditor/bootstrap-datepicker": function(exports, requir
   			if (typeof option === 'string') data[option](val);
   		});
   	};
-
+  
   	$.fn.datepicker.defaults = {
   		onRender: function(date) {
   			return '';
@@ -25782,11 +26140,10 @@ window.require.define({"CNeditor/bootstrap-datepicker": function(exports, requir
   								'</table>'+
   							'</div>'+
   						'</div>';
-
+  
   }( window.jQuery );
-}});
-
-window.require.define({"CNeditor/bootstrap-timepicker": function(exports, require, module) {
+});
+window.require.register("CNeditor/bootstrap-timepicker", function(exports, require, module) {
   /*!
    * Timepicker Component for Twitter Bootstrap
    *
@@ -25798,9 +26155,9 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
    * file that was distributed with this source code.
    */
   ;(function($, window, document, undefined) {
-
+  
     'use strict'; // jshint ;_;
-
+  
     // TIMEPICKER PUBLIC CLASS DEFINITION
     var Timepicker = function(element, options) {
       this.widget = '';
@@ -25816,17 +26173,17 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
       this.showSeconds = options.showSeconds;
       this.template = options.template;
       this.appendWidgetTo = options.appendWidgetTo;
-
+  
       this._init();
     };
-
+  
     Timepicker.prototype = {
-
+  
       constructor: Timepicker,
-
+  
       _init: function() {
         var self = this;
-
+  
         if (this.$element.parent().hasClass('input-append') || this.$element.parent().hasClass('input-prepend')) {
             this.$element.parent('.input-append, .input-prepend').find('.add-on').on({
               'click.timepicker': $.proxy(this.showWidget, this)
@@ -25853,13 +26210,13 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             });
           }
         }
-
+  
         if (this.template !== false) {
           this.$widget = $(this.getTemplate()).prependTo(this.$element.parents(this.appendWidgetTo)).on('click', $.proxy(this.widgetClick, this));
         } else {
           this.$widget = false;
         }
-
+  
         if (this.showInputs && this.$widget !== false) {
             this.$widget.find('input').each(function() {
               $(this).on({
@@ -25868,26 +26225,26 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               });
             });
         }
-
+  
         this.setDefaultTime(this.defaultTime);
       },
-
+  
       blurElement: function() {
         this.highlightedUnit = undefined;
         this.updateFromElementVal();
       },
-
+  
       decrementHour: function() {
         if (this.showMeridian) {
           if (this.hour === 1) {
             this.hour = 12;
           } else if (this.hour === 12) {
             this.hour--;
-
+  
             return this.toggleMeridian();
           } else if (this.hour === 0) {
             this.hour = 11;
-
+  
             return this.toggleMeridian();
           } else {
             this.hour--;
@@ -25901,16 +26258,16 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       decrementMinute: function(step) {
         var newVal;
-
+  
         if (step) {
           newVal = this.minute - step;
         } else {
           newVal = this.minute - this.minuteStep;
         }
-
+  
         if (newVal < 0) {
           this.decrementHour();
           this.minute = newVal + 60;
@@ -25919,10 +26276,10 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       decrementSecond: function() {
         var newVal = this.second - this.secondStep;
-
+  
         if (newVal < 0) {
           this.decrementMinute(true);
           this.second = newVal + 60;
@@ -25931,12 +26288,12 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       elementKeydown: function(e) {
         switch (e.keyCode) {
           case 9: //tab
             this.updateFromElementVal();
-
+  
             switch (this.highlightedUnit) {
               case 'hour':
                 e.preventDefault();
@@ -26013,32 +26370,32 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           break;
         }
       },
-
+  
       formatTime: function(hour, minute, second, meridian) {
         hour = hour < 10 ? '0' + hour : hour;
         minute = minute < 10 ? '0' + minute : minute;
         second = second < 10 ? '0' + second : second;
-
+  
         return hour + ':' + minute + (this.showSeconds ? ':' + second : '') + (this.showMeridian ? ' ' + meridian : '');
       },
-
+  
       getCursorPosition: function() {
         var input = this.$element.get(0);
-
+  
         if ('selectionStart' in input) {// Standard-compliant browsers
-
+  
           return input.selectionStart;
         } else if (document.selection) {// IE fix
           input.focus();
           var sel = document.selection.createRange(),
             selLen = document.selection.createRange().text.length;
-
+  
           sel.moveStart('character', - input.value.length);
-
+  
           return sel.text.length - selLen;
         }
       },
-
+  
       getTemplate: function() {
         var template,
           hourTemplate,
@@ -26046,7 +26403,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           secondTemplate,
           meridianTemplate,
           templateContent;
-
+  
         if (this.showInputs) {
           hourTemplate = '<input type="text" name="hour" class="bootstrap-timepicker-hour" maxlength="2"/>';
           minuteTemplate = '<input type="text" name="minute" class="bootstrap-timepicker-minute" maxlength="2"/>';
@@ -26058,7 +26415,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           secondTemplate = '<span class="bootstrap-timepicker-second"></span>';
           meridianTemplate = '<span class="bootstrap-timepicker-meridian"></span>';
         }
-
+  
         templateContent = '<table>'+
            '<tr>'+
              '<td><a href="#" data-action="incrementHour"><i class="icon-chevron-up"></i></a></td>'+
@@ -26100,7 +26457,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
              : '') +
            '</tr>'+
          '</table>';
-
+  
         switch(this.template) {
           case 'modal':
             template = '<div class="bootstrap-timepicker-widget modal hide fade in" data-backdrop="'+ (this.modalBackdrop ? 'true' : 'false') +'">'+
@@ -26120,23 +26477,23 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             template = '<div class="bootstrap-timepicker-widget dropdown-menu">'+ templateContent +'</div>';
           break;
         }
-
+  
         return template;
       },
-
+  
       getTime: function() {
         return this.formatTime(this.hour, this.minute, this.second, this.meridian);
       },
-
+  
       hideWidget: function() {
         if (this.isOpen === false) {
           return;
         }
-
+  
               if (this.showInputs) {
                   this.updateFromWidgetInputs();
               }
-
+  
         this.$element.trigger({
           'type': 'hide.timepicker',
           'time': {
@@ -26147,18 +26504,18 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               'meridian': this.meridian
            }
         });
-
+  
         if (this.template === 'modal') {
           this.$widget.modal('hide');
         } else {
           this.$widget.removeClass('open');
         }
-
+  
         $(document).off('mousedown.timepicker');
-
+  
         this.isOpen = false;
       },
-
+  
       highlightUnit: function() {
         this.position = this.getCursorPosition();
         if (this.position >= 0 && this.position <= 2) {
@@ -26175,7 +26532,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           this.highlightMeridian();
         }
       },
-
+  
       highlightNextUnit: function() {
         switch (this.highlightedUnit) {
           case 'hour':
@@ -26202,7 +26559,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           break;
         }
       },
-
+  
       highlightPrevUnit: function() {
         switch (this.highlightedUnit) {
           case 'hour':
@@ -26223,48 +26580,48 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           break;
         }
       },
-
+  
       highlightHour: function() {
         var $element = this.$element.get(0);
-
+  
         this.highlightedUnit = 'hour';
-
+  
               if ($element.setSelectionRange) {
                   setTimeout(function() {
                       $element.setSelectionRange(0,2);
                   }, 0);
               }
       },
-
+  
       highlightMinute: function() {
         var $element = this.$element.get(0);
-
+  
         this.highlightedUnit = 'minute';
-
+  
               if ($element.setSelectionRange) {
                   setTimeout(function() {
                       $element.setSelectionRange(3,5);
                   }, 0);
               }
       },
-
+  
       highlightSecond: function() {
         var $element = this.$element.get(0);
-
+  
         this.highlightedUnit = 'second';
-
+  
               if ($element.setSelectionRange) {
                   setTimeout(function() {
                       $element.setSelectionRange(6,8);
                   }, 0);
               }
       },
-
+  
       highlightMeridian: function() {
         var $element = this.$element.get(0);
-
+  
         this.highlightedUnit = 'meridian';
-
+  
               if ($element.setSelectionRange) {
                   if (this.showSeconds) {
                       setTimeout(function() {
@@ -26277,7 +26634,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
                   }
               }
       },
-
+  
       incrementHour: function() {
         if (this.showMeridian) {
           if (this.hour === 11) {
@@ -26293,16 +26650,16 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         this.hour++;
         this.update();
       },
-
+  
       incrementMinute: function(step) {
         var newVal;
-
+  
         if (step) {
           newVal = this.minute + step;
         } else {
           newVal = this.minute + this.minuteStep - (this.minute % this.minuteStep);
         }
-
+  
         if (newVal > 59) {
           this.incrementHour();
           this.minute = newVal - 60;
@@ -26311,10 +26668,10 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       incrementSecond: function() {
         var newVal = this.second + this.secondStep - (this.second % this.secondStep);
-
+  
         if (newVal > 59) {
           this.incrementMinute(true);
           this.second = newVal - 60;
@@ -26323,7 +26680,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         this.update();
       },
-
+  
       remove: function() {
         $('document').off('.timepicker');
         if (this.$widget) {
@@ -26331,7 +26688,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
         delete this.$element.data().timepicker;
       },
-
+  
       setDefaultTime: function(defaultTime){
         if (!this.$element.val()) {
           if (defaultTime === 'current') {
@@ -26340,7 +26697,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               minutes = Math.floor(dTime.getMinutes() / this.minuteStep) * this.minuteStep,
               seconds = Math.floor(dTime.getSeconds() / this.secondStep) * this.secondStep,
               meridian = 'AM';
-
+  
             if (this.showMeridian) {
               if (hours === 0) {
                 hours = 12;
@@ -26353,14 +26710,14 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
                 meridian = 'AM';
               }
             }
-
+  
             this.hour = hours;
             this.minute = minutes;
             this.second = seconds;
             this.meridian = meridian;
-
+  
             this.update();
-
+  
           } else if (defaultTime === false) {
             this.hour = 0;
             this.minute = 0;
@@ -26373,11 +26730,11 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           this.updateFromElementVal();
         }
       },
-
+  
       setTime: function(time) {
         var arr,
           timeArray;
-
+  
         if (this.showMeridian) {
           arr = time.split(' ');
           timeArray = arr[0].split(':');
@@ -26385,31 +26742,31 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         } else {
           timeArray = time.split(':');
         }
-
+  
         this.hour = parseInt(timeArray[0], 10);
         this.minute = parseInt(timeArray[1], 10);
         this.second = parseInt(timeArray[2], 10);
-
+  
         if (isNaN(this.hour)) {
           this.hour = 0;
         }
         if (isNaN(this.minute)) {
           this.minute = 0;
         }
-
+  
         if (this.showMeridian) {
           if (this.hour > 12) {
             this.hour = 12;
           } else if (this.hour < 1) {
             this.hour = 12;
           }
-
+  
           if (this.meridian === 'am' || this.meridian === 'a') {
             this.meridian = 'AM';
           } else if (this.meridian === 'pm' || this.meridian === 'p') {
             this.meridian = 'PM';
           }
-
+  
           if (this.meridian !== 'AM' && this.meridian !== 'PM') {
             this.meridian = 'AM';
           }
@@ -26420,13 +26777,13 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             this.hour = 0;
           }
         }
-
+  
         if (this.minute < 0) {
           this.minute = 0;
         } else if (this.minute >= 60) {
           this.minute = 59;
         }
-
+  
         if (this.showSeconds) {
           if (isNaN(this.second)) {
             this.second = 0;
@@ -26436,15 +26793,15 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             this.second = 59;
           }
         }
-
+  
         this.update();
       },
-
+  
       showWidget: function() {
         if (this.isOpen) {
           return;
         }
-
+  
         var self = this;
         $(document).on('mousedown.timepicker', function (e) {
           // Clicked outside the timepicker, hide it
@@ -26452,7 +26809,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             self.hideWidget();
           }
         });
-
+  
         this.$element.trigger({
           'type': 'show.timepicker',
           'time': {
@@ -26463,13 +26820,13 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               'meridian': this.meridian
            }
         });
-
+  
         if (this.disableFocus) {
           this.$element.blur();
         }
-
+  
         this.updateFromElementVal();
-
+  
         if (this.template === 'modal') {
           this.$widget.modal('show').on('hidden', $.proxy(this.hideWidget, this));
         } else {
@@ -26477,15 +26834,15 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
             this.$widget.addClass('open');
           }
         }
-
+  
         this.isOpen = true;
       },
-
+  
       toggleMeridian: function() {
         this.meridian = this.meridian === 'AM' ? 'PM' : 'AM';
         this.update();
       },
-
+  
       update: function() {
         this.$element.trigger({
           'type': 'changeTime.timepicker',
@@ -26497,36 +26854,36 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
               'meridian': this.meridian
            }
         });
-
+  
         this.updateElement();
         this.updateWidget();
       },
-
+  
       updateElement: function() {
         this.$element.val(this.getTime()).change();
       },
-
+  
       updateFromElementVal: function() {
               var val = this.$element.val();
-
+  
               if (val) {
                   this.setTime(val);
               }
       },
-
+  
       updateWidget: function() {
         if (this.$widget === false) {
           return;
         }
-
+  
         var hour = this.hour < 10 ? '0' + this.hour : this.hour,
             minute = this.minute < 10 ? '0' + this.minute : this.minute,
             second = this.second < 10 ? '0' + this.second : this.second;
-
+  
         if (this.showInputs) {
           this.$widget.find('input.bootstrap-timepicker-hour').val(hour);
           this.$widget.find('input.bootstrap-timepicker-minute').val(minute);
-
+  
           if (this.showSeconds) {
             this.$widget.find('input.bootstrap-timepicker-second').val(second);
           }
@@ -26536,7 +26893,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         } else {
           this.$widget.find('span.bootstrap-timepicker-hour').text(hour);
           this.$widget.find('span.bootstrap-timepicker-minute').text(minute);
-
+  
           if (this.showSeconds) {
             this.$widget.find('span.bootstrap-timepicker-second').text(second);
           }
@@ -26545,7 +26902,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           }
         }
       },
-
+  
       updateFromWidgetInputs: function() {
         if (this.$widget === false) {
           return;
@@ -26554,24 +26911,24 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
           $('input.bootstrap-timepicker-minute', this.$widget).val() +
           (this.showSeconds ? ':' + $('input.bootstrap-timepicker-second', this.$widget).val() : '') +
           (this.showMeridian ? ' ' + $('input.bootstrap-timepicker-meridian', this.$widget).val() : '');
-
+  
         this.setTime(time);
       },
-
+  
       widgetClick: function(e) {
         e.stopPropagation();
         e.preventDefault();
-
+  
         var action = $(e.target).closest('a').data('action');
         if (action) {
           this[action]();
         }
       },
-
+  
       widgetKeydown: function(e) {
         var $input = $(e.target).closest('input'),
             name = $input.attr('name');
-
+  
         switch (e.keyCode) {
           case 9: //tab
             if (this.showMeridian) {
@@ -26589,7 +26946,7 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
                 }
               }
             }
-
+  
             this.updateFromWidgetInputs();
           break;
           case 27: // escape
@@ -26632,8 +26989,8 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         }
       }
     };
-
-
+  
+  
     //TIMEPICKER PLUGIN DEFINITION
     $.fn.timepicker = function(option) {
       var args = Array.apply(null, arguments);
@@ -26642,17 +26999,17 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
         var $this = $(this),
           data = $this.data('timepicker'),
           options = typeof option === 'object' && option;
-
+  
         if (!data) {
           $this.data('timepicker', (data = new Timepicker(this, $.extend({}, $.fn.timepicker.defaults, options, $(this).data()))));
         }
-
+  
         if (typeof option === 'string') {
           data[option].apply(data, args);
         }
       });
     };
-
+  
     $.fn.timepicker.defaults = {
       defaultTime: 'current',
       disableFocus: false,
@@ -26666,37 +27023,36 @@ window.require.define({"CNeditor/bootstrap-timepicker": function(exports, requir
       template: 'dropdown',
       appendWidgetTo: '.bootstrap-timepicker'
     };
-
+  
     $.fn.timepicker.Constructor = Timepicker;
-
+  
   })(jQuery, window, document);
   
-}});
-
-window.require.define({"CNeditor/editor": function(exports, require, module) {
+});
+window.require.register("CNeditor/editor", function(exports, require, module) {
   /* ------------------------------------------------------------------------
   # CLASS FOR THE COZY NOTE EDITOR
   #
-  # usage : 
+  # usage :
   #
   # newEditor = new CNEditor( iframeTarget,callBack )
   #   iframeTarget = iframe where the editor will be nested
-  #   callBack     = launched when editor ready, the context 
+  #   callBack     = launched when editor ready, the context
   #                  is set to the editorCtrl (callBack.call(this))
   # properties & methods :
   #   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
-  #   _keyDownCallBack : (e) =>
+  #   _keyDownCb : (e) =>
   #   _insertLineAfter  : (param) ->
   #   _insertLineBefore : (param) ->
-  #   
+  #
   #   editorIframe      : the iframe element where is nested the editor
   #   editorBody$       : the jquery pointer on the body of the iframe
   #   _lines            : {} an objet, each property refers a line
-  #   _highestId        : 
+  #   _highestId        :
   #   _firstLine        : points the first line : TODO : not taken into account
   */
 
-  var CNeditor, HotString, Line, Task, md2cozy, realtimer, selection,
+  var CNeditor, HotString, Line, Tags, Task, md2cozy, realtimer, selection,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __slice = [].slice;
 
@@ -26708,58 +27064,39 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
   HotString = require('./hot-string');
 
+  Tags = require('./tags');
+
   Line = require('./line');
 
-  try {
-    realtimer = require('./realtimer');
-  } catch (e) {
-    realtimer = {
-      watch: function() {}
-    };
-  }
+  realtimer = require('./realtimer');
 
   module.exports = CNeditor = (function() {
     /*
-        #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
-        #       iframeTarget = iframe where the editor will be nested
-        #       callBack     = launched when editor ready, the context 
-        #                      is set to the editorCtrl (callBack.call(this))
+    #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
+    #       iframeTarget = iframe where the editor will be nested
+    #       callBack     = launched when editor ready, the context
+    #                      is set to the editorCtrl (callBack.call(this))
     */
-
     function CNeditor(editorTarget, callBack) {
       this._processPaste = __bind(this._processPaste, this);
-
       this._waitForPasteData = __bind(this._waitForPasteData, this);
-
       this._validateUrlPopover = __bind(this._validateUrlPopover, this);
-
       this._cancelUrlPopoverCB = __bind(this._cancelUrlPopoverCB, this);
-
       this._cancelUrlPopover = __bind(this._cancelUrlPopover, this);
-
       this._detectClickOutUrlPopover = __bind(this._detectClickOutUrlPopover, this);
-
-      this._keyUpCorrection = __bind(this._keyUpCorrection, this);
-
-      this._keyDownCallBack = __bind(this._keyDownCallBack, this);
-
+      this._keyupCb = __bind(this._keyupCb, this);
+      this._keypressCb = __bind(this._keypressCb, this);
+      this._keyDownCb = __bind(this._keyDownCb, this);
       this.registerKeyDownCbForTest = __bind(this.registerKeyDownCbForTest, this);
-
-      this._keyDownCallBackTry = __bind(this._keyDownCallBackTry, this);
-
+      this._keyDownCbTry = __bind(this._keyDownCbTry, this);
       this._toggleTaskCB = __bind(this._toggleTaskCB, this);
-
       this._pasteCB = __bind(this._pasteCB, this);
-
       this._clickCB = __bind(this._clickCB, this);
-
-      this._keyupCast = __bind(this._keyupCast, this);
-
-      this._mouseupCB = __bind(this._mouseupCB, this);
-
+      this._mouseupCb = __bind(this._mouseupCb, this);
+      this._mousedownCb = __bind(this._mousedownCb, this);
       this.loadEditor = __bind(this.loadEditor, this);
-
       var _this = this;
+
       this.editorTarget = editorTarget;
       this.editorTarget$ = $(this.editorTarget);
       this.callBack = callBack;
@@ -26782,6 +27119,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.loadEditor = function() {
       var HISTORY_SIZE, cssLink, editor_head$, editor_html$, linesDiv;
+
       if (this.isInIframe) {
         editor_html$ = this.editorTarget$.contents().find("html");
         this.editorBody$ = editor_html$.find("body");
@@ -26798,7 +27136,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this.linesDiv = linesDiv;
       linesDiv.setAttribute('id', 'editor-lines');
       linesDiv.setAttribute('class', 'editor-frame');
-      linesDiv.setAttribute('contenteditable', 'true');
+      linesDiv.contentEditable = true;
       this.editorBody$.append(linesDiv);
       if (this.isInIframe) {
         linesDiv.style.overflowY = 'auto';
@@ -26811,6 +27149,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       this._initClipBoard();
       this._initUrlPopover();
       this._hotString = new HotString(this);
+      this.Tags = new Tags();
       this._lines = {};
       this.newPosition = true;
       this._highestId = 0;
@@ -26838,30 +27177,73 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return this.callBack.call(this);
     };
 
+    CNeditor.prototype._mousedownCb = function(e) {
+      var startCont, startSeg;
+
+      if (this._hotString.isPreparing) {
+        this._hotString.mouseDownCb(e);
+      }
+      startCont = this.document.getSelection().getRangeAt(0).startContainer;
+      startSeg = selection.getSegment(e.target, 0);
+      if (!startSeg.dataset.type) {
+        return this.Tags.setTagUnEditable();
+      }
+    };
+
     /**
-     * Whe the user click in the editor, moueup event will set @newPosition to
-     * true.
+     * When the user click in the editor, mouseup event will set @newPosition to
+     * true and take actions depending on selection location and editor state.
     */
 
 
-    CNeditor.prototype._mouseupCB = function() {
-      return this.newPosition = true;
-    };
+    CNeditor.prototype._mouseupCb = function(e) {
+      var endSeg, rg, startSeg;
 
-    CNeditor.prototype._keyupCast = function(e) {
-      var keyCode, metaKeyCode, shortcut, _ref;
-      _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
-      shortcut = metaKeyCode + '-' + keyCode;
-      switch (shortcut) {
-        case 'Ctrl-S':
-        case 'Ctrl-other':
-          return;
+      this.newPosition = true;
+      this.Tags.setTagEditable();
+      if (this._hotString.isPreparing) {
+        if (this._hotString.isInAuto(e.target)) {
+          this._hotString.mouseUpInAutoCb(e);
+          return true;
+        }
       }
-      return this.editorTarget$.trigger(jQuery.Event("onKeyUp"));
+      rg = this.document.getSelection().getRangeAt(0);
+      startSeg = selection.getSegment(rg.startContainer);
+      endSeg = selection.getSegment(rg.endContainer);
+      if (startSeg.dataset.type === 'taskBtn') {
+        this._setCaret(startSeg.nextSibling, 0);
+      } else if (endSeg.dataset.type === 'taskBtn') {
+        this._setCaret(endSeg.nextSibling, 0);
+      }
+      if (startSeg.dataset.type && !endSeg.dataset.type) {
+        this.setSelection(rg.startContainer, rg.startOffset, startSeg, startSeg.childNodes.length);
+        endSeg = startSeg;
+      } else if (!startSeg.dataset.type && endSeg.dataset.type) {
+        this.setSelection(endSeg, 0, rg.endContainer, rg.endOffset);
+        startSeg = endSeg;
+      }
+      if (this._hotString.isPreparing && startSeg !== this._hotString._hsSegment) {
+        this._hotString.reset('current');
+      }
+      switch (startSeg.dataset.type) {
+        case 'contact':
+        case 'reminder':
+        case 'htag':
+          if (!this._hotString.isPreparing) {
+            rg = this.document.getSelection().getRangeAt(0);
+            this.Tags.remove(startSeg);
+            this._hotString.edit(startSeg, rg);
+            while (false) {
+              d;
+            }
+          }
+      }
+      return true;
     };
 
     CNeditor.prototype._clickCB = function(e) {
       var segments, url;
+
       this._lastKey = null;
       this.updateCurrentSel();
       segments = this._getLinkSegments();
@@ -26887,23 +27269,23 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     CNeditor.prototype._registerEventListeners = function() {
-      this.linesDiv.addEventListener('keydown', this._keyDownCallBackTry, true);
-      this.linesDiv.addEventListener('keyup', this._keyUpCorrection, false);
-      this.linesDiv.addEventListener('mouseup', this._mouseupCB, true);
-      this.editorBody$.on('keyup', this._keyupCast);
+      this.linesDiv.addEventListener('keydown', this._keyDownCbTry, true);
+      this.linesDiv.addEventListener('keyup', this._keyupCb, false);
+      this.linesDiv.addEventListener('keypress', this._keypressCb);
+      this.linesDiv.addEventListener('mouseup', this._mouseupCb, true);
+      this.linesDiv.addEventListener('mousedown', this._mousedownCb, true);
       this.editorBody$.on('click', this._clickCB);
-      this.editorBody$.on('paste', this._pasteCB);
-      return this.editorBody.addEventListener('keypress', this._hotString.newtypedChar);
+      return this.editorBody$.on('paste', this._pasteCB);
     };
 
     CNeditor.prototype._unRegisterEventListeners = function() {
-      this.linesDiv.removeEventListener('keydown', this._keyDownCallBackTry, true);
-      this.linesDiv.removeEventListener('keyup', this._keyUpCorrection, false);
-      this.linesDiv.removeEventListener('mouseup', this._mouseupCB, true);
-      this.editorBody$.off('keyup', this._keyupCast);
+      this.linesDiv.removeEventListener('keydown', this._keyDownCbTry, true);
+      this.linesDiv.removeEventListener('keyup', this._keyupCb, false);
+      this.linesDiv.removeEventListener('keypress', this._keypressCb);
+      this.linesDiv.removeEventListener('mouseup', this._mouseupCb, true);
+      this.linesDiv.removeEventListener('mousedown', this._mousedownCb, true);
       this.editorBody$.off('click', this._clickCB);
-      this.editorBody$.off('paste', this._pasteCB);
-      return this.editorBody.removeEventListener('keypress', this._hotString.newtypedChar);
+      return this.editorBody$.off('paste', this._pasteCB);
     };
 
     CNeditor.prototype.disable = function() {
@@ -26940,8 +27322,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     /** -----------------------------------------------------------------------
      * this method is modified during construction if the editor target is not
      * an iframe
-     * @return {String} Returns the serialized current selection within the 
-     *                  editor. In case serialisation is impossible (for 
+     * @return {String} Returns the serialized current selection within the
+     *                  editor. In case serialisation is impossible (for
      *                  instance if there is no selectio within editor), then
      *                  false is returned.
     */
@@ -26949,6 +27331,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.saveEditorSelection = function() {
       var sel;
+
       sel = this.document.getSelection();
       if (sel.rangeCount === 0) {
         return false;
@@ -26958,6 +27341,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._initTaskContent = function(taskDiv) {
       var segment, span, txt;
+
       segment = taskDiv.firstChild.nextSibling;
       while (segment.nodeName !== 'BR') {
         segment = segment.nextSibling;
@@ -26973,6 +27357,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._turnIntoTask = function(lineDiv) {
       var currSel;
+
       if (!lineDiv) {
         currSel = this.updateCurrentSel();
         lineDiv = currSel.startLine.line$[0];
@@ -26982,6 +27367,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._turneLineIntoTask = function(lineDiv) {
       var btn, text;
+
       if (!this.taskCanBeUsed) {
         return false;
       }
@@ -27004,6 +27390,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._turneTaskIntoLine = function(taskDiv) {
       var btn;
+
       btn = taskDiv.firstChild;
       btn.removeEventListener('click', this._toggleTaskCB);
       taskDiv.removeChild(btn);
@@ -27016,6 +27403,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._toggleTaskCB = function(e) {
       var btn, lineDiv;
+
       lineDiv = this._getSelectedLineDiv();
       btn = lineDiv.firstChild;
       if (lineDiv.dataset.state === 'done') {
@@ -27032,6 +27420,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._detectTaskChange = function() {
       var isTask, lineDiv, sel;
+
       lineDiv = this.currentSel.startLineDiv;
       if (lineDiv) {
         isTask = this.currentSel.isStartInTask;
@@ -27056,6 +27445,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._createTaskForLine = function(lineDiv) {
       var t;
+
       t = new Task({
         description: lineDiv.textContent
       });
@@ -27073,6 +27463,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     CNeditor.prototype._setTaskToLine = function(lineDiv) {
       var id, t, _i, _len, _ref,
         _this = this;
+
       id = lineDiv.dataset.id;
       _ref = this._taskList;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -27096,7 +27487,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           silent: true
         }).done(function() {
           console.log("editor : t.fetch.done()", t.id);
-          realtimer.watch(t);
+          realtimer.watchOne(t);
           return _this._updateTaskLine(t);
         });
         t.on('change', function(t) {
@@ -27112,6 +27503,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._updateTaskLine = function(t) {
       var currentTaskState, newState;
+
       if (this._isTaskUnchanged(t)) {
         return;
       }
@@ -27141,7 +27533,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             a: action
           };
         case 'modified':
-          if (!(this._tasksModifStacks[task.internalId] != null)) {
+          if (this._tasksModifStacks[task.internalId] == null) {
             return this._tasksModifStacks[task.internalId] = {
               t: task,
               a: action
@@ -27159,6 +27551,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     CNeditor.prototype.saveTasks = function() {
       var id, l, t, _ref,
         _this = this;
+
       _ref = this._tasksModifStacks;
       for (id in _ref) {
         t = _ref[id];
@@ -27170,10 +27563,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             done: l.dataset.state === 'done',
             description: l.textContent.slice(1)
           }, {
+            ignoreMySocketNotification: true,
             silent: true,
             success: function(t) {
               console.log("editor t.save.done()", t.id);
-              realtimer.watch(t);
+              realtimer.watchOne(t);
               t.lineDiv.dataset.id = t.id;
               _this.editorTarget$.trigger(jQuery.Event('onChange'));
               return t.on('change', function() {
@@ -27190,6 +27584,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             done: l.dataset.state === 'done',
             description: l.textContent.slice(1)
           }, {
+            ignoreMySocketNotification: true,
             silent: true
           });
         }
@@ -27199,6 +27594,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._isTaskUnchanged = function(task) {
       var line, res;
+
       res = true;
       line = task.lineDiv;
       res = res && task.get('done') === (line.dataset.state === 'done');
@@ -27208,6 +27604,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._isStartingWord = function() {
       var char, rg, rg2, sel, txt;
+
       sel = this.updateCurrentSelIsStartIsEnd();
       rg = sel.theoricalRange;
       if (sel.rangeIsStartLine) {
@@ -27236,17 +27633,18 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.getCurrentAllowedInsertions = function() {
       var sel;
+
       sel = this.updateCurrentSel();
       if (sel.startLineDiv.dataset.type === 'task') {
-        return ['contact', 'event', 'reminder', 'tag'];
+        return ['contact', 'event', 'reminder', 'htag'];
       } else {
-        return ['contact', 'todo', 'event', 'reminder', 'tag'];
+        return ['contact', 'todo', 'event', 'reminder', 'htag'];
       }
     };
 
     /* ------------------------------------------------------------------------
     # EXTENSION : _updateDeepest
-    # 
+    #
     # Find the maximal deep (thus the deepest line) of the text
     # TODO: improve it so it only calculates the new depth from the modified
     #       lines (not all of them)
@@ -27258,6 +27656,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._updateDeepest = function() {
       var c, lines, max;
+
       max = 1;
       lines = this._lines;
       for (c in lines) {
@@ -27278,7 +27677,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     /** -----------------------------------------------------------------------
      * Initialize the editor content from a html string
      * The html string should not been pretified because of the spaces and
-     * charriage return. 
+     * charriage return.
      * If unPretify = true then a regex tries to set up things
     */
 
@@ -27304,6 +27703,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.deleteContent = function() {
       var emptyLine;
+
       emptyLine = '<div id="CNID_1" class="Tu-1"><span></span><br></div>';
       return this.replaceContent(emptyLine);
     };
@@ -27315,6 +27715,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.getEditorContent = function() {
       var clone, lineDiv, seg, segment, segments, txt, _i, _j, _len, _len1;
+
       if (this._hotString.isPreparing || this.isUrlPopoverOn) {
         clone = this.linesDiv.cloneNode(true);
         if (this._hotString.isPreparing) {
@@ -27367,6 +27768,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.setEditorContentFromMD = function(mdContent) {
       var cozyContent;
+
       cozyContent = md2cozy.md2cozy(mdContent);
       return this.replaceContent(cozyContent);
     };
@@ -27378,6 +27780,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.replaceCSS = function(path) {
       var document, linkElm;
+
       document = this.document;
       linkElm = document.querySelector('#editorCSS');
       linkElm.setAttribute('href', path);
@@ -27385,13 +27788,13 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Return [metaKeyCode,keyCode] corresponding to the key strike combinaison. 
+     * Return [metaKeyCode,keyCode] corresponding to the key strike combinaison.
      * the string structure = [meta key]-[key]
      *   * [metaKeyCode] : (Alt)*(Ctrl)*(Shift)*
-     *   * [keyCode] : (return|end|...|A|S|V|Y|Z)|(other) 
-     * ex : 
-     *   * "AltShift" & "up" 
-     *   * "AltCtrl" & "down" 
+     *   * [keyCode] : (return|end|...|A|S|V|Y|Z)|(other)
+     * ex :
+     *   * "AltShift" & "up"
+     *   * "AltCtrl" & "down"
      *   * "Shift" & "A"
      *   * "Ctrl" & "S"
      *   * "" & "other"
@@ -27401,112 +27804,133 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
 
     CNeditor.prototype.getShortCut = function(e) {
-      var isAction, keyCode, metaKeyCode, shortcut;
-      metaKeyCode = (e.altKey ? "Alt" : "") + 
-                                (e.ctrlKey ? "Ctrl" : "") + 
+      var isAction, key, keyCode, metaKey, shortcut;
+
+      metaKey = (e.altKey ? "Alt" : "") +
+                                (e.ctrlKey ? "Ctrl" : "") +
                                 (e.shiftKey ? "Shift" : "");
-      switch (e.keyCode) {
+      keyCode = e.keyCode;
+      switch (keyCode) {
         case 13:
-          keyCode = 'return';
+          key = 'return';
+          isAction = true;
+          break;
+        case 16:
+          key = 'shift';
+          isAction = true;
+          break;
+        case 17:
+          key = 'ctrl';
+          isAction = true;
+          break;
+        case 18:
+          key = 'alt';
           isAction = true;
           break;
         case 35:
-          keyCode = 'end';
+          key = 'end';
           isAction = true;
           break;
         case 36:
-          keyCode = 'home';
+          key = 'home';
           isAction = true;
           break;
         case 33:
-          keyCode = 'pgUp';
+          key = 'pgUp';
           isAction = true;
           break;
         case 34:
-          keyCode = 'pgDwn';
+          key = 'pgDwn';
           isAction = true;
           break;
         case 37:
-          keyCode = 'left';
+          key = 'left';
           isAction = true;
           break;
         case 38:
-          keyCode = 'up';
+          key = 'up';
           isAction = true;
           break;
         case 39:
-          keyCode = 'right';
+          key = 'right';
           isAction = true;
           break;
         case 40:
-          keyCode = 'down';
+          key = 'down';
           isAction = true;
           break;
         case 9:
-          keyCode = 'tab';
+          key = 'tab';
           isAction = true;
           break;
         case 8:
-          keyCode = 'backspace';
+          key = 'backspace';
           isAction = true;
           break;
         case 32:
-          keyCode = 'space';
+          key = 'space';
           isAction = true;
           break;
         case 27:
-          keyCode = 'esc';
+          key = 'esc';
           isAction = true;
           break;
         case 46:
-          keyCode = 'suppr';
+          key = 'suppr';
           isAction = true;
           break;
         default:
           isAction = false;
-          switch (e.which) {
+          keyCode = e.which;
+          switch (keyCode) {
             case 32:
-              keyCode = 'space';
+              key = 'space';
               break;
             case 8:
-              keyCode = 'backspace';
+              key = 'backspace';
               break;
             case 65:
-              keyCode = 'A';
+              key = 'A';
               break;
             case 66:
-              keyCode = 'B';
+              key = 'B';
               break;
             case 85:
-              keyCode = 'U';
+              key = 'U';
               break;
             case 75:
-              keyCode = 'K';
+              key = 'K';
               break;
             case 76:
-              keyCode = 'L';
+              key = 'L';
               break;
             case 83:
-              keyCode = 'S';
+              key = 'S';
               break;
             case 86:
-              keyCode = 'V';
+              key = 'V';
               break;
             case 89:
-              keyCode = 'Y';
+              key = 'Y';
               break;
             case 90:
-              keyCode = 'Z';
+              key = 'Z';
               break;
             default:
-              keyCode = 'other';
+              key = 'other';
           }
       }
-      shortcut = metaKeyCode + '-' + keyCode;
-      if (metaKeyCode === '' && (keyCode === 'A' || keyCode === 'B' || keyCode === 'U' || keyCode === 'K' || keyCode === 'L' || keyCode === 'S' || keyCode === 'V' || keyCode === 'Y' || keyCode === 'Z')) {
-        keyCode = 'other';
+      shortcut = metaKey + '-' + key;
+      if (metaKey === '' && (key === 'A' || key === 'B' || key === 'U' || key === 'K' || key === 'L' || key === 'S' || key === 'V' || key === 'Y' || key === 'Z')) {
+        key = 'other';
       }
-      return [metaKeyCode, keyCode, isAction];
+      return this._shortcut = {
+        meta: metaKey,
+        key: key,
+        isAction: isAction,
+        shortcut: shortcut,
+        keyCode: keyCode
+      };
     };
 
     /** -----------------------------------------------------------------------
@@ -27517,11 +27941,15 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     */
 
 
-    CNeditor.prototype._keyDownCallBackTry = function(e) {
+    CNeditor.prototype._keyDownCbTry = function(e) {
+      var error;
+
       try {
-        return this._keyDownCallBack(e);
-      } catch (error) {
-        alert('A bug occured, we prefer to undo your last action not to take any risk.\n\nMessage :\n' + error);
+        return this._keyDownCb(e);
+      } catch (_error) {
+        error = _error;
+        alert('A bug occured, we prefer to undo your last action not to take\
+                   any risk.\n\nMessage :\n' + error);
         e.preventDefault();
         return this.unDo();
       }
@@ -27529,52 +27957,53 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * Change the callback called by keydown event for the "test" callback.
-     * The aim is that during test we don't want to intercept errors so that 
+     * The aim is that during test we don't want to intercept errors so that
      * the test can detect the error.
     */
 
 
     CNeditor.prototype.registerKeyDownCbForTest = function() {
-      this.linesDiv.removeEventListener('keydown', this._keyDownCallBackTry, true);
-      this._keyDownCallBackTry = this._keyDownCallBack;
-      return this.linesDiv.addEventListener('keydown', this._keyDownCallBackTry, true);
+      this.linesDiv.removeEventListener('keydown', this._keyDownCbTry, true);
+      this._keyDownCbTry = this._keyDownCb;
+      return this.linesDiv.addEventListener('keydown', this._keyDownCbTry, true);
     };
 
     /**------------------------------------------------------------------------
      *
      * The listener of keyPress event on the editor's iframe... the king !
-     * 
+     *
      * Params :
-     * e : the event object. Interesting attributes : 
+     * e : the event object. Interesting attributes :
      *   .which
      *   .altKey
      *   .ctrlKey
      *   .metaKey
      *   .shiftKey
      *   .keyCode
-     *   
+     *
      * SHORTCUT
      *
-     * Definition of a shortcut : 
+     * Definition of a shortcut :
      *   a combination alt,ctrl,shift,meta
-     *   + one caracter(.which) 
-     *   or 
-     *     arrow (.keyCode=dghb:) or 
-     *     return(keyCode:13) or 
-     *     bckspace (which:8) or 
+     *   + one caracter(.which)
+     *   or
+     *     arrow (.keyCode=dghb:) or
+     *     return(keyCode:13) or
+     *     bckspace (which:8) or
      *     tab(keyCode:9)
      *   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
      *                   'Ctrl-'
     */
 
 
-    CNeditor.prototype._keyDownCallBack = function(e) {
-      var keyCode, metaKeyCode, sel, shortcut, _ref;
+    CNeditor.prototype._keyDownCb = function(e) {
+      var rg, sel, shortcut;
+
       if (!this.isEnabled) {
         return true;
       }
-      _ref = this.getShortCut(e), metaKeyCode = _ref[0], keyCode = _ref[1];
-      shortcut = metaKeyCode + '-' + keyCode;
+      this.getShortCut(e);
+      shortcut = this._shortcut.shortcut;
       if (this._lastKey !== shortcut && (shortcut === '-return' || shortcut === '-backspace' || shortcut === '-suppr' || shortcut === 'CtrlShift-down' || shortcut === 'CtrlShift-up' || shortcut === 'CtrlShift-left' || shortcut === 'CtrlShift-right' || shortcut === 'Ctrl-V' || shortcut === '-space' || shortcut === '-other')) {
         this._addHistory();
       }
@@ -27590,10 +28019,48 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         endBP: null
       };
       if (this._hotString.isPreparing) {
-        if (this._hotString.newShortCut(shortcut, metaKeyCode, keyCode)) {
+        if (this._hotString.keyDownCb(shortcut)) {
           e.preventDefault();
           return false;
         }
+      }
+      if (e.keyCode === 16) {
+        rg = this.document.getSelection().getRangeAt(0);
+        if (!selection.getSegment(rg.startContainer, 0).dataset.type) {
+          this.Tags.setTagUnEditable();
+        }
+      }
+      switch (this._shortcut.key) {
+        case 'up':
+        case 'down':
+        case 'left':
+        case 'right':
+        case 'pgUp':
+        case 'pgDwn':
+        case 'end':
+        case 'home':
+          if (!e.altKey && (e.shiftKey || (!e.shiftKey && !e.ctrlrlKey))) {
+            this.newPosition = true;
+            return true;
+          }
+          break;
+        case 'other':
+        case 'space':
+          if (!e.ctrlrlKey && !e.altKey) {
+            if (this.newPosition) {
+              sel = this.updateCurrentSel();
+              if (!sel.theoricalRange.collapsed) {
+                this._backspace();
+              }
+              this.newPosition = false;
+            }
+            this.editorTarget$.trigger(jQuery.Event('onChange'));
+            this._detectTaskChange();
+            return true;
+          }
+      }
+      if (e.altKey || e.ctrlKey) {
+        e.preventDefault();
       }
       switch (shortcut) {
         case '-return':
@@ -27626,17 +28093,6 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           return e.preventDefault();
         case 'CtrlShift-up':
           return e.preventDefault();
-        case '-up':
-          return this.newPosition = true;
-        case '-down':
-          return this.newPosition = true;
-        case '-left':
-        case '-right':
-        case '-pgUp':
-        case '-pgDwn':
-        case '-end':
-        case '-home':
-          return this.newPosition = true;
         case 'Ctrl-A':
           selection.selectAll(this);
           return e.preventDefault();
@@ -27648,17 +28104,6 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           this.toggleType();
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case '-other':
-        case '-space':
-          if (this.newPosition) {
-            sel = this.updateCurrentSel();
-            if (!sel.theoricalRange.collapsed) {
-              this._backspace();
-            }
-            this.newPosition = false;
-          }
-          this.editorTarget$.trigger(jQuery.Event('onChange'));
-          return this._detectTaskChange();
         case 'Ctrl-V':
           this.editorTarget$.trigger(jQuery.Event('onChange'));
           return true;
@@ -27680,6 +28125,162 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           this.reDo();
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
+        default:
+          return e.preventDefault();
+      }
+    };
+
+    CNeditor.prototype._keypressCb = function(e) {
+      return this._hotString.keypressCb(e);
+    };
+
+    /** -----------------------------------------------------------------------
+     * Detects where the carret is after a keyup in order to launch required
+     * actions :
+     * A/ correct the 2 following problems :
+     *   a- in Chrome, the insertion of a caracter by the browser may be out of
+     *   a span.
+     *   This is du to a bug in Chrome : you can create a range with its start
+     *   break point in an empty span. But if you add this range to the
+     *   selection, then this latter will not respect your range and its start
+     *   break point will be outside the range. When a key is pressed to insert
+     *   a caracter, the browser inserts it at the start break point, ie outside
+     *   the span... this function detects after each keyup is there is a text
+     *   node outside a span and move its content and the carret.
+     *   b- in order to keep the navigation with arrows working, we have to
+     *   insert a text in the buttons of tasks. That's why we have to remove the
+     *   carret from the button when the browser put it in a button.
+     * B/ edit meta data
+     * C/ Deal case when the selection has been changed with keyboard
+     * D/ Deal hot string.
+     * E/ Fire the editor onKeyUp event
+     * @param  {Event} e The key event
+    */
+
+
+    CNeditor.prototype._keyupCb = function(e) {
+      var endSeg, line, newCont, rg, startSeg, _ref;
+
+      if (this.isChromeOrSafari) {
+        this._chromeCorrection();
+      }
+      rg = this.document.getSelection().getRangeAt(0);
+      startSeg = selection.getSegment(rg.startContainer);
+      endSeg = selection.getSegment(rg.endContainer);
+      if (startSeg.dataset) {
+        switch (startSeg.dataset.type) {
+          case 'taskBtn':
+            if (e.keyCode === 37) {
+              line = selection.getLineDiv(startSeg, 0).previousSibling;
+              if (line) {
+                newCont = line.lastChild.previousSibling;
+                this._setCaret(newCont, newCont.childNodes.length);
+              } else {
+                this._setCaret(startSeg.nextSibling, 0);
+              }
+            } else {
+              this._setCaret(startSeg.nextSibling, 0);
+            }
+            break;
+          case 'contact':
+          case 'reminder':
+          case 'htag':
+            if (!this._hotString.isPreparing) {
+              this.Tags.remove(startSeg);
+              this._hotString.edit(startSeg, rg);
+            }
+        }
+      }
+      if (e.keyCode === 16) {
+        this.Tags.setTagEditable();
+        if (startSeg.dataset.type && !endSeg.dataset.type) {
+          this.setSelection(rg.startContainer, rg.startOffset, startSeg, startSeg.childNodes.length);
+          endSeg = startSeg;
+        } else if (!startSeg.dataset.type && endSeg.dataset.type) {
+          this.setSelection(endSeg, 0, rg.endContainer, rg.endOffset);
+          startSeg = endSeg;
+        }
+        if (this._hotString.isPreparing && startSeg !== this._hotString._hsSegment) {
+          this._hotString.reset('current');
+        }
+      }
+      if (this._hotString.isPreparing) {
+        if (!(e.shiftKey && ((_ref = e.keyCode) === 17 || _ref === 37 || _ref === 38 || _ref === 36 || _ref === 33 || _ref === 40 || _ref === 39 || _ref === 34 || _ref === 35))) {
+          if (startSeg === this._hotString._hsSegment) {
+            this._hotString.updateHs();
+          } else {
+            this._hotString.updateHs();
+            this._hotString.reset('current');
+          }
+        }
+      }
+      switch (this._shortcut.shortcut) {
+        case 'Ctrl-S':
+        case 'Ctrl-other':
+          return;
+      }
+      this.editorTarget$.trigger(jQuery.Event("onKeyUp"));
+      return true;
+    };
+
+    /**
+     *   In Chrome, the insertion of a caracter by the browser may be out of
+     *   a span.
+     *   This is du to a bug in Chrome : you can create a range with its start
+     *   break point in an empty span. But if you add this range to the
+     *   selection, then this latter will not respect your range and its start
+     *   break point will be outside the range. When a key is pressed to insert
+     *   a caracter, the browser inserts it at the start break point, ie outside
+     *   the span... this function detects after each keyup is there is a text
+     *   node outside a span and move its content and the carret.
+    */
+
+
+    CNeditor.prototype._chromeCorrection = function() {
+      var brNode, curSel, i, l, line, newSpan, node, nodes, t, _ref, _ref1, _ref2;
+
+      curSel = this.updateCurrentSel();
+      line = curSel.startLine.line$[0];
+      nodes = line.childNodes;
+      l = nodes.length;
+      i = 0;
+      while (i < l) {
+        node = nodes[i];
+        if (node.nodeName === '#text') {
+          t = node.textContent;
+          if (node.previousSibling) {
+            if ((_ref = node.previousSibling.nodeName) === 'SPAN' || _ref === 'A') {
+              node.previousSibling.textContent += t;
+            } else {
+              throw new Error('A line should be constituted of\
+                            only <span> and <a>');
+            }
+          } else if (node.nextSibling) {
+            if ((_ref1 = node.nextSibling.nodeName) === 'SPAN' || _ref1 === 'A') {
+              node.nextSibling.textContent = t + node.nextSibling.textContent;
+            } else if ((_ref2 = node.nextSibling.nodeName) === 'BR') {
+              newSpan = document.createElement('span');
+              newSpan.textContent = t;
+              line.replaceChild(newSpan, node);
+              l += 1;
+              i += 1;
+            } else {
+              throw new Error('A line should be constituted of\
+                            only <span> and <a>');
+            }
+          } else {
+            throw new Error('A line should be constituted of a final\
+                            <br/>');
+          }
+          line.removeChild(node);
+          l -= 1;
+        } else {
+          i += 1;
+        }
+      }
+      if (nodes[l - 1].nodeName !== 'BR') {
+        brNode = document.createElement('br');
+        return line.appendChild(brNode);
       }
     };
 
@@ -27692,14 +28293,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             startLineDiv     : the element corresponding to startLine
             endLineDiv       : the element corresponding to endLine
             isStartInTask    : {Boolean} True if the startLine is a task
-            rangeIsStartLine : {boolean} true if the selection ends at 
+            rangeIsStartLine : {boolean} true if the selection ends at
                                the end of its line : NOT UPDATE HERE - see
                                updateCurrentSelIsStartIsEnd
-            rangeIsEndLine   : {boolean} true if the selection starts at 
+            rangeIsEndLine   : {boolean} true if the selection starts at
                                the start of its line : NOT UPDATE HERE - see
                                updateCurrentSelIsStartIsEnd
-            theoricalRange   : theoricalRange : normalization of the selection 
-                               should put each break points in a node text. It 
+            theoricalRange   : theoricalRange : normalization of the selection
+                               should put each break points in a node text. It
                                doesn't work in chrome due to a bug. We therefore
                                store here the "theorical range" that the
                                selection should match. It means that if you are
@@ -27714,6 +28315,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.updateCurrentSel = function() {
       var endLine, endLineDiv, isStartInTask, newEndBP, newStartBP, range, sel, startLine, startLineDiv, theoricalRange, _ref;
+
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       if (this.newPosition || this.isChromeOrSafari) {
@@ -27746,7 +28348,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * updates @currentSel and check if range is at the start of begin of the
-     * corresponding line. 
+     * corresponding line.
      * @currentSel =
             sel              : {Selection} of the editor's document
             range            : sel.getRangeAt(0)
@@ -27755,12 +28357,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             startLineDiv     : the element corresponding to startLine
             endLineDiv       : the element corresponding to endLine
             isStartInTask    : {Boolean} True if the startLine is a task
-            rangeIsStartLine : {boolean} true if the selection ends at 
+            rangeIsStartLine : {boolean} true if the selection ends at
                                the end of its line.
-            rangeIsEndLine   : {boolean} true if the selection starts at 
+            rangeIsEndLine   : {boolean} true if the selection starts at
                                the start of its line.
-            theoricalRange   : theoricalRange : normalization of the selection 
-                               should put each break points in a node text. It 
+            theoricalRange   : theoricalRange : normalization of the selection
+                               should put each break points in a node text. It
                                doesn't work in chrome due to a bug. We therefore
                                store here the "theorical range" that the
                                selection should match. It means that if you are
@@ -27775,6 +28377,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.updateCurrentSelIsStartIsEnd = function() {
       var div, endContainer, endDiv, endLine, firstLineIsEnd, initialEndOffset, initialStartOffset, isEnd, isStart, isStartInTask, lastLineIsStart, newEndBP, newStartBP, range, rangeIsEndLine, rangeIsStartLine, sel, startContainer, startDiv, startLine, theoricalRange, _ref, _ref1, _ref2;
+
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       if (this.newPosition || this.isChromeOrSafari) {
@@ -27818,91 +28421,6 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * This function is called two correct 2 problems :
-     * A/ in order to keep the navigation with arrows working, we have to insert
-     * a text in the buttons of tasks. That's why we have to remove the carret 
-     * from the button when the browser put it in a button.
-     * B/ in Chrome, the insertion of a caracter by the browser may be out of a 
-     * span. 
-     * This is du to a bug in Chrome : you can create a range with its start 
-     * break point in an empty span. But if you add this range to the selection,
-     * then this latter will not respect your range and its start break point 
-     * will be outside the range. When a key is pressed to insert a caracter,
-     * the browser inserts it at the start break point, ie outside the span...
-     * this function detects after each keyup is there is a text node outside a
-     * span and move its content and the carret.
-     * @param  {Event} e The key event
-    */
-
-
-    CNeditor.prototype._keyUpCorrection = function(e) {
-      var brNode, container, curSel, i, l, line, newCont, newSpan, node, nodes, t, _ref, _ref1, _ref2;
-      container = this.document.getSelection().getRangeAt(0).startContainer;
-      if (container.nodeName !== 'SPAN') {
-        container = container.parentElement;
-      }
-      if (container.className === 'CNE_task_btn') {
-        if (e.keyCode === 37) {
-          line = selection.getLineDiv(container, 0).previousSibling;
-          if (line) {
-            newCont = line.lastChild.previousSibling;
-            this._setCaret(newCont, newCont.childNodes.length);
-          } else {
-            this._setCaret(container.nextSibling, 0);
-          }
-        } else {
-          this._setCaret(container.nextSibling, 0);
-        }
-      }
-      if (this.isChromeOrSafari) {
-        curSel = this.updateCurrentSel();
-        line = curSel.startLine.line$[0];
-        nodes = line.childNodes;
-        l = nodes.length;
-        i = 0;
-        while (i < l) {
-          node = nodes[i];
-          if (node.nodeName === '#text') {
-            t = node.textContent;
-            if (node.previousSibling) {
-              if ((_ref = node.previousSibling.nodeName) === 'SPAN' || _ref === 'A') {
-                node.previousSibling.textContent += t;
-              } else {
-                throw new Error('A line should be constituted of \
-                                  only <span> and <a>');
-              }
-            } else if (node.nextSibling) {
-              if ((_ref1 = node.nextSibling.nodeName) === 'SPAN' || _ref1 === 'A') {
-                node.nextSibling.textContent = t + node.nextSibling.textContent;
-              } else if ((_ref2 = node.nextSibling.nodeName) === 'BR') {
-                newSpan = document.createElement('span');
-                newSpan.textContent = t;
-                line.replaceChild(newSpan, node);
-                l += 1;
-                i += 1;
-              } else {
-                throw new Error('A line should be constituted of \
-                                  only <span> and <a>');
-              }
-            } else {
-              throw new Error('A line should be constituted of a final\
-                                  <br/>');
-            }
-            line.removeChild(node);
-            l -= 1;
-          } else {
-            i += 1;
-          }
-        }
-        if (nodes[l - 1].nodeName !== 'BR') {
-          brNode = document.createElement('br');
-          line.appendChild(brNode);
-        }
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
      * Check if the first range of the selection is NOT in the editor
      * @param  {Boolean}  expectWide [optional] If true, tests if the first
      *                               range of the selection is collapsed. If it
@@ -27913,6 +28431,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.hasNoSelection = function(expectWide) {
       var cont, rg, sel;
+
       sel = this.document.getSelection();
       if (sel.rangeCount > 0) {
         rg = sel.getRangeAt(0);
@@ -27953,7 +28472,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.strong = function() {
       var rg;
-      if (!this.isEnabled || this.hasNoSelection(true)) {
+
+      if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
         return true;
       }
       this._addHistory();
@@ -27967,7 +28487,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.underline = function() {
       var rg;
-      if (!this.isEnabled || this.hasNoSelection(true)) {
+
+      if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
         return true;
       }
       this._addHistory();
@@ -27981,7 +28502,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.linkifySelection = function() {
       var currentSel, range, rg, segments;
-      if (!this.isEnabled || this.hasNoSelection()) {
+
+      if (!this.isEnabled || this.hasNoSelection() || this._hotString.isPreparing) {
         return true;
       }
       currentSel = this.updateCurrentSelIsStartIsEnd();
@@ -28018,11 +28540,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     CNeditor.prototype._initUrlPopover = function() {
       var btnCancel, btnDelete, btnOK, pop, textInput, urlInput, _ref, _ref1,
         _this = this;
+
       pop = document.createElement('div');
       pop.id = 'CNE_urlPopover';
       pop.className = 'CNE_urlpop';
-      pop.setAttribute('contenteditable', 'false');
-      pop.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">(Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
+      pop.setAttribute.contentEditable = false;
+      pop.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">\n        (Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
       pop.titleElt = pop.firstChild;
       pop.link = pop.getElementsByTagName('A')[0];
       _ref = pop.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
@@ -28050,7 +28573,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * Show, positionate and initialise the popover for link edition.
-     * @param  {array} segments  An array with the segments of 
+     * @param  {array} segments  An array with the segments of
      *                           the link [<a>,...<a>]. Must be created even if
      *                           it is a creation in order to put a background
      *                           on the segment where the link will be.
@@ -28062,6 +28585,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._showUrlPopover = function(segments, isLinkCreation) {
       var href, pop, seg, txt, _i, _j, _len, _len1;
+
       pop = this.urlPopover;
       this.disable();
       this.isUrlPopoverOn = true;
@@ -28109,6 +28633,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._detectClickOutUrlPopover = function(e) {
       var isOut;
+
       isOut = e.target !== this.urlPopover && $(e.target).parents('#CNE_urlPopover').length === 0;
       if (isOut) {
         return this._cancelUrlPopover(true);
@@ -28119,13 +28644,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * Close the popover and revert modifications if isLinkCreation == true
      * @param  {boolean} doNotRestoreOginalSel If true, lets the caret at its
      *                                         position (used when you click
-     *                                         outside url popover in order not 
+     *                                         outside url popover in order not
      *                                         to loose the new selection)
     */
 
 
     CNeditor.prototype._cancelUrlPopover = function(doNotRestoreOginalSel) {
       var bp1, bp2, bps, lineDiv, pop, s0, s1, seg, segments, sel, _i, _len;
+
       pop = this.urlPopover;
       segments = pop.segments;
       this.editorBody.removeEventListener('mouseup', this._detectClickOutUrlPopover);
@@ -28181,6 +28707,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._validateUrlPopover = function(event) {
       var bp, bp1, bp2, bps, i, l, lastSeg, lineDiv, parent, pop, rg, seg, segments, sel, _i, _j, _k, _len, _len1, _ref;
+
       if (event) {
         event.stopPropagation();
       }
@@ -28264,8 +28791,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Tests if a the start break point of the selection or of a range is in a 
-     * segment being a link. If yes returns the array of the segments 
+     * Tests if a the start break point of the selection or of a range is in a
+     * segment being a link. If yes returns the array of the segments
      * corresponding to the link starting in this bp, false otherwise.
      * The link can be composed of several segments, but they are on a single
      * line. Only the start break point is taken into account, not the end bp.
@@ -28278,6 +28805,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._getLinkSegments = function(rg) {
       var segment1, segments, sibling;
+
       if (!rg) {
         rg = this.currentSel.theoricalRange;
       }
@@ -28306,13 +28834,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * Applies a metadata such as STRONG, UNDERLINED, A/href etc... on the
      * selected text. The selection must not be collapsed.
      * @param  {string} metaData  The css class of the meta data or 'A' if link
-     * @param  {string} others... Other params if metadata requires 
+     * @param  {string} others... Other params if metadata requires
      *                            some (href for instance)
     */
 
 
     CNeditor.prototype._applyMetaDataOnSelection = function() {
       var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, nextSegment, others, prevSegment, range, rangeIsToNormalize, rg, rgEnd, rgStart, seg, sel, _i, _j, _len, _len1;
+
       metaData = arguments[0], others = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
       currentSel = this.updateCurrentSelIsStartIsEnd();
       range = currentSel.theoricalRange;
@@ -28411,16 +28940,16 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Walk though the segments delimited by the range (which must be in a 
+     * Walk though the segments delimited by the range (which must be in a
      * single line) to check if the meta si on all of them.
      * @param  {range} range a range contained within a line. The range must be
      *                 normalized, ie its breakpoints must be in text nodes.
      * @param  {string} meta  The name of the meta data to look for. It can be
      *                        a css class ('CNE_strong' for instance), or a
      *                        metadata type ('A' for instance)
-     * @param  {string} href  Others parameters of the meta data type if 
+     * @param  {string} href  Others parameters of the meta data type if
      *                        required (href value for a 'A' meta)
-     * @return {boolean}       true if the meta data is already on all the 
+     * @return {boolean}       true if the meta data is already on all the
      *                         segments delimited by the range.
     */
 
@@ -28435,6 +28964,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._checkIfCSSIsEverywhere = function(range, CssClass) {
       var endSegment, segment, stopNext;
+
       segment = range.startContainer.parentNode;
       endSegment = range.endContainer.parentNode;
       stopNext = segment === endSegment;
@@ -28453,6 +28983,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._checkIfAhrefIsEverywhere = function(range, href) {
       var endSegment, segment, stopNext;
+
       segment = range.startContainer.parentNode;
       endSegment = range.endContainer.parentNode;
       stopNext = segment === endSegment;
@@ -28472,20 +29003,20 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     /** -----------------------------------------------------------------------
      * Add or remove a meta data to the segments delimited by the range. The
      * range must be within a single line and normalized (its breakpoints must
-     * be in text nodes). 
-     * @param  {range} range    The range on which we want to apply the 
+     * be in text nodes).
+     * @param  {range} range    The range on which we want to apply the
      *                          metadata. The range must be within a single line
      *                          and normalized (its breakpoints must be in text
      *                          nodes). The start breakpoint can not be at the
-     *                          end of the line, except in the case of an empty 
-     *                          line fully selected. Same for end breakpoint : 
-     *                          it can not be at the beginning of the line, 
-     *                          except in the case of an empty line fully 
+     *                          end of the line, except in the case of an empty
+     *                          line fully selected. Same for end breakpoint :
+     *                          it can not be at the beginning of the line,
+     *                          except in the case of an empty line fully
      *                          selected.
-     * @param  {boolean} addMeta  True if the action is to add the metaData, 
+     * @param  {boolean} addMeta  True if the action is to add the metaData,
      *                            False if the action is to remove it.
      * @param  {string} metaData The name of the meta data to look for. It can
-     *                           be a css class ('CNE_strong' for instance), 
+     *                           be a css class ('CNE_strong' for instance),
      *                           or a metadata type ('A' for instance)
      * @param {array} others Array of others params fot meta, can be [] but not
      *                       null (not optionnal)
@@ -28495,10 +29026,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
 
     CNeditor.prototype._applyMetaOnLineRange = function(range, addMeta, metaData, others) {
-      var bp1, bp2, bps, breakPoints, endSegment, frag1, frag2, isAlreadyMeta, lineDiv, rg, span, startSegment;
+      var bp1, bp2, bps, breakPoints, endSeg, frag1, frag2, isAlreadyMeta, lineDiv, rg, span, startSeg;
+
       lineDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-      startSegment = range.startContainer.parentNode;
-      endSegment = range.endContainer.parentNode;
+      startSeg = range.startContainer.parentNode;
+      endSeg = range.endContainer.parentNode;
       bp1 = {
         cont: range.startContainer,
         offset: range.startOffset
@@ -28511,42 +29043,42 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       if (bp1.offset === 0) {
 
       } else if (bp1.offset === bp1.cont.length) {
-        startSegment = startSegment.nextSibling;
-        if (startSegment === null || startSegment.nodeName === 'BR') {
+        startSeg = startSeg.nextSibling;
+        if (startSeg === null || startSeg.nodeName === 'BR') {
           return;
         }
       } else {
-        isAlreadyMeta = this._isAlreadyMeta(startSegment, metaData, others);
+        isAlreadyMeta = this._isAlreadyMeta(startSeg, metaData, others);
         if (isAlreadyMeta && !addMeta || !isAlreadyMeta && addMeta) {
           rg = range.cloneRange();
-          if (endSegment === startSegment) {
+          if (endSeg === startSeg) {
             frag1 = rg.extractContents();
-            span = document.createElement(startSegment.nodeName);
-            if (startSegment.className !== '') {
-              span.className = startSegment.className;
+            span = document.createElement(startSeg.nodeName);
+            if (startSeg.className !== '') {
+              span.className = startSeg.className;
             }
-            if (startSegment.nodeName === 'A') {
-              span.href = startSegment.href;
+            if (startSeg.nodeName === 'A') {
+              span.href = startSeg.href;
             }
             span = frag1.appendChild(span);
             span.appendChild(frag1.firstChild);
-            rg.setEndAfter(startSegment);
+            rg.setEndAfter(startSeg);
             frag2 = rg.extractContents();
             if (frag2.textContent !== '') {
               rg.insertNode(frag2);
             }
             rg.insertNode(frag1);
-            startSegment = span;
-            endSegment = startSegment;
-            bp1.cont = startSegment.firstChild;
+            startSeg = span;
+            endSeg = startSeg;
+            bp1.cont = startSeg.firstChild;
             bp1.offset = 0;
-            bp2.cont = endSegment.lastChild;
-            bp2.offset = endSegment.lastChild.length;
+            bp2.cont = endSeg.lastChild;
+            bp2.offset = endSeg.lastChild.length;
           } else {
-            rg.setEndAfter(startSegment);
+            rg.setEndAfter(startSeg);
             frag1 = rg.extractContents();
-            startSegment = frag1.firstChild;
-            bp1.cont = startSegment.firstChild;
+            startSeg = frag1.firstChild;
+            bp1.cont = startSeg.firstChild;
             bp1.offset = 0;
             rg.insertNode(frag1);
           }
@@ -28555,32 +29087,32 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       if (bp2.offset === bp2.cont.length) {
 
       } else if (bp2.offset === 0) {
-        endSegment = endSegment.previousSibling;
-        if (endSegment === null) {
+        endSeg = endSeg.previousSibling;
+        if (endSeg === null) {
           return;
         }
       } else {
-        isAlreadyMeta = this._isAlreadyMeta(endSegment, metaData, others);
+        isAlreadyMeta = this._isAlreadyMeta(endSeg, metaData, others);
         if (isAlreadyMeta && !addMeta || !isAlreadyMeta && addMeta) {
           rg = range.cloneRange();
-          rg.setStartBefore(endSegment);
+          rg.setStartBefore(endSeg);
           frag1 = rg.extractContents();
-          if (endSegment === startSegment) {
-            startSegment = frag1.firstChild;
-            bp1.cont = startSegment.firstChild;
+          if (endSeg === startSeg) {
+            startSeg = frag1.firstChild;
+            bp1.cont = startSeg.firstChild;
             bp1.offset = 0;
           }
-          endSegment = frag1.firstChild;
-          bp2.cont = endSegment.lastChild;
-          bp2.offset = endSegment.lastChild.length;
+          endSeg = frag1.firstChild;
+          bp2.cont = endSeg.lastChild;
+          bp2.offset = endSeg.lastChild.length;
           rg.insertNode(frag1);
         }
       }
       if (metaData === 'A') {
         bps = [bp1, bp2];
-        this._applyAhrefToSegments(startSegment, endSegment, bps, addMeta, others[0]);
+        this._applyAhrefToSegments(startSeg, endSeg, bps, addMeta, others[0]);
       } else {
-        this._applyCssToSegments(startSegment, endSegment, addMeta, metaData);
+        this._applyCssToSegments(startSeg, endSeg, addMeta, metaData);
       }
       this._fusionSimilarSegments(lineDiv, breakPoints);
       if (lineDiv.dataset.type === 'task') {
@@ -28592,12 +29124,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Test if a segment already has the meta : same type, same class and other 
+     * Test if a segment already has the meta : same type, same class and other
      * for complex meta (for instance href for <a>)
      * @param  {element}  segment  The segment to test
      * @param  {string}  metaData the type of meta data : A or a CSS class
      * @param  {array}  others   An array of the other parameter of the meta,
-     *                           for instance si metaData == 'A', 
+     *                           for instance si metaData == 'A',
      *                           others[0] == href
      * @return {Boolean}          True if the segment already have the meta data
     */
@@ -28612,14 +29144,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Applies or remove a meta data of type "A" (link) on a succession of 
+     * Applies or remove a meta data of type "A" (link) on a succession of
      * segments (from startSegment to endSegment which must be on the same line)
      * This fuction may let similar segments contiguous, the decision to fusion
      * is to be taken by the caller.
      * @param  {element} startSegment The first segment to modify
      * @param  {element} endSegment   The last segment to modify (must be in the
      *                                same line as startSegment)
-     * @param  {Array} bps          [{cont,offset}...] An array of breakpoints 
+     * @param  {Array} bps          [{cont,offset}...] An array of breakpoints
      *                              to update if their container is modified
      *                              while applying the meta data.
      * @param  {Boolean} addMeta      True to apply the meta, False to remove
@@ -28629,6 +29161,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._applyAhrefToSegments = function(startSegment, endSegment, bps, addMeta, href) {
       var a, bp, segment, span, stopNext, _i, _j, _len, _len1;
+
       segment = startSegment;
       stopNext = segment === endSegment;
       while (true) {
@@ -28672,7 +29205,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Applies or remove a CSS class to a succession of segments (from 
+     * Applies or remove a CSS class to a succession of segments (from
      * startsegment to endSegment which must be on the same line)
      * @param  {element} startSegment The first segment to modify
      * @param  {element} endSegment   The last segment to modify (must be in the
@@ -28684,6 +29217,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._applyCssToSegments = function(startSegment, endSegment, addMeta, cssClass) {
       var segment, stopNext;
+
       segment = startSegment;
       stopNext = segment === endSegment;
       while (true) {
@@ -28703,19 +29237,19 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * Walk through a line div in order to :
-     *   * Concatenate successive similar segments. Similar == same nodeName, 
+     *   * Concatenate successive similar segments. Similar == same nodeName,
      *     class and if required href.
      *   * Remove empty segments.
      * @param  {element} lineDiv     the DIV containing the line
-     * @param  {Array} breakPoints [{cont,offset}...] array of respectively the 
-     *                              container and offset of the breakpoint to 
-     *                              update if cont is in a segment modified by 
-     *                              the fusion. 
-     *                              /!\ The breakpoint must be normalized, ie 
+     * @param  {Array} breakPoints [{cont,offset}...] array of respectively the
+     *                              container and offset of the breakpoint to
+     *                              update if cont is in a segment modified by
+     *                              the fusion.
+     *                              /!\ The breakpoint must be normalized, ie
      *                              containers must be in textnodes.
      *                              If the contener of a bp is deleted, then it
      *                              is put before the deleted segment. At the
-     *                              bp might be between segments, ie NOT 
+     *                              bp might be between segments, ie NOT
      *                              normalized since not in a textNode.
      * @return {Array}             A reference to the updated breakpoint.
     */
@@ -28723,6 +29257,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._fusionSimilarSegments = function(lineDiv, breakPoints) {
       var nextSegment, segment;
+
       segment = lineDiv.firstChild;
       nextSegment = segment.nextSibling;
       if (nextSegment.nodeName === 'BR') {
@@ -28752,20 +29287,21 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Removes a segment and returns a reference to previous sibling or, 
+     * Removes a segment and returns a reference to previous sibling or,
      * if doesn't exist, to the next sibling.
      * @param  {element} segment     The segment to remove. Must be in a line.
      * @param  {Array} breakPoints An Array of breakpoint to preserve : if its
      *                             is deleted, the bp is put before the deleted
      *                             segment (it is NOT normalized, since not in a
      *                             textNode)
-     * @return {element}       A reference to the previous sibling or, 
+     * @return {element}       A reference to the previous sibling or,
      *                         if doesn't exist, to the next sibling.
     */
 
 
     CNeditor.prototype._removeSegment = function(segment, breakPoints) {
       var bp, newRef, offset, _i, _j, _len, _len1;
+
       if (breakPoints.length > 0) {
         for (_i = 0, _len = breakPoints.length; _i < _len; _i++) {
           bp = breakPoints[_i];
@@ -28792,10 +29328,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * Imports the content of segment2 in segment1 and updates the breakpoint if
      * this on is  inside segment2
      * @param  {element} segment1    the segment in which the fusion operates
-     * @param  {element} segment2    the segement that will be imported in segment1
-     * @param  {Array} breakPoints [{con,offset}...] array of respectively the 
-     *                              container and offset of the breakpoint to 
-     *                              update if cont is in segment2. /!\ The 
+     * @param  {element} segment2    the segement that will be imported in
+     *                               segment1
+     * @param  {Array} breakPoints [{con,offset}...] array of respectively the
+     *                              container and offset of the breakpoint to
+     *                              update if cont is in segment2. /!\ The
      *                              breakpoint must be normalized, ie containers
      *                              must be in textnodes.
     */
@@ -28803,6 +29340,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._fusionSegments = function(segment1, segment2, breakPoints) {
       var bp, child, children, txtNode1, txtNode2, _i, _j, _len, _len1, _ref;
+
       children = Array.prototype.slice.call(segment2.childNodes);
       _ref = segment2.childNodes;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -28834,6 +29372,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._haveSameMeta = function(segment1, segment2) {
       var clas, list1, list2, _i, _len;
+
       if (segment1.nodeName !== segment2.nodeName) {
         return false;
       } else if (segment1.nodeName === 'A') {
@@ -28860,20 +29399,22 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     #  _suppr :
-    # 
+    #
     # Manage deletions when suppr key is pressed
     */
 
 
     CNeditor.prototype._suppr = function() {
       var bp, result, sel, startLine, startOffset, textNode, txt;
+
       sel = this.currentSel;
       startLine = sel.startLine;
       if (sel.range.collapsed) {
         if (sel.rangeIsEndLine) {
           if (startLine.lineNext !== null) {
             if (sel.startLineDiv.nextSibling.dataset.type === 'task') {
-              result = window.confirm('Do you want to remove the task ?');
+              result = window.confirm('Do you want to remove\
+                            the task ?');
               if (result) {
                 this._turneTaskIntoLine(sel.startLineDiv.nextSibling);
               } else {
@@ -28910,6 +29451,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           }
         }
       } else if (sel.endLine === startLine) {
+        this.Tags.removeFromRange(sel.theoricalRange);
         sel.range.deleteContents();
         bp = {
           cont: sel.range.startContainer,
@@ -28928,20 +29470,22 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     #  _backspace
-    # 
+    #
     # Manage deletions when backspace key is pressed
     */
 
 
     CNeditor.prototype._backspace = function() {
       var bp, cloneRg, result, sel, startLine, startOffset, textNode, txt;
+
       sel = this.currentSel;
       startLine = sel.startLine;
       if (sel.range.collapsed) {
         if (sel.rangeIsStartLine) {
           if (startLine.linePrev !== null) {
             if (sel.isStartInTask) {
-              result = window.confirm('Do you want to remove the task ?');
+              result = window.confirm('Do you want to remove the\
+                                                 task ?');
               if (result) {
                 this._turneTaskIntoLine(sel.startLineDiv);
                 this._setCaret(sel.startLineDiv, 0);
@@ -28979,6 +29523,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           }
         }
       } else if (sel.endLine === startLine) {
+        this.Tags.removeFromRange(sel.theoricalRange);
         sel.range.deleteContents();
         bp = {
           cont: sel.range.startContainer,
@@ -29003,6 +29548,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.titleList = function(l) {
       var endDiv, endLineID, line, range, startDiv, startDivID, _results;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -29041,7 +29587,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Turn selected lines or the one given in parameter in a 
+     * Turn selected lines or the one given in parameter in a
      * Marker List line (Tu)
      * @param  {Line} l [optional] The line to turn in to a Tu
     */
@@ -29049,6 +29595,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.markerList = function(l) {
       var endDiv, endLineID, line, range, startDiv, startDivID, _results;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -29088,7 +29635,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     #  _findDepthRel
-    # 
+    #
     # Calculates the relative depth of the line
     #   usage   : cycle : Tu => To => Lx => Th
     #   param   : line : the line we want to find the relative depth
@@ -29099,6 +29646,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findDepthRel = function(line) {
       var linePrev;
+
       if (line.lineDepthAbs === 1) {
         if (line.lineType[1] === "h") {
           return 0;
@@ -29128,6 +29676,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.toggleType = function() {
       var currentDepth, depthIsTreated, done, endDiv, endLineID, line, range, sel, startDiv;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -29161,6 +29710,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._toggleLineType = function(line) {
       var l, lineTypeTarget;
+
       switch (line.lineType) {
         case 'Tu':
           lineTypeTarget = 'Th';
@@ -29234,7 +29784,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Indent selection. History is incremented. 
+     * Indent selection. History is incremented.
      * @param  {[type]} l [description]
      * @return {[type]}   [description]
     */
@@ -29242,6 +29792,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.tab = function(l) {
       var endDiv, endLineID, line, range, sel, startDiv, _results;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -29271,6 +29822,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._tabLine = function(line) {
       var depthAbsTarget, nextSib, nextSibType, prevSib, prevSibType, prevSibling, typeTarget;
+
       switch (line.lineType) {
         case 'Tu':
         case 'Th':
@@ -29310,6 +29862,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._chooseTypeTarget = function(prevSibType, nextSibType) {
       var typeTarget;
+
       if ((prevSibType === nextSibType && nextSibType === null)) {
         typeTarget = 'Tu';
       } else if (prevSibType === nextSibType) {
@@ -29332,6 +29885,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.shiftTab = function(range) {
       var endDiv, endLineID, line, sel, startDiv;
+
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
@@ -29362,16 +29916,17 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
 
     CNeditor.prototype._shiftTabLine = function(line) {
-      var depthAbsTarget, nextL, nextSib, nextSibType, parent, prevSib, prevSibType, typeTarget;
+      var depthAbsTarget, nextL, nextSib, nextSibType, parnt, prevSib, prevSibType, typeTarget;
+
       switch (line.lineType) {
         case 'Tu':
         case 'Th':
         case 'To':
-          parent = line.linePrev;
-          while (parent !== null && parent.lineDepthAbs >= line.lineDepthAbs) {
-            parent = parent.linePrev;
+          parnt = line.linePrev;
+          while (parnt !== null && parnt.lineDepthAbs >= line.lineDepthAbs) {
+            parnt = parnt.linePrev;
           }
-          if (parent === null) {
+          if (parnt === null) {
             return;
           }
           if ((line.lineNext != null) && line.lineNext.lineType[0] === 'L' && line.lineNext.lineDepthAbs === line.lineDepthAbs) {
@@ -29388,10 +29943,10 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
               nextL.setType('T' + nextL.lineType[1]);
             }
           }
-          typeTarget = parent.lineType;
+          typeTarget = parnt.lineType;
           typeTarget = "L" + typeTarget.charAt(1);
           line.lineDepthAbs -= 1;
-          line.lineDepthRel -= parent.lineDepthRel;
+          line.lineDepthRel -= parnt.lineDepthRel;
           break;
         case 'Lh':
         case 'Lu':
@@ -29409,6 +29964,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.adjustSiblingsToType = function(line) {
       var lineIt, _results;
+
       lineIt = line;
       _results = [];
       while (true) {
@@ -29428,13 +29984,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Return on the carret position. Selection must be normalized but not 
+     * Return on the carret position. Selection must be normalized but not
      * necessarily collapsed.
     */
 
 
     CNeditor.prototype._return = function() {
       var bp1, currSel, dh, endLine, endOfLineFragment, isInTask, l, newLine, p, rg, startLine, _ref;
+
       currSel = this.currentSel;
       startLine = currSel.startLine;
       endLine = currSel.endLine;
@@ -29515,13 +30072,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._getSelectedLineDiv = function() {
       var cont;
+
       cont = this.document.getSelection().getRangeAt(0).startContainer;
       return selection.getLineDiv(cont);
     };
 
     /* ------------------------------------------------------------------------
     #  _findParent1stSibling
-    # 
+    #
     # find the sibling line of the parent of line that is the first of the list
     # ex :
     #   . Sibling1 <= _findParent1stSibling(line)
@@ -29536,6 +30094,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findParent1stSibling = function(line) {
       var lineDepthAbs, linePrev;
+
       lineDepthAbs = line.lineDepthAbs;
       linePrev = line.linePrev;
       if (linePrev === null) {
@@ -29567,7 +30126,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findNextSibling = function(line, depth) {
       var nextSib;
-      if (!(depth != null)) {
+
+      if (depth == null) {
         depth = line.lineDepthAbs;
       }
       nextSib = line.lineNext;
@@ -29596,6 +30156,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findPrevSiblingT = function(line, depth) {
       var prevSib;
+
       if (!depth) {
         depth = line.lineDepthAbs;
       }
@@ -29624,6 +30185,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._findPrevSibling = function(line, depth) {
       var prevSib;
+
       if (!depth) {
         depth = line.lineDepthAbs;
       }
@@ -29641,25 +30203,28 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-    # Delete the user multi line selection :
-    #    * The 2 lines (selected or given in param) must be distinct
-    #    * If no params :
-    #        - @currentSel.theoricalRange will the range used to find the  
-    #          lines to delete. 
-    #        - Only the range is deleted, not the beginning of startline nor the
-    #          end of endLine
-    #        - the caret is positionned at the firts break point of range.
-    #    * if startLine and endLine is given
-    #       - the whole lines from start and endLine are deleted, both included.
-    #       - the caret position is not updated by this function.
-    # @param  {[line]} startLine [optional] if exists, the whole line will be deleted
-    # @param  {[line]} endLine   [optional] if exists, the whole line will be deleted
-    # @return {[none]}           [nothing]
+     * Delete the user multi line selection :
+     *   * The 2 lines (selected or given in param) must be distinct
+     *   * If no params :
+     *       - @currentSel.theoricalRange will the range used to find the
+     *         lines to delete.
+     *       - Only the range is deleted, not the beginning of startline nor the
+     *         end of endLine
+     *       - the caret is positionned at the firts break point of range.
+     *   * if startLine and endLine is given
+     *      - the whole lines from start and endLine are deleted, both included.
+     *      - the caret position is not updated by this function.
+     * @param  {[line]} startLine [optional] if exists, the whole line will be
+     *                                       deleted
+     * @param  {[line]} endLine   [optional] if exists, the whole line will be
+     *                                       deleted
+     * @return {[none]}           [nothing]
     */
 
 
     CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
       var bp, currentDelta, deltaInserted, endLineDepth, endOfLineFragment, firstNextLine, firstNextLineDepth, line, range, replaceCaret, startContainer, startLineDepth, startOffset;
+
       if (startLine === null || endLine === null) {
         throw new Error('CEeditor._deleteMultiLinesSelections called with a null param');
       }
@@ -29675,6 +30240,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         endLine = this.currentSel.endLine;
         replaceCaret = true;
       }
+      this.Tags.removeFromRange(range);
       endLineDepth = endLine.lineDepthAbs;
       endOfLineFragment = selection.cloneEndFragment(range, endLine);
       if (startLine.line$[0].dataset.type === 'task') {
@@ -29720,18 +30286,19 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * This function goes throught these lines to correct their depth.
      * @param  {Line} startLine     The first line after the bloc of inserted or
      *                              deleted lines
-     * @param  {Number} deltaInserted Delta of depth between the first line of 
+     * @param  {Number} deltaInserted Delta of depth between the first line of
      *                                the block and its last one.
-     * @param  {number} currentDelta  Delta of depth between the last line of 
+     * @param  {number} currentDelta  Delta of depth between the last line of
      *                                the block (startLine) and the following.
-     * @param  {Number} minDepth      The depth under wich (this one included) 
-     *                                we are sure the structure is valid and 
+     * @param  {Number} minDepth      The depth under wich (this one included)
+     *                                we are sure the structure is valid and
      *                                there is no need to check.
     */
 
 
     CNeditor.prototype._adaptDepth = function(startLine, deltaInserted, currentDelta, minDepth) {
       var firstNextLine, lineIt;
+
       if (startLine.lineNext === null) {
         return;
       }
@@ -29748,6 +30315,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._adaptType = function(startLine) {
       var lineIt, prev;
+
       lineIt = startLine.lineNext;
       while (lineIt !== null) {
         prev = this._findPrevSibling(lineIt);
@@ -29765,6 +30333,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._unIndentBlock = function(firstLine, delta) {
       var firstLineDepth, line, newDepth;
+
       line = firstLine;
       firstLineDepth = firstLine.lineDepthAbs;
       newDepth = Math.max(1, line.lineDepthAbs - delta);
@@ -29779,6 +30348,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._addMissingFragment = function(line, fragment) {
       var lastNode, lineEl, newText, node, startFrag, startOffset, _ref;
+
       startFrag = fragment.childNodes[0];
       lineEl = line.line$[0];
       if (lineEl.lastChild === null) {
@@ -29812,6 +30382,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._adaptEndLineType = function(startLine, endLine, endLineDepthAbs) {
       var deltaDepth, endType, line, newDepth, startType, _results, _results1, _results2;
+
       endType = endLine.lineType;
       startType = startLine.lineType;
       deltaDepth = endLineDepthAbs - startLine.lineDepthAbs;
@@ -29854,19 +30425,20 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Put caret at given position. The break point will be normalized (ie put 
+     * Put caret at given position. The break point will be normalized (ie put
      * in the closest text node).
      * @param {element} startContainer Container of the break point
      * @param {number} startOffset    Offset of the break point
-     * @param  {boolean} preferNext [optional] if true, in case BP8, we will choose
-     *                              to go in next sibling - if it exists - rather 
-     *                              than in the previous one.
+     * @param  {boolean} preferNext [optional] if true, in case BP8, we will
+     *                              choose to go in next sibling - if exists -
+     *                              rather than in the previous one.
      * @return {Object} {cont,offset} the normalized break point
     */
 
 
     CNeditor.prototype._setCaret = function(startContainer, startOffset, preferNext) {
       var bp, range, sel;
+
       bp = selection.normalizeBP(startContainer, startOffset, preferNext);
       range = this.document.createRange();
       range.setStart(bp.cont, bp.offset);
@@ -29879,6 +30451,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._setCaretAfter = function(elemt) {
       var index, nextEl, parent;
+
       nextEl = elemt;
       while (nextEl.nextSibling === null) {
         nextEl = nextEl.parentElement;
@@ -29898,6 +30471,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._setSelectionOnNode = function(node) {
       var range, sel;
+
       range = this.document.createRange();
       range.selectNodeContents(node);
       selection.normalize(range);
@@ -29909,6 +30483,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.setSelection = function(startContainer, startOffset, endContainer, endOffset) {
       var range, sel;
+
       range = this.document.createRange();
       range.setStart(startContainer, startOffset);
       range.setEnd(endContainer, endOffset);
@@ -29919,8 +30494,19 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return true;
     };
 
+    CNeditor.prototype.setSelectionFromRg = function(range, preferNext) {
+      var sel;
+
+      selection.normalize(range, preferNext);
+      sel = this.document.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return true;
+    };
+
     CNeditor.prototype.setSelectionBp = function(bp1, bp2) {
       var range, sel;
+
       range = this.document.createRange();
       range.setStart(bp1.cont, bp1.offset);
       range.setEnd(bp2.cont, bp2.offset);
@@ -29933,11 +30519,11 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     #  _insertLineAfter
-    # 
+    #
     # Insert a line after a source line
-    # The line will be inserted in the parent of the source line (which can be 
+    # The line will be inserted in the parent of the source line (which can be
     # the editor or a fragment in the case of the paste for instance)
-    # p = 
+    # p =
     #     sourceLine         : line after which the line will be added
     #     fragment           : [optionnal] - an html fragment that will be added
     #                          in the div of the line.
@@ -29951,15 +30537,16 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertLineAfter = function(p) {
       var newLine;
+
       newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, p.sourceLine, null, p.fragment);
       return newLine;
     };
 
     /* ------------------------------------------------------------------------
     #  _insertLineBefore
-    # 
+    #
     # Insert a line before a source line
-    # p = 
+    # p =
     #     sourceLine         : Line before which a line will be added
     #     fragment           : [optionnal] - an html fragment that will be added
     #                          the fragment is not supposed to end with a <br>
@@ -29971,19 +30558,21 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertLineBefore = function(p) {
       var newLine;
+
       newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, null, p.sourceLine, p.fragment);
       return newLine;
     };
 
     /*  -----------------------------------------------------------------------
     #   _readHtml
-    # 
+    #
     # Parse a raw html inserted in the iframe in order to update the controller
     */
 
 
     CNeditor.prototype._readHtml = function() {
-      var deltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, txt, _i, _len, _ref;
+      var deltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, seg, txt, _i, _len, _ref;
+
       linesDiv$ = $(this.linesDiv).children();
       lineDepthAbs = 0;
       lineDepthRel = 0;
@@ -30038,13 +30627,20 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           }
           this._setTaskToLine(htmlLine);
         }
+        seg = htmlLine.firstChild;
+        while (seg.nodeName === 'SPAN') {
+          if (seg.dataset.type) {
+            this.Tags._tagList.push(seg);
+          }
+          seg = seg.nextSibling;
+        }
       }
       return this._highestId = lineID;
     };
 
     /* ------------------------------------------------------------------------
     # LINES MOTION MANAGEMENT
-    # 
+    #
     # Functions to perform the motion of an entire block of lines
     # BUG : when doubleclicking on an end of line then moving this line
     #       down, selection does not behave as expected :-)
@@ -30078,6 +30674,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._moveLinesDown = function() {
       var cloneLine, endDiv, endLineID, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
+
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
@@ -30178,6 +30775,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._moveLinesUp = function() {
       var cloneLine, endDiv, endLineID, isSecondLine, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
+
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
@@ -30260,18 +30858,18 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /*
-        #  HISTORY MANAGEMENT:
-        # 1. _addHistory (Save html code, selection markers, positions...)
-        # 2. undoPossible (Return true only if unDo can be called)
-        # 3. redoPossible (Return true only if reDo can be called)
-        # 4. unDo (Undo the previous action)
-        # 5. reDo ( Redo a undo-ed action)
-        #
-        # What is saved in the history:
-        #  - current html content
-        #  - current selection
-        #  - current scrollbar position
-        #  - the boolean newPosition
+    #  HISTORY MANAGEMENT:
+    # 1. _addHistory (Save html code, selection markers, positions...)
+    # 2. undoPossible (Return true only if unDo can be called)
+    # 3. redoPossible (Return true only if reDo can be called)
+    # 4. unDo (Undo the previous action)
+    # 5. reDo ( Redo a undo-ed action)
+    #
+    # What is saved in the history:
+    #  - current html content
+    #  - current selection
+    #  - current scrollbar position
+    #  - the boolean newPosition
     */
 
 
@@ -30283,6 +30881,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._addHistory = function() {
       var i, savedScroll, savedSel;
+
       if (this.isUrlPopoverOn || this._hotString.isPreparing) {
         return;
       }
@@ -30317,6 +30916,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._initHistory = function() {
       var HISTORY_SIZE, h;
+
       HISTORY_SIZE = this.HISTORY_SIZE;
       h = this._history;
       h.history = new Array(HISTORY_SIZE);
@@ -30346,11 +30946,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.undoPossible = function() {
       var i;
+
       i = this._history.index;
       return i >= 0 && this._history.historyPos[i] !== void 0;
     };
 
-    /* -------------------------------------------------------------------------
+    /* ------------------------------------------------------------------------
     #  redoPossible
     # Return true only if reDo can be called
     */
@@ -30367,12 +30968,16 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.unDo = function() {
       if (this.undoPossible() && this.isEnabled) {
+        if (this._hotString.isPreparing) {
+          this._hotString.reset(false);
+        }
         return this._forceUndo();
       }
     };
 
     CNeditor.prototype._forceUndo = function() {
       var savedScroll, savedSel, stepIndex;
+
       if (this._history.index === this._history.history.length - 1) {
         this._addHistory();
         this._history.index -= 1;
@@ -30402,6 +31007,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.reDo = function() {
       var i, index, savedSel, xcoord, ycoord;
+
       if (this.redoPossible() && this.isEnabled) {
         index = (this._history.index += 1);
         i = index + 1;
@@ -30430,6 +31036,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.__printHistory = function(txt) {
       var arrow, content, i, step, _i, _len, _ref;
+
       if (!txt) {
         txt = '';
       }
@@ -30461,6 +31068,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.deSerializeRange = function(serial, rootNode) {
       var endCont, endPath, i, offset, parentCont, range, serials, startCont, startPath;
+
       if (!rootNode) {
         rootNode = this.linesDiv;
       }
@@ -30496,7 +31104,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Serialize a range. 
+     * Serialize a range.
      * The breakpoint are 2 strings separated by a comma.
      * Structure of a serialized bp : {offset}{/index}*
      * Global struct : {startOffset}{/index}*,{endOffset}{/index}*
@@ -30505,13 +31113,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      *                            If none, we use the body of the ownerDocument
      *                            of range.startContainer
      * @return {String}          The string, exemple : "10/0/2/1,3/1", or false
-     *                           if the rootNode is not a parent of one of the 
+     *                           if the rootNode is not a parent of one of the
      *                           range's break point.
     */
 
 
     CNeditor.prototype.serializeRange = function(range, rootNode) {
       var i, node, res, sib;
+
       if (!rootNode) {
         rootNode = this.linesDiv;
       }
@@ -30550,6 +31159,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.serializeSel = function() {
       var s;
+
       s = this.document.getSelection();
       if (s.rangeCount === 0) {
         return false;
@@ -30559,6 +31169,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.deSerializeSelection = function(serial) {
       var sel;
+
       sel = this.document.getSelection();
       sel.removeAllRanges();
       return sel.addRange(this.deSerializeRange(serial));
@@ -30566,7 +31177,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /* ------------------------------------------------------------------------
     # EXTENSION  :  auto-summary management and upkeep
-    # 
+    #
     # initialization
     # TODO: avoid updating the summary too often
     #       it would be best to make the update faster (rather than reading
@@ -30576,6 +31187,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._initSummary = function() {
       var summary;
+
       summary = this.editorBody$.children("#navi");
       if (summary.length === 0) {
         summary = $(document.createElement('div'));
@@ -30587,12 +31199,13 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._buildSummary = function() {
       var c, lines, summary, _results;
+
       summary = this.initSummary();
       this.editorBody$.children("#navi").children().remove();
       lines = this._lines;
       _results = [];
       for (c in lines) {
-        if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th") {
+        if (this.editorBody$.children('#' + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th") {
           _results.push(lines[c].line$.clone().appendTo(summary));
         } else {
           _results.push(void 0);
@@ -30620,6 +31233,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.paste = function(event) {
       var mySandBox, range, sel;
+
       mySandBox = this.clipboard;
       this.updateCurrentSelIsStartIsEnd();
       range = this.document.createRange();
@@ -30660,8 +31274,9 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._initClipBoard = function() {
       var clipboardEl, getOffTheScreen;
+
       clipboardEl = document.createElement('div');
-      clipboardEl.setAttribute('contenteditable', 'true');
+      clipboardEl.contentEditable = true;
       clipboardEl.id = 'editor-clipboard';
       this.clipboard$ = $(clipboardEl);
       getOffTheScreen = {
@@ -30681,7 +31296,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * Function that will call itself until the browser has pasted data in the
      * clipboar div
      * @param  {element} sandbox      the div where the browser will paste data
-     * @param  {function} processpaste the function to call back whan paste 
+     * @param  {function} processpaste the function to call back whan paste
      * is ok
     */
 
@@ -30695,13 +31310,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Called when the browser has pasted data in the clipboard div. 
+     * Called when the browser has pasted data in the clipboard div.
      * Its role is to insert the content of the clipboard into the editor.
     */
 
 
     CNeditor.prototype._processPaste = function() {
       var absDepth, bp, br, childNodes, currSel, currentDelta, currentLineFrag, deltaInserted, domWalkContext, dummyLine, endLine, endTargetLineFrag, firstAddedLine, frag, htmlStr, l, lastAdded, lastAddedDepth, lastFragLine, lineElements, lineNextStartLine, n, parendDiv, range, sandbox, secondAddedLine, segToInsert, startLine, startLineDepth, startOffset, targetNode, _i, _j, _len;
+
       sandbox = this.clipboard;
       currSel = this.currentSel;
       sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
@@ -30731,12 +31347,12 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       sandbox.innerHTML = "";
       frag.removeChild(frag.firstChild);
       /*
-              # TODO : the following steps removes all the styles of the lines in frag
-              # Later this will be removed in order to take into account styles.
+      # TODO : the following steps removes all the styles of the lines in frag
+      # Later this will be removed in order to take into account styles.
       */
 
       /*
-              # END TODO
+      # END TODO
       */
 
       startLine = currSel.startLine;
@@ -30784,8 +31400,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       targetNode = bp.cont;
       startOffset = bp.offset;
       /*
-              # 6- If the clipboard has more than one line, insert the end of target
-              #    line in the last line of frag and delete it
+      # 6- If the clipboard has more than one line, insert the end of target
+      #    line in the last line of frag and delete it
       */
 
       if (frag.childNodes.length > 1) {
@@ -30814,7 +31430,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         }
       }
       /*
-               * remove the firstAddedLine from the fragment
+       * remove the firstAddedLine from the fragment
       */
 
       firstAddedLine = dummyLine.lineNext;
@@ -30826,7 +31442,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         delete this._lines[firstAddedLine.lineID];
       }
       /*
-               * 7- updates nextLine and prevLines, insert frag in the editor
+       * 7- updates nextLine and prevLines, insert frag in the editor
       */
 
       if (secondAddedLine != null) {
@@ -30842,7 +31458,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         }
       }
       /*
-               * 8- Adapt lines depth and type.
+       * 8- Adapt lines depth and type.
       */
 
       lastAdded = domWalkContext.lastAddedLine;
@@ -30855,18 +31471,18 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
         this._adaptType(currSel.startLine);
       }
       /*
-               * 9- position caret
+       * 9- position caret
       */
 
       return bp = this._setCaret(bp.cont, bp.offset);
     };
 
     /** -----------------------------------------------------------------------
-     * Insert segment at the position of the breakpoint. 
+     * Insert segment at the position of the breakpoint.
      * /!\ The bp is updated but not normalized. The break point will between 2
      * segments if the insertion splits a segment in two. This is normal. If you
      * want to have a break point normalized (ie in a text node), then you have
-     * to do it afterwards. 
+     * to do it afterwards.
      * /!\ If the inserted segment should be fusionned with its similar sibling,
      * you have to run _fusionSimilarSegments() over the whole line after the
      * insertion.
@@ -30880,6 +31496,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertSegment = function(newSeg, bp) {
       var targetNode, targetSeg;
+
       targetNode = bp.cont;
       targetSeg = selection.getSegment(targetNode);
       if (targetSeg.nodeName === 'DIV') {
@@ -30901,6 +31518,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertTextInSegment = function(txt, bp, targetSeg) {
       var newText, offset, targetText;
+
       if (txt === '') {
         return true;
       }
@@ -30921,6 +31539,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._splitAndInsertSegment = function(newSegment, bp, targetSeg) {
       var children, frag, i, rg;
+
       if (!targetSeg) {
         targetSeg = selection.getSegment(bp.cont);
       }
@@ -30948,6 +31567,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._insertSegmentAfterSeg = function(seg) {
       var span, txt;
+
       span = document.createElement('SPAN');
       txt = document.createTextNode('\u00a0');
       span.appendChild(txt);
@@ -30965,6 +31585,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.insertSpaceAfterSeg = function(seg) {
       var bp, c1, index, nextSeg, span, txtNode;
+
       nextSeg = seg.nextSibling;
       if (nextSeg.nodeName === 'BR') {
         span = this._insertSegmentAfterSeg(seg);
@@ -30995,6 +31616,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype.insertSpaceAfterUrl = function(seg) {
       var bp, index, nextSeg, span, txtNode;
+
       nextSeg = seg.nextSibling;
       if (nextSeg.nodeName === 'BR') {
         span = this._insertSegmentAfterSeg(seg);
@@ -31015,14 +31637,13 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
      * Walks thoug an html tree in order to convert it in a strutured content
      * that fit to a note structure.
      * @param  {html element} elemt   Reference to an html element to be parsed
-     * @param  {object} context _domWalk is recursive and its context of execution
-     *                  is kept in this param instead of using the editor context
-     *                  (quicker and better) isolation
+     * @param  {object} context context of execution of _domWalk (recursive).
     */
 
 
     CNeditor.prototype._domWalk = function(elemt, context) {
       var p;
+
       this.__domWalk(elemt, context);
       if (context.currentLineFrag.childNodes.length > 0) {
         p = {
@@ -31039,17 +31660,18 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     /** -----------------------------------------------------------------------
      * Walks thoug an html tree in order to convert it in a strutured content
      * that fit to a note structure.
-     * @param  {html element} nodeToParse   Reference to an html element to 
+     * @param  {html element} nodeToParse   Reference to an html element to
      *                        be parsed
-     * @param  {object} context __domWalk is recursive and its context of 
-     *                          execution is kept in this param instead of 
-     *                          using the editor context (faster and better 
+     * @param  {object} context __domWalk is recursive and its context of
+     *                          execution is kept in this param instead of
+     *                          using the editor context (faster and better
      *                          isolation)
     */
 
 
     CNeditor.prototype.__domWalk = function(nodeToParse, context) {
       var aNode, absDepth, child, clas, classes, deltaHxLevel, lastInsertedEl, newClass, prevHxLevel, spanEl, spanNode, txtNode, _i, _j, _len, _len1, _ref, _ref1;
+
       absDepth = context.absDepth;
       prevHxLevel = context.prevHxLevel;
       _ref = nodeToParse.childNodes;
@@ -31158,6 +31780,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     CNeditor.prototype._appendCurrentLineFrag = function(context, absDepth, relDepth) {
       var p, spanNode;
+
       if (context.currentLineFrag.childNodes.length === 0) {
         spanNode = document.createElement('span');
         spanNode.appendChild(document.createTextNode(''));
@@ -31178,13 +31801,15 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
 
     /** -----------------------------------------------------------------------
      * Insert in the editor a line that was copied in a cozy note editor
-     * @param  {html element} elemt a div ex : <div id="CNID_7" class="Lu-3"> ... </div>
-     * @return {line}        a ref to the line object
+     * @param  {Element} elemt A div
+     *                         ex : <div id="CNID_7" class="Lu-3"> ... </div>
+     * @return {Line}          A ref to the line object
     */
 
 
     CNeditor.prototype._clipBoard_Insert_InternalLine = function(elemt, context) {
       var deltaDepth, elemtFrag, i, lineClass, lineDepthAbs, n, p, seg, span;
+
       lineClass = elemt.className.split('-');
       lineDepthAbs = +lineClass[1];
       lineClass = lineClass[0];
@@ -31223,12 +31848,42 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
       return context.lastAddedLine = this._insertLineAfter(p);
     };
 
+    /**
+     * Called by the hotString controler when return is hit or when an item of
+     * the auto complete is clicked.
+     * @param  {Object} autoItem {text:'value', type:'reminder'|'contact'|...}
+    */
+
+
     CNeditor.prototype.doHotStringAction = function(autoItem) {
       var bp, d, date, format, h, hs, m, mn, reg, taskDiv, txt, y;
+
       hs = this._hotString;
+      if (!autoItem) {
+        hs.reset('end');
+        return true;
+      }
       switch (autoItem.type) {
         case 'ttag':
-          return hs.forceHsType(autoItem.value);
+          switch (autoItem.value) {
+            case 'todo':
+              return this.doHotStringAction({
+                type: 'todo'
+              });
+            case 'htag':
+              hs._forceUserHotString('#', []);
+              hs.updateHs();
+              bp = selection.normalizeBP(hs._hsSegment, 1);
+              this._setCaret(bp.cont, bp.offset);
+              return true;
+            case 'reminder':
+              hs._forceUserHotString('@@', []);
+              hs.updateHs();
+              bp = selection.normalizeBP(hs._hsSegment, 1);
+              this._setCaret(bp.cont, bp.offset);
+              return true;
+          }
+          break;
         case 'todo':
           taskDiv = this._turnIntoTask();
           if (taskDiv) {
@@ -31237,16 +31892,18 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
             if (txt.match(reg)) {
               this._initTaskContent(taskDiv);
             } else {
-              hs._forceUserHotString('');
+              hs._forceUserHotString('', []);
             }
-            hs.reset();
+            hs.reset(false);
             this.editorTarget$.trigger(jQuery.Event('onChange'));
             return true;
           }
           break;
         case 'contact':
-          hs._forceUserHotString(autoItem.text);
+          hs._forceUserHotString(autoItem.text, []);
           hs._hsSegment.classList.add('CNE_contact');
+          hs._hsSegment.dataset.type = 'contact';
+          this.Tags._tagList.push(hs._hsSegment);
           hs._hsSegment.classList.remove('CNE_hot_string');
           bp = this.insertSpaceAfterSeg(hs._hsSegment);
           this._setCaret(bp.cont, 1);
@@ -31255,8 +31912,10 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           this.editorTarget$.trigger(jQuery.Event('onChange'));
           return true;
         case 'htag':
-          hs._forceUserHotString(autoItem.text);
+          hs._forceUserHotString(autoItem.text, []);
           hs._hsSegment.classList.add('CNE_htag');
+          hs._hsSegment.dataset.type = 'htag';
+          this.Tags._tagList.push(hs._hsSegment);
           hs._hsSegment.classList.remove('CNE_hot_string');
           bp = this.insertSpaceAfterSeg(hs._hsSegment);
           this._setCaret(bp.cont, 1);
@@ -31271,16 +31930,19 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
               return n;
             }
           };
-          date = autoItem.text;
+          date = autoItem.value;
           d = format(date.getDate());
           m = format(date.getMonth());
           y = format(date.getFullYear());
           h = format(date.getHours());
           mn = format(date.getMinutes());
           txt = d + '/' + m + '/' + y + '  ' + h + ':' + mn;
-          hs._forceUserHotString(txt);
+          hs._forceUserHotString(txt, []);
           hs._hsSegment.classList.add('CNE_reminder');
           hs._hsSegment.classList.remove('CNE_hot_string');
+          hs._hsSegment.dataset.type = 'reminder';
+          this.Tags._tagList.push(hs._hsSegment);
+          hs._hsSegment.dataset.value = date.format();
           bp = this.insertSpaceAfterSeg(hs._hsSegment);
           this._setCaret(bp.cont, 1);
           hs._auto.hide();
@@ -31288,8 +31950,8 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
           this.editorTarget$.trigger(jQuery.Event('onChange'));
           return true;
       }
+      hs.reset('end');
       this.editorTarget$.trigger(jQuery.Event('onChange'));
-      this._auto.hide();
       return false;
     };
 
@@ -31297,10 +31959,10 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     # EXTENSION  :  cleaned up HTML parsing
     #
     #  (TODO)
-    # 
+    #
     # We suppose the html treated here has already been sanitized so the DOM
     #  structure is coherent and not twisted
-    # 
+    #
     # _parseHtml:
     #  Parse an html string and return the matching html in the editor's format
     # We try to restitute the very structure the initial fragment :
@@ -31311,7 +31973,7 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     #   > textuals enhancements (bold, underlined, italic)
     #   > titles
     #   > line return
-    # 
+    #
     # Ideas to do that :
     #  0- textContent is always kept
     #  1- A, IMG keep their specific attributes
@@ -31327,17 +31989,14 @@ window.require.define({"CNeditor/editor": function(exports, require, module) {
     */
 
 
-    CNeditor.prototype.logKeyPress = function(e) {};
-
     return CNeditor;
 
   })();
 
   CNeditor = exports.CNeditor;
   
-}});
-
-window.require.define({"CNeditor/hot-string": function(exports, require, module) {
+});
+window.require.register("CNeditor/hot-string", function(exports, require, module) {
   var AutoComplete, HotString, selection,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
@@ -31347,26 +32006,18 @@ window.require.define({"CNeditor/hot-string": function(exports, require, module)
   selection = require('./selection').selection;
 
   module.exports = HotString = (function() {
-
     function HotString(editor) {
-      this._mouseUpCb = __bind(this._mouseUpCb, this);
-
-      this._mouseDownCb = __bind(this._mouseDownCb, this);
-
-      this._tryHighlight = __bind(this._tryHighlight, this);
-
-      this.newtypedChar = __bind(this.newtypedChar, this);
-      this.editor = editor;
+      this._tryHighlight = __bind(this._tryHighlight, this);    this.editor = editor;
+      this._isEdit = false;
       this.container = editor.linesDiv;
-      this._auto = new AutoComplete(editor.linesDiv, editor);
+      this._auto = new AutoComplete(editor.linesDiv, editor, this);
       this._hsTypes = ['@', '@@', '#'];
       this._modes = {
         '@': 'contact',
         '@@': 'reminder',
-        '#': 'tag'
+        '#': 'htag'
       };
       this.isPreparing = false;
-      this._fullHS = '';
       this._hsType = '';
       this._hsRight = '';
       this._hsLeft = '';
@@ -31377,44 +32028,20 @@ window.require.define({"CNeditor/hot-string": function(exports, require, module)
       this.container.addEventListener('keyup', this._tryHighlight);
     }
 
-    HotString.prototype.newShortCut = function(shortcut, metaKeyCode, keyCode) {
-      var item, newType, preventDefault;
+    /** -----------------------------------------------------------------------
+     * Called by the editor keydown call back.
+     * @param  {Object} shortcut cf editor.getShortcut(e)
+     * @return {Boolean}          True if keydown should be preventDefaulted
+    */
+
+
+    HotString.prototype.keyDownCb = function(shortcut) {
+      var preventDefault;
+
       switch (shortcut) {
         case '-return':
-          item = this._auto.hide();
-          this.isPreparing = false;
-          this.editor.doHotStringAction(item);
+          this.validate();
           preventDefault = true;
-          break;
-        case '-backspace':
-          if (this._hsLeft.length === 0) {
-            newType = this._hsType.slice(0, -1);
-            if (__indexOf.call(this._hsTypes, newType) >= 0) {
-              this._hsType = newType;
-              this._currentMode = this._modes[newType];
-              this._auto.setMode(this._currentMode);
-              this._auto.update(this._hsString);
-            } else {
-              this.reset(true);
-            }
-          } else {
-            this._hsLeft = this._hsLeft.slice(0, -1);
-            this._hsString = this._hsLeft + this._hsRight;
-            this._fullHS = this._hsType + this._hsString;
-            this._auto.update(this._hsString);
-          }
-          preventDefault = false;
-          break;
-        case '-suppr':
-          if (this._hsRight.length === 0) {
-            this.reset(true);
-          } else {
-            this._hsRight = this._hsRight.slice(1);
-            this._hsString = this._hsLeft + this._hsRight;
-            this._fullHS = this._hsType + this._hsString;
-            this._auto.update(this._hsString);
-          }
-          preventDefault = false;
           break;
         case '-up':
           this._auto.up();
@@ -31424,203 +32051,311 @@ window.require.define({"CNeditor/hot-string": function(exports, require, module)
           this._auto.down();
           preventDefault = true;
           break;
-        case '-left':
-          if (this._hsLeft.length === 0) {
-            this.reset(true);
-          } else {
-            this._hsRight = this._hsLeft.slice(-1) + this._hsRight;
-            this._hsLeft = this._hsLeft.slice(0, -1);
-          }
-          preventDefault = false;
-          break;
-        case '-right':
-          if (this._hsRight.length === 0) {
-            this.reset(true);
-          } else {
-            this._hsLeft = this._hsLeft + this._hsRight[0];
-            this._hsRight = this._hsRight.slice(1);
-          }
-          preventDefault = false;
-          break;
         case '-pgUp':
         case '-pgDwn':
         case '-end':
         case '-home':
-          this.reset(true);
+          this.reset(false);
           preventDefault = false;
           break;
         case '-space':
           preventDefault = false;
           break;
         case '-esc':
-          this.reset(true);
+          this.reset('end');
           preventDefault = false;
       }
       return preventDefault;
     };
 
     HotString.prototype.printHotString = function() {
-      return console.log('_fullHS = "' + this._fullHS + '"', '_hsType = "' + this._hsType + '"', '_hsLeft = "' + this._hsLeft + '"', '_hsRight = "' + this._hsRight + '"');
+      return console.log('_hsType = "' + this._hsType + '"', '_hsLeft = "' + this._hsLeft + '"', '_hsRight = "' + this._hsRight + '"');
     };
 
     /** -----------------------------------------------------------------------
      * Update the current "hotString" typed by the user. This function is called
-     * by keypress event, and detects keys such as '@' and "normal caracters". 
-     * Arrows, return, baskspace etc are manage in newShortCut()
+     * by editor._keypressCb(), and detects keys such as '@' and "normal 
+     * caracters". 
+     * Actions (Arrows, return, baskspace etc...) are managed in newShortCut()
      * @param  {Event} e The keyboard event
     */
 
 
-    HotString.prototype.newtypedChar = function(e) {
-      var autoItem, charCode, isAction, modes;
+    HotString.prototype.keypressCb = function(e) {
+      var charCode, modes;
+
       charCode = e.which;
       if (this.isPreparing) {
-        if (this._hsLeft === '' && charCode === 64 && (this._hsType = '@')) {
-          this._hsType = '@@';
-          this._currentMode = 'reminder';
-          this._auto.setMode('reminder');
-          return true;
-        }
-        isAction = this._getShortCut(e)[2];
-        if (!isAction) {
-          this._hsLeft += String.fromCharCode(charCode);
-          this._hsString = this._hsLeft + this._hsRight;
-          this._fullHS = this._hsType + this._hsString;
-          autoItem = this._isAHotString(this._hsString);
-          if (autoItem) {
-            this.editor.doHotStringAction(autoItem);
-            e.preventDefault();
-            return false;
-          }
-          this._auto.update(this._hsString);
-          return true;
-        }
+
       } else if (charCode === 64) {
         if (this.editor._isStartingWord()) {
           modes = this.editor.getCurrentAllowedInsertions();
           if (__indexOf.call(modes, 'contact') >= 0) {
             this._hsType = '@';
-            this._fullHS = '@';
             this.isPreparing = true;
-            this.container.addEventListener('mousedown', this._mouseDownCb);
-            this.container.addEventListener('mouseup', this._mouseUpCb);
             this._auto.setAllowedModes(modes);
             this._currentMode = 'contact';
             this._auto.setMode('contact');
-            this._autoToBeShowed = true;
+            this._autoToBeShowed = {
+              mode: 'insertion'
+            };
           }
         }
       } else if (charCode === 35) {
         if (this.editor._isStartingWord()) {
           modes = this.editor.getCurrentAllowedInsertions();
-          if (__indexOf.call(modes, 'tag') >= 0) {
+          if (__indexOf.call(modes, 'htag') >= 0) {
             this._hsType = '#';
-            this._fullHS = '#';
             this.isPreparing = true;
-            this.container.addEventListener('mousedown', this._mouseDownCb);
-            this.container.addEventListener('mouseup', this._mouseUpCb);
             this._currentMode = 'htag';
             this._auto.setMode('htag');
-            this._autoToBeShowed = true;
+            this._autoToBeShowed = {
+              mode: 'insertion'
+            };
           }
         }
       }
       return true;
     };
 
+    /** -----------------------------------------------------------------------
+     * Called by editor._keyupCb() if a hotstring is preparing.
+     * It will check if the content of _hsSegment has change and then take the
+     * appropriate actions (update autocomplete, change mode, reset)
+    */
+
+
+    HotString.prototype.updateHs = function(seg) {
+      var autoItem, hsType, mode, newHotStrg;
+
+      if (!seg) {
+        seg = this._hsSegment;
+      }
+      newHotStrg = this._hsSegment.textContent;
+      if (this._hsType + this._hsString === newHotStrg) {
+        return true;
+      }
+      hsType = newHotStrg.slice(0, 2);
+      if (hsType === '@@') {
+        this._hsString = newHotStrg.slice(2);
+      } else {
+        hsType = hsType[0];
+        if (hsType === '@' || hsType === '#') {
+          this._hsString = newHotStrg.slice(1);
+        } else {
+          this.reset('current', true);
+          return true;
+        }
+      }
+      if (hsType !== this._hsType) {
+        this._hsType = hsType;
+        mode = this._modes[hsType];
+        this._currentMode = mode;
+        this._auto.setMode(mode);
+        return true;
+      } else {
+        autoItem = this._isAHotString(this._hsString);
+        if (autoItem) {
+          this.editor.doHotStringAction(autoItem);
+          return false;
+        }
+        return this._auto.update(this._hsString);
+      }
+    };
+
+    /** -----------------------------------------------------------------------
+     * Called by editor._keyupCb() and editor._mouseupCb() which detect if the
+     * carret enters a meta segment. If yes, then we edit it.
+     * @param  {Element} seg   The segment with meta data (reminder, contact...)
+     * @param  {Range} range The range of the selection
+    */
+
+
+    HotString.prototype.edit = function(seg, range) {
+      var endOffset, modes, segClass, startOffset, type;
+
+      console.log('hotstring.edit()');
+      this._isEdit = true;
+      this.isPreparing = true;
+      type = seg.dataset.type;
+      switch (type) {
+        case 'reminder':
+          this._hsType = '@@';
+          segClass = 'CNE_reminder';
+          break;
+        case 'contact':
+          this._hsType = '@';
+          segClass = 'CNE_contact';
+          break;
+        case 'htag':
+          this._hsType = '#';
+          segClass = 'CNE_htag';
+      }
+      this._editedItem = {
+        text: seg.textContent,
+        type: seg.dataset.type,
+        id: seg.dataset.id,
+        value: seg.dataset.value
+      };
+      startOffset = range.startOffset + this._hsType.length;
+      endOffset = range.endOffset + this._hsType.length;
+      this._hsTextNode = seg.firstChild;
+      this._hsString = seg.textContent;
+      this._hsTextNode.textContent = this._hsType + this._hsString;
+      seg.classList.remove(segClass);
+      seg.dataset.type = '';
+      this.editor.setSelection(seg.firstChild, startOffset, seg.firstChild, endOffset);
+      modes = this.editor.getCurrentAllowedInsertions();
+      this._auto.setAllowedModes(modes);
+      this._currentMode = type;
+      this._auto.setMode(type);
+      this._autoToBeShowed = {
+        mode: 'edit',
+        segment: seg
+      };
+      this._tryHighlight();
+      return true;
+    };
+
     HotString.prototype._isNormalChar = function(charCode) {
       var res;
+
       res = (96 < charCode && charCode < 123) || (63 < charCode && charCode < 91) || (47 < charCode && charCode < 58) || (charCode === 43);
       return res;
     };
 
+    /**
+     * In charge of diplaying the hotstring segment and the auto completion div
+     * when a creation or edition begins.
+    */
+
+
     HotString.prototype._tryHighlight = function() {
       var rg;
-      if (this._autoToBeShowed) {
-        rg = this.editor.getEditorSelection().getRangeAt(0);
-        this.editor.setSelection(rg.startContainer, rg.startOffset - this._hsType.length, rg.endContainer, rg.endOffset);
-        rg = this.editor._applyMetaDataOnSelection('CNE_hot_string');
-        this._hsTextNode = rg.startContainer;
-        this._hsSegment = rg.startContainer.parentElement;
-        this.editor._setCaret(this._hsSegment, this._hsSegment.childNodes.length);
-        this._autoToBeShowed = false;
-        this._auto.show(this._hsSegment, '');
+
+      if (!this._autoToBeShowed) {
+        return true;
+      }
+      switch (this._autoToBeShowed.mode) {
+        case 'edit':
+          this._hsSegment = this._autoToBeShowed.segment;
+          this._hsTextNode = this._hsSegment.firstChild;
+          this._hsSegment.classList.add('CNE_hot_string');
+          this._hsSegment.dataset.type = 'hotString';
+          this._autoToBeShowed = false;
+          this._auto.show(this._hsSegment, this._hsString);
+          break;
+        case 'insertion':
+          rg = this.editor.getEditorSelection().getRangeAt(0);
+          this.editor.setSelection(rg.startContainer, rg.startOffset - this._hsType.length, rg.endContainer, rg.endOffset);
+          rg = this.editor._applyMetaDataOnSelection('CNE_hot_string');
+          this._hsTextNode = rg.startContainer;
+          this._hsSegment = rg.startContainer.parentElement;
+          this._hsSegment.dataset.type = 'hotString';
+          this.editor._setCaret(this._hsSegment, this._hsSegment.childNodes.length);
+          this._autoToBeShowed = false;
+          this._auto.show(this._hsSegment, '');
       }
       return true;
     };
 
-    HotString.prototype._unhighLight = function(dealCaret) {
-      var bp, seg;
+    HotString.prototype._unhighLight = function(bps) {
+      var seg;
+
       seg = this._hsSegment;
       if (seg.parentElement) {
         seg.classList.remove('CNE_hot_string');
-        bp = {
-          cont: this._hsTextNode,
-          offset: this._hsType.length + this._hsLeft.length
-        };
-        this.editor._fusionSimilarSegments(seg.parentElement, [bp]);
-        if (dealCaret) {
-          this.editor._setCaret(bp.cont, bp.offset);
-        }
+        this.editor._fusionSimilarSegments(seg.parentElement, bps);
         this._hsTextNode = null;
         this._hsSegment = null;
       }
       return true;
     };
 
-    HotString.prototype._forceUserHotString = function(newHotString, setEnd) {
-      var textNode;
+    HotString.prototype._forceUserHotString = function(newHotString, bps) {
+      var bp, textNode, _i, _len;
+
       textNode = this._hsTextNode;
       textNode.textContent = newHotString;
-      if (setEnd) {
-        return this.editor._setCaret(textNode, textNode.length);
+      for (_i = 0, _len = bps.length; _i < _len; _i++) {
+        bp = bps[_i];
+        if (bp.cont === textNode) {
+          bp.offset = newHotString.length;
+        }
+      }
+      return bps;
+    };
+
+    HotString.prototype.validate = function() {
+      var item;
+
+      item = this._auto.getSelectedItem();
+      return this.editor.doHotStringAction(item);
+    };
+
+    /** -----------------------------------------------------------------------
+     * Reset hot string : the segment is removed and autocomplete hidden. In 
+     * case where it was not a creation of a meta but a modification, then the
+     * initial value of the meta is restored. If the hsType ('@', '#' or '@@')
+     * has been deleted then the meta data segment is also removed if editing.
+     * @param  {String} dealCaret  3 values : 1/ 'current'the current caret 
+     *                  position is saved and restored after. 2/ 'end' : the 
+     *                  caret will be set at the end of the segment. 3/ false :
+     *                  the carret is not managed here.
+    */
+
+
+    HotString.prototype.reset = function(dealCaret, hardReset) {
+      var bp, endContainer, endOffset, rg, startContainer, startOffset;
+
+      if (!this.isPreparing) {
+        return true;
+      }
+      if (this._isEdit && !hardReset) {
+        if (dealCaret === 'current') {
+          rg = this.editor.getEditorSelection().getRangeAt(0);
+          startContainer = rg.startContainer;
+          startOffset = rg.startOffset;
+          endContainer = rg.endContainer;
+          endOffset = rg.endOffset;
+          this.editor.doHotStringAction(this._editedItem);
+          this.editor.setSelection(startContainer, startOffset, endContainer, endOffset);
+        } else {
+          this.editor.doHotStringAction(this._editedItem);
+        }
+        return true;
+      }
+      if (dealCaret === 'current') {
+        rg = this.editor.getEditorSelection().getRangeAt(0);
+        bp = {
+          cont: rg.startContainer,
+          offset: rg.startOffset
+        };
+        this._unhighLight([bp]);
+      } else if (dealCaret === 'end') {
+        bp = {
+          cont: this._hsTextNode,
+          offset: this._hsTextNode.length
+        };
+        this._unhighLight([bp]);
       } else {
-        return this.editor._setSelectionOnNode(textNode);
+        this._unhighLight([]);
       }
-    };
-
-    HotString.prototype.forceHsType = function(type) {
-      switch (type) {
-        case 'todo':
-          return this.editor.doHotStringAction({
-            type: 'todo'
-          });
-        case 'reminder':
-          this._forceUserHotString('@@', true);
-          this._hsType = '@@';
-          this._currentMode = 'reminder';
-          this._auto.setMode('reminder');
-          return true;
-        case 'htag':
-          this._auto.hide();
-          this._forceUserHotString('#', true);
-          this._fullHS = '#';
-          this._hsType = '#';
-          this._hsString = '';
-          this._hsRight = '';
-          this._hsLeft = '';
-          this._currentMode = 'htag';
-          this._auto.setMode('htag');
-          this._auto.show(this._hsSegment, this._hsString);
-          return true;
-      }
-    };
-
-    HotString.prototype.reset = function(dealCaret) {
-      this._unhighLight(dealCaret);
       this._reInit();
-      return this._auto.hide();
+      this._auto.hide();
+      if (dealCaret) {
+        this.editor._setCaret(bp.cont, bp.offset);
+      }
+      return true;
     };
 
     HotString.prototype._reInit = function() {
-      this._fullHS = '';
       this._hsType = '';
       this._hsString = '';
       this._hsRight = '';
       this._hsLeft = '';
       this.isPreparing = false;
-      this.container.removeEventListener('mousedown', this._mouseDownCb);
-      return this.container.removeEventListener('mouseup', this._mouseUpCb);
+      return this._isEdit = false;
     };
 
     HotString.prototype._isAHotString = function(txt) {
@@ -31646,45 +32381,42 @@ window.require.define({"CNeditor/hot-string": function(exports, require, module)
       }
     };
 
-    HotString.prototype._mouseDownCb = function(e) {
+    HotString.prototype.mouseDownCb = function(e) {
       var isOut;
-      console.log('== mousedown');
+
       isOut = e.target !== this.el && $(e.target).parents('#CNE_autocomplete').length === 0;
       if (!isOut) {
         return e.preventDefault();
       }
     };
 
-    HotString.prototype._mouseUpCb = function(e) {
-      var isOut, selectedLine;
-      console.log('== mouseup');
-      isOut = e.target !== this.el && $(e.target).parents('#CNE_autocomplete').length === 0;
-      if (isOut) {
-        this.reset(false);
+    HotString.prototype.mouseUpInAutoCb = function(e) {
+      var selectedLine;
+
+      if (this._currentMode === 'reminder') {
         return true;
-      } else {
-        if (this._currentMode === 'reminder') {
-          return true;
-        }
-        selectedLine = e.target;
-        while (selectedLine && selectedLine.tagName !== 'LI') {
-          selectedLine = selectedLine.parentElement;
-        }
-        if (selectedLine) {
-          return this.editor.doHotStringAction(selectedLine.item);
-        } else {
-          return this.reset(true);
-        }
       }
+      selectedLine = e.target;
+      while (selectedLine && selectedLine.tagName !== 'LI') {
+        selectedLine = selectedLine.parentElement;
+      }
+      if (selectedLine) {
+        return this.editor.doHotStringAction(selectedLine.item);
+      } else {
+        return this.reset('end');
+      }
+    };
+
+    HotString.prototype.isInAuto = function(elt) {
+      return elt === this.el || $(elt).parents('#CNE_autocomplete').length !== 0;
     };
 
     return HotString;
 
   })();
   
-}});
-
-window.require.define({"CNeditor/line": function(exports, require, module) {
+});
+window.require.register("CNeditor/line", function(exports, require, module) {
   /** -----------------------------------------------------------------------
    * line$        : 
    * lineID       : 
@@ -31699,24 +32431,24 @@ window.require.define({"CNeditor/line": function(exports, require, module) {
 
   Line = (function() {
     /*
-         * If no arguments, returns an empty object (only methods), otherwise
-         * constructs a full line. The dom element of the line is inserted according
-         * to the previous or next line given in the arguments.
-         * @param  {Array}  Array of parameters :
-         *   [ 
-                editor        , # 
-                type          , # 
-                depthAbs      , # 
-                depthRelative , # 
-                prevLine      , # The prev line, null if nextLine is given
-                nextLine      , # The next line, null if prevLine is given
-                fragment        # [optional] a fragment to insert in the line, will
-                                  add a br at the end if none in the fragment.
-              ]
+     * If no arguments, returns an empty object (only methods), otherwise
+     * constructs a full line. The dom element of the line is inserted according
+     * to the previous or next line given in the arguments.
+     * @param  {Array}  Array of parameters :
+     *   [ 
+            editor        , # 
+            type          , # 
+            depthAbs      , # 
+            depthRelative , # 
+            prevLine      , # The prev line, null if nextLine is given
+            nextLine      , # The next line, null if prevLine is given
+            fragment        # [optional] a fragment to insert in the line, will
+                              add a br at the end if none in the fragment.
+          ]
     */
-
     function Line() {
       var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
+
       if (arguments.length === 0) {
         return;
       } else {
@@ -31793,6 +32525,7 @@ window.require.define({"CNeditor/line": function(exports, require, module) {
 
   Line.clone = function(line) {
     var clone;
+
     clone = new Line();
     clone.line$ = line.line$.clone();
     clone.lineID = line.lineID;
@@ -31806,10 +32539,8 @@ window.require.define({"CNeditor/line": function(exports, require, module) {
 
   module.exports = Line;
   
-}});
-
-window.require.define({"CNeditor/request": function(exports, require, module) {
-  
+});
+window.require.register("CNeditor/request", function(exports, require, module) {
   exports.request = function(type, url, data, callback) {
     return $.ajax({
       type: type,
@@ -31847,5 +32578,112 @@ window.require.define({"CNeditor/request": function(exports, require, module) {
     return exports.request("DELETE", url, null, callbacks);
   };
   
-}});
+});
+window.require.register("CNeditor/tags", function(exports, require, module) {
+  var Tags, selection;
 
+  selection = require('./selection').selection;
+
+  module.exports = Tags = (function() {
+    function Tags() {
+      this._tagList = [];
+      this._areTagsEditable = true;
+      window.taglist = this._tagList;
+    }
+
+    /**
+     * The selection within tags is difficult. The idea is to have selection
+     * whether in a tag, or fully outside any tag. To deal the different pb,
+     * here is the logic choosen :
+     * tags are usually "editable" (= contentEditable = true) except :
+     *   - when shift key is pressed (keydown) outside a tag : then turn all
+     *     tags un-editable. If the user modify the selection with keyboard
+     *     (shift + arrow or alike) then the browser will not let selection go
+     *     into a tag.
+     *   - when mousedown outside of a tag : then turn all tag un-editable so
+     *     that selection can not end in one of them.
+     *   - when mouseup or keyup : let all tags be editable agin and check if
+     *     the selection has an end in a tag and not the other (possible if the
+     *     change of the selection started within a tag in edition), then modify
+     *     the selection to be fully in the tag.
+     *
+    */
+
+
+    Tags.prototype.setTagEditable = function() {
+      var tag, _i, _len, _ref;
+
+      if (!this._areTagsEditable) {
+        _ref = this._tagList;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          tag = _ref[_i];
+          tag.contentEditable = true;
+        }
+        return this._areTagsEditable = true;
+      }
+    };
+
+    Tags.prototype.setTagUnEditable = function() {
+      var tag, _i, _len, _ref;
+
+      if (this._areTagsEditable) {
+        _ref = this._tagList;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          tag = _ref[_i];
+          tag.contentEditable = false;
+        }
+        return this._areTagsEditable = false;
+      }
+    };
+
+    Tags.prototype.remove = function(seg) {
+      return this._tagList = _.without(this._tagList, seg);
+    };
+
+    /**
+     * Find and removes all tags within a range (strictly included in a
+     * line, normalize it for precaution).
+     * @param  {Range} rg The range in which the tags to remove are.
+    */
+
+
+    Tags.prototype.removeFromRange = function(rg) {
+      var endSeg, seg, startSeg, _i, _len, _ref;
+
+      startSeg = selection.getSegment(rg.startContainer, 0);
+      endSeg = selection.getSegment(rg.endContainer, 0);
+      console.log('_tagList at beginning', this._tagList);
+      if (startSeg !== endSeg) {
+        seg = startSeg.nextSibling;
+        while (seg !== endSeg) {
+          if (seg.nodeName === 'BR') {
+            seg = seg.parentElement.nextSibling.firstChild;
+            if (seg === endSeg) {
+              break;
+            }
+          }
+          if (seg.dataset.type) {
+            console.log(' before removing', this._tagList);
+            this._tagList = _.without(this._tagList, seg);
+            console.log(' after  removing', this._tagList);
+            window.taglist = this._tagList;
+          }
+          seg = seg.nextSibling;
+        }
+      }
+      console.log('_tagList at the end', this._tagList);
+      _ref = this._tagList;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        seg = _ref[_i];
+        if ($(seg).parents('body').length === 0) {
+          console.log('pb !');
+        }
+      }
+      return true;
+    };
+
+    return Tags;
+
+  })();
+  
+});
