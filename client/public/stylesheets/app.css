@@ -7696,25 +7696,6 @@ else
   border-bottom: 1px solid #e8e8e8;
   background-color: transparent;
   font-size: 14px;
-/*
-    #tree-node-all > ul > li > .jstree-rename-input
-        margin-left: 8px
-        margin-top: 10px
-
-    li
-        padding 10px 0
-        position relative
-
-    ul > li > ul > li
-        border-top: 1px solid whitegrey
-        border-bottom: 1px solid grey
-        margin-left: 0px
-
-    ul > li > ul > li > ul > li
-        border: 0px
-        padding: 3px
-        margin-left: 10px
-    */
 }
 #tree #tree-node-all > ins:first-child {
   display: none;
