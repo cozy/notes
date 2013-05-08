@@ -44,7 +44,7 @@ iframe
 
 #note-full-breadcrumb.topaffix
     position fixed
-    top 40px
+    top 35px
     padding-left: 50px
 
 #note-full
@@ -68,7 +68,7 @@ iframe
 #note-style
     margin: 40px 2%
     padding: 20px 50px
-    border: 1px solid lightgrey + 30%
+    border: 1px solid #DDD
     background: #FDFDFD
     background-position: right top
     background-repeat: no-repeat
@@ -136,12 +136,12 @@ iframe
     z-index: 53
 
 #note-full-title:hover
-    outline: 1px solid orange
+    outline: 1px solid lightorange
 
 #note-full-title:active
 #note-full-title:focus
     background-color: white
-    outline: 1px solid blue
+    outline: 1px solid lightblue
     box-shadow: none
 
 #note-full-title.topaffix
@@ -245,13 +245,13 @@ iframe
     min-width: 250px
     right: 14%
     top: 50px
-    border: 1px solid lightgrey
+    border: 1px solid #EEE
     text-align: center
     background: white
     box-shadow: 1px 1px 2px #EEE
     font-family: main, helvetica
-    color: lightgrey
-    z-index: 52;
+    color: softgrey
+    z-index: 55
 
     .note-file
         display: none
@@ -259,14 +259,14 @@ iframe
         padding-bottom: 3px
         margin-top: 5px
         z-index: 10
-        border-top: 1px solid lightgrey
+        border-top: 1px solid softgrey
 
         a
             font-size: 0.9em
             color: lightgrey - 20%
 
         a:hover
-            color: lightgrey - 50%
+            color: orange
 
         button
             border: none
@@ -290,6 +290,9 @@ iframe
         height: 40px
         width: 27px
         background-image: url('../img/attachment.png')
+
+    #file-pic:hover
+        background-image: url('../img/attachment-hover.png')
 
 #note-file-list.topaffix
     position fixed
