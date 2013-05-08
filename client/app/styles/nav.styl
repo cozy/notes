@@ -4,6 +4,8 @@ whitegrey = #FCFCFC
 darkgrey = #333
 grey = #E8E8E8
 blue = #7DBBF4
+lightblue = #CBE4FB
+lightorange = #FFC47F
 
 // Nav container styles
 
@@ -95,7 +97,7 @@ blue = #7DBBF4
 
     .jstree-clicked
         border: 0
-        background: blue + 60%
+        background: lightblue
 
     .jstree-leaf ins.jstree-icon
         background-image: url('../img/icon-note.png')
@@ -103,6 +105,7 @@ blue = #7DBBF4
 
     .jstree-hovered
         border: 0
+        background: lightorange
 
     .jstree-rename-input
         margin-left: -6px
@@ -177,6 +180,19 @@ blue = #7DBBF4
 #tree-search-field
     border: 1px solid #DDD
     width: 100%
+
+#tree-search-field:hover
+    border: 1px solid orange
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0) inset
+    
+#tree-search-field:focus
+    border: 1px solid blue
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0) inset
+
+#tree-top-buttons
+    input[type="text"]:focus
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0) inset
+        transition: 0
     
 #suppr-button
     position: absolute

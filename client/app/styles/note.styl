@@ -1,3 +1,12 @@
+lightgrey = #FDFDFD
+softgrey = #DADADA
+middlegrey = #3A3A3A
+darkgrey = #525252
+orange = #fe8800
+blue = #34a6ff
+lightblue = #CBE4FB
+lightorange = #FFC47F
+
 transform()
   -webkit-transform: arguments
   -moz-transform: arguments
@@ -23,18 +32,23 @@ iframe
     font-family: main
     font-size: 14px
     border: 0
-    color: darkgrey
+    color: grey + 20%
     z-index: 51
 
     a
-        color: darkgrey
+        color: grey + 20%
+
+    a:hover
+        color: orange
+
 
 #note-full-breadcrumb.topaffix
     position fixed
-    top 2px
+    top 40px
+    padding-left: 50px
 
 #note-full
-    padding: 8px 2% 0px 2% 
+    padding: 0
     border: 0
     box-shadow: 0
 
@@ -66,11 +80,8 @@ iframe
         min-height: 150px
 
 #faketop
+    padding-top: 50px
     margin-top: 40px
-    padding: 20px 50px
-    margin-left: 2%
-    margin-right: 2%
-    border: 1px solid lightgrey + 30%
     border-right: 0px
     background: #FDFDFD
     background-position: right top
@@ -78,13 +89,12 @@ iframe
     height: 60px
     padding-bottom: 0
     margin-top: 0
-    border-bottom : 0
+    border-bottom: 0
     position: fixed
-    top: -100px
+    top: -130px
     z-index: 50
-    //display:none
+
 #faketop.topaffix
-    //display:block
     top:0px
 
 #faketop-grad
@@ -94,11 +104,11 @@ iframe
     height: 15px
     width: 100%
     left: -50px
-    background -webkit-linear-gradient(top, #e7f4f9, rgba(255, 255, 255, 0))
-    background -ms-linear-gradient(top, #e7f4f9, rgba(255, 255, 255, 0))
-    background -o-linear-gradient(top, #e7f4f9, rgba(255, 255, 255, 0))
-    background -moz-linear-gradient(top, #e7f4f9, rgba(255, 255, 255, 0))
-    background linear-gradient(top, #e7f4f9, rgba(255, 255, 255, 0))
+    background -webkit-linear-gradient(top, softgrey, rgba(255, 255, 255, 0))
+    background -ms-linear-gradient(top, softgrey, rgba(255, 255, 255, 0))
+    background -o-linear-gradient(top, softgrey, rgba(255, 255, 255, 0))
+    background -moz-linear-gradient(top, softgrey, rgba(255, 255, 255, 0))
+    background linear-gradient(top, softgrey, rgba(255, 255, 255, 0))
     visibility:hidden
 #faketop-grad.topaffix
     visibility:visible
@@ -109,11 +119,12 @@ iframe
     height: 100%
     width: 100%
     position: relative
+    margin-top: 15px
 
 #note-full-title
     height: 35px
-    margin: 0px 0 5px 10px
-    // width: 60%
+    margin: 0
+    padding-left: 10px
     color: #222
     border: 0px
     background: none repeat scroll 0 0 transparent
@@ -123,16 +134,19 @@ iframe
     position:absolute
     top: 115px
     z-index: 53
-    
+
+#note-full-title:hover
+    outline: 1px solid orange
+
+#note-full-title:active
 #note-full-title:focus
-    outline: 0 none
-    border-color: rgba(82, 168, 236, 0.8)
     background-color: white
-    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6)
+    outline: 1px solid blue
+    box-shadow: none
 
 #note-full-title.topaffix
     position fixed
-    top 35px
+    top 65px
 
 // Buttons
 
@@ -224,12 +238,13 @@ iframe
     display: none
 
 #note-file-list
+    width: 300px
     position: absolute
     padding: 0 0 10px 0
     margin: 0
     min-width: 250px
     right: 14%
-    top: 55px
+    top: 50px
     border: 1px solid lightgrey
     text-align: center
     background: white
