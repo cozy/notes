@@ -11,29 +11,32 @@ note = new Note
     content: """
 # What is Cozy Notes ?
 
-Cozy Notes is a simple yet powerful note manager. You structure efficiently your notes by easily toggling between titles and bullet points, formatting becomes incredibly fast. You also can search and attach files to your notes. 
+Cozy Notes is a simple yet powerful note manager. It can be used entirely with the keyboard and its original text editor makes formating incredibly fast.
 
 # Navigation
 
-Your notes can be organized following a tree structure. To create a “daughter” note simply hover over a note and press the “+” button. You can also alternate the tree structure by dragging and dropping notes in the tree. The “pencil” button allows you to rename the note while the “x” lets you delete it.
+You organize your notes following a tree structure.
+* To create a top level note, click the "+" button in the left panet on the right side of "My notes" logo
+* To create a sub level note, hover the mouse on an existing note and press the "+" button
 
-To attach a file, simply click the paper clip in the top right corner.
+# Layout
 
-# Formating your text:
+You can structure your notes with two actions.
+* Toggle between titles and bullet points pressing Alt + A or clicking "T" button
+* Indent and un-indent lines pressing Tab and Shift + Tab or using the buttons
 
-* When you create a note, by default you are writing bullet points.
-* Indenting a bullet point line makes it successively a classic paragraph, then a sub-level bullet. You can similarly un-indent.
-* You can indent successively a selection of several lines to implement a decreasing-level bullet point list. 
-* Titles are created using the "change selection to title" button. This action makes every line of similar indent level a title within the same sub-section (under the previous title).
-* Indenting a title line makes it successively a simple text and a title of a different level. 
-* No line can be indented more than one level than the previous one.
+# Tools
 
-That covers pretty much it. Once used to it, I bet you will no longer want to use any other note editor ;-)
+* Add in text links pressing Ctrl + K or using the button
+* Attach files to a note by clicking the paper clip
+* Search your notes using the top left input box
 
-# Keyboard shortcuts
+# Tips
 
-* Tab = indent
-* Shift + Tab = un-indent
+* Lines of similar indent level are either titles or bullet point
+* You can implement a list of decreasing indent level
+    * like this one
+		* by indenting a selection of lines
 
 """
 

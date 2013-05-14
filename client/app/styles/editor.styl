@@ -1,5 +1,5 @@
 Debug = 0
-maxDepth=4
+maxDepth = 4
 limit = 4
 
 lightgrey = #FDFDFD
@@ -7,6 +7,10 @@ softgrey = #DADADA
 middlegrey = #3A3A3A
 darkgrey = #525252
 blue = #329ef7
+orange = #fe8800
+blue = #34a6ff
+lightblue = #CBE4FB
+lightorange = #FFC47F
 
 @font-face
     font-family: main
@@ -134,23 +138,16 @@ lineMixin(rank)
     font: normal 13px/18px main, "Helvetica Neue", Arial, Helvetica, sans-serif
     font-family: main
     color: darkgrey
-    // overflow-y: auto
     padding-top:4px
     padding-bottom:8px
     padding-left:8px
     padding-right:8px
-    // position: absolute
-    // margin:0
-    // top:0
-    // right:0
-    // left:0
-    // bottom:0
 
 #editor-lines:focus
-    outline: 0px
-    // outline: 1px solid red
-    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.07),0 0 8px rgba(82, 168, 236, 0.60)
+    outline: 1px solid lightblue
 
+#editor-lines:hover:not(:focus)
+    outline: 1px solid lightorange
 
 .CNE_urlpop
     // z-index:2500
