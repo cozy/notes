@@ -178,11 +178,11 @@ window.require.register("helpers", function(exports, require, module) {
             width: 1,
             radius: 5
           },
-          normal: {
-            lines: 10,
-            length: 2,
+          large: {
+            lines: 7,
+            length: 1,
             width: 2,
-            radius: 8
+            radius: 5
           }
         };
         if (Spinner) {
@@ -771,6 +771,117 @@ window.require.register("models/note", function(exports, require, module) {
   })(BaseModel);
   
 });
+window.require.register("models/task", function(exports, require, module) {
+  var Task, request,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  request = require("lib/request");
+
+  module.exports = Task = (function(_super) {
+    var createInboxTodoList, doNothing, findInboxTodoList, isFromNote, isTodo, todoIsInstalled;
+
+    __extends(Task, _super);
+
+    function Task() {
+      return Task.__super__.constructor.apply(this, arguments);
+    }
+
+    Task.prototype.url = function() {
+      if (this.isNew()) {
+        return "/apps/todos/todolists/" + Task.todolistId + "/tasks";
+      } else {
+        return "/apps/todos/todolists/" + Task.todolistId + "/tasks/" + this.id;
+      }
+    };
+
+    Task.prototype.defaults = function() {
+      return {
+        done: false,
+        nextTask: null,
+        previousTask: null
+      };
+    };
+
+    doNothing = function() {};
+
+    isTodo = function(app) {
+      return app.name === 'todos';
+    };
+
+    isFromNote = function(todolist) {
+      return todolist.title === 'from notes';
+    };
+
+    todoIsInstalled = function(callback) {
+      return request.get('/api/applications', function(err, apps) {
+        if (!err && apps.rows.some(isTodo)) {
+          return callback(true);
+        } else {
+          return callback(false);
+        }
+      });
+    };
+
+    findInboxTodoList = function(callback) {
+      return request.get('/apps/todos/todolists', function(err, lists) {
+        var inboxList;
+        if (err) {
+          return callback(null);
+        } else {
+          inboxList = _.find(lists.rows, isFromNote);
+          return callback(inboxList);
+        }
+      });
+    };
+
+    createInboxTodoList = function(callback) {
+      var todolist;
+      todolist = {
+        title: 'from notes',
+        parent_id: 'tree-node-all'
+      };
+      return request.post('/apps/todos/todolists', todolist, function(err, inboxList) {
+        if (err) {
+          return callback(null);
+        } else {
+          return callback(inboxList);
+        }
+      });
+    };
+
+    Task.initialize = function(callback) {
+      if (callback == null) {
+        callback = doNothing;
+      }
+      return todoIsInstalled(function(installed) {
+        if (!installed) {
+          return callback(Task.canBeUsed = false);
+        } else {
+          return findInboxTodoList(function(list) {
+            if (list) {
+              Task.todolistId = list.id;
+              return callback(Task.canBeUsed = true);
+            } else {
+              return createInboxTodoList(function(list) {
+                if (list) {
+                  Task.todolistId = list.id;
+                  return callback(Task.canBeUsed = true);
+                } else {
+                  return callback(Task.canBeUsed = false);
+                }
+              });
+            }
+          });
+        }
+      });
+    };
+
+    return Task;
+
+  })(Backbone.Model);
+  
+});
 window.require.register("routers/main_router", function(exports, require, module) {
   var slugify,
     __hasProp = {}.hasOwnProperty,
@@ -1057,17 +1168,38 @@ window.require.register("views/home_view", function(exports, require, module) {
         'left': nsLeft - 0.5 * editorBB.width()
       });
       title = $('#note-full-title');
-      return title.width(0.9 * (fileList.offset().left - title.offset().left));
+      title.width($('#editor-container').width() - 10);
+      if (this.faketop != null) {
+        this.faketop.width(ns.width() + 102);
+        $('#faketop-grad').width(ns.width() + 102);
+        return this.faketop.offset({
+          'left': nsLeft
+        });
+      }
     };
 
     HomeView.prototype.onWindowScrolled = function() {
-      var scrollTop;
+      var fileList, fileListLeft, ns, nsLeft, scrollTop;
       scrollTop = $('#note-area').scrollTop();
       this.handleAffix($('#note-full-breadcrumb'), scrollTop, 30);
-      this.handleAffix($('#note-file-list'), scrollTop, 38);
-      this.handleAffix($('#note-full-title'), scrollTop, 80);
-      this.handleAffix($('#faketop'), scrollTop, 55);
-      return this.handleAffix($('#faketop-grad'), scrollTop, 80);
+      this.handleAffix($('#note-file-list'), scrollTop, 30);
+      this.handleAffix($('#note-full-title'), scrollTop, 30);
+      this.handleAffix($('#faketop'), scrollTop, 30);
+      this.handleAffix($('#faketop-grad'), scrollTop, 30);
+      ns = $('#note-style');
+      nsLeft = ns.offset().left;
+      fileList = $('#note-file-list');
+      if (this.faketop.hasClass('topaffix')) {
+        fileListLeft = nsLeft + ns.width() - 200;
+        return fileList.css({
+          left: fileListLeft
+        });
+      } else {
+        fileListLeft = nsLeft + ns.width() - 600;
+        return fileList.css({
+          left: fileListLeft
+        });
+      }
     };
 
     HomeView.prototype.handleAffix = function(el, scrollTop, limit) {
@@ -1476,7 +1608,7 @@ window.require.register("views/note_view", function(exports, require, module) {
     NoteView.prototype.showLoading = function() {
       this.noteFullTitle.hide();
       this.$('#editor-container').hide();
-      return this.$("#note-style").spin('normal');
+      return this.$("#note-style").spin("large");
     };
 
     NoteView.prototype.hideLoading = function() {
