@@ -909,6 +909,8 @@ window.require.register("views/home_view", function(exports, require, module) {
 
       this.onWindowResized = __bind(this.onWindowResized, this);
 
+      this.onWindowClosed = __bind(this.onWindowClosed, this);
+
       this.selectNoteIfIframeLoaded = __bind(this.selectNoteIfIframeLoaded, this);
 
       this.onIFrameLoaded = __bind(this.onIFrameLoaded, this);
@@ -1000,12 +1002,7 @@ window.require.register("views/home_view", function(exports, require, module) {
     };
 
     HomeView.prototype.configureSaving = function() {
-      var _this = this;
-      return $(window).unload = function() {
-        return _this.noteView.saveEditorContent(function() {
-          return console.log("note saved on closing");
-        });
-      };
+      return window.addEventListener('beforeunload', this.onWindowClosed);
     };
 
     /* Listeners
@@ -1026,6 +1023,20 @@ window.require.register("views/home_view", function(exports, require, module) {
       if (this.iframeLoaded) {
         return this.selectNote(this.note_uuid);
       }
+    };
+
+    HomeView.prototype.onWindowClosed = function(e) {
+      var pleasewaitmsg;
+      if ((this.noteView != null) && this.noteView.savingState === 'clean') {
+        return null;
+      }
+      pleasewaitmsg = 'You have some unsaved changes. ';
+      pleasewaitmsg += 'Please stay on this page while they are saved.';
+      if ((this.noteView != null) && this.noteView.savingState === 'dirty') {
+        this.noteView.saveEditorContent();
+      }
+      e.returnValue = pleasewaitmsg;
+      return pleasewaitmsg;
     };
 
     HomeView.prototype.onWindowResized = function() {
@@ -1201,27 +1212,39 @@ window.require.register("views/home_view", function(exports, require, module) {
 
 
     HomeView.prototype.onTreeSelectionChg = function(path, id, data) {
-      var _this = this;
+      var changeView, _ref,
+        _this = this;
       this.tree.widget.jstree("search", "");
       this.searchView.hide();
-      this.noteView.saveEditorContent();
-      if (path.indexOf("/")) {
-        path = "/" + path;
-      }
-      app.router.navigate("note" + path, {
-        trigger: false
-      });
-      if (!(id != null) || id === "tree-node-all") {
-        this.helpInfo.show();
-        return this.noteFull.hide();
+      changeView = function() {
+        if (path.indexOf("/")) {
+          path = "/" + path;
+        }
+        app.router.navigate("note" + path, {
+          trigger: false
+        });
+        if (!(id != null) || id === "tree-node-all") {
+          _this.helpInfo.show();
+          return _this.noteFull.hide();
+        } else {
+          _this.helpInfo.hide();
+          _this.noteView.showLoading();
+          return Note.getNote(id, function(note) {
+            _this.noteView.hideLoading();
+            _this.renderNote(note, data);
+            _this.noteFull.show();
+            return _this.onWindowResized();
+          });
+        }
+      };
+      if (((_ref = this.noteView) != null ? _ref.savingState : void 0) === 'clean') {
+        return changeView();
       } else {
-        this.helpInfo.hide();
-        this.noteView.showLoading();
-        return Note.getNote(id, function(note) {
-          _this.noteView.hideLoading();
-          _this.renderNote(note, data);
-          _this.noteFull.show();
-          return _this.onWindowResized();
+        return this.noteView.saveEditorContent(function(err) {
+          if (err) {
+            return console.log(err);
+          }
+          return changeView();
         });
       }
     };
@@ -1319,6 +1342,7 @@ window.require.register("views/note_view", function(exports, require, module) {
       NoteView.__super__.constructor.call(this);
       this.$el = $("#note-full");
       this.$("#editor").html(require('./templates/editor'));
+      this.savingState = 'clean';
       this.saveTimer = null;
       this.saveButton = this.$('#save-editor-content');
       this.noteFullTitle = this.$('#note-full-title');
@@ -1329,6 +1353,8 @@ window.require.register("views/note_view", function(exports, require, module) {
       this.setEditorFocusListener();
       this.setSaveListeners();
       this.fileList = new FileList(this.model, '#file-list');
+      window;
+
     }
 
     /**
@@ -1340,23 +1366,10 @@ window.require.register("views/note_view", function(exports, require, module) {
     NoteView.prototype.setSaveListeners = function() {
       var _this = this;
       this.$("#editor-container").on("onChange", function() {
-        var id;
-        id = _this.model.id;
+        _this.saveButton.removeClass("active");
         clearTimeout(_this.saveTimer);
-        if (_this.saveButton.hasClass("active")) {
-          _this.saveButton.removeClass("active");
-        }
-        return _this.saveTimer = setTimeout(function() {
-          _this.saveButton.spin('small');
-          Note.updateNote(id, {
-            content: _this.editor.getEditorContent()
-          }, function() {
-            return _this.saveButton.spin();
-          });
-          if (!_this.saveButton.hasClass("active")) {
-            return _this.saveButton.addClass("active");
-          }
-        }, 3000);
+        _this.saveTimer = setTimeout(_this.saveEditorContent, 3000);
+        return _this.savingState = 'dirty';
       });
       this.saveButton.click(this.saveEditorContent);
       return this.$('#editor-container').on('saveRequest', this.saveEditorContent);
@@ -1446,8 +1459,8 @@ window.require.register("views/note_view", function(exports, require, module) {
       });
     };
 
-    /**
-    #
+    /*
+        #
     */
 
 
@@ -1472,8 +1485,8 @@ window.require.register("views/note_view", function(exports, require, module) {
       return this.$("#note-style").spin();
     };
 
-    /**
-    #  Display note title
+    /*
+        #  Display note title
     */
 
 
@@ -1481,24 +1494,33 @@ window.require.register("views/note_view", function(exports, require, module) {
       return this.noteFullTitle.val(title);
     };
 
-    /**
-    # Stop saving timer if any and force saving of editor content.
+    /*
+        # Stop saving timer if any and force saving of editor content.
     */
 
 
     NoteView.prototype.saveEditorContent = function(callback) {
-      var _this = this;
-      if ((this.model != null) && (this.editor != null) && (this.saveTimer != null)) {
+      var data,
+        _this = this;
+      if ((this.model != null) && (this.editor != null) && this.savingState !== 'clean') {
+        this.savingState = 'saving';
         clearTimeout(this.saveTimer);
         this.saveTimer = null;
         this.saveButton.spin('small');
-        return Note.updateNote(this.model.id, {
+        data = {
           content: this.editor.getEditorContent()
-        }, function() {
+        };
+        return Note.updateNote(this.model.id, data, function(error) {
+          if (error) {
+            alert("Unable to save changes on the server. Try again");
+            console.log(error);
+          } else if (_this.savingState === 'saving') {
+            _this.savingState = 'clean';
+          }
           _this.saveButton.addClass("active");
           _this.saveButton.spin();
           if (typeof callback === 'function') {
-            return callback();
+            return callback(error);
           }
         });
       }

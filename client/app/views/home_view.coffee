@@ -93,9 +93,7 @@ class exports.HomeView extends Backbone.View
 
     # Save data when user leaves page.
     configureSaving: ->
-        $(window).unload = =>
-            @noteView.saveEditorContent =>
-                console.log "note saved on closing"
+        window.addEventListener 'beforeunload', @onWindowClosed
 
     ### Listeners ###
 
@@ -113,6 +111,19 @@ class exports.HomeView extends Backbone.View
         @treeLoaded = true
         @selectNote(@note_uuid) if @iframeLoaded
 
+    onWindowClosed: (e) =>
+        return null if @noteView? and @noteView.savingState is 'clean'
+
+        pleasewaitmsg  = 'You have some unsaved changes. '
+        pleasewaitmsg += 'Please stay on this page while they are saved.'
+
+        if @noteView? and @noteView.savingState is 'dirty'
+            @noteView.saveEditorContent()
+
+        e.returnValue = pleasewaitmsg
+        return pleasewaitmsg
+
+
     # Small trick to adapt editor size when window is resized.
     onWindowResized: =>
         windowWidth = $(window).width()
@@ -121,9 +132,15 @@ class exports.HomeView extends Backbone.View
         ns = $('#note-style')
         nsLeft = ns.offset().left
 
+        if @faketop?
+            @faketop.width ns.width()
+            @faketop.offset 'left':nsLeft
+
+        fileList = $('#note-file-list')
+
         editorBB = $('#editor-button-bar')
         editorBB.css
-            left: nsLeft - 0.5 * editorBB.width()
+            'left': nsLeft - 0.5 * editorBB.width()
 
         title = $('#note-full-title')
         title.width  $('#editor-container').width() - 10
@@ -249,22 +266,30 @@ class exports.HomeView extends Backbone.View
     onTreeSelectionChg: (path, id, data) =>
         @tree.widget.jstree "search", ""
         @searchView.hide()
-        @noteView.saveEditorContent()
 
-        path = "/#{path}" if path.indexOf "/"
-        app.router.navigate "note#{path}", trigger: false
+        changeView = =>
+            path = "/#{path}" if path.indexOf "/"
+            app.router.navigate "note#{path}", trigger: false
 
-        if not id? or id is "tree-node-all"
-            @helpInfo.show()
-            @noteFull.hide()
-        else
-            @helpInfo.hide()
-            @noteView.showLoading()
-            Note.getNote id, (note) =>
-                @noteView.hideLoading()
-                @renderNote note, data
-                @noteFull.show()
-                @onWindowResized()
+            if not id? or id is "tree-node-all"
+                @helpInfo.show()
+                @noteFull.hide()
+            else
+                @helpInfo.hide()
+                @noteView.showLoading()
+                Note.getNote id, (note) =>
+                    @noteView.hideLoading()
+                    @renderNote note, data
+                    @noteFull.show()
+                    @onWindowResized()
+
+
+        if @noteView?.savingState is 'clean' then changeView()
+        else @noteView.saveEditorContent (err) ->
+            return console.log err if err
+            changeView()
+
+
 
     ###*
     # When note is dropped, its old path and its new path are sent to server
