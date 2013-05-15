@@ -246,19 +246,22 @@
   display: block;
   position: absolute;
   _moz_resizing: false;
+  border-radius-top-right: 5px;
+  border-radius-top-left: 5px;
   font-size: 14px;
   background-color: whiteSmoke;
-  border-radius: 5px;
-  border-color: #e6e6e6;
+  border-color: #000;
   border-style: solid;
   border-width: 1px;
   padding: 0px;
   list-style-type: none;
 }
+.SUGG_ttags {
+  background-color: #313131;
+}
 .SUGG_line_ttag {
   cursor: pointer;
   display: block;
-  background-color: #313131;
   padding-left: 5px;
   padding-right: 5px;
   color: #ebebec;
@@ -368,6 +371,9 @@ div[ data-type = "task"] {
   border-color: rgba(255,0,0,0.06);
   border-width: 1px;
   border-style: solid;
+  padding-top: 1px;
+  margin-top: -2px;
+  margin-bottom: -1px;
 }
 div[ data-state = "done"] {
   background-color: #f3f3f3;
