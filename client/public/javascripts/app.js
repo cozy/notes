@@ -1402,6 +1402,7 @@ window.require.register("views/note_view", function(exports, require, module) {
       this.toggleBtn = this.$("#toggleBtn");
       this.boldBtn = this.$("#boldBtn");
       this.linkBtn = this.$("#linkBtn");
+      this.metaBtn = this.$("#metaBtn");
       this.saveEditorBtn = this.$("#save-editor-content");
       this.titleBtn = this.$("#titleBtn");
       delay = {
@@ -1450,8 +1451,16 @@ window.require.register("views/note_view", function(exports, require, module) {
         delay: delay
       });
       this.linkBtn.on("click", function(e) {
-        console.log('click');
         return _this.editor.linkifySelection();
+      });
+      this.metaBtn.tooltip({
+        placement: "right",
+        title: "Add a meta-object (@)",
+        delay: delay
+      });
+      this.metaBtn.on("click", function(e) {
+        _this.editor.emulateAt();
+        return _this.editor.setFocus();
       });
       return this.saveEditorBtn.tooltip({
         placement: "right",
@@ -1659,7 +1668,7 @@ window.require.register("views/templates/editor", function(exports, require, mod
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="editor-button-bar" class="btn-group btn-group-vertical clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="toggleBtn" class="btn btn-small"><i class="icon-toggle"></i></button><button id="boldBtn" class="btn btn-small"><i class="icon-bold"></i></button><button id="linkBtn" class="btn btn-small"><i class="icon-link"></i></button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"><div id="file-number">0 files</div><div id="file-pic"></div><div id="file-list"></div></div><div id="editor-container"></div>');
+  buf.push('<div id="editor-button-bar" class="btn-group btn-group-vertical clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="toggleBtn" class="btn btn-small"><i class="icon-toggle"></i></button><button id="boldBtn" class="btn btn-small"><i class="icon-bold"></i></button><button id="linkBtn" class="btn btn-small"><i class="icon-link"></i></button><button id="metaBtn" class="btn btn-small">@</button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"><div id="file-number">0 files</div><div id="file-pic"></div><div id="file-list"></div></div><div id="editor-container"></div>');
   }
   return buf.join("");
   };

@@ -11,7 +11,7 @@ class exports.NoteView extends Backbone.View
     className: "note-full"
     id: "note-full"
     tagName: "div"
-   
+
     ### Constructor ####
 
     remove: ->
@@ -39,7 +39,7 @@ class exports.NoteView extends Backbone.View
         @setSaveListeners()
 
         @fileList = new FileList @model, '#file-list'
-        
+
     ###*
      * every keyUp in the note's editor will trigger a countdown of 3s, after
      * 3s and if the user didn't type anything, the content will be saved
@@ -74,7 +74,7 @@ class exports.NoteView extends Backbone.View
                 @homeView.onNoteTitleChange @model.id, newName
                 @homeView.tree._updateSuggestionList "rename", newName, oldName
                 @updateBreadcrumbOnTitleChange newName
-    
+
     setEditorFocusListener : () ->
         editorEl = document.getElementById('editor-container')
         editorEl.addEventListener('focus', @homeView.disableTreeHotkey, true)
@@ -87,6 +87,7 @@ class exports.NoteView extends Backbone.View
         @toggleBtn     = @$("#toggleBtn")
         @boldBtn       = @$("#boldBtn")
         @linkBtn       = @$("#linkBtn")
+        @metaBtn       = @$("#metaBtn")
         @saveEditorBtn = @$("#save-editor-content")
         @titleBtn      = @$("#titleBtn")
 
@@ -107,7 +108,7 @@ class exports.NoteView extends Backbone.View
         @unIndentBtn.on "click", () =>
             @editor.shiftTab()
             @editor.setFocus()
-        
+
         @toggleBtn.tooltip
             placement : "right"
             title     : "Toggle line type (Alt + A)"
@@ -129,16 +130,23 @@ class exports.NoteView extends Backbone.View
             title     : "Create or edit a link (Ctrl + K)"
             delay     : delay
         @linkBtn.on "click", (e) =>
-            console.log 'click'
             @editor.linkifySelection()
+
+        @metaBtn.tooltip
+            placement : "right"
+            title     : "Add a meta-object (@)"
+            delay     : delay
+        @metaBtn.on "click", (e) =>
+            @editor.emulateAt()
+            @editor.setFocus()
 
         @saveEditorBtn.tooltip
             placement : "right"
             title     : "Save the current content"
             delay     : delay
-        
+
     ###*
-     * 
+     *
     ###
     setModel : (note, data) ->
         @model = note
@@ -147,7 +155,7 @@ class exports.NoteView extends Backbone.View
         @createBreadcrumb note, data
         @fileList.configure @model
         @fileList.render()
-        
+
 
     # Hide title and editor, show spinner
     showLoading: ->
@@ -168,7 +176,7 @@ class exports.NoteView extends Backbone.View
         @noteFullTitle.val title
 
     ###*
-     * Stop saving timer if any and force saving of editor content. 
+     * Stop saving timer if any and force saving of editor content.
     ###
     saveEditorContent: (callback) =>
         if @model? and @editor? and @saveTimer?
@@ -219,7 +227,7 @@ class exports.NoteView extends Backbone.View
             breadcrumb = "<a href='#{path}#{currentPath}'> #{noteName}</a> >#{breadcrumb}"
 
         breadcrumb = "<a href='#note/all'> All</a> > #{breadcrumb}"
-        
+
         @breadcrumb.find("a").unbind()
         @breadcrumb.html breadcrumb
         @breadcrumb.find("a").click (event) ->
@@ -228,7 +236,7 @@ class exports.NoteView extends Backbone.View
             path = hash.split("/")
             id = path[1]
             app.homeView.selectNote id
-            
+
     ###*
      * in case of renaming a note this function update the breadcrumb in consequences
     ###

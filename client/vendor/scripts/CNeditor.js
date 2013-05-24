@@ -25190,66 +25190,9 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
       auto.appendChild(this.contactsDiv);
       this.setItems('tTags', [
         {
-          text: 'contact',
-          type: 'ttag',
-          value: 'contact',
-          mention: ' (@)'
-        }, {
-          text: 'reminder',
-          type: 'ttag',
-          value: 'reminder',
-          mention: ' (@@)'
-        }, {
           text: 'todo',
           type: 'ttag',
           value: 'todo'
-        }, {
-          text: 'tag',
-          type: 'ttag',
-          value: 'htag',
-          mention: ' (#)'
-        }
-      ]);
-      this.setItems('contact', [
-        {
-          text: 'Frank @Rousseau',
-          type: 'contact'
-        }, {
-          text: 'Lucas Toulouse',
-          type: 'contact'
-        }, {
-          text: 'Maxence Cote',
-          type: 'contact'
-        }, {
-          text: 'Joseph Silvestre',
-          type: 'contact'
-        }, {
-          text: 'Romain Foucault',
-          type: 'contact'
-        }, {
-          text: 'Zoé Bellot',
-          type: 'contact'
-        }
-      ]);
-      this.setItems('htag', [
-        {
-          text: 'Carte',
-          type: 'htag'
-        }, {
-          text: 'Factures',
-          type: 'htag'
-        }, {
-          text: 'Javascript',
-          type: 'htag'
-        }, {
-          text: 'Pérou 2012',
-          type: 'htag'
-        }, {
-          text: 'Présentation LyonJS',
-          type: 'htag'
-        }, {
-          text: 'Recettes cuisine',
-          type: 'htag'
         }
       ]);
       return this;
@@ -25373,6 +25316,21 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
 
       this._unSelectLine();
       switch (mode) {
+        case 'ttag':
+          this._currentMode = 'ttag';
+          if (!this.tTagsDiv.parentNode) {
+            this.el.appendChild(this.tTagsDiv);
+          }
+          if (this.htagDiv.parentNode) {
+            this.el.removeChild(this.htagDiv);
+          }
+          if (this.contactsDiv.parentNode) {
+            this.el.removeChild(this.contactsDiv);
+          }
+          if (this.reminderDiv.parentNode) {
+            return this.el.removeChild(this.reminderDiv);
+          }
+          break;
         case 'contact':
           this._currentMode = 'contact';
           if (!this.tTagsDiv.parentNode) {
@@ -25426,17 +25384,30 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
     };
 
     AutoComplete.prototype.update = function(typedTxt) {
-      var dd, dh, dmn, it, items, nbrOfSuggestions, now, reg1, reg2, reg3, regD, regH, regMn, resReg1, resReg2, resReg3, resRegD, resRegH, resRegMn, ttag, _i, _j, _len, _len1, _ref;
+      var dd, dh, dmn, it, items, nbrOfSuggestions, now, reg1, reg2, reg3, regD, regH, regMn, resReg1, resReg2, resReg3, resRegD, resRegH, resRegMn, ttag, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
 
       if (!this.isVisible) {
         return;
       }
       nbrOfSuggestions = 0;
       switch (this._currentMode) {
-        case 'contact':
+        case 'ttag':
           _ref = this.tTags;
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
             ttag = _ref[_i];
+            if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
+              nbrOfSuggestions += 1;
+              ttag.line.style.display = 'block';
+            } else {
+              ttag.line.style.display = 'none';
+            }
+          }
+          items = [];
+          break;
+        case 'contact':
+          _ref1 = this.tTags;
+          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+            ttag = _ref1[_j];
             if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
               nbrOfSuggestions += 1;
               ttag.line.style.display = 'block';
@@ -25462,7 +25433,7 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
           resRegD = regD.exec(typedTxt);
           resRegH = regH.exec(typedTxt);
           resRegMn = regMn.exec(typedTxt);
-          console.log(resRegD);
+          console.info(resRegD);
           if (resRegMn || resRegH || resRegD) {
             dd = dh = dmn = 0;
             if (resRegD) {
@@ -25481,8 +25452,8 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
           }
           return;
       }
-      for (_j = 0, _len1 = items.length; _j < _len1; _j++) {
-        it = items[_j];
+      for (_k = 0, _len2 = items.length; _k < _len2; _k++) {
+        it = items[_k];
         if (this._shouldDisp(it, typedTxt)) {
           nbrOfSuggestions += 1;
           it.line.style.display = 'block';
@@ -25516,7 +25487,7 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
     AutoComplete.prototype._updateLine = function(line, item, typedTxt) {
       var c, span, t, type, _i, _len;
 
-      console.log('_updateLine');
+      console.info('_updateLine');
       type = item.type;
       switch (type) {
         case 'tag':
@@ -25587,6 +25558,7 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
       var date, item;
 
       switch (this._currentMode) {
+        case 'ttag':
         case 'contact':
           if (this._selectedLine) {
             item = this._selectedLine.item;
@@ -27154,6 +27126,8 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
   realtimer = require('./realtimer');
 
+  console.info = function() {};
+
   module.exports = CNeditor = (function() {
     /*
     #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
@@ -27333,7 +27307,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype._clickCB = function(e) {
       var segments, url;
 
-      console.log("== editor._clickCB()");
+      console.info("== editor._clickCB()");
       this._lastKey = null;
       this.updateCurrentSel();
       segments = this._getLinkSegments();
@@ -27442,7 +27416,8 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       txt = this.document.createTextNode('A new task');
       span.appendChild(txt);
       taskDiv.insertBefore(span, segment);
-      return this._setSelectionOnNode(txt);
+      this._setSelectionOnNode(txt);
+      return this._addHistory();
     };
 
     /**
@@ -27490,7 +27465,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       btn.removeEventListener('click', this._toggleTaskCB);
       this.Tags.remove(btn);
       taskDiv.removeChild(btn);
-      this._stackTaskChange(taskDiv.task, 'removed');
       taskDiv.task = null;
       taskDiv.dataset.type = '';
       taskDiv.dataset.state = '';
@@ -27602,21 +27576,24 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         t.fetch({
           silent: true
         }).done(function() {
+          t.isFromServer = true;
           realtimer.watchOne(t);
           return _this._updateTaskLine(t);
         }).fail(function(resp) {
           if (resp.status === 404) {
             return _this._turneTaskIntoLine(t.lineDiv);
           } else {
-            return t.set({
+            t.set({
               done: t.lineDiv.dataset.state === 'done',
               description: t.lineDiv.firstChild.nextSibling.textContent
             }, {
               silent: true
             });
+            return t.isFromServer = false;
           }
         });
         t.on('change', function(t) {
+          t.isFromServer = true;
           return _this._updateTaskLine(t);
         });
         t.on('destroy', function(t) {
@@ -27644,6 +27621,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       } else {
         attrib = t.attributes;
       }
+      console.info(attrib);
       t.lineDiv.firstChild.nextSibling.textContent = attrib.description;
       currentTaskState = t.lineDiv.dataset.state === 'done';
       if (attrib.done) {
@@ -27658,7 +27636,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     };
 
     CNeditor.prototype._stackTaskChange = function(task, action) {
-      console.log('== editor._stackTaskChange() ' + action, task.internalId);
+      console.info('== editor._stackTaskChange() ' + action, task.internalId);
       this._stackTaskForSave(task.internalId, task, action);
       switch (action) {
         case 'modified':
@@ -27722,6 +27700,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           } else {
             modif.deleted = true;
           }
+          break;
+        case 'removed':
+          modif.removed = true;
       }
       return true;
     };
@@ -27743,18 +27724,18 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       var i, id, l, lineDiv, modif, t, _i, _len, _ref, _ref1,
         _this = this;
 
-      console.log('== saveTasks()');
+      console.info('== saveTasks()');
       _ref = this._tasksToBeSaved;
       for (id in _ref) {
         modif = _ref[id];
-        if (modif.removed) {
-          continue;
-        } else if (modif.created && modif.deleted) {
-          continue;
-        } else if (modif.deleted) {
+        if (modif.deleted) {
           modif.t.destroy({
             silent: true
           });
+        } else if (modif.created && modif.deleted) {
+          continue;
+        } else if (modif.removed) {
+          continue;
         } else if (modif.modified && !modif.created) {
           t = modif.t;
           l = t.lineDiv;
@@ -27769,6 +27750,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
               return _this._updateTaskLine(t, true);
             }
           });
+          t.isFromServer = false;
         } else if (modif.created && !modif.t.id) {
           this._saveTaskCreation(modif.t);
         } else if (modif.created && modif.t.id) {
@@ -27796,7 +27778,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         _this = this;
 
       l = t.lineDiv;
-      return t.save({
+      t.save({
         done: l.dataset.state === 'done',
         description: l.textContent.slice(1)
       }, {
@@ -27805,7 +27787,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         success: function(t) {
           realtimer.watchOne(t);
           _this.editorTarget$.trigger(jQuery.Event('onChange'));
+          t.lineDiv.dataset.id = t.id;
           t.on('change', function() {
+            t.isFromServer = true;
             return _this._updateTaskLine(t);
           });
           return t.on('destroy', function(t) {
@@ -27817,6 +27801,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           return _this._turneTaskIntoLine(t.lineDiv);
         }
       });
+      return t.isFromServer = false;
     };
 
     /** -----------------------------------------------------------------------
@@ -27881,9 +27866,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
       sel = this.updateCurrentSel();
       if (sel.startLineDiv.dataset.type === 'task') {
-        return ['contact', 'event', 'reminder', 'htag'];
+        return [];
       } else {
-        return ['contact', 'todo', 'event', 'reminder', 'htag'];
+        return ['todo'];
       }
     };
 
@@ -28249,7 +28234,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       }
       this.getShortCut(e);
       shortcut = this._shortcut.shortcut;
-      console.log('== keyDownCb() : shortcut', shortcut, '_lastKey', this._lastKey, 'isAction', this._shortcut.isAction, 'newPosition', this.newPosition);
       lastShortcut = this._lastKey;
       this._lastKey = shortcut;
       this.currentSel = {
@@ -28307,9 +28291,14 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             this._detectTaskChange();
             return true;
           }
+          if (e.ctrlKey && e.altKey) {
+            return true;
+          }
       }
       if (e.altKey || e.ctrlKey) {
-        e.preventDefault();
+        if (!(e.altKey && e.ctrlKey)) {
+          e.preventDefault();
+        }
       }
       switch (shortcut) {
         case '-return':
@@ -28317,6 +28306,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             this._addHistory();
           }
           this.updateCurrentSelIsStartIsEnd();
+          if (this.currentSel.isStartInTask && lastShortcut === shortcut) {
+            this._addHistory();
+          }
           this._return();
           this.newPosition = false;
           e.preventDefault();
@@ -28790,6 +28782,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         return true;
       }
       currentSel = this.updateCurrentSelIsStartIsEnd();
+      if (currentSel.isStartInTask) {
+        return true;
+      }
       range = currentSel.theoricalRange;
       if (range.collapsed) {
         segments = this._getLinkSegments();
@@ -29111,6 +29106,24 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       } else {
         return false;
       }
+    };
+
+    /** -----------------------------------------------------------------------
+     * Go to end of line and emulate @ pressed
+    */
+
+
+    CNeditor.prototype.emulateAt = function() {
+      var currentSel, newCont;
+
+      currentSel = this.updateCurrentSelIsStartIsEnd();
+      newCont = currentSel.endLine.line$[0].lastChild.previousSibling;
+      newCont.innerHTML += '@';
+      this._keypressCb({
+        which: 64
+      });
+      this._setCaret(newCont, newCont.childNodes.length);
+      return this._hotString.showAutoAndHighLight();
     };
 
     /** -----------------------------------------------------------------------
@@ -29697,12 +29710,15 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           if (startLine.lineNext !== null) {
             if (sel.startLineDiv.nextSibling.dataset.type === 'task') {
               result = window.confirm('Do you want to remove\
-                            the task ?');
+                            the task from todos ?');
               if (result) {
-                this._turneTaskIntoLine(sel.startLineDiv.nextSibling);
+                this._addHistory();
+                this._stackTaskChange(sel.startLineDiv.nextSibling.task, 'deleted');
               } else {
-                return;
+                this._addHistory();
+                this._stackTaskChange(sel.startLineDiv.nextSibling.task, 'removed');
               }
+              this._turneTaskIntoLine(sel.startLineDiv.nextSibling);
             }
             sel.range.setEndBefore(startLine.lineNext.line$[0].firstChild);
             selection.normalize(sel.range);
@@ -29769,12 +29785,15 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           if (startLine.linePrev !== null) {
             if (sel.isStartInTask) {
               result = window.confirm('Do you want to remove the\
-                                                 task ?');
+                                                 task from todos?');
               if (result) {
+                this._addHistory();
+                this._stackTaskChange(sel.startLineDiv.task, 'deleted');
+              } else {
+                this._addHistory();
+                this._stackTaskChange(sel.startLineDiv.task, 'removed');
                 this._turneTaskIntoLine(sel.startLineDiv);
                 this._setCaret(sel.startLineDiv, 0);
-              } else {
-                return;
               }
             }
             cloneRg = sel.range.cloneRange();
@@ -31194,7 +31213,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype._addHistory = function() {
       var h, i, savedScroll, savedSel;
 
-      console.log('== _addHistory()');
+      console.info('== _addHistory()');
       if (this.isUrlPopoverOn || this._hotString.isPreparing) {
         return;
       }
@@ -31289,9 +31308,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     };
 
     CNeditor.prototype._forceUndo = function() {
-      var h, i, id, isInHistory, modif, modifs, savedScroll, savedSel, stepIndex, t, _i, _len, _ref, _ref1;
+      var h, id, modif, savedScroll, savedSel, stepIndex, t, _i, _len, _ref, _ref1;
 
-      console.log("\n== UNDO :");
+      console.info("\n== UNDO :");
       h = this._history;
       if (h.index === h.history.length - 1) {
         this._addHistory();
@@ -31314,6 +31333,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       _ref = h.modifiedTask[stepIndex + 1];
       for (id in _ref) {
         modif = _ref[id];
+        console.info(modif.a);
         switch (modif.a) {
           case 'modified':
             this._stackTaskForSave(id, modif.t, 'modified');
@@ -31322,26 +31342,14 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             this._stackTaskForSave(id, modif.t, 'created');
             break;
           default:
+            console.info('marking as deleted in undo');
             this._stackTaskForSave(id, modif.t, 'deleted');
         }
       }
       _ref1 = this._taskList;
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
         t = _ref1[_i];
-        i = stepIndex + 1;
-        isInHistory = false;
-        while (this.HISTORY_SIZE - i) {
-          modifs = h.modifiedTask[i];
-          i++;
-          for (id in modifs) {
-            if (id === t.internalId) {
-              i = this.HISTORY_SIZE;
-              isInHistory = true;
-              break;
-            }
-          }
-        }
-        if (!isInHistory) {
+        if (t.isFromServer) {
           this._updateTaskLine(t);
         }
       }
@@ -31355,9 +31363,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype.reDo = function() {
-      var h, i, id, index, isInHistory, modif, modifs, savedSel, t, xcoord, ycoord, _i, _len, _ref, _ref1;
+      var h, i, id, index, modif, savedSel, t, xcoord, ycoord, _i, _len, _ref, _ref1;
 
-      console.log("\n== REDO :");
+      console.info("\n== REDO :");
       h = this._history;
       if (this.redoPossible() && this.isEnabled) {
         index = (h.index += 1);
@@ -31384,21 +31392,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         _ref1 = this._taskList;
         for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
           t = _ref1[_i];
-          i = index + 1;
-          isInHistory = false;
-          while (this.HISTORY_SIZE - i) {
-            modifs = h.modifiedTask[i];
-            i++;
-            for (id in modifs) {
-              modif = modifs[id];
-              if (id === t.internalId) {
-                i = this.HISTORY_SIZE;
-                isInHistory = true;
-                break;
-              }
-            }
-          }
-          if (!isInHistory) {
+          if (t.isFromServer) {
             this._updateTaskLine(t);
           }
         }
@@ -31434,7 +31428,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (!txt) {
         txt = '';
       }
-      console.log(txt + ' _history.index : ' + this._history.index);
+      console.info(txt + ' _history.index : ' + this._history.index);
       _ref = this._history.history;
       for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
         step = _ref[i];
@@ -31447,7 +31441,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             content = '_';
           }
         }
-        console.log(i, content, this._history.historySelect[i], arrow);
+        console.info(i, content, this._history.historySelect[i], arrow);
       }
       return true;
     };
@@ -31485,7 +31479,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         res += ', ';
       }
       res = res.slice(0, -2);
-      console.log(res);
+      console.info(res);
       return true;
     };
 
@@ -32442,6 +32436,10 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
 
   selection = require('./selection').selection;
 
+  console.info = function() {
+    return console.log.apply(console, arguments);
+  };
+
   module.exports = HotString = (function() {
     function HotString(editor) {
       this.showAutoAndHighLight = __bind(this.showAutoAndHighLight, this);    this.editor = editor;
@@ -32450,9 +32448,7 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
       this._auto = new AutoComplete(editor.linesDiv, editor, this);
       this._hsTypes = ['@', '@@', '#'];
       this._modes = {
-        '@': 'contact',
-        '@@': 'reminder',
-        '#': 'htag'
+        '@': 'contact'
       };
       this.isPreparing = false;
       this._hsType = '';
@@ -32476,6 +32472,7 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
     HotString.prototype.keyDownCb = function(shortcut) {
       var preventDefault;
 
+      preventDefault = false;
       switch (shortcut) {
         case '-return':
           this.validate();
@@ -32494,14 +32491,9 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
         case '-end':
         case '-home':
           this.reset(false);
-          preventDefault = false;
-          break;
-        case '-space':
-          preventDefault = false;
           break;
         case '-esc':
           this.reset('end');
-          preventDefault = false;
       }
       return preventDefault;
     };
@@ -32520,31 +32512,29 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
     HotString.prototype.keypressCb = function(e) {
       var charCode, modes;
 
+      console.log('== hotstring.keypressCb()');
       charCode = e.which;
       if (this.isPreparing) {
 
       } else if (charCode === 64) {
+        console.log('== here');
         if (this.editor._isStartingWord()) {
           modes = this.editor.getCurrentAllowedInsertions();
+          console.log('== here2');
+          this._auto.setAllowedModes(modes);
           if (__indexOf.call(modes, 'contact') >= 0) {
             this._hsType = '@';
             this.isPreparing = true;
-            this._auto.setAllowedModes(modes);
-            this._currentMode = 'contact';
-            this._auto.setMode('contact');
+            this._auto.setMode('ttag');
+            this._currentMode = 'ttag';
             this._autoToBeShowed = {
               mode: 'insertion'
             };
-          }
-        }
-      } else if (charCode === 35) {
-        if (this.editor._isStartingWord()) {
-          modes = this.editor.getCurrentAllowedInsertions();
-          if (__indexOf.call(modes, 'htag') >= 0) {
-            this._hsType = '#';
+          } else if (modes.length > 0) {
+            this._hsType = '@';
             this.isPreparing = true;
-            this._currentMode = 'htag';
-            this._auto.setMode('htag');
+            this._auto.setMode('ttag');
+            this._currentMode = 'ttag';
             this._autoToBeShowed = {
               mode: 'insertion'
             };
@@ -32610,7 +32600,7 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
     HotString.prototype.edit = function(seg, range) {
       var endOffset, modes, segClass, startOffset, type;
 
-      console.log('hotstring.edit()');
+      console.info('hotstring.edit()');
       this._isEdit = true;
       this.isPreparing = true;
       type = seg.dataset.type;
@@ -32862,7 +32852,7 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
 
 
     HotString.prototype.printHotString = function() {
-      return console.log('_hsType = "' + this._hsType + '"', '_hsLeft = "' + this._hsLeft + '"', '_hsRight = "' + this._hsRight + '"');
+      return console.info('_hsType = "' + this._hsType + '"', '_hsLeft = "' + this._hsLeft + '"', '_hsRight = "' + this._hsRight + '"');
     };
 
     return HotString;
@@ -33045,6 +33035,8 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
   */
 
 
+  console.info = function() {};
+
   module.exports = Tags = (function() {
     function Tags() {
       this._tagList = [];
@@ -33112,7 +33104,7 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
 
       startSeg = selection.getSegment(rg.startContainer, 0);
       endSeg = selection.getSegment(rg.endContainer, 0);
-      console.log('_tagList at beginning', this._tagList);
+      console.info('_tagList at beginning', this._tagList);
       if (startSeg !== endSeg) {
         seg = startSeg.nextSibling;
         while (seg !== endSeg) {
