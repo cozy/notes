@@ -1,9 +1,10 @@
 template = require('./templates/note')
-Note = require('../models/note').Note
+Note     = require('../models/note').Note
 TreeInst = require('./widgets/tree')
 FileList = require('./widgets/file_list').FileList
+CNeditor = require('CNeditor/editor')
 
-helpers = require '../helpers'
+helpers  = require '../helpers'
 
 
 class exports.NoteView extends Backbone.View
@@ -40,9 +41,8 @@ class exports.NoteView extends Backbone.View
 
         @fileList = new FileList @model, '#file-list'
 
-        window
 
-    ###*
+    ###
     # every keyUp in the note's editor will trigger a countdown of 3s, after
     # 3s and if the user didn't type anything, the content will be saved
     ###
@@ -82,6 +82,7 @@ class exports.NoteView extends Backbone.View
         @toggleBtn     = @$("#toggleBtn")
         @boldBtn       = @$("#boldBtn")
         @linkBtn       = @$("#linkBtn")
+        @metaBtn       = @$("#metaBtn")
         @saveEditorBtn = @$("#save-editor-content")
         @titleBtn      = @$("#titleBtn")
 
@@ -111,26 +112,34 @@ class exports.NoteView extends Backbone.View
             @editor.toggleType()
             @editor.setFocus()
 
-        # @boldBtn.tooltip
-        #     placement : "right"
-        #     title     : "Bold (Ctrl + B)"
-        #     delay     : delay
-        # @boldBtn.on "click", () =>
-        #     @editor.strong()
-        #     @editor.setFocus()
+        @boldBtn.tooltip
+            placement : "right"
+            title     : "Bold (Ctrl + B)"
+            delay     : delay
+        @boldBtn.on "click", () =>
+            @editor.strong()
+            @editor.setFocus()
 
         @linkBtn.tooltip
             placement : "right"
             title     : "Create or edit a link (Ctrl + K)"
             delay     : delay
         @linkBtn.on "click", (e) =>
-            console.log 'click'
             @editor.linkifySelection()
+
+        @metaBtn.tooltip
+            placement : "right"
+            title     : "Add a meta-object (@)"
+            delay     : delay
+        @metaBtn.on "click", (e) =>
+            @editor.emulateAt()
+            @editor.setFocus()
 
         @saveEditorBtn.tooltip
             placement : "right"
             title     : "Save the current content"
             delay     : delay
+
 
     ###
     #
@@ -138,7 +147,7 @@ class exports.NoteView extends Backbone.View
     setModel : (note, data) ->
         @model = note
         @setTitle note.title
-        @setContent note.content
+        @setContent note
         @createBreadcrumb note, data
         @fileList.configure @model
         @fileList.render()
@@ -171,7 +180,7 @@ class exports.NoteView extends Backbone.View
             clearTimeout @saveTimer
             @saveTimer = null
             @saveButton.spin 'small'
-
+            @editor.saveTasks()
             data = content: @editor.getEditorContent()
             Note.updateNote @model.id, data, (error) =>
                 if error
@@ -184,21 +193,29 @@ class exports.NoteView extends Backbone.View
                 @saveButton.spin() #stop spinning
                 callback(error) if typeof callback is 'function'
 
-    # Display given content inside editor.
-    # If no content is given, editor is cleared.
-    setContent : (content) ->
-        if content
-            @editor.setEditorContent(content)
+
+    ###*
+     * Display given content inside editor.
+     * If no content is given, editor is cleared.
+    ###
+    setContent : (note) ->
+        if note.content
+            # means that the note had been saved in the olf markdown format
+            if !note.version
+                @editor.setEditorContentFromMD(note.content)
+            # otherwise it was stored in html
+            else
+                @editor.setEditorContent(note.content)
         else
             @editor.deleteContent()
 
 
 
     ###*
-    # create a breadcrumb showing a clickable way from the root to the current note
-    # input: noteModel, contains the informations of the current note
-    #  data, allow to reach the id of the parents of the current note
-    # output: the breadcrumb html is modified
+     * create a breadcrumb showing a clickable way from the root to the current note
+     * input: noteModel, contains the informations of the current note
+     *  data, allow to reach the id of the parents of the current note
+     * output: the breadcrumb html is modified
     ###
     createBreadcrumb : (noteModel, data) ->
         paths = noteModel.path
@@ -225,7 +242,7 @@ class exports.NoteView extends Backbone.View
             app.homeView.selectNote id
 
     ###*
-    # in case of renaming a note this function update the breadcrumb in consequences
+     * in case of renaming a note this function update the breadcrumb in consequences
     ###
     updateBreadcrumbOnTitleChange : (newName) ->
         @breadcrumb.find(" a:last").text newName
