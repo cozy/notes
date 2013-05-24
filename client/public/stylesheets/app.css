@@ -8487,6 +8487,9 @@ iframe {
 #editor-button-bar .btn i.icon-link {
   background-image: url("../img/02-menu-Link-light.png");
 }
+#editor-button-bar .btn i.icon-tags {
+  background-image: url("../img/02-menu-Meta-light.png");
+}
 #editor-button-bar .btn i.icon-download-alt {
   background-image: url("../img/menu-save.png");
 }
@@ -8510,6 +8513,9 @@ iframe {
 }
 #editor-button-bar .btn:hover i.icon-link {
   background-image: url("../img/02-menu-Link-rollover.png");
+}
+#editor-button-bar .btn:hover i.icon-tags {
+  background-image: url("../img/02-menu-Meta-rollover.png");
 }
 #editor-button-bar .btn:hover i.icon-download-alt {
   background-image: url("../img/menu-save-over.png");

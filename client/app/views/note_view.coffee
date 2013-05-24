@@ -180,6 +180,7 @@ class exports.NoteView extends Backbone.View
             clearTimeout @saveTimer
             @saveTimer = null
             @saveButton.spin 'small'
+            @editor.saveTasks()
             data = content: @editor.getEditorContent()
             Note.updateNote @model.id, data, (error) =>
                 if error

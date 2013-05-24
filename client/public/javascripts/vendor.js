@@ -42856,6 +42856,8 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __slice = [].slice;
 
+  require('./logging');
+
   md2cozy = require('./md2cozy').md2cozy;
 
   selection = require('./selection').selection;
@@ -42869,8 +42871,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
   Line = require('./line');
 
   realtimer = require('./realtimer');
-
-  console.info = function() {};
 
   module.exports = CNeditor = (function() {
     /*
@@ -48180,10 +48180,6 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
 
   selection = require('./selection').selection;
 
-  console.info = function() {
-    return console.log.apply(console, arguments);
-  };
-
   module.exports = HotString = (function() {
     function HotString(editor) {
       this.showAutoAndHighLight = __bind(this.showAutoAndHighLight, this);    this.editor = editor;
@@ -48256,15 +48252,13 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
     HotString.prototype.keypressCb = function(e) {
       var charCode, modes;
 
-      console.log('== hotstring.keypressCb()');
+      console.info('== hotstring.keypressCb()');
       charCode = e.which;
       if (this.isPreparing) {
 
       } else if (charCode === 64) {
-        console.log('== here');
         if (this.editor._isStartingWord()) {
           modes = this.editor.getCurrentAllowedInsertions();
-          console.log('== here2');
           this._auto.setAllowedModes(modes);
           if (__indexOf.call(modes, 'contact') >= 0) {
             this._hsType = '@';
@@ -48728,6 +48722,10 @@ window.require.register("CNeditor/line", function(exports, require, module) {
   module.exports = Line;
   
 });
+window.require.register("CNeditor/logging", function(exports, require, module) {
+  console.info = function() {};
+  
+});
 window.require.register("CNeditor/request", function(exports, require, module) {
   exports.request = function(type, url, data, callback) {
     return $.ajax({
@@ -48778,8 +48776,6 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
    * contact ...)
   */
 
-
-  console.info = function() {};
 
   module.exports = Tags = (function() {
     function Tags() {

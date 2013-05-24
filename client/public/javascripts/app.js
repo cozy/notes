@@ -1548,6 +1548,7 @@ window.require.register("views/note_view", function(exports, require, module) {
         clearTimeout(this.saveTimer);
         this.saveTimer = null;
         this.saveButton.spin('small');
+        this.editor.saveTasks();
         data = {
           content: this.editor.getEditorContent()
         };
@@ -1707,7 +1708,7 @@ window.require.register("views/templates/editor", function(exports, require, mod
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="editor-button-bar" class="btn-group btn-group-vertical clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="toggleBtn" class="btn btn-small"><i class="icon-toggle"></i></button><button id="boldBtn" class="btn btn-small"><i class="icon-bold"></i></button><button id="linkBtn" class="btn btn-small"><i class="icon-link"></i></button><button id="metaBtn" class="btn btn-small">@</button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"><div id="file-number">0 files</div><div id="file-pic"></div><div id="file-list"></div></div><div id="editor-container"></div>');
+  buf.push('<div id="editor-button-bar" class="btn-group btn-group-vertical clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="toggleBtn" class="btn btn-small"><i class="icon-toggle"></i></button><button id="boldBtn" class="btn btn-small"><i class="icon-bold"></i></button><button id="linkBtn" class="btn btn-small"><i class="icon-link"></i></button><button id="metaBtn" class="btn btn-small"><i class="icon-tags"></i></button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"><div id="file-number">0 files</div><div id="file-pic"></div><div id="file-list"></div></div><div id="editor-container"></div>');
   }
   return buf.join("");
   };
