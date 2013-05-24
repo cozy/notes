@@ -46,7 +46,7 @@ class exports.HomeView extends Backbone.View
             spacing_open: 10
             spacing_closed: 10
             togglerLength_closed: "100%"
-            defaults: 
+            defaults:
                 enableCursorHotkey: false
             onresize_end: =>
                 @onWindowResized()
@@ -68,7 +68,7 @@ class exports.HomeView extends Backbone.View
                 @tree.widget.jstree(
                     "create","#tree-node-all","first","A New Note")
 
-    # Detect the start of resize with the on mousedown instead of 
+    # Detect the start of resize with the on mousedown instead of
     # the onresize_start because this one happens a bit latter what may be a pb.
     configureLayoutDrag: ->
         drag = $("#drag")
@@ -93,13 +93,11 @@ class exports.HomeView extends Backbone.View
 
     # Save data when user leaves page.
     configureSaving: ->
-        $(window).unload = =>
-            @noteView.saveEditorContent =>
-                console.log "note saved on closing"
+        window.addEventListener 'beforeunload', @onWindowClosed
 
     ### Listeners ###
-    
-    # If editor iframe is loaded after tree, it displays the note that should be 
+
+    # If editor iframe is loaded after tree, it displays the note that should be
     # loaded first.
     onIFrameLoaded: =>
         @iframeLoaded = true
@@ -112,7 +110,20 @@ class exports.HomeView extends Backbone.View
     selectNoteIfIframeLoaded: =>
         @treeLoaded = true
         @selectNote(@note_uuid) if @iframeLoaded
-        
+
+    onWindowClosed: (e) =>
+        return null if @noteView? and @noteView.savingState is 'clean'
+
+        pleasewaitmsg  = 'You have some unsaved changes. '
+        pleasewaitmsg += 'Please stay on this page while they are saved.'
+
+        if @noteView? and @noteView.savingState is 'dirty'
+            @noteView.saveEditorContent()
+
+        e.returnValue = pleasewaitmsg
+        return pleasewaitmsg
+
+
     # Small trick to adapt editor size when window is resized.
     onWindowResized: =>
         windowWidth = $(window).width()
@@ -121,28 +132,45 @@ class exports.HomeView extends Backbone.View
         ns = $('#note-style')
         nsLeft = ns.offset().left
 
-        if @faketop? 
+        if @faketop?
             @faketop.width ns.width()
             @faketop.offset 'left':nsLeft
 
         fileList = $('#note-file-list')
 
         editorBB = $('#editor-button-bar')
-        editorBB.css 
+        editorBB.css
             'left': nsLeft - 0.5 * editorBB.width()
 
         title = $('#note-full-title')
-        title.width(0.9*(fileList.offset().left - title.offset().left))
+        title.width  $('#editor-container').width() - 10
+
+        if @faketop?
+            @faketop.width ns.width() + 102
+            $('#faketop-grad').width ns.width() + 102
+            @faketop.offset 'left':nsLeft
 
     onWindowScrolled: =>
         scrollTop = $('#note-area').scrollTop()
 
         @handleAffix $('#note-full-breadcrumb'), scrollTop, 30
-        @handleAffix $('#note-file-list'), scrollTop, 38
-        @handleAffix $('#note-full-title'), scrollTop, 80
-        @handleAffix $('#faketop'), scrollTop, 55
-        @handleAffix $('#faketop-grad'), scrollTop, 80
-        
+        @handleAffix $('#note-file-list'), scrollTop, 30
+        @handleAffix $('#note-full-title'), scrollTop, 30
+        @handleAffix $('#faketop'), scrollTop, 30
+        @handleAffix $('#faketop-grad'), scrollTop, 30
+
+        ns = $('#note-style')
+        nsLeft = ns.offset().left
+        fileList = $('#note-file-list')
+        if @faketop.hasClass 'topaffix'
+            fileListLeft =  nsLeft  + ns.width() - 200
+            fileList.css
+                left: fileListLeft
+        else
+            fileListLeft = nsLeft  + ns.width() - 600
+            fileList.css
+                left: fileListLeft
+
     handleAffix: (el, scrollTop, limit) ->
         if scrollTop > limit
             if not el.hasClass('topaffix')
@@ -203,7 +231,7 @@ class exports.HomeView extends Backbone.View
 
     ###*
     # When note title is changed, the changement is send to backend for
-    # persistence. 
+    # persistence.
     ###
     onNoteTitleChange:(uuid, newName) =>
         if newName?
@@ -238,22 +266,30 @@ class exports.HomeView extends Backbone.View
     onTreeSelectionChg: (path, id, data) =>
         @tree.widget.jstree "search", ""
         @searchView.hide()
-        @noteView.saveEditorContent()
 
-        path = "/#{path}" if path.indexOf "/"
-        app.router.navigate "note#{path}", trigger: false
+        changeView = =>
+            path = "/#{path}" if path.indexOf "/"
+            app.router.navigate "note#{path}", trigger: false
 
-        if not id? or id is "tree-node-all"
-            @helpInfo.show()
-            @noteFull.hide()
-        else
-            @helpInfo.hide()
-            @noteView.showLoading()
-            Note.getNote id, (note) =>
-                @noteView.hideLoading()
-                @renderNote note, data
-                @noteFull.show()
-                @onWindowResized()
+            if not id? or id is "tree-node-all"
+                @helpInfo.show()
+                @noteFull.hide()
+            else
+                @helpInfo.hide()
+                @noteView.showLoading()
+                Note.getNote id, (note) =>
+                    @noteView.hideLoading()
+                    @renderNote note, data
+                    @noteFull.show()
+                    @onWindowResized()
+
+
+        if @noteView?.savingState is 'clean' then changeView()
+        else @noteView.saveEditorContent (err) ->
+            return console.log err if err
+            changeView()
+
+
 
     ###*
     # When note is dropped, its old path and its new path are sent to server
@@ -261,7 +297,7 @@ class exports.HomeView extends Backbone.View
     ###
     onNoteDropped: (nodeId, targetNodeId) ->
         Note.updateNote nodeId, {parent_id:targetNodeId} , () ->
-            
+
 
     ### Functions ###
 

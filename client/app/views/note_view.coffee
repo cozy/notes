@@ -24,6 +24,7 @@ class exports.NoteView extends Backbone.View
 
         @$("#editor").html require('./templates/editor')
 
+        @savingState = 'clean'
         @saveTimer = null
         @saveButton = @$ '#save-editor-content'
         @noteFullTitle = @$ '#note-full-title'
@@ -40,26 +41,20 @@ class exports.NoteView extends Backbone.View
 
         @fileList = new FileList @model, '#file-list'
 
-    ###*
-     * every keyUp in the note's editor will trigger a countdown of 3s, after
-     * 3s and if the user didn't type anything, the content will be saved
+
+    ###
+    # every keyUp in the note's editor will trigger a countdown of 3s, after
+    # 3s and if the user didn't type anything, the content will be saved
     ###
     setSaveListeners: ->
         @$("#editor-container").on "onChange", () =>
-            id = @model.id
+            @saveButton.removeClass "active"
 
+            # save in 3s if nothing else happens
             clearTimeout @saveTimer
-            @saveButton.removeClass("active") if @saveButton.hasClass "active"
+            @saveTimer = setTimeout @saveEditorContent, 3000
+            @savingState = 'dirty'
 
-            @saveTimer = setTimeout(=>
-                @saveButton.spin 'small'
-                @editor.saveTasks()
-                Note.updateNote id, content: @editor.getEditorContent(), =>
-                    @saveButton.spin()
-
-                unless @saveButton.hasClass "active"
-                    @saveButton.addClass "active"
-            , 3000)
         @saveButton.click @saveEditorContent
         @$('#editor-container').on 'saveRequest', @saveEditorContent
 
@@ -145,8 +140,9 @@ class exports.NoteView extends Backbone.View
             title     : "Save the current content"
             delay     : delay
 
-    ###*
-     *
+
+    ###
+    #
     ###
     setModel : (note, data) ->
         @model = note
@@ -161,7 +157,7 @@ class exports.NoteView extends Backbone.View
     showLoading: ->
         @noteFullTitle.hide()
         @$('#editor-container').hide()
-        @$("#note-style").spin 'normal'
+        @$("#note-style").spin "large"
 
     # Show title and editor, hide spinner
     hideLoading: ->
@@ -169,25 +165,32 @@ class exports.NoteView extends Backbone.View
         @$('#editor-container').show()
         @$("#note-style").spin()
 
-    ###*
-     *  Display note title
+    ###
+    #  Display note title
     ###
     setTitle: (title) ->
         @noteFullTitle.val title
 
-    ###*
-     * Stop saving timer if any and force saving of editor content.
+    ###
+    # Stop saving timer if any and force saving of editor content.
     ###
     saveEditorContent: (callback) =>
-        if @model? and @editor? and @saveTimer?
+        if @model? and @editor? and @savingState isnt 'clean'
+            @savingState = 'saving'
             clearTimeout @saveTimer
             @saveTimer = null
             @saveButton.spin 'small'
-            @editor.saveTasks()
-            Note.updateNote @model.id, content: @editor.getEditorContent(), =>
+            data = content: @editor.getEditorContent()
+            Note.updateNote @model.id, data, (error) =>
+                if error
+                    alert "Unable to save changes on the server. Try again"
+                    console.log error
+                else if @savingState is 'saving'
+                    @savingState = 'clean'
+
                 @saveButton.addClass "active"
-                @saveButton.spin()
-                callback() if typeof(callback) == 'function'
+                @saveButton.spin() #stop spinning
+                callback(error) if typeof callback is 'function'
 
 
     ###*

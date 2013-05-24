@@ -20,7 +20,7 @@ returnNotes = (err, notes) ->
         send length: notes.length, rows: notes
 
 ###
-# Grab note corresponding to id given in url before 
+# Grab note corresponding to id given in url before
 # update, destroy or show actions
 ###
 before 'load note', ->
@@ -31,14 +31,14 @@ before 'load note', ->
             send error: 'Note not found', 404
         else
             # due to jugglingdb pb, arrays are stored as json
-            note.path = JSON.parse note.path 
+            note.path = JSON.parse note.path
             @note = note
             next()
 , only: ['destroy', 'show', 'addFile', 'getFile', 'delFile']
 
 
 ###*
-# Before each note list modification current tree is loaded. If it does not 
+# Before each note list modification current tree is loaded. If it does not
 # exist it is created.
 ###
 before 'load tree', ->
@@ -65,14 +65,14 @@ action 'all', ->
     Note.all(returnNotes)
 
 ###
-# Return a note 
+# Return a note
 ###
 action 'show', ->
     send @note, 200
 
 ###
 # Create a new note from data given in the body of request
-# params : post object : 
+# params : post object :
 #               { title : "the title, mandatory",
 #                 parent_id : "the parent note, mandatory, null if root"}
 #          Other attributes of a note are optionnal (content, tags)
@@ -82,7 +82,7 @@ action 'create', ->
     path = Tree.getPath parent_id
     path.push body.title
     # due to jugglingdb pb, arrays are stored as json
-    body.path = JSON.stringify(path) 
+    body.path = JSON.stringify(path)
     Note.create body, (err, note) ->
         if err
             # TODO : roll back the creation of the note.
@@ -95,7 +95,7 @@ action 'create', ->
                 else
                     note.index ["title", "content"], (err) ->
                         # due to jugglingdb pb, arrays are stored as json
-                        note.path = JSON.parse(note.path) 
+                        note.path = JSON.parse(note.path)
                         send note, 201
 
 ###
@@ -173,10 +173,8 @@ action 'update', ->
             saveAttributes isToIndex, note, newData
         else
             cbk(null)
-           
-###
+
 ## Remove given note from db.
-###
 action 'destroy', ->
     Note.destroy params.id, ->
         send success: 'Note succesfuly deleted', 200
@@ -216,12 +214,12 @@ action 'addFile', ->
 action 'getFile', ->
     name = params.name
 
-    @note.getFile name, (err, res, body) ->
-        if err or not res?
+    @note.getFile name, (err, resp, body) ->
+        if err or not resp?
             send 500
-        else if res.statusCode is 404
+        else if resp.statusCode is 404
             send 'File not found', 404
-        else if res.statusCode != 200
+        else if resp.statusCode != 200
             send 500
         else
             send 200

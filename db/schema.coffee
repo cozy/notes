@@ -9,7 +9,7 @@ Note = define 'Note', ->
     property 'lastModificationDate' , Date   , default: Date
     property 'tags'                 , [String]
     property 'parent_id'            , String
-    property 'path'                 , String  
+    property 'path'                 , String
     property 'humanPath'            , [String]
     property '_attachments'         , Object
     property 'version'              , String

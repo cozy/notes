@@ -21,11 +21,11 @@ class exports.BrunchApplication
                     width: 1
                     radius: 5
 
-                normal:
-                    lines: 10
-                    length: 2
-                    width: 2
-                    radius: 8
+                large:
+                  lines: 7
+                  length: 1
+                  width: 2
+                  radius: 5
 
             if Spinner
                 @each ->
