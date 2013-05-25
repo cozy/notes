@@ -11,7 +11,8 @@ Note = define 'Note', ->
     property 'parent_id'            , String
     property 'path'                 , String
     property 'humanPath'            , [String]
-    property '_attachments'          , Object
+    property '_attachments'         , Object
+    property 'version'              , String
 
 Tree = define 'Tree', ->
     property 'type'                 , String  , default: "Note"

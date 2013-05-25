@@ -746,10 +746,12 @@ window.require.register("models/note", function(exports, require, module) {
     };
 
     Note.createNote = function(data, callback) {
+      data.version = '1';
       return request.post("notes", data, callback);
     };
 
     Note.updateNote = function(id, data, callback) {
+      data.version = '1';
       return request.put("notes/" + id, data, callback);
     };
 
@@ -769,117 +771,6 @@ window.require.register("models/note", function(exports, require, module) {
     return Note;
 
   })(BaseModel);
-  
-});
-window.require.register("models/task", function(exports, require, module) {
-  var Task, request,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  request = require("lib/request");
-
-  module.exports = Task = (function(_super) {
-    var createInboxTodoList, doNothing, findInboxTodoList, isFromNote, isTodo, todoIsInstalled;
-
-    __extends(Task, _super);
-
-    function Task() {
-      return Task.__super__.constructor.apply(this, arguments);
-    }
-
-    Task.prototype.url = function() {
-      if (this.isNew()) {
-        return "/apps/todos/todolists/" + Task.todolistId + "/tasks";
-      } else {
-        return "/apps/todos/todolists/" + Task.todolistId + "/tasks/" + this.id;
-      }
-    };
-
-    Task.prototype.defaults = function() {
-      return {
-        done: false,
-        nextTask: null,
-        previousTask: null
-      };
-    };
-
-    doNothing = function() {};
-
-    isTodo = function(app) {
-      return app.name === 'todos';
-    };
-
-    isFromNote = function(todolist) {
-      return todolist.title === 'from notes';
-    };
-
-    todoIsInstalled = function(callback) {
-      return request.get('/api/applications', function(err, apps) {
-        if (!err && apps.rows.some(isTodo)) {
-          return callback(true);
-        } else {
-          return callback(false);
-        }
-      });
-    };
-
-    findInboxTodoList = function(callback) {
-      return request.get('/apps/todos/todolists', function(err, lists) {
-        var inboxList;
-        if (err) {
-          return callback(null);
-        } else {
-          inboxList = _.find(lists.rows, isFromNote);
-          return callback(inboxList);
-        }
-      });
-    };
-
-    createInboxTodoList = function(callback) {
-      var todolist;
-      todolist = {
-        title: 'from notes',
-        parent_id: 'tree-node-all'
-      };
-      return request.post('/apps/todos/todolists', todolist, function(err, inboxList) {
-        if (err) {
-          return callback(null);
-        } else {
-          return callback(inboxList);
-        }
-      });
-    };
-
-    Task.initialize = function(callback) {
-      if (callback == null) {
-        callback = doNothing;
-      }
-      return todoIsInstalled(function(installed) {
-        if (!installed) {
-          return callback(Task.canBeUsed = false);
-        } else {
-          return findInboxTodoList(function(list) {
-            if (list) {
-              Task.todolistId = list.id;
-              return callback(Task.canBeUsed = true);
-            } else {
-              return createInboxTodoList(function(list) {
-                if (list) {
-                  Task.todolistId = list.id;
-                  return callback(Task.canBeUsed = true);
-                } else {
-                  return callback(Task.canBeUsed = false);
-                }
-              });
-            }
-          });
-        }
-      });
-    };
-
-    return Task;
-
-  })(Backbone.Model);
   
 });
 window.require.register("routers/main_router", function(exports, require, module) {
@@ -1433,7 +1324,7 @@ window.require.register("views/home_view", function(exports, require, module) {
   
 });
 window.require.register("views/note_view", function(exports, require, module) {
-  var FileList, Note, TreeInst, helpers, template,
+  var CNeditor, FileList, Note, TreeInst, helpers, template,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -1445,6 +1336,8 @@ window.require.register("views/note_view", function(exports, require, module) {
   TreeInst = require('./widgets/tree');
 
   FileList = require('./widgets/file_list').FileList;
+
+  CNeditor = require('CNeditor/editor');
 
   helpers = require('../helpers');
 
@@ -1485,13 +1378,11 @@ window.require.register("views/note_view", function(exports, require, module) {
       this.setEditorFocusListener();
       this.setSaveListeners();
       this.fileList = new FileList(this.model, '#file-list');
-      window;
-
     }
 
-    /**
-    # every keyUp in the note's editor will trigger a countdown of 3s, after
-    # 3s and if the user didn't type anything, the content will be saved
+    /*
+        # every keyUp in the note's editor will trigger a countdown of 3s, after
+        # 3s and if the user didn't type anything, the content will be saved
     */
 
 
@@ -1542,6 +1433,7 @@ window.require.register("views/note_view", function(exports, require, module) {
       this.toggleBtn = this.$("#toggleBtn");
       this.boldBtn = this.$("#boldBtn");
       this.linkBtn = this.$("#linkBtn");
+      this.metaBtn = this.$("#metaBtn");
       this.saveEditorBtn = this.$("#save-editor-content");
       this.titleBtn = this.$("#titleBtn");
       delay = {
@@ -1575,14 +1467,31 @@ window.require.register("views/note_view", function(exports, require, module) {
         _this.editor.toggleType();
         return _this.editor.setFocus();
       });
+      this.boldBtn.tooltip({
+        placement: "right",
+        title: "Bold (Ctrl + B)",
+        delay: delay
+      });
+      this.boldBtn.on("click", function() {
+        _this.editor.strong();
+        return _this.editor.setFocus();
+      });
       this.linkBtn.tooltip({
         placement: "right",
         title: "Create or edit a link (Ctrl + K)",
         delay: delay
       });
       this.linkBtn.on("click", function(e) {
-        console.log('click');
         return _this.editor.linkifySelection();
+      });
+      this.metaBtn.tooltip({
+        placement: "right",
+        title: "Add a meta-object (@)",
+        delay: delay
+      });
+      this.metaBtn.on("click", function(e) {
+        _this.editor.emulateAt();
+        return _this.editor.setFocus();
       });
       return this.saveEditorBtn.tooltip({
         placement: "right",
@@ -1599,7 +1508,7 @@ window.require.register("views/note_view", function(exports, require, module) {
     NoteView.prototype.setModel = function(note, data) {
       this.model = note;
       this.setTitle(note.title);
-      this.setContent(note.content);
+      this.setContent(note);
       this.createBreadcrumb(note, data);
       this.fileList.configure(this.model);
       return this.fileList.render();
@@ -1639,6 +1548,7 @@ window.require.register("views/note_view", function(exports, require, module) {
         clearTimeout(this.saveTimer);
         this.saveTimer = null;
         this.saveButton.spin('small');
+        this.editor.saveTasks();
         data = {
           content: this.editor.getEditorContent()
         };
@@ -1658,19 +1568,29 @@ window.require.register("views/note_view", function(exports, require, module) {
       }
     };
 
-    NoteView.prototype.setContent = function(content) {
-      if (content) {
-        return this.editor.setEditorContent(content);
+    /**
+     * Display given content inside editor.
+     * If no content is given, editor is cleared.
+    */
+
+
+    NoteView.prototype.setContent = function(note) {
+      if (note.content) {
+        if (!note.version) {
+          return this.editor.setEditorContentFromMD(note.content);
+        } else {
+          return this.editor.setEditorContent(note.content);
+        }
       } else {
         return this.editor.deleteContent();
       }
     };
 
     /**
-    # create a breadcrumb showing a clickable way from the root to the current note
-    # input: noteModel, contains the informations of the current note
-    #  data, allow to reach the id of the parents of the current note
-    # output: the breadcrumb html is modified
+     * create a breadcrumb showing a clickable way from the root to the current note
+     * input: noteModel, contains the informations of the current note
+     *  data, allow to reach the id of the parents of the current note
+     * output: the breadcrumb html is modified
     */
 
 
@@ -1701,7 +1621,7 @@ window.require.register("views/note_view", function(exports, require, module) {
     };
 
     /**
-    # in case of renaming a note this function update the breadcrumb in consequences
+     * in case of renaming a note this function update the breadcrumb in consequences
     */
 
 
@@ -1788,7 +1708,7 @@ window.require.register("views/templates/editor", function(exports, require, mod
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="editor-button-bar" class="btn-group btn-group-vertical clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="toggleBtn" class="btn btn-small"><i class="icon-toggle"></i></button><button id="linkBtn" class="btn btn-small"><i class="icon-link"></i></button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"><div id="file-number">0 files</div><div id="file-pic"></div><div id="file-list"></div></div><div id="editor-container"></div>');
+  buf.push('<div id="editor-button-bar" class="btn-group btn-group-vertical clearfix"><button id="indentBtn" class="btn btn-small"><i class="icon-indent-right"></i></button><button id="unIndentBtn" class="btn btn-small"><i class="icon-indent-left"></i></button><button id="toggleBtn" class="btn btn-small"><i class="icon-toggle"></i></button><button id="boldBtn" class="btn btn-small"><i class="icon-bold"></i></button><button id="linkBtn" class="btn btn-small"><i class="icon-link"></i></button><button id="metaBtn" class="btn btn-small"><i class="icon-tags"></i></button><button id="save-editor-content" class="btn active btn-small"><i class="icon-download-alt"></i></button></div><div class="spacer"></div><div id="note-file-list"><div id="file-number">0 files</div><div id="file-pic"></div><div id="file-list"></div></div><div id="editor-container"></div>');
   }
   return buf.join("");
   };
