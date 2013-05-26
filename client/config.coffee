@@ -42,6 +42,7 @@ exports.config =
         before: [
             'vendor/styles/normalize.css'
             'vendor/styles/bootstrap.css'
+            'vendor/styles/CNeditor.css'
             'vendor/styles/layout-default.css'
         ]
         after: [

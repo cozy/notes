@@ -1,2 +1,17 @@
-// The main styl of the editor content is in : client/app/vendor/styles/CNeditor.css
+// The main styl of the editor content is in:
+// client/app/vendor/styles/CNeditor.css
 // This one is updated with CNeditor
+
+
+#editor
+    #editor-container:focus
+        outline: 0
+        border: 0
+
+    #editor-lines:focus
+        border: 0
+        box-shadow: none
+        outline: 1px solid lightblue
+     
+    #editor-lines:hover:not(:focus)
+        outline: 1px solid lightorange 
