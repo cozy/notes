@@ -18,7 +18,7 @@ class exports.NoteView extends Backbone.View
         @$el.remove()
 
     constructor: (@homeView, @onIFrameLoaded) ->
-        super()
+        super
 
         @$el = $("#note-full")
 
@@ -31,9 +31,7 @@ class exports.NoteView extends Backbone.View
         @breadcrumb = @$ '#note-full-breadcrumb'
 
         @editor = new CNeditor(@$('#editor-container')[0], @onIFrameLoaded)
-        #@$('#editor-container').niceScroll
-            #cursorcolor: "#CCC"
-            #enablekeyboard: false
+
         @configureButtons()
         @setTitleListeners()
         @setEditorFocusListener()
@@ -69,6 +67,7 @@ class exports.NoteView extends Backbone.View
                 @homeView.onNoteTitleChange @model.id, newName
                 @homeView.tree._updateSuggestionList "rename", newName, oldName
                 @updateBreadcrumbOnTitleChange newName
+                @updateEditorReminderCf()
 
     setEditorFocusListener : () ->
         editorEl = document.getElementById('editor-container')
@@ -151,6 +150,12 @@ class exports.NoteView extends Backbone.View
         @createBreadcrumb note, data
         @fileList.configure @model
         @fileList.render()
+        @updateEditorReminderCf()
+
+    updateEditorReminderCf: =>
+        @editor.setReminderCf "note #{@model.title}",
+            app: 'notes'
+            url: "note/#{@model.id}"
 
 
     # Hide title and editor, show spinner
@@ -170,6 +175,7 @@ class exports.NoteView extends Backbone.View
     ###
     setTitle: (title) ->
         @noteFullTitle.val title
+        @updateEditorReminderCf()
 
     ###
     # Stop saving timer if any and force saving of editor content.
@@ -188,6 +194,8 @@ class exports.NoteView extends Backbone.View
                     console.log error
                 else if @savingState is 'saving'
                     @savingState = 'clean'
+
+                @updateEditorReminderCf()
 
                 @saveButton.addClass "active"
                 @saveButton.spin() #stop spinning
@@ -208,6 +216,8 @@ class exports.NoteView extends Backbone.View
                 @editor.setEditorContent(note.content)
         else
             @editor.deleteContent()
+
+        @updateEditorReminderCf()
 
 
 

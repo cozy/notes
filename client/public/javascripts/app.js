@@ -1014,7 +1014,7 @@ window.require.register("views/home_view", function(exports, require, module) {
     HomeView.prototype.onIFrameLoaded = function() {
       this.iframeLoaded = true;
       if (this.treeLoaded) {
-        this.selectNote(note_uuid);
+        this.selectNote(this.note_uuid);
       }
       this.treeLoaded = true;
       return this.iframe = $("iframe");
@@ -1364,7 +1364,9 @@ window.require.register("views/note_view", function(exports, require, module) {
       this.onIFrameLoaded = onIFrameLoaded;
       this.saveEditorContent = __bind(this.saveEditorContent, this);
 
-      NoteView.__super__.constructor.call(this);
+      this.updateEditorReminderCf = __bind(this.updateEditorReminderCf, this);
+
+      NoteView.__super__.constructor.apply(this, arguments);
       this.$el = $("#note-full");
       this.$("#editor").html(require('./templates/editor'));
       this.savingState = 'clean';
@@ -1412,7 +1414,8 @@ window.require.register("views/note_view", function(exports, require, module) {
         if (newName !== "" && oldName !== newName) {
           _this.homeView.onNoteTitleChange(_this.model.id, newName);
           _this.homeView.tree._updateSuggestionList("rename", newName, oldName);
-          return _this.updateBreadcrumbOnTitleChange(newName);
+          _this.updateBreadcrumbOnTitleChange(newName);
+          return _this.updateEditorReminderCf();
         }
       });
     };
@@ -1511,7 +1514,15 @@ window.require.register("views/note_view", function(exports, require, module) {
       this.setContent(note);
       this.createBreadcrumb(note, data);
       this.fileList.configure(this.model);
-      return this.fileList.render();
+      this.fileList.render();
+      return this.updateEditorReminderCf();
+    };
+
+    NoteView.prototype.updateEditorReminderCf = function() {
+      return this.editor.setReminderCf("note " + this.model.title, {
+        app: 'notes',
+        url: "note/" + this.model.id
+      });
     };
 
     NoteView.prototype.showLoading = function() {
@@ -1532,7 +1543,8 @@ window.require.register("views/note_view", function(exports, require, module) {
 
 
     NoteView.prototype.setTitle = function(title) {
-      return this.noteFullTitle.val(title);
+      this.noteFullTitle.val(title);
+      return this.updateEditorReminderCf();
     };
 
     /*
@@ -1559,6 +1571,7 @@ window.require.register("views/note_view", function(exports, require, module) {
           } else if (_this.savingState === 'saving') {
             _this.savingState = 'clean';
           }
+          _this.updateEditorReminderCf();
           _this.saveButton.addClass("active");
           _this.saveButton.spin();
           if (typeof callback === 'function') {
@@ -1577,13 +1590,14 @@ window.require.register("views/note_view", function(exports, require, module) {
     NoteView.prototype.setContent = function(note) {
       if (note.content) {
         if (!note.version) {
-          return this.editor.setEditorContentFromMD(note.content);
+          this.editor.setEditorContentFromMD(note.content);
         } else {
-          return this.editor.setEditorContent(note.content);
+          this.editor.setEditorContent(note.content);
         }
       } else {
-        return this.editor.deleteContent();
+        this.editor.deleteContent();
       }
+      return this.updateEditorReminderCf();
     };
 
     /**
