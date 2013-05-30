@@ -16787,10 +16787,27 @@ window.require.register("CNeditor/realtimer", function(exports, require, module)
 
     SocketListener.prototype.models = {
       'task': require('CNeditor/task'),
-      'alarm': require('CNeditor/alarm')
+      'alarm': require('CNeditor/alarm'),
+      'contact': require('CNeditor/contact')
     };
 
-    SocketListener.prototype.events = ['alarm.update', 'alarm.delete', 'task.update', 'task.delete'];
+    SocketListener.prototype.events = ['alarm.update', 'alarm.delete', 'contact.create', 'contact.update', 'contact.delete', 'task.update', 'task.delete'];
+
+    SocketListener.prototype.onRemoteCreate = function(model) {
+      var collection, _i, _len, _ref1, _results;
+
+      _ref1 = this.collections;
+      _results = [];
+      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+        collection = _ref1[_i];
+        if (model instanceof collection.model) {
+          _results.push(collection.add(model));
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
 
     SocketListener.prototype.onRemoteDelete = function(model) {
       return model.trigger('destroy', model, model.collection, {});
@@ -40760,8 +40777,6 @@ window.require.register("CNeditor/alarm", function(exports, require, module) {
   request = require("./request");
 
   module.exports = Alarm = (function(_super) {
-    var checkAlarmInstalled, getApps, isAlarm, noCallback;
-
     __extends(Alarm, _super);
 
     function Alarm() {
@@ -40773,27 +40788,20 @@ window.require.register("CNeditor/alarm", function(exports, require, module) {
 
     Alarm.dateFormat = "{Dow} {Mon} {dd} {yyyy} {HH}:{mm}:00";
 
+    Alarm.prototype.defaults = function() {
+      return {
+        action: 'DISPLAY'
+      };
+    };
+
     Alarm.prototype.validate = function(attrs, options) {
-      var allowedActions, errors;
+      var errors;
 
       errors = [];
       if (!attrs.description || attrs.description === "") {
         errors.push({
           field: 'description',
           value: "A description must be set."
-        });
-      }
-      if (!attrs.action || attrs.action === "") {
-        errors.push({
-          field: 'action',
-          value: "An action must be set."
-        });
-      }
-      allowedActions = ['DISPLAY', 'EMAIL'];
-      if (allowedActions.indexOf(attrs.action) === -1) {
-        errors.push({
-          field: 'action',
-          value: "A valid action must be set."
         });
       }
       if (!attrs.trigg || !new Date.create(attrs.trigg).isValid()) {
@@ -40815,51 +40823,31 @@ window.require.register("CNeditor/alarm", function(exports, require, module) {
       return this.getDateObject().format(formatter);
     };
 
-    noCallback = function() {};
-
-    isAlarm = function(app) {
-      return app.name === 'agenda';
-    };
-
-    getApps = function(callback) {
-      return request.get('/api/applications', callback);
-    };
-
-    checkAlarmInstalled = function(apps, callback) {
-      if (apps.rows.some(isAlarm)) {
-        return callback(null, true);
-      } else {
-        return callback('notinstalled');
-      }
+    Alarm.makeCollection = function() {
+      return new Backbone.Collection([], {
+        model: Alarm
+      });
     };
 
     Alarm.initialize = function(callback) {
-      var fail, success;
+      var isAgenda;
 
-      fail = function(err) {
-        Alarm.canBeUsed = false;
-        Alarm.error = err;
-        if (typeof callback === 'function') {
-          return callback(false);
-        }
+      if (callback == null) {
+        callback = function() {};
+      }
+      isAgenda = function(app) {
+        return app.name === 'agenda';
       };
-      success = function() {
-        Alarm.canBeUsed = true;
-        if (typeof callback === 'function') {
-          return callback(true);
+      return request.get('/api/applications', function(err, apps) {
+        if (!err && !apps.rows.some(isAgenda)) {
+          err = 'notinstalled';
         }
-      };
-      return getApps(function(err, apps) {
         if (err) {
-          return fail(err);
+          Contact.error = err;
+          return callback(Alarm.canBeUsed = false);
+        } else {
+          return callback(Alarm.canBeUsed = true);
         }
-        return checkAlarmInstalled(apps, function(err) {
-          if (err) {
-            return fail(err);
-          } else {
-            return success();
-          }
-        });
       });
     };
 
@@ -40894,13 +40882,14 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
       this.datePick = $(this.reminderDiv.lastChild).datepicker();
       this.datePick.show();
       this.datePick.on('changeDate', function(e) {
-        var date, nd;
+        var _ref;
 
-        nd = e.date;
-        date = _this._currentDate;
-        date.setDate(nd.getDate());
-        date.setMonth(nd.getMonth());
-        return date.setFullYear(nd.getFullYear());
+        if ((_ref = _this._currentDate) == null) {
+          _this._currentDate = new Date();
+        }
+        _this._currentDate.setDate(e.date.getDate());
+        _this._currentDate.setMonth(e.date.getMonth());
+        return _this._currentDate.setFullYear(e.date.getFullYear());
       });
       this.timePick = $(this.reminderDiv.childNodes[2].firstElementChild.lastElementChild);
       this.timePick.timepicker({
@@ -40908,6 +40897,16 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
         template: 'modal',
         showSeconds: true,
         showMeridian: false
+      });
+      this.timePick.timepicker().on('changeTime.timepicker', function(e) {
+        var _ref;
+
+        if ((_ref = this._currentDate) == null) {
+          this._currentDate = new Date();
+        }
+        this._currentDate.setHours(e.time.hours);
+        this._currentDate.setMinutes(e.time.minutes);
+        return this._currentDate.setSeconds(e.time.seconds);
       });
       reminderTitle = this.reminderDiv.querySelector('.reminder-title');
       reminderTitle.addEventListener('click', function() {
@@ -40934,16 +40933,27 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
       auto.appendChild(this.contactsDiv);
       this.setItems('tTags', [
         {
+          text: 'contact',
+          type: 'ttag',
+          value: 'contact',
+          mention: ' (@)'
+        }, {
           text: 'todo',
           type: 'ttag',
           value: 'todo'
+        }, {
+          text: 'reminder',
+          type: 'ttag',
+          value: 'reminder',
+          mention: ' (@@)'
         }
       ]);
+      this.setItems('contact', []);
       return this;
     }
 
     /**
-     * Adds items to a type of suggestions
+     * Set items for a type of suggestions
      * @param {String} type  'tTags', 'contact', 'htag'
      * @param {Object} items Object {text, type, [mention]}
     */
@@ -40964,6 +40974,9 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
         case 'htag':
           this.htags = items;
           lines = this.htagDiv;
+      }
+      while (lines.firstChild) {
+        lines.removeChild(lines.firstChild);
       }
       for (_i = 0, _len = items.length; _i < _len; _i++) {
         it = items[_i];
@@ -41128,7 +41141,7 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
     };
 
     AutoComplete.prototype.update = function(typedTxt) {
-      var dd, dh, dmn, it, items, nbrOfSuggestions, now, reg1, reg2, reg3, regD, regH, regMn, resReg1, resReg2, resReg3, resRegD, resRegH, resRegMn, ttag, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
+      var it, items, nbrOfSuggestions, newdate, time, ttag, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
 
       if (!this.isVisible) {
         return;
@@ -41165,34 +41178,12 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
           items = this.htags;
           break;
         case 'reminder':
-          reg1 = /\+?(\d+)h(\d*)mn/i;
-          reg2 = /\+?(\d+)h/i;
-          reg3 = /\+?((\d+)d)?((\d+)h)?((\d*)mn)?/i;
-          regD = /(\d+)d/i;
-          regH = /(\d+)h/i;
-          regMn = /(\d+)mn/i;
-          resReg1 = reg1.exec(typedTxt);
-          resReg2 = reg2.exec(typedTxt);
-          resReg3 = reg3.exec(typedTxt);
-          resRegD = regD.exec(typedTxt);
-          resRegH = regH.exec(typedTxt);
-          resRegMn = regMn.exec(typedTxt);
-          console.info(resRegD);
-          if (resRegMn || resRegH || resRegD) {
-            dd = dh = dmn = 0;
-            if (resRegD) {
-              dd = parseInt(resRegD[1]) * 3600000 * 24;
-            }
-            if (resRegH) {
-              dh = parseInt(resRegH[1]) * 3600000;
-            }
-            if (resRegMn) {
-              dmn = parseInt(resRegMn[1]) * 60000;
-            }
-            this._currentDate.setTime(this._initialDate.getTime() + dd + dh + dmn);
-            now = this._currentDate;
-            this.datePick.datepicker('setValue', now);
-            this.timePick.timepicker('setTime', now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds());
+          newdate = Date.future(typedTxt);
+          if (newdate.isValid()) {
+            this._currentDate = newdate;
+            this.datePick.datepicker('setValue', this._currentDate);
+            time = this._currentDate.toTimeString().substring(0, 8);
+            this.timePick.timepicker('setTime', time);
           }
           return;
       }
@@ -41392,6 +41383,11 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
         if (prev) {
           this._selectedLine = prev;
         } else {
+          if (this._currentMode === 'reminder') {
+            this._selectedLine = line;
+            this._selectLine();
+            return true;
+          }
           if (line.item.type === 'ttag') {
             this._selectedLine = this.el.lastChild.lastChild;
           } else {
@@ -41425,6 +41421,11 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
         line = this._unSelectLine();
         next = line.nextSibling;
         if (next) {
+          if (this._currentMode === 'reminder') {
+            this._selectedLine = line;
+            this._selectLine();
+            return true;
+          }
           this._selectedLine = next;
         } else {
           if (line.item.type === 'ttag') {
@@ -42829,6 +42830,59 @@ window.require.register("CNeditor/bootstrap-timepicker", function(exports, requi
   })(jQuery, window, document);
   
 });
+window.require.register("CNeditor/contact", function(exports, require, module) {
+  var Contact, request, _ref,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  request = require("./request");
+
+  module.exports = Contact = (function(_super) {
+    __extends(Contact, _super);
+
+    function Contact() {
+      _ref = Contact.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    Contact.prototype.urlRoot = "/apps/contacts/contacts";
+
+    Contact.makeCollection = function() {
+      return new Backbone.Collection([], {
+        model: Contact,
+        url: function() {
+          return Contact.prototype.urlRoot;
+        }
+      });
+    };
+
+    Contact.initialize = function(callback) {
+      var isContacts;
+
+      if (callback == null) {
+        callback = function() {};
+      }
+      isContacts = function(app) {
+        return app.name === 'contacts';
+      };
+      return request.get('/api/applications', function(err, apps) {
+        if (!err && !apps.rows.some(isContacts)) {
+          err = 'notinstalled';
+        }
+        if (err) {
+          Contact.error = err;
+          return callback(Contact.canBeUsed = false);
+        } else {
+          return callback(Contact.canBeUsed = true);
+        }
+      });
+    };
+
+    return Contact;
+
+  })(Backbone.Model);
+  
+});
 window.require.register("CNeditor/editor", function(exports, require, module) {
   /* ------------------------------------------------------------------------
   # CLASS FOR THE COZY NOTE EDITOR
@@ -42852,7 +42906,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
   #   _firstLine        : points the first line : TODO : not taken into account
   */
 
-  var CNeditor, HotString, Line, Tags, Task, md2cozy, realtimer, selection,
+  var Alarm, CNeditor, Contact, HotString, Line, Tags, Task, md2cozy, realtimer, selection,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __slice = [].slice;
 
@@ -42863,6 +42917,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
   selection = require('./selection').selection;
 
   Task = require('./task');
+
+  Contact = require('./contact');
+
+  Alarm = require('./alarm');
 
   HotString = require('./hot-string');
 
@@ -42880,6 +42938,12 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     #                      is set to the editorCtrl (callBack.call(this))
     */
     function CNeditor(editorTarget, callBack) {
+      this._updateReminderSegment = __bind(this._updateReminderSegment, this);
+      this._removeReminderSegment = __bind(this._removeReminderSegment, this);
+      this._updateHotStringContacts = __bind(this._updateHotStringContacts, this);
+      this._updateContactSegment = __bind(this._updateContactSegment, this);
+      this._removeContactSegment = __bind(this._removeContactSegment, this);
+      this._showContactPopover = __bind(this._showContactPopover, this);
       this._processPaste = __bind(this._processPaste, this);
       this._waitForPasteData = __bind(this._waitForPasteData, this);
       this._validateUrlPopover = __bind(this._validateUrlPopover, this);
@@ -42897,30 +42961,64 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       this._mouseupCb = __bind(this._mouseupCb, this);
       this._mousedownCb = __bind(this._mousedownCb, this);
       this.loadEditor = __bind(this.loadEditor, this);
-      var _this = this;
+      var loadingJoin, loadingJoinCounter,
+        _this = this;
 
       this.editorTarget = editorTarget;
       this.editorTarget$ = $(this.editorTarget);
-      this.callBack = callBack;
+      loadingJoinCounter = 4;
+      loadingJoin = function() {
+        loadingJoinCounter--;
+        if (loadingJoinCounter === 0) {
+          return callBack.call(_this);
+        }
+      };
       this._internalTaskCounter = 0;
       this._taskList = [];
       this._tasksToBeSaved = {};
       this._tasksModifSinceLastHistory = {};
       Task.initialize(function() {
-        return _this.taskCanBeUsed = Task.canBeUsed;
+        _this.taskCanBeUsed = Task.canBeUsed;
+        return loadingJoin();
+      });
+      this.contactsCollection = Contact.makeCollection();
+      Contact.initialize(function() {
+        _this.contactCanBeUsed = Contact.canBeUsed;
+        if (_this.contactCanBeUsed) {
+          _this.contactsCollection.fetch();
+        }
+        realtimer.watch(_this.contactsCollection);
+        _this.contactsCollection.on('add', _this._updateHotStringContacts);
+        _this.contactsCollection.on('sync', _this._updateHotStringContacts);
+        _this.contactsCollection.on('remove', _this._updateHotStringContacts);
+        _this.contactsCollection.on('reset', _this._updateHotStringContacts);
+        _this.contactsCollection.on('change:name', _this._updateHotStringContacts);
+        _this.contactsCollection.on('change:name', _this._updateContactSegment);
+        _this.contactsCollection.on('destroy', _this._removeContactSegment);
+        return loadingJoin();
+      });
+      this.alarmsCollection = Alarm.makeCollection();
+      Alarm.initialize(function() {
+        _this.alarmCanBeUsed = Alarm.canBeUsed;
+        realtimer.watch(_this.alarmsCollection);
+        _this.alarmsCollection.on('change:trigg', _this._updateReminderSegment);
+        _this.alarmsCollection.on('destroy', _this._removeReminderSegment);
+        return loadingJoin();
       });
       if (this.editorTarget.nodeName === "IFRAME") {
         this.isInIframe = true;
-        this.editorTarget$.on('load', this.loadEditor);
+        this.editorTarget$.on('load', function() {
+          return _this.loadEditor(loadingJoin);
+        });
         this.editorTarget.src = '';
       } else if (this.editorTarget.nodeName === "DIV") {
         this.isInIframe = false;
-        this.loadEditor();
+        this.loadEditor(loadingJoin);
       }
       return this;
     }
 
-    CNeditor.prototype.loadEditor = function() {
+    CNeditor.prototype.loadEditor = function(callback) {
       var HISTORY_SIZE, cssLink, editor_head$, editor_html$, linesDiv;
 
       if (this.isInIframe) {
@@ -42952,7 +43050,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       this._initClipBoard();
       this._initUrlPopover();
       this._hotString = new HotString(this);
-      this.Tags = new Tags();
+      this.Tags = new Tags(this);
       this._lines = {};
       this.newPosition = true;
       this._highestId = 0;
@@ -42981,7 +43079,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         return e.preventDefault();
       });
       this.enable();
-      return this.callBack.call(this);
+      return callback();
     };
 
     CNeditor.prototype._mousedownCb = function(e) {
@@ -43033,12 +43131,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         this._hotString.reset('current');
       }
       switch (startSeg.dataset.type) {
-        case 'contact':
         case 'reminder':
         case 'htag':
           if (!this._hotString.isPreparing) {
             rg = this.document.getSelection().getRangeAt(0);
-            this.Tags.remove(startSeg);
             this._hotString.edit(startSeg, rg);
             while (false) {
               d;
@@ -43049,7 +43145,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     };
 
     CNeditor.prototype._clickCB = function(e) {
-      var segments, url;
+      var oldcontactseg, segments, url;
 
       console.info("== editor._clickCB()");
       this._lastKey = null;
@@ -43065,6 +43161,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           e.stopPropagation();
           e.preventDefault();
         }
+      }
+      oldcontactseg = this._hideContactPopover();
+      if (e.target.dataset.type === 'contact' && e.target !== oldcontactseg) {
+        this._showContactPopover(e.target);
       }
       if (this.hotString.isPreparing) {
         this.hotString.reInit();
@@ -43181,7 +43281,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype._turneLineIntoTask = function(lineDiv) {
       var btn, text;
 
-      if (!this.taskCanBeUsed) {
+      if (!Task.canBeUsed) {
         return false;
       }
       btn = this.document.createElement('SPAN');
@@ -43565,6 +43665,42 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       return res;
     };
 
+    CNeditor.prototype.setReminderCf = function(description, related) {
+      var _ref;
+
+      console.info('setReminderCf');
+      if ((_ref = this.reminderCf) == null) {
+        this.reminderCf = {};
+      }
+      if (description) {
+        this.reminderCf.description = description;
+      }
+      if (related) {
+        return this.reminderCf.related = related;
+      }
+    };
+
+    CNeditor.prototype._createReminderForSegment = function(segment) {
+      var alarm, date,
+        _this = this;
+
+      date = Date.create(segment.dataset.value).format(Alarm.dateFormat);
+      alarm = new Alarm({
+        id: segment.dataset.id || null,
+        trigg: date,
+        related: this.reminderCf.related,
+        description: this.reminderCf.description
+      });
+      this.alarmsCollection.add(alarm);
+      return alarm.save().done(function() {
+        return segment.dataset.id = alarm.id;
+      }).fail(function(jqXHR) {
+        console.log(jqXHR);
+        console.log('failed to save CNE_reminder');
+        return _this.Tags.remove(segment);
+      });
+    };
+
     /** -----------------------------------------------------------------------
      * Returns true if the selection is at the start of a word. Ex :
      *     . xxxx |yyyy   : true
@@ -43612,7 +43748,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (sel.startLineDiv.dataset.type === 'task') {
         return [];
       } else {
-        return ['todo'];
+        return ['todo', 'contact', 'reminder'];
       }
     };
 
@@ -43691,6 +43827,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype.getEditorContent = function() {
       var clone, lineDiv, seg, segment, segments, txt, _i, _j, _len, _len1;
 
+      this._hideContactPopover();
       if (this._hotString.isPreparing || this.isUrlPopoverOn) {
         clone = this.linesDiv.cloneNode(true);
         if (this._hotString.isPreparing) {
@@ -43870,6 +44007,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             case 66:
               key = 'B';
               break;
+            case 67:
+              key = 'C';
+              break;
             case 85:
               key = 'U';
               break;
@@ -43885,6 +44025,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             case 86:
               key = 'V';
               break;
+            case 88:
+              key = 'X';
+              break;
             case 89:
               key = 'Y';
               break;
@@ -43896,7 +44039,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           }
       }
       shortcut = metaKey + '-' + key;
-      if ((metaKey === '' || metaKey === 'Shift') && (key === 'A' || key === 'B' || key === 'U' || key === 'K' || key === 'L' || key === 'S' || key === 'V' || key === 'Y' || key === 'Z')) {
+      if ((metaKey === '' || metaKey === 'Shift') && (key === 'A' || key === 'B' || key === 'C' || key === 'X' || key === 'U' || key === 'K' || key === 'L' || key === 'S' || key === 'V' || key === 'Y' || key === 'Z')) {
         key = 'other';
       }
       return this._shortcut = {
@@ -43924,6 +44067,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       } catch (_error) {
         error = _error;
         alert('A bug occured, we prefer to undo your last action not ' + 'to take any risk.\n\nMessage :\n' + error);
+        console.log(error.stack);
         e.preventDefault();
         return this.unDo();
       }
@@ -43971,7 +44115,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype._keyDownCb = function(e) {
-      var lastShortcut, rg, sel, shortcut;
+      var cont, lastShortcut, offset, rg, sel, shortcut, winAltGr;
 
       if (!this.isEnabled) {
         return true;
@@ -44018,7 +44162,11 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           break;
         case 'other':
         case 'space':
-          if (!e.ctrlrlKey && !e.altKey) {
+          winAltGr = e.ctrlKey && e.altKey;
+          if (winAltGr) {
+            return true;
+          }
+          if (!(e.ctrlKey || e.altKey)) {
             if (this.newPosition) {
               this._addHistory();
             } else if (lastShortcut === '-space' && shortcut !== '-space') {
@@ -44035,14 +44183,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             this._detectTaskChange();
             return true;
           }
-          if (e.ctrlKey && e.altKey) {
-            return true;
-          }
-      }
-      if (e.altKey || e.ctrlKey) {
-        if (!(e.altKey && e.ctrlKey)) {
-          e.preventDefault();
-        }
       }
       switch (shortcut) {
         case '-return':
@@ -44111,6 +44251,11 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         case 'Ctrl-V':
           this._addHistory();
           this.editorTarget$.trigger(jQuery.Event('onChange'));
+          if (this._hotString.isPreparing) {
+            cont = this._hotString._hsSegment.childNodes[0];
+            offset = cont.length;
+            this._setCaret(cont, offset);
+          }
           return true;
         case 'Ctrl-B':
           this._addHistory();
@@ -44131,6 +44276,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           this.reDo();
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
+        case 'Ctrl-C':
+        case 'Ctrl-X':
+          break;
         default:
           return e.preventDefault();
       }
@@ -44165,7 +44313,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype._keyupCb = function(e) {
-      var endSeg, line, newCont, rg, startSeg, _ref;
+      var bp, endSeg, line, newCont, rg, startSeg, _ref;
 
       if (this.isChromeOrSafari) {
         this._chromeCorrection();
@@ -44189,10 +44337,20 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             }
             break;
           case 'contact':
+            if (e.keyCode === 37) {
+              this._setCaret(startSeg.previousSibling.childNodes[0], startSeg.previousSibling.childNodes[0].length - 1);
+            } else {
+              if (startSeg.nextSibling.childNodes[0]) {
+                this._setCaret(startSeg.nextSibling.childNodes[0], 1);
+              } else {
+                bp = this.insertSpaceAfterSeg(startSeg);
+                this._setCaret(bp.cont, bp.offset);
+              }
+            }
+            break;
           case 'reminder':
           case 'htag':
             if (!this._hotString.isPreparing) {
-              this.Tags.remove(startSeg);
               this._hotString.edit(startSeg, rg);
             }
         }
@@ -45554,6 +45712,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             bp = selection.setBpPreviousSegEnd(textNode);
             textNode = bp.cont;
             startOffset = bp.offset;
+          }
+          if (textNode.parentNode.dataset.type === 'contact') {
+            textNode.parentNode.parentNode.removeChild(textNode.parentNode);
+            return;
           }
           txt = textNode.textContent;
           textNode.textContent = txt.substr(0, startOffset - 1) + txt.substr(startOffset);
@@ -48026,11 +48188,11 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype.doHotStringAction = function(autoItem) {
-      var bp, d, date, format, h, hs, m, mn, reg, taskDiv, txt, y;
+      var bp, hs, reg, taskDiv, txt;
 
       hs = this._hotString;
-      if (!autoItem) {
-        hs.reset('end');
+      if (!(autoItem != null ? autoItem.type : void 0)) {
+        hs.reset('end', true);
         return true;
       }
       switch (autoItem.type) {
@@ -48074,8 +48236,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         case 'contact':
           hs._forceUserHotString(autoItem.text, []);
           hs._hsSegment.classList.add('CNE_contact');
+          hs._hsSegment.contentEditable = false;
           hs._hsSegment.dataset.type = 'contact';
-          this.Tags._tagList.push(hs._hsSegment);
+          hs._hsSegment.dataset.id = autoItem.model.id;
           hs._hsSegment.classList.remove('CNE_hot_string');
           bp = this.insertSpaceAfterSeg(hs._hsSegment);
           this._setCaret(bp.cont, 1);
@@ -48097,26 +48260,14 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           this.newPosition = true;
           return true;
         case 'reminder':
-          format = function(n) {
-            if (n.toString().length === 1) {
-              return '0' + n;
-            } else {
-              return n;
-            }
-          };
-          date = autoItem.value;
-          d = format(date.getDate());
-          m = format(date.getMonth());
-          y = format(date.getFullYear());
-          h = format(date.getHours());
-          mn = format(date.getMinutes());
-          txt = d + '/' + m + '/' + y + '  ' + h + ':' + mn;
+          txt = typeof autoItem.value === 'string' ? autoItem.value : autoItem.value.format();
           hs._forceUserHotString(txt, []);
           hs._hsSegment.classList.add('CNE_reminder');
           hs._hsSegment.classList.remove('CNE_hot_string');
           hs._hsSegment.dataset.type = 'reminder';
           this.Tags._tagList.push(hs._hsSegment);
-          hs._hsSegment.dataset.value = date.format();
+          hs._hsSegment.dataset.value = txt;
+          this._createReminderForSegment(hs._hsSegment);
           bp = this.insertSpaceAfterSeg(hs._hsSegment);
           this._setCaret(bp.cont, 1);
           hs._auto.hide();
@@ -48128,6 +48279,102 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       hs.reset('end');
       this.editorTarget$.trigger(jQuery.Event('onChange'));
       return false;
+    };
+
+    CNeditor.prototype._hideContactPopover = function() {
+      var oldcontactseg;
+
+      oldcontactseg = null;
+      if (this.contactpopover) {
+        oldcontactseg = this.contactpopover.parentNode;
+        oldcontactseg.removeChild(this.contactpopover);
+        this.contactpopover = null;
+      }
+      return oldcontactseg;
+    };
+
+    CNeditor.prototype._showContactPopover = function(contactsegment) {
+      var dp, html, model, name, value, _i, _len, _ref;
+
+      model = this.contactsCollection.get(contactsegment.dataset.id);
+      this.contactpopover = document.createElement('DIV');
+      this.contactpopover.id = 'contactpopover';
+      html = '<dl class="dl-horizontal">';
+      _ref = model.get('datapoints');
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        dp = _ref[_i];
+        value = dp.value.replace("\n", '<br />');
+        if (dp.name === 'other' || dp.name === 'about') {
+          name = dp.type;
+        } else {
+          name = dp.type + ' ' + dp.name.replace('smail', 'postal');
+        }
+        html += "<dt>" + name + "</dt><dd>" + value + "</dd>";
+      }
+      html += '</dl>';
+      this.contactpopover.innerHTML = html;
+      return contactsegment.appendChild(this.contactpopover);
+    };
+
+    CNeditor.prototype._removeContactSegment = function(model) {
+      var contactsegment, selector, _i, _len, _ref, _results;
+
+      selector = "span[data-type='contact'][data-id='" + model.id + "']";
+      _ref = this.linesDiv.querySelectorAll(selector);
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        contactsegment = _ref[_i];
+        _results.push(this.Tags.remove(contactsegment));
+      }
+      return _results;
+    };
+
+    CNeditor.prototype._updateContactSegment = function(model) {
+      var contactsegment, selector, _i, _len, _ref, _results;
+
+      selector = "span[data-type='contact'][data-id='" + model.id + "']";
+      _ref = this.linesDiv.querySelectorAll(selector);
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        contactsegment = _ref[_i];
+        _results.push(contactsegment.textContent = model.get('name'));
+      }
+      return _results;
+    };
+
+    CNeditor.prototype._updateHotStringContacts = function() {
+      var contacts;
+
+      contacts = this.contactsCollection.map(function(contact) {
+        return {
+          text: contact.get('name'),
+          type: 'contact',
+          model: contact
+        };
+      });
+      return this._hotString._auto.setItems('contact', contacts);
+    };
+
+    CNeditor.prototype._removeReminderSegment = function(model) {
+      var remindersegment, selector;
+
+      selector = "span[data-type='reminder'][data-id='" + model.id + "']";
+      remindersegment = this.linesDiv.querySelectorAll(selector)[0];
+      return this.Tags.remove(remindersegment);
+    };
+
+    CNeditor.prototype._updateReminderSegment = function(model) {
+      var contactsegment, selector, value, _i, _len, _ref, _results;
+
+      selector = "span[data-type='reminder'][data-id='" + model.id + "']";
+      _ref = this.linesDiv.querySelectorAll(selector);
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        contactsegment = _ref[_i];
+        value = Date.create(model.get('trigg')).format();
+        _results.push(contactsegment.textContent = value);
+      }
+      return _results;
     };
 
     /* ------------------------------------------------------------------------
@@ -48188,7 +48435,8 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
       this._auto = new AutoComplete(editor.linesDiv, editor, this);
       this._hsTypes = ['@', '@@', '#'];
       this._modes = {
-        '@': 'contact'
+        '@': 'contact',
+        '@@': 'reminder'
       };
       this.isPreparing = false;
       this._hsType = '';
@@ -48263,8 +48511,8 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
           if (__indexOf.call(modes, 'contact') >= 0) {
             this._hsType = '@';
             this.isPreparing = true;
-            this._auto.setMode('ttag');
-            this._currentMode = 'ttag';
+            this._auto.setMode('contact');
+            this._currentMode = 'contact';
             this._autoToBeShowed = {
               mode: 'insertion'
             };
@@ -48366,7 +48614,9 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
       this._hsTextNode = seg.firstChild;
       this._hsString = seg.textContent;
       this._hsTextNode.textContent = this._hsType + this._hsString;
-      seg.classList.remove(segClass);
+      seg.classList.remove('CNE_reminder');
+      seg.classList.remove('CNE_contact');
+      seg.classList.remove('CNE_htag');
       seg.dataset.type = '';
       this.editor.setSelection(seg.firstChild, startOffset, seg.firstChild, endOffset);
       modes = this.editor.getCurrentAllowedInsertions();
@@ -48739,7 +48989,7 @@ window.require.register("CNeditor/request", function(exports, require, module) {
         }
       },
       error: function() {
-        if ((data.msg != null) && (callback != null)) {
+        if (((data != null ? data.msg : void 0) != null) && (callback != null)) {
           return callback(new Error(data.msg));
         } else if (callback != null) {
           return callback(new Error("Server error occured"));
@@ -48766,9 +49016,11 @@ window.require.register("CNeditor/request", function(exports, require, module) {
   
 });
 window.require.register("CNeditor/tags", function(exports, require, module) {
-  var Tags, selection;
+  var Alarm, Tags, selection;
 
   selection = require('./selection').selection;
+
+  Alarm = require('./alarm');
 
   /**
    * Helpers for Tags
@@ -48778,7 +49030,8 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
 
 
   module.exports = Tags = (function() {
-    function Tags() {
+    function Tags(editor) {
+      this.editor = editor;
       this._tagList = [];
       this._areTagsEditable = true;
       window.taglist = this._tagList;
@@ -48830,7 +49083,25 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
     };
 
     Tags.prototype.remove = function(seg) {
-      return this._tagList = _.without(this._tagList, seg);
+      var _ref;
+
+      console.log('Tags.remove', seg);
+      this._tagList = _.without(this._tagList, seg);
+      switch (seg.dataset.type) {
+        case 'reminder':
+          seg.textContent = '@@' + seg.textContent;
+          if ((_ref = this.editor.alarmsCollection.get(seg.dataset.id)) != null) {
+            _ref.destroy();
+          }
+          break;
+        case 'contact':
+          seg.textContent = '@' + seg.textContent;
+      }
+      seg.classList.remove('CNE_reminder');
+      seg.classList.remove('CNE_contact');
+      delete seg.dataset.id;
+      delete seg.dataset.type;
+      return delete seg.dataset.value;
     };
 
     /**
@@ -48855,7 +49126,7 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
             }
           }
           if (seg.dataset.type) {
-            this._tagList = _.without(this._tagList, seg);
+            this.remove(seg);
           }
           seg = seg.nextSibling;
         }

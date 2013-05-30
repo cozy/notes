@@ -101,7 +101,7 @@ class exports.HomeView extends Backbone.View
     # loaded first.
     onIFrameLoaded: =>
         @iframeLoaded = true
-        @selectNote note_uuid if @treeLoaded
+        @selectNote @note_uuid if @treeLoaded
         @treeLoaded = true
         @iframe = $ "iframe"
 
