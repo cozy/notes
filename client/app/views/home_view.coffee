@@ -236,8 +236,9 @@ class exports.HomeView extends Backbone.View
     onNoteTitleChange:(uuid, newName) =>
         if newName?
             @tree.jstreeEl.jstree "rename_node", "##{uuid}", newName
-            Note.updateNote uuid, title: newName, (err) ->
+            Note.updateNote uuid, title: newName, (err) =>
                 alert "Server error occured" if err
+                @noteView.updateEditorReminderCf(newName)
 
 
     disableTreeHotkey: () =>

@@ -15824,7 +15824,7 @@ rangy.createModule("SaveRestore", function(api, module) {
 })();
 
 window.require.register("CNeditor/selection", function(exports, require, module) {
-  var selection, µ;
+  var µ;
 
   µ = {};
 
@@ -16380,9 +16380,7 @@ window.require.register("CNeditor/selection", function(exports, require, module)
     return index;
   };
 
-  selection = µ;
-
-  exports.selection = µ;
+  module.exports = µ;
   
 });
 window.require.register("CNeditor/md2cozy", function(exports, require, module) {
@@ -16633,149 +16631,12 @@ window.require.register("CNeditor/md2cozy", function(exports, require, module) {
   exports.md2cozy = md2cozy;
   
 });
-window.require.register("CNeditor/task", function(exports, require, module) {
-  var Task, request, _ref,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  request = require("./request");
-
-  module.exports = Task = (function(_super) {
-    var checkInboxExists, checkTodoInstalled, createInbox, getApps, getLists, isFromNote, isTodo, noCallback;
-
-    __extends(Task, _super);
-
-    function Task() {
-      _ref = Task.__super__.constructor.apply(this, arguments);
-      return _ref;
-    }
-
-    Task.prototype.url = function() {
-      if (this.isNew()) {
-        return "/apps/todos/todolists/" + Task.todolistId + "/tasks";
-      } else {
-        return "/apps/todos/tasks/" + this.id;
-      }
-    };
-
-    Task.prototype.defaults = function() {
-      return {
-        done: false
-      };
-    };
-
-    Task.prototype.parse = function(data) {
-      if (data.rows) {
-        return data.rows[0];
-      } else {
-        return data;
-      }
-    };
-
-    noCallback = function() {};
-
-    isTodo = function(app) {
-      return app.name === 'todos';
-    };
-
-    isFromNote = function(todolist) {
-      return todolist.title === 'Inbox';
-    };
-
-    getApps = function(callback) {
-      return request.get('/api/applications', callback);
-    };
-
-    checkTodoInstalled = function(apps, callback) {
-      if (apps.rows.some(isTodo)) {
-        return callback(null, true);
-      } else {
-        return callback('notinstalled', false);
-      }
-    };
-
-    getLists = function(callback) {
-      return request.get('/apps/todos/todolists', callback);
-    };
-
-    checkInboxExists = function(lists, callback) {
-      var inbox;
-
-      inbox = _.find(lists.rows, isFromNote);
-      if (inbox) {
-        return callback(null, inbox);
-      } else {
-        return callback('noinbox');
-      }
-    };
-
-    createInbox = function(callback) {
-      var todolist;
-
-      todolist = {
-        title: 'Inbox',
-        parent_id: 'tree-node-all'
-      };
-      return request.post('/apps/todos/todolists', todolist, callback);
-    };
-
-    Task.initialize = function(callback) {
-      var fail, success;
-
-      fail = function(err) {
-        Task.canBeUsed = false;
-        Task.error = err;
-        if (typeof callback === 'function') {
-          return callback(false);
-        }
-      };
-      success = function(inbox) {
-        Task.todolistId = inbox.id;
-        Task.canBeUsed = true;
-        if (typeof callback === 'function') {
-          return callback(true);
-        }
-      };
-      return getApps(function(err, apps) {
-        if (err) {
-          return fail(err);
-        }
-        return checkTodoInstalled(apps, function(err, isInstalled) {
-          if (err) {
-            return fail(err);
-          }
-          return getLists(function(err, lists) {
-            if (err) {
-              return fail(err);
-            }
-            return checkInboxExists(lists, function(err, inbox) {
-              if (inbox) {
-                return success(inbox);
-              }
-              if (err !== 'noinbox') {
-                return fail(err);
-              }
-              return createInbox(function(err, inbox) {
-                if (err) {
-                  return fail(err);
-                }
-                return success(inbox);
-              });
-            });
-          });
-        });
-      });
-    };
-
-    return Task;
-
-  })(Backbone.Model);
-  
-});
 window.require.register("CNeditor/realtimer", function(exports, require, module) {
-  var SocketListener, _ref,
+  var ExternalModels, SocketListener, realtimer, _ref,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  ExternalModels = require('./externalmodels');
 
   SocketListener = (function(_super) {
     __extends(SocketListener, _super);
@@ -16786,9 +16647,9 @@ window.require.register("CNeditor/realtimer", function(exports, require, module)
     }
 
     SocketListener.prototype.models = {
-      'task': require('CNeditor/task'),
-      'alarm': require('CNeditor/alarm'),
-      'contact': require('CNeditor/contact')
+      'task': ExternalModels.Task,
+      'alarm': ExternalModels.Alarm,
+      'contact': ExternalModels.Contact
     };
 
     SocketListener.prototype.events = ['alarm.update', 'alarm.delete', 'contact.create', 'contact.update', 'contact.delete', 'task.update', 'task.delete'];
@@ -16817,7 +16678,13 @@ window.require.register("CNeditor/realtimer", function(exports, require, module)
 
   })(CozySocketListener);
 
-  module.exports = new SocketListener();
+  realtimer = new SocketListener();
+
+  realtimer.watch(ExternalModels.contactCollection);
+
+  realtimer.watch(ExternalModels.alarmCollection);
+
+  module.exports = realtimer;
   
 });
 /*!
@@ -40769,93 +40636,6 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);;
-window.require.register("CNeditor/alarm", function(exports, require, module) {
-  var Alarm, request, _ref,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  request = require("./request");
-
-  module.exports = Alarm = (function(_super) {
-    __extends(Alarm, _super);
-
-    function Alarm() {
-      _ref = Alarm.__super__.constructor.apply(this, arguments);
-      return _ref;
-    }
-
-    Alarm.prototype.urlRoot = "/apps/agenda/alarms";
-
-    Alarm.dateFormat = "{Dow} {Mon} {dd} {yyyy} {HH}:{mm}:00";
-
-    Alarm.prototype.defaults = function() {
-      return {
-        action: 'DISPLAY'
-      };
-    };
-
-    Alarm.prototype.validate = function(attrs, options) {
-      var errors;
-
-      errors = [];
-      if (!attrs.description || attrs.description === "") {
-        errors.push({
-          field: 'description',
-          value: "A description must be set."
-        });
-      }
-      if (!attrs.trigg || !new Date.create(attrs.trigg).isValid()) {
-        errors.push({
-          field: 'triggdate',
-          value: "The date or time format might be invalid. " + "It must be \"dd/mm/yyyy hh:mm\"."
-        });
-      }
-      if (errors.length > 0) {
-        return errors;
-      }
-    };
-
-    Alarm.prototype.getDateObject = function() {
-      return new Date.create(this.get('trigg'));
-    };
-
-    Alarm.prototype.getFormattedDate = function(formatter) {
-      return this.getDateObject().format(formatter);
-    };
-
-    Alarm.makeCollection = function() {
-      return new Backbone.Collection([], {
-        model: Alarm
-      });
-    };
-
-    Alarm.initialize = function(callback) {
-      var isAgenda;
-
-      if (callback == null) {
-        callback = function() {};
-      }
-      isAgenda = function(app) {
-        return app.name === 'agenda';
-      };
-      return request.get('/api/applications', function(err, apps) {
-        if (!err && !apps.rows.some(isAgenda)) {
-          err = 'notinstalled';
-        }
-        if (err) {
-          Contact.error = err;
-          return callback(Alarm.canBeUsed = false);
-        } else {
-          return callback(Alarm.canBeUsed = true);
-        }
-      });
-    };
-
-    return Alarm;
-
-  })(Backbone.Model);
-  
-});
 window.require.register("CNeditor/autocomplete", function(exports, require, module) {
   var AutoComplete;
 
@@ -40863,7 +40643,7 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
 
   require('./bootstrap-timepicker');
 
-  AutoComplete = (function() {
+  module.exports = AutoComplete = (function() {
     function AutoComplete(container, editor, hotString) {
       var auto, reminderTitle,
         _this = this;
@@ -41462,8 +41242,6 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
     return AutoComplete;
 
   })();
-
-  exports.AutoComplete = AutoComplete;
   
 });
 window.require.register("CNeditor/bootstrap-datepicker", function(exports, require, module) {
@@ -42830,57 +42608,51 @@ window.require.register("CNeditor/bootstrap-timepicker", function(exports, requi
   })(jQuery, window, document);
   
 });
-window.require.register("CNeditor/contact", function(exports, require, module) {
-  var Contact, request, _ref,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+window.require.register("CNeditor/contactpopover", function(exports, require, module) {
+  var ContactPopover;
 
-  request = require("./request");
-
-  module.exports = Contact = (function(_super) {
-    __extends(Contact, _super);
-
-    function Contact() {
-      _ref = Contact.__super__.constructor.apply(this, arguments);
-      return _ref;
+  module.exports = ContactPopover = (function() {
+    function ContactPopover() {
+      this.el = document.createElement('DIV');
+      this.el.id = 'contactpopover';
+      this.isOn = false;
     }
 
-    Contact.prototype.urlRoot = "/apps/contacts/contacts";
+    ContactPopover.prototype.hide = function() {
+      var oldcontactseg;
 
-    Contact.makeCollection = function() {
-      return new Backbone.Collection([], {
-        model: Contact,
-        url: function() {
-          return Contact.prototype.urlRoot;
-        }
-      });
-    };
-
-    Contact.initialize = function(callback) {
-      var isContacts;
-
-      if (callback == null) {
-        callback = function() {};
+      oldcontactseg = null;
+      if (this.isOn && (oldcontactseg = this.el.parentNode)) {
+        oldcontactseg.removeChild(this.el);
       }
-      isContacts = function(app) {
-        return app.name === 'contacts';
-      };
-      return request.get('/api/applications', function(err, apps) {
-        if (!err && !apps.rows.some(isContacts)) {
-          err = 'notinstalled';
-        }
-        if (err) {
-          Contact.error = err;
-          return callback(Contact.canBeUsed = false);
-        } else {
-          return callback(Contact.canBeUsed = true);
-        }
-      });
+      this.isOn = false;
+      return oldcontactseg;
     };
 
-    return Contact;
+    ContactPopover.prototype.show = function(segment, model) {
+      var dp, html, name, value, _i, _len, _ref;
 
-  })(Backbone.Model);
+      html = '<dl class="dl-horizontal">';
+      _ref = model.get('datapoints');
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        dp = _ref[_i];
+        value = dp.value.replace("\n", '<br />');
+        if (dp.name === 'other' || dp.name === 'about') {
+          name = dp.type;
+        } else {
+          name = dp.type + ' ' + dp.name.replace('smail', 'postal');
+        }
+        html += "<dt>" + name + "</dt><dd>" + value + "</dd>";
+      }
+      html += '</dl>';
+      this.el.innerHTML = html;
+      segment.appendChild(this.el);
+      return this.isOn = true;
+    };
+
+    return ContactPopover;
+
+  })();
   
 });
 window.require.register("CNeditor/editor", function(exports, require, module) {
@@ -42906,29 +42678,31 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
   #   _firstLine        : points the first line : TODO : not taken into account
   */
 
-  var Alarm, CNeditor, Contact, HotString, Line, Tags, Task, md2cozy, realtimer, selection,
+  var Alarm, CNeditor, Contact, ExternalModels, History, HotString, Line, Tags, Task, UrlPopover, logging, md2cozy, realtimer, selection,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __slice = [].slice;
 
-  require('./logging');
+  logging = require('./logging');
 
   md2cozy = require('./md2cozy').md2cozy;
 
-  selection = require('./selection').selection;
-
-  Task = require('./task');
-
-  Contact = require('./contact');
-
-  Alarm = require('./alarm');
+  selection = require('./selection');
 
   HotString = require('./hot-string');
+
+  UrlPopover = require('./urlpopover');
+
+  History = require('./history');
 
   Tags = require('./tags');
 
   Line = require('./line');
 
   realtimer = require('./realtimer');
+
+  ExternalModels = require('./externalmodels');
+
+  Alarm = ExternalModels.Alarm, Contact = ExternalModels.Contact, Task = ExternalModels.Task;
 
   module.exports = CNeditor = (function() {
     /*
@@ -42938,18 +42712,8 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     #                      is set to the editorCtrl (callBack.call(this))
     */
     function CNeditor(editorTarget, callBack) {
-      this._updateReminderSegment = __bind(this._updateReminderSegment, this);
-      this._removeReminderSegment = __bind(this._removeReminderSegment, this);
-      this._updateHotStringContacts = __bind(this._updateHotStringContacts, this);
-      this._updateContactSegment = __bind(this._updateContactSegment, this);
-      this._removeContactSegment = __bind(this._removeContactSegment, this);
-      this._showContactPopover = __bind(this._showContactPopover, this);
       this._processPaste = __bind(this._processPaste, this);
       this._waitForPasteData = __bind(this._waitForPasteData, this);
-      this._validateUrlPopover = __bind(this._validateUrlPopover, this);
-      this._cancelUrlPopoverCB = __bind(this._cancelUrlPopoverCB, this);
-      this._cancelUrlPopover = __bind(this._cancelUrlPopover, this);
-      this._detectClickOutUrlPopover = __bind(this._detectClickOutUrlPopover, this);
       this._keyupCb = __bind(this._keyupCb, this);
       this._keypressCb = __bind(this._keypressCb, this);
       this._keyDownCb = __bind(this._keyDownCb, this);
@@ -42961,65 +42725,33 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       this._mouseupCb = __bind(this._mouseupCb, this);
       this._mousedownCb = __bind(this._mousedownCb, this);
       this.loadEditor = __bind(this.loadEditor, this);
-      var loadingJoin, loadingJoinCounter,
-        _this = this;
+      var _this = this;
 
       this.editorTarget = editorTarget;
       this.editorTarget$ = $(this.editorTarget);
-      loadingJoinCounter = 4;
-      loadingJoin = function() {
-        loadingJoinCounter--;
-        if (loadingJoinCounter === 0) {
-          return callBack.call(_this);
-        }
-      };
       this._internalTaskCounter = 0;
       this._taskList = [];
       this._tasksToBeSaved = {};
       this._tasksModifSinceLastHistory = {};
-      Task.initialize(function() {
-        _this.taskCanBeUsed = Task.canBeUsed;
-        return loadingJoin();
-      });
-      this.contactsCollection = Contact.makeCollection();
-      Contact.initialize(function() {
-        _this.contactCanBeUsed = Contact.canBeUsed;
-        if (_this.contactCanBeUsed) {
-          _this.contactsCollection.fetch();
+      ExternalModels.initialize(function(err) {
+        console.log(err);
+        realtimer.watch(ExternalModels.contactCollection);
+        if (_this.editorTarget.nodeName === "IFRAME") {
+          _this.isInIframe = true;
+          _this.editorTarget$.on('load', function() {
+            return _this.loadEditor(callBack);
+          });
+          return _this.editorTarget.src = '';
+        } else if (_this.editorTarget.nodeName === "DIV") {
+          _this.isInIframe = false;
+          return _this.loadEditor(callBack);
         }
-        realtimer.watch(_this.contactsCollection);
-        _this.contactsCollection.on('add', _this._updateHotStringContacts);
-        _this.contactsCollection.on('sync', _this._updateHotStringContacts);
-        _this.contactsCollection.on('remove', _this._updateHotStringContacts);
-        _this.contactsCollection.on('reset', _this._updateHotStringContacts);
-        _this.contactsCollection.on('change:name', _this._updateHotStringContacts);
-        _this.contactsCollection.on('change:name', _this._updateContactSegment);
-        _this.contactsCollection.on('destroy', _this._removeContactSegment);
-        return loadingJoin();
       });
-      this.alarmsCollection = Alarm.makeCollection();
-      Alarm.initialize(function() {
-        _this.alarmCanBeUsed = Alarm.canBeUsed;
-        realtimer.watch(_this.alarmsCollection);
-        _this.alarmsCollection.on('change:trigg', _this._updateReminderSegment);
-        _this.alarmsCollection.on('destroy', _this._removeReminderSegment);
-        return loadingJoin();
-      });
-      if (this.editorTarget.nodeName === "IFRAME") {
-        this.isInIframe = true;
-        this.editorTarget$.on('load', function() {
-          return _this.loadEditor(loadingJoin);
-        });
-        this.editorTarget.src = '';
-      } else if (this.editorTarget.nodeName === "DIV") {
-        this.isInIframe = false;
-        this.loadEditor(loadingJoin);
-      }
       return this;
     }
 
     CNeditor.prototype.loadEditor = function(callback) {
-      var HISTORY_SIZE, cssLink, editor_head$, editor_html$, linesDiv;
+      var cssLink, editor_head$, editor_html$;
 
       if (this.isInIframe) {
         editor_html$ = this.editorTarget$.contents().find("html");
@@ -43033,39 +42765,30 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       }
       this.editorBody = this.editorBody$[0];
       this.document = this.editorBody.ownerDocument;
-      linesDiv = document.createElement('div');
-      this.linesDiv = linesDiv;
-      linesDiv.setAttribute('id', 'editor-lines');
-      linesDiv.setAttribute('class', 'editor-frame');
-      linesDiv.contentEditable = true;
-      this.editorBody$.append(linesDiv);
+      this.linesDiv = document.createElement('div');
+      this.linesDiv.setAttribute('id', 'editor-lines');
+      this.linesDiv.setAttribute('class', 'editor-frame');
+      this.linesDiv.contentEditable = true;
+      this.editorBody$.append(this.linesDiv);
       if (this.isInIframe) {
-        linesDiv.style.overflowY = 'auto';
-        linesDiv.style.position = 'absolute';
-        linesDiv.style.top = 0;
-        linesDiv.style.bottom = 0;
-        linesDiv.style.right = 0;
-        linesDiv.style.left = 0;
+        this.linesDiv.style.overflowY = 'auto';
+        this.linesDiv.style.position = 'absolute';
+        this.linesDiv.style.top = 0;
+        this.linesDiv.style.bottom = 0;
+        this.linesDiv.style.right = 0;
+        this.linesDiv.style.left = 0;
       }
       this._initClipBoard();
-      this._initUrlPopover();
+      this.urlPopover = new UrlPopover(this);
       this._hotString = new HotString(this);
-      this.Tags = new Tags(this);
+      this._hotString.realtimeContacts(ExternalModels.contactCollection);
+      this.Tags = new Tags(this, ExternalModels);
       this._lines = {};
       this.newPosition = true;
       this._highestId = 0;
       this._deepest = 1;
-      this._firstLine = null;
-      HISTORY_SIZE = 100;
-      this.HISTORY_SIZE = HISTORY_SIZE;
-      this._history = {
-        index: HISTORY_SIZE - 1,
-        history: new Array(HISTORY_SIZE),
-        historySelect: new Array(HISTORY_SIZE),
-        historyScroll: new Array(HISTORY_SIZE),
-        historyPos: new Array(HISTORY_SIZE),
-        modifiedTask: new Array(HISTORY_SIZE)
-      };
+      this.isEnabled = true;
+      this._history = new History(this);
       this._lastKey = null;
       this.currentSel = {
         sel: this.getEditorSelection()
@@ -43078,17 +42801,20 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       this.linesDiv.addEventListener('drop', function(e) {
         return e.preventDefault();
       });
-      this.enable();
+      this._registerEventListeners();
       return callback();
     };
 
     CNeditor.prototype._mousedownCb = function(e) {
       var startCont, startSeg;
 
+      if (!this.isEnabled) {
+        return true;
+      }
       if (this._hotString.isPreparing) {
         this._hotString.mouseDownCb(e);
       }
-      startCont = this.document.getSelection().getRangeAt(0).startContainer;
+      startCont = this.getEditorSelection().getRangeAt(0).startContainer;
       startSeg = selection.getSegment(e.target, 0);
       if (!startSeg.dataset.type) {
         return this.Tags.setTagUnEditable();
@@ -43102,8 +42828,11 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype._mouseupCb = function(e) {
-      var endSeg, rg, startSeg;
+      var endSeg, rg, startSeg, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
 
+      if (!this.isEnabled) {
+        return true;
+      }
       this.newPosition = true;
       this.Tags.setTagEditable();
       if (this._hotString.isPreparing) {
@@ -43112,29 +42841,29 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           return true;
         }
       }
-      rg = this.document.getSelection().getRangeAt(0);
+      rg = this.getEditorSelection().getRangeAt(0);
       startSeg = selection.getSegment(rg.startContainer);
       endSeg = selection.getSegment(rg.endContainer);
-      if (startSeg.dataset.type === 'taskBtn') {
+      if (((_ref = startSeg.dataset) != null ? _ref.type : void 0) === 'taskBtn') {
         this._setCaret(startSeg.nextSibling, 0);
-      } else if (endSeg.dataset.type === 'taskBtn') {
+      } else if (((_ref1 = endSeg.dataset) != null ? _ref1.type : void 0) === 'taskBtn') {
         this._setCaret(endSeg.nextSibling, 0);
       }
-      if (startSeg.dataset.type && !endSeg.dataset.type) {
+      if (((_ref2 = startSeg.dataset) != null ? _ref2.type : void 0) && !((_ref3 = endSeg.dataset) != null ? _ref3.type : void 0)) {
         this.setSelection(rg.startContainer, rg.startOffset, startSeg, startSeg.childNodes.length);
         endSeg = startSeg;
-      } else if (!startSeg.dataset.type && endSeg.dataset.type) {
+      } else if (!((_ref4 = startSeg.dataset) != null ? _ref4.type : void 0) && ((_ref5 = endSeg.dataset) != null ? _ref5.type : void 0)) {
         this.setSelection(endSeg, 0, rg.endContainer, rg.endOffset);
         startSeg = endSeg;
       }
       if (this._hotString.isPreparing && startSeg !== this._hotString._hsSegment) {
         this._hotString.reset('current');
       }
-      switch (startSeg.dataset.type) {
+      switch ((_ref6 = startSeg.dataset) != null ? _ref6.type : void 0) {
         case 'reminder':
         case 'htag':
           if (!this._hotString.isPreparing) {
-            rg = this.document.getSelection().getRangeAt(0);
+            rg = this.getEditorSelection().getRangeAt(0);
             this._hotString.edit(startSeg, rg);
             while (false) {
               d;
@@ -43145,8 +42874,11 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     };
 
     CNeditor.prototype._clickCB = function(e) {
-      var oldcontactseg, segments, url;
+      var segments, url;
 
+      if (!this.isEnabled) {
+        return true;
+      }
       console.info("== editor._clickCB()");
       this._lastKey = null;
       this.updateCurrentSel();
@@ -43155,17 +42887,13 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         if (e.ctrlKey) {
           url = segments[0].href;
           window.open(url, '_blank');
-          e.preventDefault();
         } else {
-          this._showUrlPopover(segments, false);
-          e.stopPropagation();
-          e.preventDefault();
+          this.urlPopover.show(segments, false);
         }
+        e.stopPropagation();
+        e.preventDefault();
       }
-      oldcontactseg = this._hideContactPopover();
-      if (e.target.dataset.type === 'contact' && e.target !== oldcontactseg) {
-        this._showContactPopover(e.target);
-      }
+      this.Tags.clickCb(e);
       if (this.hotString.isPreparing) {
         this.hotString.reInit();
       }
@@ -43173,6 +42901,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     };
 
     CNeditor.prototype._pasteCB = function(event) {
+      if (!this.isEnabled) {
+        return true;
+      }
       return this.paste(event);
     };
 
@@ -43186,24 +42917,12 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       return this.editorBody$.on('paste', this._pasteCB);
     };
 
-    CNeditor.prototype._unRegisterEventListeners = function() {
-      this.linesDiv.removeEventListener('keydown', this._keyDownCbTry, true);
-      this.linesDiv.removeEventListener('keyup', this._keyupCb, false);
-      this.linesDiv.removeEventListener('keypress', this._keypressCb);
-      this.linesDiv.removeEventListener('mouseup', this._mouseupCb, true);
-      this.linesDiv.removeEventListener('mousedown', this._mousedownCb, true);
-      this.editorBody$.off('click', this._clickCB);
-      return this.editorBody$.off('paste', this._pasteCB);
-    };
-
     CNeditor.prototype.disable = function() {
-      this.isEnabled = false;
-      return this._unRegisterEventListeners();
+      return this.isEnabled = false;
     };
 
     CNeditor.prototype.enable = function() {
-      this.isEnabled = true;
-      return this._registerEventListeners();
+      return this.isEnabled = true;
     };
 
     /** -----------------------------------------------------------------------
@@ -43216,9 +42935,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     };
 
     /** -----------------------------------------------------------------------
-     * Methods to deal selection on an iframe
-     * This method is modified during construction if the editor target is not
-     * an iframe
+     * Get the selection from the editor's document
      * @return {selection} The selection on the editor.
     */
 
@@ -43238,13 +42955,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype.saveEditorSelection = function() {
-      var sel;
-
-      sel = this.document.getSelection();
-      if (sel.rangeCount === 0) {
-        return false;
-      }
-      return this.serializeRange(sel.getRangeAt(0));
+      return this.serializeSel();
     };
 
     CNeditor.prototype._initTaskContent = function(taskDiv) {
@@ -43261,7 +42972,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       span.appendChild(txt);
       taskDiv.insertBefore(span, segment);
       this._setSelectionOnNode(txt);
-      return this._addHistory();
+      return this._history.addStep();
     };
 
     /**
@@ -43272,7 +42983,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype._turnIntoTask = function(lineDiv) {
-      if (!lineDiv) {
+      if (lineDiv == null) {
         lineDiv = this.updateCurrentSel().startLineDiv;
       }
       return this._turneLineIntoTask(lineDiv);
@@ -43281,13 +42992,13 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype._turneLineIntoTask = function(lineDiv) {
       var btn, text;
 
-      if (!Task.canBeUsed) {
+      if (!ExternalModels.taskCanBeUsed) {
         return false;
       }
       btn = this.document.createElement('SPAN');
       btn.className = 'CNE_task_btn';
       btn.dataset.type = 'taskBtn';
-      this.Tags._tagList.push(btn);
+      this.Tags.handle(btn);
       if (this.isChromeOrSafari) {
         text = this.document.createTextNode(' ');
       } else {
@@ -43318,7 +43029,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype._toggleTaskCB = function(e) {
       var btn, lineDiv;
 
-      this._addHistory();
+      this._history.addStep();
       lineDiv = selection.getLineDiv(e.target);
       btn = lineDiv.firstChild;
       if (lineDiv.dataset.state === 'done') {
@@ -43497,7 +43208,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             a: 'created'
           };
       }
-      this.__printTasksModifStacks();
+      logging.printTasksModifStacks('_stackTaskChange', this._tasksToBeSaved);
       return true;
     };
 
@@ -43665,42 +43376,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       return res;
     };
 
-    CNeditor.prototype.setReminderCf = function(description, related) {
-      var _ref;
-
-      console.info('setReminderCf');
-      if ((_ref = this.reminderCf) == null) {
-        this.reminderCf = {};
-      }
-      if (description) {
-        this.reminderCf.description = description;
-      }
-      if (related) {
-        return this.reminderCf.related = related;
-      }
-    };
-
-    CNeditor.prototype._createReminderForSegment = function(segment) {
-      var alarm, date,
-        _this = this;
-
-      date = Date.create(segment.dataset.value).format(Alarm.dateFormat);
-      alarm = new Alarm({
-        id: segment.dataset.id || null,
-        trigg: date,
-        related: this.reminderCf.related,
-        description: this.reminderCf.description
-      });
-      this.alarmsCollection.add(alarm);
-      return alarm.save().done(function() {
-        return segment.dataset.id = alarm.id;
-      }).fail(function(jqXHR) {
-        console.log(jqXHR);
-        console.log('failed to save CNE_reminder');
-        return _this.Tags.remove(segment);
-      });
-    };
-
     /** -----------------------------------------------------------------------
      * Returns true if the selection is at the start of a word. Ex :
      *     . xxxx |yyyy   : true
@@ -43742,14 +43417,24 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     };
 
     CNeditor.prototype.getCurrentAllowedInsertions = function() {
-      var sel;
+      var line, metaSelector, out;
 
-      sel = this.updateCurrentSel();
-      if (sel.startLineDiv.dataset.type === 'task') {
-        return [];
-      } else {
-        return ['todo', 'contact', 'reminder'];
+      line = this.updateCurrentSel().startLineDiv;
+      out = [];
+      if (line.dataset.type === 'task') {
+        return out;
       }
+      metaSelector = '[data-type="contact"], [data-type="reminder"]';
+      if (ExternalModels.taskCanBeUsed && !line.querySelector(metaSelector)) {
+        out.push('todo');
+      }
+      if (ExternalModels.contactCanBeUsed) {
+        out.push('contact');
+      }
+      if (ExternalModels.alarmCanBeUsed) {
+        out.push('reminder');
+      }
+      return out;
     };
 
     /* ------------------------------------------------------------------------
@@ -43765,23 +43450,29 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype._updateDeepest = function() {
-      var c, lines, max;
+      var c, lines, max, _results;
 
       max = 1;
       lines = this._lines;
+      _results = [];
       for (c in lines) {
         if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th" && lines[c].lineDepthAbs > max) {
-          max = this._lines[c].lineDepthAbs;
-        }
-      }
-      if (max !== this._deepest) {
-        this._deepest = max;
-        if (max < 4) {
-          return this.replaceCSS("stylesheets/app-deep-" + max + ".css");
+          _results.push(max = this._lines[c].lineDepthAbs);
         } else {
-          return this.replaceCSS("stylesheets/app-deep-4.css");
+          _results.push(void 0);
         }
       }
+      return _results;
+    };
+
+    /*-----------------------------------------------------------------------
+    # Set the editor description and related to be used when creating
+    # reminders
+    */
+
+
+    CNeditor.prototype.setReminderCf = function(description, related) {
+      return Alarm.setDefaultCf(description, related);
     };
 
     /** -----------------------------------------------------------------------
@@ -43796,12 +43487,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (unPretify) {
         htmlString = htmlString.replace(/>[\n ]*</g, "><");
       }
-      if (this.isUrlPopoverOn) {
-        this._cancelUrlPopover(false);
-      }
+      this.urlPopover.cancel();
       this.linesDiv.innerHTML = htmlString;
       this._taskList = [];
-      this._readHtml();
+      this._readHtml(true);
       this._setCaret(this.linesDiv.firstChild.firstChild, 0, true);
       this.newPosition = true;
       return this.hotString = '';
@@ -43827,8 +43516,8 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype.getEditorContent = function() {
       var clone, lineDiv, seg, segment, segments, txt, _i, _j, _len, _len1;
 
-      this._hideContactPopover();
-      if (this._hotString.isPreparing || this.isUrlPopoverOn) {
+      this.Tags.contactPopover.hide();
+      if (this._hotString.isPreparing || this.urlPopover.isOn) {
         clone = this.linesDiv.cloneNode(true);
         if (this._hotString.isPreparing) {
           segment = clone.querySelector('.CNE_hot_string');
@@ -43839,7 +43528,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           segment = clone.querySelector('#CNE_autocomplete');
           segment.parentElement.removeChild(segment);
         }
-        if (this.isUrlPopoverOn) {
+        if (this.urlPopover.isOn) {
           segment = clone.querySelector('#CNE_urlPopover');
           segment.parentElement.removeChild(segment);
           segments = clone.querySelectorAll('.CNE_url_in_edition');
@@ -43864,7 +43553,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     };
 
     /* ------------------------------------------------------------------------
-    # Sets the editor content from a markdown string
+    # Sets the editor content from a html string
     */
 
 
@@ -43883,20 +43572,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
       cozyContent = md2cozy.md2cozy(mdContent);
       return this.replaceContent(cozyContent);
-    };
-
-    /* ------------------------------------------------------------------------
-    # Change the path of the css applied to the editor iframe
-    */
-
-
-    CNeditor.prototype.replaceCSS = function(path) {
-      var document, linkElm;
-
-      document = this.document;
-      linkElm = document.querySelector('#editorCSS');
-      linkElm.setAttribute('href', path);
-      return document.head.appendChild(linkElm);
     };
 
     /** -----------------------------------------------------------------------
@@ -44062,11 +43737,14 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype._keyDownCbTry = function(e) {
       var error;
 
+      if (!this.isEnabled) {
+        return;
+      }
       try {
         return this._keyDownCb(e);
       } catch (_error) {
         error = _error;
-        alert('A bug occured, we prefer to undo your last action not ' + 'to take any risk.\n\nMessage :\n' + error);
+        alert('A bug occured, we prefer to undo your last action to ' + 'be safe.\n\nMessage :\n' + error);
         console.log(error.stack);
         e.preventDefault();
         return this.unDo();
@@ -44082,8 +43760,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
     CNeditor.prototype.registerKeyDownCbForTest = function() {
       this.linesDiv.removeEventListener('keydown', this._keyDownCbTry, true);
-      this._keyDownCbTry = this._keyDownCb;
-      return this.linesDiv.addEventListener('keydown', this._keyDownCbTry, true);
+      return this.linesDiv.addEventListener('keydown', this._keyDownCb, true);
     };
 
     /**------------------------------------------------------------------------
@@ -44115,7 +43792,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype._keyDownCb = function(e) {
-      var cont, lastShortcut, offset, rg, sel, shortcut, winAltGr;
+      var lastShortcut, rg, sel, shortcut, winAltGr;
 
       if (!this.isEnabled) {
         return true;
@@ -44141,7 +43818,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         }
       }
       if (e.keyCode === 16) {
-        rg = this.document.getSelection().getRangeAt(0);
+        rg = this.getEditorSelection().getRangeAt(0);
         if (!selection.getSegment(rg.startContainer, 0).dataset.type) {
           this.Tags.setTagUnEditable();
         }
@@ -44168,9 +43845,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           }
           if (!(e.ctrlKey || e.altKey)) {
             if (this.newPosition) {
-              this._addHistory();
+              this._history.addStep();
             } else if (lastShortcut === '-space' && shortcut !== '-space') {
-              this._addHistory();
+              this._history.addStep();
             }
             if (this.newPosition) {
               sel = this.updateCurrentSel();
@@ -44187,11 +43864,11 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       switch (shortcut) {
         case '-return':
           if (lastShortcut !== shortcut) {
-            this._addHistory();
+            this._history.addStep();
           }
           this.updateCurrentSelIsStartIsEnd();
           if (this.currentSel.isStartInTask && lastShortcut === shortcut) {
-            this._addHistory();
+            this._history.addStep();
           }
           this._return();
           this.newPosition = false;
@@ -44199,7 +43876,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case '-backspace':
           if (lastShortcut !== shortcut) {
-            this._addHistory();
+            this._history.addStep();
           }
           this.updateCurrentSelIsStartIsEnd();
           this._backspace();
@@ -44207,18 +43884,18 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case '-tab':
-          this._addHistory();
+          this._history.addStep();
           this.tab();
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case 'Shift-tab':
-          this._addHistory();
+          this._history.addStep();
           this.shiftTab();
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case '-suppr':
           if (lastShortcut !== shortcut) {
-            this._addHistory();
+            this._history.addStep();
           }
           this.updateCurrentSelIsStartIsEnd();
           this._suppr(e);
@@ -44227,38 +43904,33 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case 'CtrlShift-down':
           if (lastShortcut !== shortcut) {
-            this._addHistory();
+            this._history.addStep();
           }
           return e.preventDefault();
         case 'CtrlShift-up':
           if (lastShortcut !== shortcut) {
-            this._addHistory();
+            this._history.addStep();
           }
           return e.preventDefault();
         case 'Ctrl-A':
           selection.selectAll(this);
           return e.preventDefault();
         case 'Alt-L':
-          this._addHistory();
+          this._history.addStep();
           this.markerList();
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case 'Alt-A':
-          this._addHistory();
+          this._history.addStep();
           this.toggleType();
           e.preventDefault();
           return this.editorTarget$.trigger(jQuery.Event('onChange'));
         case 'Ctrl-V':
-          this._addHistory();
+          this._history.addStep();
           this.editorTarget$.trigger(jQuery.Event('onChange'));
-          if (this._hotString.isPreparing) {
-            cont = this._hotString._hsSegment.childNodes[0];
-            offset = cont.length;
-            this._setCaret(cont, offset);
-          }
           return true;
         case 'Ctrl-B':
-          this._addHistory();
+          this._history.addStep();
           this.strong();
           return e.preventDefault();
         case 'Ctrl-K':
@@ -44285,6 +43957,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     };
 
     CNeditor.prototype._keypressCb = function(e) {
+      if (!this.isEnabled) {
+        return true;
+      }
       return this._hotString.keypressCb(e);
     };
 
@@ -44315,10 +43990,13 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype._keyupCb = function(e) {
       var bp, endSeg, line, newCont, rg, startSeg, _ref;
 
+      if (!this.isEnabled) {
+        return true;
+      }
       if (this.isChromeOrSafari) {
         this._chromeCorrection();
       }
-      rg = this.document.getSelection().getRangeAt(0);
+      rg = this.getEditorSelection().getRangeAt(0);
       startSeg = selection.getSegment(rg.startContainer);
       endSeg = selection.getSegment(rg.endContainer);
       if (startSeg.dataset) {
@@ -44609,7 +44287,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype.hasNoSelection = function(expectWide) {
       var cont, rg, sel;
 
-      sel = this.document.getSelection();
+      sel = this.getEditorSelection();
       if (sel.rangeCount > 0) {
         rg = sel.getRangeAt(0);
         if (expectWide && rg.collapsed) {
@@ -44653,10 +44331,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
         return true;
       }
-      this._addHistory();
+      this._history.addStep();
       rg = this._applyMetaDataOnSelection('CNE_strong');
       if (!rg) {
-        return this._removeLastHistoryStep();
+        return this._history.removeLastStep();
       } else {
         return this.editorTarget$.trigger(jQuery.Event('onChange'));
       }
@@ -44668,10 +44346,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
         return true;
       }
-      this._addHistory();
+      this._history.addStep();
       rg = this._applyMetaDataOnSelection('CNE_underline');
       if (!rg) {
-        return this._removeLastHistoryStep();
+        return this._history.removeLastStep();
       } else {
         return this.editorTarget$.trigger(jQuery.Event('onChange'));
       }
@@ -44691,283 +44369,25 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (range.collapsed) {
         segments = this._getLinkSegments();
         if (segments) {
-          this._showUrlPopover(segments, false);
+          this.urlPopover.show(segments, false);
         }
       } else {
         segments = this._getLinkSegments();
         if (segments) {
-          this._showUrlPopover(segments, false);
+          this.urlPopover.show(segments, false);
         } else {
-          this._addHistory();
-          this.isUrlPopoverOn = true;
+          this._history.addStep();
+          this.urlPopover.isOn = true;
           rg = this._applyMetaDataOnSelection('A', 'http://');
           if (rg) {
             segments = this._getLinkSegments(rg);
-            this._showUrlPopover(segments, true);
+            this.urlPopover.show(segments, true);
           } else {
-            this.isUrlPopoverOn = true;
+            this.urlPopover.isOn = true;
           }
         }
       }
       return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * initialise the popover during the editor initialization.
-    */
-
-
-    CNeditor.prototype._initUrlPopover = function() {
-      var btnCancel, btnDelete, btnOK, pop, textInput, urlInput, _ref, _ref1,
-        _this = this;
-
-      pop = document.createElement('div');
-      pop.id = 'CNE_urlPopover';
-      pop.className = 'CNE_urlpop';
-      pop.setAttribute.contentEditable = false;
-      pop.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">\n        (Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
-      pop.titleElt = pop.firstChild;
-      pop.link = pop.getElementsByTagName('A')[0];
-      _ref = pop.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
-      btnOK.addEventListener('click', this._validateUrlPopover);
-      btnCancel.addEventListener('click', this._cancelUrlPopoverCB);
-      btnDelete.addEventListener('click', function() {
-        pop.urlInput.value = '';
-        return _this._validateUrlPopover();
-      });
-      _ref1 = pop.querySelectorAll('input'), urlInput = _ref1[0], textInput = _ref1[1];
-      pop.urlInput = urlInput;
-      pop.textInput = textInput;
-      pop.addEventListener('keypress', function(e) {
-        if (e.keyCode === 13) {
-          _this._validateUrlPopover();
-          e.stopPropagation();
-        } else if (e.keyCode === 27) {
-          _this._cancelUrlPopover(false);
-        }
-        return false;
-      });
-      this.urlPopover = pop;
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Show, positionate and initialise the popover for link edition.
-     * @param  {array} segments  An array with the segments of
-     *                           the link [<a>,...<a>]. Must be created even if
-     *                           it is a creation in order to put a background
-     *                           on the segment where the link will be.
-     * @param  {boolean} isLinkCreation True is it is a creation. In this case,
-     *                                  if the process is canceled, the initial
-     *                                  state without link will be restored.
-    */
-
-
-    CNeditor.prototype._showUrlPopover = function(segments, isLinkCreation) {
-      var href, pop, seg, txt, _i, _j, _len, _len1;
-
-      pop = this.urlPopover;
-      this.disable();
-      this.isUrlPopoverOn = true;
-      pop.isLinkCreation = isLinkCreation;
-      pop.initialSelRg = this.currentSel.theoricalRange.cloneRange();
-      pop.segments = segments;
-      seg = segments[0];
-      pop.style.left = seg.offsetLeft + 'px';
-      pop.style.top = seg.offsetTop + 20 + 'px';
-      href = seg.href;
-      if (href === '' || href === 'http:///') {
-        href = 'http://';
-      }
-      pop.urlInput.value = href;
-      txt = '';
-      for (_i = 0, _len = segments.length; _i < _len; _i++) {
-        seg = segments[_i];
-        txt += seg.textContent;
-      }
-      pop.textInput.value = txt;
-      pop.initialTxt = txt;
-      if (isLinkCreation) {
-        pop.titleElt.textContent = 'Create Link';
-        pop.link.style.display = 'none';
-      } else {
-        pop.titleElt.textContent = 'Edit Link';
-        pop.link.style.display = 'inline-block';
-        pop.link.href = href;
-      }
-      seg.parentElement.parentElement.appendChild(pop);
-      this.editorBody.addEventListener('mouseup', this._detectClickOutUrlPopover);
-      pop.urlInput.select();
-      pop.urlInput.focus();
-      for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
-        seg = segments[_j];
-        seg.classList.add('CNE_url_in_edition');
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * The callback for a click outside the popover
-    */
-
-
-    CNeditor.prototype._detectClickOutUrlPopover = function(e) {
-      var isOut;
-
-      isOut = e.target !== this.urlPopover && $(e.target).parents('#CNE_urlPopover').length === 0;
-      if (isOut) {
-        return this._cancelUrlPopover(true);
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Close the popover and revert modifications if isLinkCreation == true
-     * @param  {boolean} doNotRestoreOginalSel If true, lets the caret at its
-     *                                         position (used when you click
-     *                                         outside url popover in order not
-     *                                         to loose the new selection)
-    */
-
-
-    CNeditor.prototype._cancelUrlPopover = function(doNotRestoreOginalSel) {
-      var bp1, bp2, bps, lineDiv, pop, s0, s1, seg, segments, sel, _i, _len;
-
-      pop = this.urlPopover;
-      segments = pop.segments;
-      this.editorBody.removeEventListener('mouseup', this._detectClickOutUrlPopover);
-      pop.parentElement.removeChild(pop);
-      this.isUrlPopoverOn = false;
-      for (_i = 0, _len = segments.length; _i < _len; _i++) {
-        seg = segments[_i];
-        seg.classList.remove('CNE_url_in_edition');
-      }
-      if (pop.isLinkCreation) {
-        s0 = segments[0];
-        s1 = segments[segments.length - 1];
-        bp1 = {
-          cont: s0,
-          offset: 0
-        };
-        bp2 = {
-          cont: s1,
-          offset: s1.childNodes.length
-        };
-        bps = [bp1, bp2];
-        selection.normalizeBPs(bps);
-        lineDiv = selection._getLineDiv(s0);
-        this._applyAhrefToSegments(s0, s1, bps, false, '');
-        this._fusionSimilarSegments(lineDiv, bps);
-        if (!doNotRestoreOginalSel) {
-          this.setSelectionBp(bp1, bp2);
-        }
-      } else if (!doNotRestoreOginalSel) {
-        sel = this.document.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(pop.initialSelRg);
-      }
-      this.setFocus();
-      this.enable();
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Same as _cancelUrlPopover but used in events call backs
-    */
-
-
-    CNeditor.prototype._cancelUrlPopoverCB = function(e) {
-      e.stopPropagation();
-      return this._cancelUrlPopover(false);
-    };
-
-    /** -----------------------------------------------------------------------
-     * Close the popover and applies modifications to the link.
-    */
-
-
-    CNeditor.prototype._validateUrlPopover = function(event) {
-      var bp, bp1, bp2, bps, i, l, lastSeg, lineDiv, parent, pop, rg, seg, segments, sel, _i, _j, _k, _len, _len1, _ref;
-
-      if (event) {
-        event.stopPropagation();
-      }
-      pop = this.urlPopover;
-      segments = pop.segments;
-      if (pop.urlInput.value === '' && pop.isLinkCreation) {
-        this._cancelUrlPopover(false);
-        return true;
-      }
-      this.editorBody.removeEventListener('mouseup', this._detectClickOutUrlPopover);
-      pop.parentElement.removeChild(pop);
-      this.isUrlPopoverOn = false;
-      for (_i = 0, _len = segments.length; _i < _len; _i++) {
-        seg = segments[_i];
-        seg.classList.remove('CNE_url_in_edition');
-      }
-      if (!pop.isLinkCreation) {
-        sel = this.document.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(pop.initialSelRg);
-        this._addHistory();
-      }
-      lineDiv = segments[0].parentElement;
-      if (pop.urlInput.value === '') {
-        l = segments.length;
-        bp1 = {
-          cont: segments[0].firstChild,
-          offset: 0
-        };
-        bp2 = {
-          cont: segments[l - 1].firstChild,
-          offset: segments[l - 1].firstChild.length
-        };
-        bps = [bp1, bp2];
-        this._applyAhrefToSegments(segments[0], segments[l - 1], bps, false, '');
-        this._fusionSimilarSegments(lineDiv, bps);
-        rg = document.createRange();
-        bp1 = bps[0];
-        bp2 = bps[1];
-        rg.setStart(bp1.cont, bp1.offset);
-        rg.setEnd(bp2.cont, bp2.offset);
-        sel = this.document.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(rg);
-        this.setFocus();
-        this.enable();
-        this.editorTarget$.trigger(jQuery.Event('onChange'));
-        if (lineDiv.dataset.type === 'task') {
-          this._stackTaskChange(lineDiv.task, 'modified');
-        }
-        return true;
-      } else if (pop.initialTxt === pop.textInput.value) {
-        for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
-          seg = segments[_j];
-          seg.href = pop.urlInput.value;
-        }
-        lastSeg = seg;
-      } else {
-        seg = segments[0];
-        seg.href = pop.urlInput.value;
-        seg.textContent = pop.textInput.value;
-        parent = seg.parentNode;
-        for (i = _k = 1, _ref = segments.length - 1; _k <= _ref; i = _k += 1) {
-          seg = segments[i];
-          parent.removeChild(seg);
-        }
-        lastSeg = segments[0];
-      }
-      i = selection.getSegmentIndex(lastSeg);
-      i = i[1];
-      bp = selection.normalizeBP(lineDiv, i + 1);
-      this._fusionSimilarSegments(lineDiv, [bp]);
-      bp = this.insertSpaceAfterUrl(selection.getNestedSegment(bp.cont));
-      this._setCaret(bp.cont, bp.offset);
-      this.setFocus();
-      this.enable();
-      this.editorTarget$.trigger(jQuery.Event('onChange'));
-      if (lineDiv.dataset.type === 'task') {
-        return this._stackTaskChange(lineDiv.task, 'modified');
-      }
     };
 
     /** -----------------------------------------------------------------------
@@ -45314,7 +44734,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       }
       this._fusionSimilarSegments(lineDiv, breakPoints);
       if (lineDiv.dataset.type === 'task') {
-        if (!this.isUrlPopoverOn) {
+        if (!this.urlPopover.isOn) {
           this._stackTaskChange(lineDiv.task, 'modified');
         }
       }
@@ -45614,10 +45034,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
               result = window.confirm('Do you want to remove\
                             the task from todos ?');
               if (result) {
-                this._addHistory();
+                this._history.addStep();
                 this._stackTaskChange(sel.startLineDiv.nextSibling.task, 'deleted');
               } else {
-                this._addHistory();
+                this._history.addStep();
                 this._stackTaskChange(sel.startLineDiv.nextSibling.task, 'removed');
               }
               this._turneTaskIntoLine(sel.startLineDiv.nextSibling);
@@ -45689,10 +45109,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
               result = window.confirm('Do you want to remove the\
                                                  task from todos?');
               if (result) {
-                this._addHistory();
+                this._history.addStep();
                 this._stackTaskChange(sel.startLineDiv.task, 'deleted');
               } else {
-                this._addHistory();
+                this._history.addStep();
                 this._stackTaskChange(sel.startLineDiv.task, 'removed');
                 this._turneTaskIntoLine(sel.startLineDiv);
                 this._setCaret(sel.startLineDiv, 0);
@@ -45761,7 +45181,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
-      this._addHistory();
+      this._history.addStep();
       if (l != null) {
         startDivID = l.lineID;
         endLineID = startDivID;
@@ -45808,7 +45228,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
-      this._addHistory();
+      this._history.addStep();
       if (l != null) {
         startDivID = l.lineID;
         endLineID = startDivID;
@@ -45889,7 +45309,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
-      this._addHistory();
+      this._history.addStep();
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
@@ -46005,7 +45425,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
-      this._addHistory();
+      this._history.addStep();
       if (l != null) {
         startDiv = l.line$[0];
         endDiv = startDiv;
@@ -46098,7 +45518,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       if (!this.isEnabled || this.hasNoSelection()) {
         return true;
       }
-      this._addHistory();
+      this._history.addStep();
       if (range == null) {
         sel = this.getEditorSelection();
         range = sel.getRangeAt(0);
@@ -46282,7 +45702,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype._getSelectedLineDiv = function() {
       var cont;
 
-      cont = this.document.getSelection().getRangeAt(0).startContainer;
+      cont = this.getEditorSelection().getRangeAt(0).startContainer;
       return selection.getLineDiv(cont);
     };
 
@@ -46652,7 +46072,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       range = this.document.createRange();
       range.setStart(bp.cont, bp.offset);
       range.collapse(true);
-      sel = this.document.getSelection();
+      sel = this.getEditorSelection();
       sel.removeAllRanges();
       sel.addRange(range);
       return bp;
@@ -46684,7 +46104,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       range = this.document.createRange();
       range.selectNodeContents(node);
       selection.normalize(range);
-      sel = this.document.getSelection();
+      sel = this.getEditorSelection();
       sel.removeAllRanges();
       sel.addRange(range);
       return true;
@@ -46697,7 +46117,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       range.setStart(startContainer, startOffset);
       range.setEnd(endContainer, endOffset);
       selection.normalize(range);
-      sel = this.document.getSelection();
+      sel = this.getEditorSelection();
       sel.removeAllRanges();
       sel.addRange(range);
       return true;
@@ -46707,7 +46127,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       var sel;
 
       selection.normalize(range, preferNext);
-      sel = this.document.getSelection();
+      sel = this.getEditorSelection();
       sel.removeAllRanges();
       sel.addRange(range);
       return true;
@@ -46720,7 +46140,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       range.setStart(bp1.cont, bp1.offset);
       range.setEnd(bp2.cont, bp2.offset);
       selection.normalize(range);
-      sel = this.document.getSelection();
+      sel = this.getEditorSelection();
       sel.removeAllRanges();
       sel.addRange(range);
       return true;
@@ -46777,7 +46197,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     */
 
 
-    CNeditor.prototype._readHtml = function() {
+    CNeditor.prototype._readHtml = function(isFullReplaceContent) {
       var deltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, seg, txt, _i, _len, _ref;
 
       linesDiv$ = $(this.linesDiv).children();
@@ -46787,6 +46207,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       this._lines = {};
       linePrev = null;
       lineNext = null;
+      this.Tags.empty(isFullReplaceContent);
       for (_i = 0, _len = linesDiv$.length; _i < _len; _i++) {
         htmlLine = linesDiv$[_i];
         htmlLine$ = $(htmlLine);
@@ -46835,13 +46256,17 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           this._setTaskToLine(htmlLine);
         }
         seg = htmlLine.firstChild;
-        while (seg.nodeName === 'SPAN') {
+        while (seg && seg.nodeName !== 'BR') {
           if (seg.dataset.type) {
-            this.Tags._tagList.push(seg);
+            this.Tags.handle(seg);
           }
           seg = seg.nextSibling;
         }
+        if (!seg) {
+          htmlLine.appendChild(document.createElement('br'));
+        }
       }
+      this.Tags.refreshAll();
       return this._highestId = lineID;
     };
 
@@ -47064,169 +46489,29 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       }
     };
 
-    /*
-    #  HISTORY MANAGEMENT:
-    # 1. _addHistory (Save html code, selection markers, positions...)
-    # 2. undoPossible (Return true only if unDo can be called)
-    # 3. redoPossible (Return true only if reDo can be called)
-    # 4. unDo (Undo the previous action)
-    # 5. reDo ( Redo a undo-ed action)
-    #
-    # What is saved in the history:
-    #  - current html content
-    #  - current selection
-    #  - current scrollbar position
-    #  - the boolean newPosition
-    */
-
-
-    /** -----------------------------------------------------------------------
-     *  Task history management
-    
-        time ------------------+------+---------------+-----------+-------->
-        Tasks modified or      | T0c  | T0m T1c T2c   |  T1m T2m  |
-        created                |      |               |           |
-                               |      |               |           |
-        History steps          H1     H2              H3          H4(*)
-        history.modifiedTask        {T0c}       {T0m T1c T2c}   {T1m T2m}
-    
-        Ctrl-z                 H1     H2              H3(*)       H4
-        _tasksToBeSaved                              {T1m,T2m}
-    
-        Ctrl-z                 H1     H2(*)           H3          H4
-        _tasksToBeSaved              {T0m, T1d,T2d}
-    
-        Ctrl-z                 H1(*)  H2              H3          H4
-        _tasksToBeSaved        {T0d, T1d,T2d}
-    
-        Ctrl-y                 H1     H2(*)           H3          H4
-        _tasksToBeSaved              {T0m, T1d,T2d}
-    
-        Ctrl-y                 H1     H2              H3(*)       H4
-        _tasksToBeSaved                              {T1m,T2m}
-    
-        Ctrl-y                 H1     H2              H3          H4(*)
-        _tasksToBeSaved                                           {}
-    */
-
-
-    /** -----------------------------------------------------------------------
-     * Add html, selection markers and scrollbar positions to the history.
-     * No effect if the url popover is displayed
-    */
-
-
-    CNeditor.prototype._addHistory = function() {
-      var h, i, savedScroll, savedSel;
-
-      console.info('== _addHistory()');
-      if (this.isUrlPopoverOn || this._hotString.isPreparing) {
-        return;
-      }
-      h = this._history;
-      if (h.index < this.HISTORY_SIZE - 1) {
-        i = this.HISTORY_SIZE - 1 - h.index;
-        while (i--) {
-          h.historySelect.pop();
-          h.historyScroll.pop();
-          h.historyPos.pop();
-          h.history.pop();
-          h.modifiedTask.pop();
-          h.historySelect.unshift(void 0);
-          h.historyScroll.unshift(void 0);
-          h.historyPos.unshift(void 0);
-          h.history.unshift(void 0);
-          h.modifiedTask.unshift(void 0);
-        }
-      }
-      savedSel = this.saveEditorSelection();
-      h.historySelect.push(savedSel);
-      savedScroll = {
-        xcoord: this.linesDiv.scrollTop,
-        ycoord: this.linesDiv.scrollLeft
-      };
-      h.historyScroll.push(savedScroll);
-      h.historyPos.push(this.newPosition);
-      h.history.push(this.linesDiv.innerHTML);
-      h.modifiedTask.push(this._tasksModifSinceLastHistory);
-      this._tasksModifSinceLastHistory = {};
-      h.index = this.HISTORY_SIZE - 1;
-      h.historySelect.shift();
-      h.historyScroll.shift();
-      h.historyPos.shift();
-      h.history.shift();
-      return h.modifiedTask.shift();
-    };
-
-    CNeditor.prototype._removeLastHistoryStep = function() {
-      var h;
-
-      h = this._history;
-      h.historySelect.pop();
-      h.historyScroll.pop();
-      h.historyPos.pop();
-      h.history.pop();
-      h.modifiedTask.pop();
-      h.historySelect.unshift(void 0);
-      h.historyScroll.unshift(void 0);
-      h.historyPos.unshift(void 0);
-      h.history.unshift(void 0);
-      h.modifiedTask.unshift(void 0);
-      return h.index = this.HISTORY_SIZE - 1;
-    };
-
-    /* ------------------------------------------------------------------------
-    #  undoPossible
-    # Return true only if unDo can be called
-    */
-
-
-    CNeditor.prototype.undoPossible = function() {
-      var i;
-
-      i = this._history.index;
-      return i >= 0 && this._history.historyPos[i] !== void 0;
-    };
-
-    /* ------------------------------------------------------------------------
-    #  redoPossible
-    # Return true only if reDo can be called
-    */
-
-
-    CNeditor.prototype.redoPossible = function() {
-      return this._history.index < this._history.history.length - 2;
-    };
-
     /**------------------------------------------------------------------------
      * Undo the previous action
     */
 
 
     CNeditor.prototype.unDo = function() {
-      if (this.undoPossible() && this.isEnabled) {
-        if (this._hotString.isPreparing) {
-          this._hotString.reset(false);
-        }
-        this._forceUndo();
-        return this.newPosition = true;
-      }
-    };
-
-    CNeditor.prototype._forceUndo = function() {
-      var h, id, modif, savedScroll, savedSel, stepIndex, t, _i, _len, _ref, _ref1;
+      var h, id, modif, newPosition, savedScroll, savedSel, stepIndex, t, _i, _len, _ref, _ref1;
 
       console.info("\n== UNDO :");
       h = this._history;
+      if (!(h.undoPossible() && this.isEnabled)) {
+        return false;
+      }
+      if (this._hotString.isPreparing) {
+        this._hotString.reset();
+      }
       if (h.index === h.history.length - 1) {
-        this._addHistory();
+        this._history.addStep();
         h.index -= 1;
       }
       stepIndex = h.index;
       this.newPosition = h.historyPos[stepIndex];
-      if (this.isUrlPopoverOn) {
-        this._cancelUrlPopover(false);
-      }
+      this.urlPopover.cancel();
       this.linesDiv.innerHTML = h.history[stepIndex];
       savedSel = h.historySelect[stepIndex];
       if (savedSel) {
@@ -47259,8 +46544,10 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           this._updateTaskLine(t);
         }
       }
-      this.__printTasksModifStacks();
-      return h.index -= 1;
+      logging.printTasksModifStacks('unDo', this._tasksToBeSaved);
+      h.index -= 1;
+      logging.printHistory('unDo', this._history);
+      return newPosition = true;
     };
 
     /** -----------------------------------------------------------------------
@@ -47273,38 +46560,37 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
       console.info("\n== REDO :");
       h = this._history;
-      if (this.redoPossible() && this.isEnabled) {
-        index = (h.index += 1);
-        i = index + 1;
-        this.newPosition = h.historyPos[i];
-        if (this.isUrlPopoverOn) {
-          this._cancelUrlPopover(false);
-        }
-        this.linesDiv.innerHTML = h.history[i];
-        savedSel = h.historySelect[i];
-        if (savedSel) {
-          this.deSerializeSelection(savedSel);
-        }
-        xcoord = h.historyScroll[i].xcoord;
-        ycoord = h.historyScroll[i].ycoord;
-        this.linesDiv.scrollTop = xcoord;
-        this.linesDiv.scrollLeft = ycoord;
-        this._readHtml();
-        _ref = h.modifiedTask[index + 1];
-        for (id in _ref) {
-          modif = _ref[id];
-          this._stackTaskForSave(id, modif.t, modif.a);
-        }
-        _ref1 = this._taskList;
-        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-          t = _ref1[_i];
-          if (t.isFromServer) {
-            this._updateTaskLine(t);
-          }
-        }
-        this.newPosition = true;
-        return this.__printTasksModifStacks();
+      if (!(h.redoPossible() && this.isEnabled)) {
+        return false;
       }
+      index = (h.index += 1);
+      i = index + 1;
+      this.newPosition = h.historyPos[i];
+      this.urlPopover.cancel();
+      this.linesDiv.innerHTML = h.history[i];
+      savedSel = h.historySelect[i];
+      if (savedSel) {
+        this.deSerializeSelection(savedSel);
+      }
+      xcoord = h.historyScroll[i].xcoord;
+      ycoord = h.historyScroll[i].ycoord;
+      this.linesDiv.scrollTop = xcoord;
+      this.linesDiv.scrollLeft = ycoord;
+      this._readHtml();
+      _ref = h.modifiedTask[index + 1];
+      for (id in _ref) {
+        modif = _ref[id];
+        this._stackTaskForSave(id, modif.t, modif.a);
+      }
+      _ref1 = this._taskList;
+      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+        t = _ref1[_i];
+        if (t.isFromServer) {
+          this._updateTaskLine(t);
+        }
+      }
+      this.newPosition = true;
+      return logging.printTasksModifStacks('redo', this._tasksToBeSaved);
     };
 
     CNeditor.prototype._replaceInTaskHistory = function(task) {
@@ -47320,73 +46606,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           modif[task.internalId].t = task;
         }
       }
-    };
-
-    /** -----------------------------------------------------------------------
-     * A utility fuction for debugging
-     * @param  {string} txt A text to print in front of the log
-    */
-
-
-    CNeditor.prototype.__printHistory = function(txt) {
-      var arrow, content, i, step, _i, _len, _ref;
-
-      if (!txt) {
-        txt = '';
-      }
-      console.info(txt + ' _history.index : ' + this._history.index);
-      _ref = this._history.history;
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        step = _ref[i];
-        if (this._history.index === i) {
-          arrow = ' <---';
-        } else {
-          arrow = ' ';
-          content = $(step).text();
-          if (content === '') {
-            content = '_';
-          }
-        }
-        console.info(i, content, this._history.historySelect[i], arrow);
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * A utility fuction for debugging
-     * @param  {string} txt A text to print in front of the log
-    */
-
-
-    CNeditor.prototype.__printTasksModifStacks = function(txt) {
-      var id, modif, res, _ref;
-
-      if (!txt) {
-        txt = '';
-      }
-      res = '  _tasksToBeSaved : ';
-      _ref = this._tasksToBeSaved;
-      for (id in _ref) {
-        modif = _ref[id];
-        res += id + ':';
-        if (modif.created) {
-          res += 'created-';
-        }
-        if (modif.modified) {
-          res += 'modified-';
-        }
-        if (modif.deleted) {
-          res += 'deleted-';
-        }
-        if (modif.removed) {
-          res += 'removed-';
-        }
-        res = res.slice(0, -1);
-        res += ', ';
-      }
-      res = res.slice(0, -2);
-      console.info(res);
-      return true;
     };
 
     /** -----------------------------------------------------------------------
@@ -47491,17 +46710,17 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
     CNeditor.prototype.serializeSel = function() {
       var s;
 
-      s = this.document.getSelection();
-      if (s.rangeCount === 0) {
-        return false;
+      s = this.getEditorSelection();
+      if (s.rangeCount) {
+        return this.serializeRange(s.getRangeAt(0));
       }
-      return this.serializeRange(s.getRangeAt(0));
+      return false;
     };
 
     CNeditor.prototype.deSerializeSelection = function(serial) {
       var sel;
 
-      sel = this.document.getSelection();
+      sel = this.getEditorSelection();
       sel.removeAllRanges();
       return sel.addRange(this.deSerializeRange(serial));
     };
@@ -47937,33 +47156,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       return bp;
     };
 
-    /**
-     * returns a break point, collapsed after a space caracter immediately
-     * following a given segment. A segment will we inserted if required.
-     * @param  {[type]} seg [description]
-     * @return {Object}     {cont,offset} : the break point
-    */
-
-
-    CNeditor.prototype.insertSpaceAfterUrl = function(seg) {
-      var bp, index, nextSeg, span, txtNode;
-
-      nextSeg = seg.nextSibling;
-      if (nextSeg.nodeName === 'BR') {
-        span = this._insertSegmentAfterSeg(seg);
-        bp = {
-          cont: span.firstChild,
-          offset: 1
-        };
-      } else {
-        index = selection.getSegmentIndex(seg)[1] + 1;
-        bp = selection.normalizeBP(seg.parentElement, index, true);
-        txtNode = bp.cont;
-        bp.offset = 0;
-      }
-      return bp;
-    };
-
     /** -----------------------------------------------------------------------
      * Walks thoug an html tree in order to convert it in a strutured content
      * that fit to a note structure.
@@ -48042,14 +47234,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             }
             break;
           case 'LI':
-            if (context.isCurrentLineBeingPopulated) {
-              this._appendCurrentLineFrag(context, absDepth, absDepth);
-            }
-            this.__domWalk(child, context);
-            if (context.isCurrentLineBeingPopulated) {
-              this._appendCurrentLineFrag(context, absDepth, absDepth);
-            }
-            break;
           case 'TR':
             if (context.isCurrentLineBeingPopulated) {
               this._appendCurrentLineFrag(context, absDepth, absDepth);
@@ -48235,11 +47419,8 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           break;
         case 'contact':
           hs._forceUserHotString(autoItem.text, []);
-          hs._hsSegment.classList.add('CNE_contact');
-          hs._hsSegment.contentEditable = false;
-          hs._hsSegment.dataset.type = 'contact';
           hs._hsSegment.dataset.id = autoItem.model.id;
-          hs._hsSegment.classList.remove('CNE_hot_string');
+          this.Tags.create('contact', hs._hsSegment);
           bp = this.insertSpaceAfterSeg(hs._hsSegment);
           this._setCaret(bp.cont, 1);
           hs._auto.hide();
@@ -48251,7 +47432,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
           hs._forceUserHotString(autoItem.text, []);
           hs._hsSegment.classList.add('CNE_htag');
           hs._hsSegment.dataset.type = 'htag';
-          this.Tags._tagList.push(hs._hsSegment);
+          this.Tags.handle(hs._hsSegment, true);
           hs._hsSegment.classList.remove('CNE_hot_string');
           bp = this.insertSpaceAfterSeg(hs._hsSegment);
           this._setCaret(bp.cont, 1);
@@ -48262,12 +47443,8 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         case 'reminder':
           txt = typeof autoItem.value === 'string' ? autoItem.value : autoItem.value.format();
           hs._forceUserHotString(txt, []);
-          hs._hsSegment.classList.add('CNE_reminder');
-          hs._hsSegment.classList.remove('CNE_hot_string');
-          hs._hsSegment.dataset.type = 'reminder';
-          this.Tags._tagList.push(hs._hsSegment);
           hs._hsSegment.dataset.value = txt;
-          this._createReminderForSegment(hs._hsSegment);
+          this.Tags.create('reminder', hs._hsSegment);
           bp = this.insertSpaceAfterSeg(hs._hsSegment);
           this._setCaret(bp.cont, 1);
           hs._auto.hide();
@@ -48281,136 +47458,6 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       return false;
     };
 
-    CNeditor.prototype._hideContactPopover = function() {
-      var oldcontactseg;
-
-      oldcontactseg = null;
-      if (this.contactpopover) {
-        oldcontactseg = this.contactpopover.parentNode;
-        oldcontactseg.removeChild(this.contactpopover);
-        this.contactpopover = null;
-      }
-      return oldcontactseg;
-    };
-
-    CNeditor.prototype._showContactPopover = function(contactsegment) {
-      var dp, html, model, name, value, _i, _len, _ref;
-
-      model = this.contactsCollection.get(contactsegment.dataset.id);
-      this.contactpopover = document.createElement('DIV');
-      this.contactpopover.id = 'contactpopover';
-      html = '<dl class="dl-horizontal">';
-      _ref = model.get('datapoints');
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        dp = _ref[_i];
-        value = dp.value.replace("\n", '<br />');
-        if (dp.name === 'other' || dp.name === 'about') {
-          name = dp.type;
-        } else {
-          name = dp.type + ' ' + dp.name.replace('smail', 'postal');
-        }
-        html += "<dt>" + name + "</dt><dd>" + value + "</dd>";
-      }
-      html += '</dl>';
-      this.contactpopover.innerHTML = html;
-      return contactsegment.appendChild(this.contactpopover);
-    };
-
-    CNeditor.prototype._removeContactSegment = function(model) {
-      var contactsegment, selector, _i, _len, _ref, _results;
-
-      selector = "span[data-type='contact'][data-id='" + model.id + "']";
-      _ref = this.linesDiv.querySelectorAll(selector);
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        contactsegment = _ref[_i];
-        _results.push(this.Tags.remove(contactsegment));
-      }
-      return _results;
-    };
-
-    CNeditor.prototype._updateContactSegment = function(model) {
-      var contactsegment, selector, _i, _len, _ref, _results;
-
-      selector = "span[data-type='contact'][data-id='" + model.id + "']";
-      _ref = this.linesDiv.querySelectorAll(selector);
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        contactsegment = _ref[_i];
-        _results.push(contactsegment.textContent = model.get('name'));
-      }
-      return _results;
-    };
-
-    CNeditor.prototype._updateHotStringContacts = function() {
-      var contacts;
-
-      contacts = this.contactsCollection.map(function(contact) {
-        return {
-          text: contact.get('name'),
-          type: 'contact',
-          model: contact
-        };
-      });
-      return this._hotString._auto.setItems('contact', contacts);
-    };
-
-    CNeditor.prototype._removeReminderSegment = function(model) {
-      var remindersegment, selector;
-
-      selector = "span[data-type='reminder'][data-id='" + model.id + "']";
-      remindersegment = this.linesDiv.querySelectorAll(selector)[0];
-      return this.Tags.remove(remindersegment);
-    };
-
-    CNeditor.prototype._updateReminderSegment = function(model) {
-      var contactsegment, selector, value, _i, _len, _ref, _results;
-
-      selector = "span[data-type='reminder'][data-id='" + model.id + "']";
-      _ref = this.linesDiv.querySelectorAll(selector);
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        contactsegment = _ref[_i];
-        value = Date.create(model.get('trigg')).format();
-        _results.push(contactsegment.textContent = value);
-      }
-      return _results;
-    };
-
-    /* ------------------------------------------------------------------------
-    # EXTENSION  :  cleaned up HTML parsing
-    #
-    #  (TODO)
-    #
-    # We suppose the html treated here has already been sanitized so the DOM
-    #  structure is coherent and not twisted
-    #
-    # _parseHtml:
-    #  Parse an html string and return the matching html in the editor's format
-    # We try to restitute the very structure the initial fragment :
-    #   > indentation
-    #   > lists
-    #   > images, links, tables... and their specific attributes
-    #   > text
-    #   > textuals enhancements (bold, underlined, italic)
-    #   > titles
-    #   > line return
-    #
-    # Ideas to do that :
-    #  0- textContent is always kept
-    #  1- A, IMG keep their specific attributes
-    #  2- UL, OL become divs whose class is Tu/To. LI become Lu/Lo
-    #  3- H[1-6] become divs whose class is Th. Depth is determined depending on
-    #     where the element was pasted.
-    #  4- U, B have the effect of adding to each elt they contain a class (bold
-    #     and underlined class)
-    #  5- BR delimit the different DIV that will be added
-    #  6- relative indentation preserved with imbrication of paragraphs P
-    #  7- any other elt is turned into a simple SPAN with a textContent
-    #  8- IFRAME, FRAME, SCRIPT are ignored
-    */
-
-
     return CNeditor;
 
   })();
@@ -48418,17 +47465,373 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
   CNeditor = exports.CNeditor;
   
 });
+window.require.register("CNeditor/externalmodels", function(exports, require, module) {
+  var Alarm, Contact, Task, request, _ref, _ref1, _ref2,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  request = require('./request');
+
+  module.exports.taskCanBeUsed = false;
+
+  module.exports.contactCanBeUsed = false;
+
+  module.exports.alarmCanBeUsed = false;
+
+  /*
+  # Alarm model and collection
+  */
+
+
+  module.exports.Alarm = Alarm = (function(_super) {
+    __extends(Alarm, _super);
+
+    function Alarm() {
+      _ref = Alarm.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    Alarm.prototype.urlRoot = "/apps/agenda/alarms";
+
+    Alarm.dateFormat = "{Dow} {Mon} {dd} {yyyy} {HH}:{mm}:00";
+
+    Alarm.reminderCf = {};
+
+    Alarm.setDefaultCf = function(description, related) {
+      var _this = this;
+
+      console.log('setting Cf', description);
+      if (description) {
+        Alarm.reminderCf.description = description;
+      }
+      if (related) {
+        Alarm.reminderCf.related = related;
+      }
+      return module.exports.alarmCollection.each(function(model) {
+        return model.save(Alarm.reminderCf);
+      });
+    };
+
+    Alarm.prototype.defaults = function() {
+      return {
+        description: Alarm.reminderCf.description,
+        related: Alarm.reminderCf.related,
+        action: 'DISPLAY'
+      };
+    };
+
+    return Alarm;
+
+  })(Backbone.Model);
+
+  module.exports.alarmCollection = new Backbone.Collection([], {
+    model: Alarm
+  });
+
+  /*
+  # Contact model and collection
+  */
+
+
+  module.exports.Contact = Contact = (function(_super) {
+    __extends(Contact, _super);
+
+    function Contact() {
+      _ref1 = Contact.__super__.constructor.apply(this, arguments);
+      return _ref1;
+    }
+
+    Contact.prototype.urlRoot = '/apps/contacts/contacts';
+
+    return Contact;
+
+  })(Backbone.Model);
+
+  module.exports.contactCollection = new Backbone.Collection([], {
+    url: Contact.prototype.urlRoot,
+    model: Contact
+  });
+
+  /*
+  # Tasks model
+  # TODO : use a collection
+  */
+
+
+  module.exports.Task = Task = (function(_super) {
+    __extends(Task, _super);
+
+    function Task() {
+      _ref2 = Task.__super__.constructor.apply(this, arguments);
+      return _ref2;
+    }
+
+    Task.prototype.url = function() {
+      if (this.isNew()) {
+        return "/apps/todos/todolists/" + Task.todolistId + "/tasks";
+      } else {
+        return "/apps/todos/tasks/" + this.id;
+      }
+    };
+
+    Task.prototype.defaults = function() {
+      return {
+        done: false
+      };
+    };
+
+    Task.prototype.parse = function(data) {
+      if (data.rows) {
+        return data.rows[0];
+      } else {
+        return data;
+      }
+    };
+
+    return Task;
+
+  })(Backbone.Model);
+
+  /*
+  # Initializer : ask home to see what is installed
+  # -> fetch contacts
+  # -> get or create Inbox todolist
+  */
+
+
+  module.exports.initialize = function(callback) {
+    var isAgenda;
+
+    if (callback == null) {
+      callback = function() {};
+    }
+    isAgenda = function(app) {
+      return app.name === 'agenda';
+    };
+    return request.get('/api/applications', function(err, apps) {
+      var app, _i, _len, _ref3;
+
+      if (err) {
+        return callback(err);
+      }
+      _ref3 = (apps != null ? apps.rows : void 0) || [];
+      for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+        app = _ref3[_i];
+        if (app.state !== 'installed') {
+          continue;
+        }
+        switch (app.slug) {
+          case 'contacts':
+            module.exports.contactCanBeUsed = true;
+            module.exports.contactCollection.fetch();
+            break;
+          case 'agenda':
+            module.exports.alarmCanBeUsed = true;
+            break;
+          case 'todos':
+            module.exports.taskCanBeUsed = true;
+        }
+      }
+      if (!module.exports.taskCanBeUsed) {
+        return callback(null);
+      }
+      return request.get('/apps/todos/todolists', function(err, lists) {
+        var inbox, todolist;
+
+        if (err) {
+          module.exports.taskCanBeUsed = false;
+          return callback(err);
+        }
+        if (inbox = _.findWhere(lists.rows, {
+          title: 'Inbox'
+        })) {
+          Task.todolistId = inbox.id;
+          return callback(null);
+        }
+        todolist = {
+          title: 'Inbox',
+          parent_id: 'tree-node-all'
+        };
+        return request.post('/apps/todos/todolists', todolist, function(err, inbox) {
+          if (err) {
+            module.exports.taskCanBeUsed = false;
+            return callback(err);
+          }
+          Task.todolistId = inbox.id;
+          return callback(null);
+        });
+      });
+    });
+  };
+  
+});
+window.require.register("CNeditor/history", function(exports, require, module) {
+  var History, logging;
+
+  logging = require('./logging');
+
+  module.exports = History = (function() {
+    var HISTORY_SIZE;
+
+    HISTORY_SIZE = 100;
+
+    function History(editor) {
+      this.editor = editor;
+      this.index = HISTORY_SIZE - 1;
+      this.history = new Array(HISTORY_SIZE);
+      this.historySelect = new Array(HISTORY_SIZE);
+      this.historyScroll = new Array(HISTORY_SIZE);
+      this.historyPos = new Array(HISTORY_SIZE);
+      this.modifiedTask = new Array(HISTORY_SIZE);
+    }
+
+    /*
+    #  HISTORY MANAGEMENT:
+    # 1. _addHistory (Save html code, selection markers, positions...)
+    # 2. undoPossible (Return true only if unDo can be called)
+    # 3. redoPossible (Return true only if reDo can be called)
+    # 4. unDo (Undo the previous action)
+    # 5. reDo ( Redo a undo-ed action)
+    #
+    # What is saved in the history:
+    #  - current html content
+    #  - current selection
+    #  - current scrollbar position
+    #  - the boolean newPosition
+    */
+
+
+    /** -----------------------------------------------------------------------
+     *  Task history management
+    
+        time ------------------+------+---------------+-----------+-------->
+        Tasks modified or      | T0c  | T0m T1c T2c   |  T1m T2m  |
+        created                |      |               |           |
+                               |      |               |           |
+        History steps          H1     H2              H3          H4(*)
+        history.modifiedTask        {T0c}       {T0m T1c T2c}   {T1m T2m}
+    
+        Ctrl-z                 H1     H2              H3(*)       H4
+        _tasksToBeSaved                              {T1m,T2m}
+    
+        Ctrl-z                 H1     H2(*)           H3          H4
+        _tasksToBeSaved              {T0m, T1d,T2d}
+    
+        Ctrl-z                 H1(*)  H2              H3          H4
+        _tasksToBeSaved        {T0d, T1d,T2d}
+    
+        Ctrl-y                 H1     H2(*)           H3          H4
+        _tasksToBeSaved              {T0m, T1d,T2d}
+    
+        Ctrl-y                 H1     H2              H3(*)       H4
+        _tasksToBeSaved                              {T1m,T2m}
+    
+        Ctrl-y                 H1     H2              H3          H4(*)
+        _tasksToBeSaved                                           {}
+    */
+
+
+    /** -----------------------------------------------------------------------
+     * Add html, selection markers and scrollbar positions to the history.
+     * No effect if the url popover is displayed
+    */
+
+
+    History.prototype.addStep = function() {
+      var i;
+
+      console.info('== _addHistory()');
+      if (this.editor.urlPopover.isOn || this.editor._hotString.isPreparing) {
+        return;
+      }
+      if (this.index < HISTORY_SIZE - 1) {
+        i = HISTORY_SIZE - 1 - this.index;
+        while (i--) {
+          this.historySelect.pop();
+          this.historyScroll.pop();
+          this.historyPos.pop();
+          this.history.pop();
+          this.modifiedTask.pop();
+          this.historySelect.unshift(void 0);
+          this.historyScroll.unshift(void 0);
+          this.historyPos.unshift(void 0);
+          this.history.unshift(void 0);
+          this.modifiedTask.unshift(void 0);
+        }
+      }
+      this.historySelect.push(this.editor.saveEditorSelection());
+      this.historyScroll.push({
+        xcoord: this.editor.linesDiv.scrollTop,
+        ycoord: this.editor.linesDiv.scrollLeft
+      });
+      this.historyPos.push(this.editor.newPosition);
+      this.history.push(this.editor.linesDiv.innerHTML);
+      this.modifiedTask.push(this.editor._tasksModifSinceLastHistory);
+      this.editor._tasksModifSinceLastHistory = {};
+      this.index = HISTORY_SIZE - 1;
+      this.historySelect.shift();
+      this.historyScroll.shift();
+      this.historyPos.shift();
+      this.history.shift();
+      this.modifiedTask.shift();
+      return logging.printHistory('_addHistory', this);
+    };
+
+    History.prototype.removeLastStep = function() {
+      this.historySelect.pop();
+      this.historyScroll.pop();
+      this.historyPos.pop();
+      this.history.pop();
+      this.modifiedTask.pop();
+      this.historySelect.unshift(void 0);
+      this.historyScroll.unshift(void 0);
+      this.historyPos.unshift(void 0);
+      this.history.unshift(void 0);
+      this.modifiedTask.unshift(void 0);
+      return this.index = HISTORY_SIZE - 1;
+    };
+
+    /* ------------------------------------------------------------------------
+    #  undoPossible
+    # Return true only if unDo can be called
+    */
+
+
+    History.prototype.undoPossible = function() {
+      var result;
+
+      result = this.index >= 0 && this.historyPos[this.index] !== void 0;
+      console.log('undoPossible', result);
+      return result;
+    };
+
+    /* ------------------------------------------------------------------------
+    #  redoPossible
+    # Return true only if reDo can be called
+    */
+
+
+    History.prototype.redoPossible = function() {
+      return this.index < this.history.length - 2;
+    };
+
+    return History;
+
+  })();
+  
+});
 window.require.register("CNeditor/hot-string", function(exports, require, module) {
   var AutoComplete, HotString, selection,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-  AutoComplete = require('./autocomplete').AutoComplete;
+  AutoComplete = require('./autocomplete');
 
-  selection = require('./selection').selection;
+  selection = require('./selection');
 
   module.exports = HotString = (function() {
     function HotString(editor) {
+      this.realtimeContacts = __bind(this.realtimeContacts, this);
       this.showAutoAndHighLight = __bind(this.showAutoAndHighLight, this);    this.editor = editor;
       this._isEdit = false;
       this.container = editor.linesDiv;
@@ -48805,10 +48208,7 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
     };
 
     HotString.prototype.mouseDownCb = function(e) {
-      var isOut;
-
-      isOut = e.target !== this.el && $(e.target).parents('#CNE_autocomplete').length === 0;
-      if (!isOut) {
+      if (this.isInAuto(e.target)) {
         return e.preventDefault();
       }
     };
@@ -48832,6 +48232,28 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
 
     HotString.prototype.isInAuto = function(elt) {
       return elt === this.el || $(elt).parents('#CNE_autocomplete').length !== 0;
+    };
+
+    HotString.prototype.realtimeContacts = function(contactCollection) {
+      var updateItems,
+        _this = this;
+
+      updateItems = function() {
+        console.log('updateItems', contactCollection);
+        return _this._auto.setItems('contact', contactCollection.map(function(contact) {
+          return {
+            text: contact.get('name'),
+            type: 'contact',
+            model: contact
+          };
+        }));
+      };
+      contactCollection.on({
+        'add': updateItems,
+        'remove': updateItems,
+        'change:name': updateItems
+      });
+      return updateItems();
     };
 
     /**
@@ -48974,6 +48396,71 @@ window.require.register("CNeditor/line", function(exports, require, module) {
 });
 window.require.register("CNeditor/logging", function(exports, require, module) {
   console.info = function() {};
+
+  module.exports = {
+    /** -----------------------------------------------------------------------
+     * A utility fuction for debugging
+     * @param  {string} txt A text to print in front of the log
+    */
+
+    printHistory: function(txt, history) {
+      var arrow, content, i, step, _i, _len, _ref;
+
+      if (!txt) {
+        txt = '';
+      }
+      console.info(txt + ' _history.index : ' + history.index);
+      _ref = history.history;
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        step = _ref[i];
+        if (history.index === i) {
+          arrow = ' <---';
+        } else {
+          arrow = ' ';
+          content = $(step).text();
+          if (content === '') {
+            content = '_';
+          }
+        }
+        console.info(i, content, history.historySelect[i], arrow);
+      }
+      return true;
+    },
+    /** -----------------------------------------------------------------------
+     * A utility fuction for debugging
+     * @param  {string} txt A text to print in front of the log
+    */
+
+    printTasksModifStacks: function(txt, _tasksToBeSaved) {
+      var id, modif, res;
+
+      if (!txt) {
+        txt = '';
+      }
+      res = '  _tasksToBeSaved : ';
+      for (id in _tasksToBeSaved) {
+        modif = _tasksToBeSaved[id];
+        res += id + ':';
+        if (modif.created) {
+          res += 'created-';
+        }
+        if (modif.modified) {
+          res += 'modified-';
+        }
+        if (modif.deleted) {
+          res += 'deleted-';
+        }
+        if (modif.removed) {
+          res += 'removed-';
+        }
+        res = res.slice(0, -1);
+        res += ', ';
+      }
+      res = res.slice(0, -2);
+      console.info(res);
+      return true;
+    }
+  };
   
 });
 window.require.register("CNeditor/request", function(exports, require, module) {
@@ -49016,11 +48503,12 @@ window.require.register("CNeditor/request", function(exports, require, module) {
   
 });
 window.require.register("CNeditor/tags", function(exports, require, module) {
-  var Alarm, Tags, selection;
+  var ContactPopover, Tags, selection,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-  selection = require('./selection').selection;
+  selection = require('./selection');
 
-  Alarm = require('./alarm');
+  ContactPopover = require('./contactpopover');
 
   /**
    * Helpers for Tags
@@ -49030,11 +48518,28 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
 
 
   module.exports = Tags = (function() {
-    function Tags(editor) {
+    function Tags(editor, models) {
       this.editor = editor;
+      this.models = models;
+      this._updateReminderSegment = __bind(this._updateReminderSegment, this);
+      this._removeReminderSegment = __bind(this._removeReminderSegment, this);
+      this._updateContactSegment = __bind(this._updateContactSegment, this);
+      this._removeContactSegment = __bind(this._removeContactSegment, this);
+      this.handle = __bind(this.handle, this);
+      this.empty = __bind(this.empty, this);
       this._tagList = [];
+      this.oldList = null;
       this._areTagsEditable = true;
       window.taglist = this._tagList;
+      this.contactPopover = new ContactPopover();
+      this.models.contactCollection.on({
+        'change:name': this._updateContactSegment,
+        'destroy': this._removeContactSegment
+      });
+      this.models.alarmCollection.on({
+        'change:trigg': this._updateReminderSegment,
+        'destroy': this._removeReminderSegment
+      });
     }
 
     /**
@@ -49082,16 +48587,135 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
       }
     };
 
+    Tags.prototype.create = function(type, seg) {
+      var alarm, date,
+        _this = this;
+
+      seg.classList.remove('CNE_hot_string');
+      seg.contentEditable = this._areTagsEditable;
+      switch (type) {
+        case 'contact':
+          seg.classList.add('CNE_contact');
+          seg.dataset.type = 'contact';
+          return this.handle(seg);
+        case 'reminder':
+          seg.classList.add('CNE_reminder');
+          seg.dataset.type = 'reminder';
+          date = Date.create(seg.dataset.value);
+          alarm = new this.models.Alarm({
+            id: seg.dataset.id || null,
+            trigg: date.format(this.models.Alarm.dateFormat)
+          });
+          this.models.alarmCollection.add(alarm);
+          this.handle(seg);
+          return alarm.save().done(function() {
+            return seg.dataset.id = alarm.id;
+          }).fail(function(jqXHR) {
+            console.log(jqXHR);
+            console.log('failed to save CNE_reminder');
+            return _this.remove(seg);
+          });
+      }
+    };
+
+    Tags.prototype.empty = function(isFullReplaceContent) {
+      this.isFullReplaceContent = isFullReplaceContent;
+      this.oldList = _.clone(this._tagList);
+      return this._tagList = [];
+    };
+
+    Tags.prototype.handle = function(seg, norefresh) {
+      return this._tagList.push(seg);
+    };
+
+    Tags.prototype.refreshAll = function() {
+      var alarm, date, iz, newseg, oldseg, seg, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results,
+        _this = this;
+
+      iz = function(a) {
+        return function(b) {
+          return a.dataset.id === b.dataset.id;
+        };
+      };
+      _ref = this.oldList || [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        oldseg = _ref[_i];
+        if (!this._tagList.some(iz(oldseg))) {
+          if (oldseg.dataset.type === 'reminder') {
+            this.remove(oldseg);
+          }
+        }
+      }
+      if (this.oldList && !this.isFullReplaceContent) {
+        _ref1 = this._tagList;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          newseg = _ref1[_j];
+          if (!this.oldList.some(iz(newseg))) {
+            if (newseg.dataset.type === 'reminder') {
+              delete newseg.dataset.id;
+              date = Date.create(newseg.dataset.value);
+              alarm = new this.models.Alarm({
+                trigg: date.format(this.models.Alarm.dateFormat)
+              });
+              this.models.alarmCollection.add(alarm);
+              alarm.save().done(function() {
+                return newseg.dataset.id = alarm.id;
+              }).fail(function(jqXHR) {
+                console.log(jqXHR);
+                console.log('failed to save CNE_reminder');
+                return _this.remove(seg);
+              });
+            }
+          }
+        }
+      }
+      _ref2 = this._tagList;
+      _results = [];
+      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+        seg = _ref2[_k];
+        _results.push(this.refresh(seg));
+      }
+      return _results;
+    };
+
+    Tags.prototype.refresh = function(seg) {
+      var model, value,
+        _this = this;
+
+      switch (seg.dataset.type) {
+        case 'reminder':
+          model = this.models.alarmCollection.get(seg.dataset.id);
+          if (model) {
+            value = Date.create(model.get('trigg')).format();
+            return seg.textContent = value;
+          } else {
+            model = new this.models.Alarm({
+              id: seg.dataset.id
+            });
+            model.fetch().fail(function() {
+              _this.models.alarmCollection.remove(model);
+              return _this.remove(seg);
+            });
+            return this.models.alarmCollection.add(model);
+          }
+          break;
+        case 'contact':
+          model = this.models.contactCollection.get(seg.dataset.id);
+          return seg.textContent = model.get('name');
+      }
+    };
+
     Tags.prototype.remove = function(seg) {
-      var _ref;
+      var model;
 
       console.log('Tags.remove', seg);
       this._tagList = _.without(this._tagList, seg);
       switch (seg.dataset.type) {
         case 'reminder':
           seg.textContent = '@@' + seg.textContent;
-          if ((_ref = this.editor.alarmsCollection.get(seg.dataset.id)) != null) {
-            _ref.destroy();
+          model = this.models.alarmCollection.get(seg.dataset.id);
+          if (model) {
+            model.destroy();
           }
           break;
         case 'contact':
@@ -49116,25 +48740,390 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
       startSeg = selection.getSegment(rg.startContainer, 0);
       endSeg = selection.getSegment(rg.endContainer, 0);
       console.info('_tagList at beginning', this._tagList);
-      if (startSeg !== endSeg) {
-        seg = startSeg.nextSibling;
-        while (seg !== endSeg) {
-          if (seg.nodeName === 'BR') {
-            seg = seg.parentElement.nextSibling.firstChild;
-            if (seg === endSeg) {
-              break;
-            }
+      if (startSeg === endSeg) {
+        return null;
+      }
+      seg = startSeg.nextSibling;
+      while (seg !== endSeg) {
+        if (seg.nodeName === 'BR') {
+          seg = seg.parentElement.nextSibling.firstChild;
+          if (seg === endSeg) {
+            break;
           }
-          if (seg.dataset.type) {
-            this.remove(seg);
-          }
-          seg = seg.nextSibling;
         }
+        if (seg.dataset.type) {
+          this.remove(seg);
+        }
+        seg = seg.nextSibling;
       }
       return true;
     };
 
+    Tags.prototype.clickCb = function(e) {
+      var model, oldcontactseg;
+
+      oldcontactseg = this.contactPopover.hide();
+      if (e.target.dataset.type === 'contact' && e.target !== oldcontactseg) {
+        model = this.models.contactCollection.get(e.target.dataset.id);
+        return this.contactPopover.show(e.target, model);
+      }
+    };
+
+    Tags.prototype._removeContactSegment = function(model) {
+      var seg, _i, _len, _ref, _results;
+
+      _ref = this._tagList;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        seg = _ref[_i];
+        if (seg.dataset.type === 'contact' && seg.dataset.id === model.id) {
+          _results.push(this.remove(seg));
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
+    Tags.prototype._updateContactSegment = function(model) {
+      var seg, _i, _len, _ref, _results;
+
+      _ref = this._tagList;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        seg = _ref[_i];
+        if (seg.dataset.type === 'contact' && seg.dataset.id === model.id) {
+          _results.push(seg.textContent = model.get('name'));
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
+    Tags.prototype._removeReminderSegment = function(model) {
+      var seg, _i, _len, _ref, _results;
+
+      _ref = this._tagList;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        seg = _ref[_i];
+        if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
+          _results.push(this.remove(seg));
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
+    Tags.prototype._updateReminderSegment = function(model) {
+      var seg, value, _i, _len, _ref, _results;
+
+      _ref = this._tagList;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        seg = _ref[_i];
+        if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
+          value = Date.create(model.get('trigg')).format();
+          _results.push(seg.textContent = value);
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
     return Tags;
+
+  })();
+  
+});
+window.require.register("CNeditor/urlpopover", function(exports, require, module) {
+  /** -----------------------------------------------------------------------
+   * initialise the popover during the editor initialization.
+  */
+
+  var UrlPopover,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  module.exports = UrlPopover = (function() {
+    function UrlPopover(editor) {
+      var btnCancel, btnDelete, btnOK, textInput, urlInput, _ref, _ref1,
+        _this = this;
+
+      this.editor = editor;
+      this.validate = __bind(this.validate, this);
+      this.cancel = __bind(this.cancel, this);
+      this.clickOut = __bind(this.clickOut, this);
+      this.isOn = false;
+      this.el = document.createElement('div');
+      this.el.id = 'CNE_urlPopover';
+      this.el.className = 'CNE_urlpop';
+      this.el.setAttribute.contentEditable = false;
+      this.el.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">\n        (Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
+      this.el.titleElt = this.el.firstChild;
+      this.el.link = this.el.getElementsByTagName('A')[0];
+      _ref = this.el.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
+      btnOK.addEventListener('click', this.validate);
+      btnCancel.addEventListener('click', function(e) {
+        e.stopPropagation();
+        return _this.cancel(false);
+      });
+      btnDelete.addEventListener('click', function() {
+        _this.el.urlInput.value = '';
+        return _this.validate();
+      });
+      _ref1 = this.el.querySelectorAll('input'), urlInput = _ref1[0], textInput = _ref1[1];
+      this.el.urlInput = urlInput;
+      this.el.textInput = textInput;
+      this.el.addEventListener('keypress', function(e) {
+        if (e.keyCode === 13) {
+          _this.validate();
+          e.stopPropagation();
+        } else if (e.keyCode === 27) {
+          _this.cancel(false);
+        }
+        return false;
+      });
+      this.editor.editorBody.addEventListener('mouseup', this.clickOut);
+      return true;
+    }
+
+    /** -----------------------------------------------------------------------
+     * Show, positionate and initialise the popover for link edition.
+     * @param  {array} segments  An array with the segments of
+     *                           the link [<a>,...<a>]. Must be created even if
+     *                           it is a creation in order to put a background
+     *                           on the segment where the link will be.
+     * @param  {boolean} isLinkCreation True is it is a creation. In this case,
+     *                                  if the process is canceled, the initial
+     *                                  state without link will be restored.
+    */
+
+
+    UrlPopover.prototype.show = function(segments, isLinkCreation) {
+      var href, seg, txt, _i, _j, _len, _len1;
+
+      this.editor.disable();
+      this.isOn = true;
+      this.isLinkCreation = isLinkCreation;
+      this.el.initialSelRg = this.editor.currentSel.theoricalRange.cloneRange();
+      this.el.segments = segments;
+      seg = segments[0];
+      this.el.style.left = seg.offsetLeft + 'px';
+      this.el.style.top = seg.offsetTop + 20 + 'px';
+      href = seg.href;
+      if (href === '' || href === 'http:///') {
+        href = 'http://';
+      }
+      this.el.urlInput.value = href;
+      txt = '';
+      for (_i = 0, _len = segments.length; _i < _len; _i++) {
+        seg = segments[_i];
+        txt += seg.textContent;
+      }
+      this.el.textInput.value = txt;
+      this.el.initialTxt = txt;
+      if (isLinkCreation) {
+        this.el.titleElt.textContent = 'Create Link';
+        this.el.link.style.display = 'none';
+      } else {
+        this.el.titleElt.textContent = 'Edit Link';
+        this.el.link.style.display = 'inline-block';
+        this.el.link.href = href;
+      }
+      seg.parentElement.parentElement.appendChild(this.el);
+      this.el.urlInput.select();
+      this.el.urlInput.focus();
+      for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
+        seg = segments[_j];
+        seg.classList.add('CNE_url_in_edition');
+      }
+      return true;
+    };
+
+    /** -----------------------------------------------------------------------
+     * The callback for a click outside the popover
+    */
+
+
+    UrlPopover.prototype.clickOut = function(e) {
+      var elt;
+
+      elt = e.target;
+      while (elt !== this.el && elt !== this.editor.editorBody) {
+        elt = elt.parentNode;
+      }
+      if (elt === this.el) {
+        return this.cancel(true);
+      }
+    };
+
+    /** -----------------------------------------------------------------------
+     * Close the popover and revert modifications if isLinkCreation == true
+     * @param  {boolean} doNotRestoreOginalSel If true, lets the caret at its
+     *                                         position (used when you click
+     *                                         outside url popover in order not
+     *                                         to loose the new selection)
+    */
+
+
+    UrlPopover.prototype.cancel = function(doNotRestoreOginalSel) {
+      var bp1, bp2, bps, lineDiv, s0, s1, seg, segments, sel, _i, _len;
+
+      segments = this.el.segments;
+      if (!this.isOn) {
+        return;
+      }
+      this.el.parentElement.removeChild(this.el);
+      this.isOn = false;
+      for (_i = 0, _len = segments.length; _i < _len; _i++) {
+        seg = segments[_i];
+        seg.classList.remove('CNE_url_in_edition');
+      }
+      if (this.isLinkCreation) {
+        s0 = segments[0];
+        s1 = segments[segments.length - 1];
+        bp1 = {
+          cont: s0,
+          offset: 0
+        };
+        bp2 = {
+          cont: s1,
+          offset: s1.childNodes.length
+        };
+        bps = [bp1, bp2];
+        selection.normalizeBPs(bps);
+        lineDiv = selection._getLineDiv(s0);
+        this.editor._applyAhrefToSegments(s0, s1, bps, false, '');
+        this.editor._fusionSimilarSegments(lineDiv, bps);
+        if (!doNotRestoreOginalSel) {
+          this.setSelectionBp(bp1, bp2);
+        }
+      } else if (!doNotRestoreOginalSel) {
+        sel = getEditorSelection();
+        sel.removeAllRanges();
+        sel.addRange(this.el.initialSelRg);
+      }
+      this.editor.setFocus();
+      this.editor.enable();
+      return true;
+    };
+
+    /** -----------------------------------------------------------------------
+     * Close the popover and applies modifications to the link.
+    */
+
+
+    UrlPopover.prototype.validate = function(event) {
+      var bp, bp1, bp2, bps, i, l, lastSeg, lineDiv, parent, rg, seg, segments, sel, _i, _j, _k, _len, _len1, _ref;
+
+      if (event) {
+        event.stopPropagation();
+      }
+      segments = this.el.segments;
+      if (this.el.urlInput.value === '' && this.isLinkCreation) {
+        this.cancel(false);
+        return true;
+      }
+      this.el.parentElement.removeChild(this.el);
+      this.isOn = false;
+      for (_i = 0, _len = segments.length; _i < _len; _i++) {
+        seg = segments[_i];
+        seg.classList.remove('CNE_url_in_edition');
+      }
+      if (!this.isLinkCreation) {
+        sel = getEditorSelection();
+        sel.removeAllRanges();
+        sel.addRange(this.el.initialSelRg);
+        this.editor._history.addStep();
+      }
+      lineDiv = segments[0].parentElement;
+      if (this.el.urlInput.value === '') {
+        l = segments.length;
+        bp1 = {
+          cont: segments[0].firstChild,
+          offset: 0
+        };
+        bp2 = {
+          cont: segments[l - 1].firstChild,
+          offset: segments[l - 1].firstChild.length
+        };
+        bps = [bp1, bp2];
+        this.editor._applyAhrefToSegments(segments[0], segments[l - 1], bps, false, '');
+        this.editor._fusionSimilarSegments(lineDiv, bps);
+        rg = document.createRange();
+        bp1 = bps[0];
+        bp2 = bps[1];
+        rg.setStart(bp1.cont, bp1.offset);
+        rg.setEnd(bp2.cont, bp2.offset);
+        sel = getEditorSelection();
+        sel.removeAllRanges();
+        sel.addRange(rg);
+        this.editor.setFocus();
+        this.editor.enable();
+        this.editorTarget$.trigger(jQuery.Event('onChange'));
+        return true;
+      } else if (this.el.initialTxt === this.el.textInput.value) {
+        for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
+          seg = segments[_j];
+          seg.href = this.el.urlInput.value;
+        }
+        lastSeg = seg;
+      } else {
+        seg = segments[0];
+        seg.href = this.el.urlInput.value;
+        seg.textContent = this.el.textInput.value;
+        parent = seg.parentNode;
+        for (i = _k = 1, _ref = segments.length - 1; _k <= _ref; i = _k += 1) {
+          seg = segments[i];
+          parent.removeChild(seg);
+        }
+        lastSeg = segments[0];
+      }
+      i = selection.getSegmentIndex(lastSeg);
+      i = i[1];
+      bp = selection.normalizeBP(lineDiv, i + 1);
+      this.editor._fusionSimilarSegments(lineDiv, [bp]);
+      bp = this.insertSpaceAfterUrl(selection.getNestedSegment(bp.cont));
+      this._setCaret(bp.cont, bp.offset);
+      this.setFocus();
+      this.editor.enable();
+      this.editorTarget$.trigger(jQuery.Event('onChange'));
+      if (lineDiv.dataset.type === 'task') {
+        return this._stackTaskChange(lineDiv.task, 'modified');
+      }
+    };
+
+    /**
+     * returns a break point, collapsed after a space caracter immediately
+     * following a given segment. A segment will we inserted if required.
+     * @param  {[type]} seg [description]
+     * @return {Object}     {cont,offset} : the break point
+    */
+
+
+    UrlPopover.prototype.insertSpaceAfterUrl = function(seg) {
+      var bp, index, nextSeg, span, txtNode;
+
+      nextSeg = seg.nextSibling;
+      if (nextSeg.nodeName === 'BR') {
+        span = this.editor._insertSegmentAfterSeg(seg);
+        bp = {
+          cont: span.firstChild,
+          offset: 1
+        };
+      } else {
+        index = selection.getSegmentIndex(seg)[1] + 1;
+        bp = selection.normalizeBP(seg.parentElement, index, true);
+        txtNode = bp.cont;
+        bp.offset = 0;
+      }
+      return bp;
+    };
+
+    return UrlPopover;
 
   })();
   

@@ -792,8 +792,8 @@ window.require.register("routers/main_router", function(exports, require, module
     Routes:
     
       * '': home: initialize the app
-      * '#note/{note_uuid : 25 char}/slugyPath' : unique url corresponding 
-        to a note where note_uuid is the note id and slugyPath the slugified 
+      * '#note/{note_uuid : 25 char}/slugyPath' : unique url corresponding
+        to a note where note_uuid is the note id and slugyPath the slugified
         path of a note constituted with the name of its parents.
     */
 
@@ -1189,14 +1189,16 @@ window.require.register("views/home_view", function(exports, require, module) {
 
 
     HomeView.prototype.onNoteTitleChange = function(uuid, newName) {
+      var _this = this;
       if (newName != null) {
         this.tree.jstreeEl.jstree("rename_node", "#" + uuid, newName);
         return Note.updateNote(uuid, {
           title: newName
         }, function(err) {
           if (err) {
-            return alert("Server error occured");
+            alert("Server error occured");
           }
+          return _this.noteView.updateEditorReminderCf(newName);
         });
       }
     };
@@ -1414,8 +1416,7 @@ window.require.register("views/note_view", function(exports, require, module) {
         if (newName !== "" && oldName !== newName) {
           _this.homeView.onNoteTitleChange(_this.model.id, newName);
           _this.homeView.tree._updateSuggestionList("rename", newName, oldName);
-          _this.updateBreadcrumbOnTitleChange(newName);
-          return _this.updateEditorReminderCf();
+          return _this.updateBreadcrumbOnTitleChange(newName);
         }
       });
     };
@@ -1514,14 +1515,13 @@ window.require.register("views/note_view", function(exports, require, module) {
       this.setContent(note);
       this.createBreadcrumb(note, data);
       this.fileList.configure(this.model);
-      this.fileList.render();
-      return this.updateEditorReminderCf();
+      return this.fileList.render();
     };
 
-    NoteView.prototype.updateEditorReminderCf = function() {
-      return this.editor.setReminderCf("note " + this.model.title, {
+    NoteView.prototype.updateEditorReminderCf = function(title) {
+      return this.editor.setReminderCf("note " + title, {
         app: 'notes',
-        url: "note/" + this.model.id
+        url: "note/" + this.model.id + "/"
       });
     };
 
@@ -1544,7 +1544,7 @@ window.require.register("views/note_view", function(exports, require, module) {
 
     NoteView.prototype.setTitle = function(title) {
       this.noteFullTitle.val(title);
-      return this.updateEditorReminderCf();
+      return this.updateEditorReminderCf(title);
     };
 
     /*
@@ -1571,7 +1571,6 @@ window.require.register("views/note_view", function(exports, require, module) {
           } else if (_this.savingState === 'saving') {
             _this.savingState = 'clean';
           }
-          _this.updateEditorReminderCf();
           _this.saveButton.addClass("active");
           _this.saveButton.spin();
           if (typeof callback === 'function') {
@@ -1590,14 +1589,13 @@ window.require.register("views/note_view", function(exports, require, module) {
     NoteView.prototype.setContent = function(note) {
       if (note.content) {
         if (!note.version) {
-          this.editor.setEditorContentFromMD(note.content);
+          return this.editor.setEditorContentFromMD(note.content);
         } else {
-          this.editor.setEditorContent(note.content);
+          return this.editor.setEditorContent(note.content);
         }
       } else {
-        this.editor.deleteContent();
+        return this.editor.deleteContent();
       }
-      return this.updateEditorReminderCf();
     };
 
     /**
