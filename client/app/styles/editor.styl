@@ -2,6 +2,11 @@
 // client/app/vendor/styles/CNeditor.css
 // This one is updated with CNeditor
 
+orange = #fe8800
+blue = #34a6ff
+lightblue = #CBE4FB
+lightorange = #FFC47F
+green = #5C5
 
 #editor
     #editor-container:focus
@@ -15,3 +20,23 @@
      
     #editor-lines:hover:not(:focus)
         outline: 1px solid lightorange 
+
+div[data-type="task"]
+    background: lightblue + 70%
+    border: 1px solid lightblue
+    z-index: 10
+
+.CNE_task_btn
+    background: blue
+    content: "todo"
+
+div[data-state="done"] > .CNE_task_btn
+    background: green
+
+div[data-state="done"][data-type="task"]
+    background: green + 90%
+    border: 1px solid #CCC
+    z-index: -10
+
+div[data-state="done"] > .CNE_task_btn:hover
+    background-color: orange

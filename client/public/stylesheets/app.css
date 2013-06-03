@@ -8110,10 +8110,30 @@ h5 {
 #editor #editor-lines:focus {
   border: 0;
   box-shadow: none;
-  outline: 1px solid #add8e6;
+  outline: 1px solid #cbe4fb;
 }
 #editor #editor-lines:hover:not(:focus) {
-  outline: 1px solid lightorange;
+  outline: 1px solid #ffc47f;
+}
+div[data-type="task"] {
+  background: #eff7fe;
+  border: 1px solid #cbe4fb;
+  z-index: 10;
+}
+.CNE_task_btn {
+  background: #34a6ff;
+  content: "todo";
+}
+div[data-state="done"] > .CNE_task_btn {
+  background: #5c5;
+}
+div[data-state="done"][data-type="task"] {
+  background: #eefaee;
+  border: 1px solid #ccc;
+  z-index: -10;
+}
+div[data-state="done"] > .CNE_task_btn:hover {
+  background-color: #fe8800;
 }
 #nav {
   padding: 0;
