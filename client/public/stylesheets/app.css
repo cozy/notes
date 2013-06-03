@@ -7312,6 +7312,7 @@ a {
 }
 .CNE_contact #contactpopover dd {
   margin-left: 120px;
+  margin-right: 30px;
 }
 .CNE_contact:hover {
   text-decoration: underline;

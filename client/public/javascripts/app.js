@@ -792,8 +792,8 @@ window.require.register("routers/main_router", function(exports, require, module
     Routes:
     
       * '': home: initialize the app
-      * '#note/{note_uuid : 25 char}/slugyPath' : unique url corresponding
-        to a note where note_uuid is the note id and slugyPath the slugified
+      * '#note/{note_uuid : 25 char}/slugyPath' : unique url corresponding 
+        to a note where note_uuid is the note id and slugyPath the slugified 
         path of a note constituted with the name of its parents.
     */
 
