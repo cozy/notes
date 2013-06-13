@@ -16,7 +16,7 @@
   , "async":            ">= 0.1.22"
   , "request":          ">= 0"
   , "form-data":        ">= 0"
-  , "cozy-realtime-adapter":"= 0.0.8"
+  , "cozy-realtime-adapter":"= 0.11.0"
   }
 , "devDependencies":
   { "request-json":     "= 0.2.9"
