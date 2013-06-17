@@ -30,7 +30,7 @@
   }
 , "cozy-permissions":
   { "Note":
-    {"description": "Creates and edit your note documents."
+    {"description": "Creates and edits your note documents."
     }
   , "Tree":
     {"description": "Sorts your notes within a tree structure."
