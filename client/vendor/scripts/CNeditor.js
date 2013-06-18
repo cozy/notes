@@ -24996,7 +24996,7 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
 
 
     AutoComplete.prototype.setItems = function(type, items) {
-      var it, lines, _i, _len;
+      var it, line, lines, _i, _len;
 
       switch (type) {
         case 'tTags':
@@ -25016,7 +25016,10 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
       }
       for (_i = 0, _len = items.length; _i < _len; _i++) {
         it = items[_i];
-        lines.appendChild(this._createLine(it));
+        line = this._createLine(it);
+        if (line) {
+          lines.appendChild(line);
+        }
       }
       return true;
     };
@@ -25029,8 +25032,11 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
 
 
     AutoComplete.prototype._createLine = function(item) {
-      var c, line, span, t, type, _i, _len;
+      var c, line, span, t, type, _i, _len, _ref;
 
+      if (!item.text) {
+        return null;
+      }
       line = document.createElement('LI');
       type = item.type;
       switch (type) {
@@ -25043,7 +25049,7 @@ window.require.register("CNeditor/autocomplete", function(exports, require, modu
         case 'htag':
           line.className = 'SUGG_line_htag';
       }
-      t = item.text.split('');
+      t = ((_ref = item.text) != null ? _ref.split('') : void 0) || [];
       for (_i = 0, _len = t.length; _i < _len; _i++) {
         c = t[_i];
         span = document.createElement('SPAN');
@@ -27058,7 +27064,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         return e.preventDefault();
       });
       this._registerEventListeners();
-      return callback();
+      return callback.call(this);
     };
 
     CNeditor.prototype._mousedownCb = function(e) {
@@ -27740,10 +27746,14 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype.replaceContent = function(htmlString, unPretify) {
+      var _ref;
+
       if (unPretify) {
         htmlString = htmlString.replace(/>[\n ]*</g, "><");
       }
-      this.urlPopover.cancel();
+      if ((_ref = this.urlPopover) != null) {
+        _ref.cancel();
+      }
       this.linesDiv.innerHTML = htmlString;
       this._taskList = [];
       this._readHtml(true);
@@ -32498,7 +32508,7 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
         console.log('updateItems', contactCollection);
         return _this._auto.setItems('contact', contactCollection.map(function(contact) {
           return {
-            text: contact.get('name'),
+            text: contact.get('fn'),
             type: 'contact',
             model: contact
           };
@@ -32789,7 +32799,7 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
       window.taglist = this._tagList;
       this.contactPopover = new ContactPopover();
       this.models.contactCollection.on({
-        'change:name': this._updateContactSegment,
+        'change:fn': this._updateContactSegment,
         'destroy': this._removeContactSegment
       });
       this.models.alarmCollection.on({
@@ -32957,7 +32967,7 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
           break;
         case 'contact':
           model = this.models.contactCollection.get(seg.dataset.id);
-          return seg.textContent = model.get('name');
+          return seg.textContent = model.get('fn');
       }
     };
 
@@ -33049,7 +33059,7 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         seg = _ref[_i];
         if (seg.dataset.type === 'contact' && seg.dataset.id === model.id) {
-          _results.push(seg.textContent = model.get('name'));
+          _results.push(seg.textContent = model.get('fn'));
         } else {
           _results.push(void 0);
         }
