@@ -1,5 +1,6 @@
 { "name": "cozy-notes"
 , "version": "0.8.0"
+, "description": "Cozy Notes is a simple and powerful note manager. Its specificity resides in its note editor which helps you to structure efficiently your notes. It also provide classical text editor shortcuts which make you ultra-efficient at typing notes."
 , "engines": ["node >= 0.6.0"]
 , "main": "server.coffee"
 , "dependencies":
@@ -12,11 +13,11 @@
   , "mime":             "= 1.2.7"
   , "qs":               "= 0.5.0"
   , "jugglingdb":       "= 0.2.0-23"
-  , "jugglingdb-cozy-adapter": "= 0.3.1"
+  , "jugglingdb-cozy-adapter": "= 0.3.2"
   , "async":            ">= 0.1.22"
   , "request":          ">= 0"
   , "form-data":        ">= 0"
-  , "cozy-realtime-adapter":"= 0.0.8"
+  , "cozy-realtime-adapter":"= 0.11.0"
   }
 , "devDependencies":
   { "request-json":     "= 0.2.9"
@@ -26,5 +27,13 @@
   }
 , "scripts":
   { "test": "nodeunit test/*/*"
+  }
+, "cozy-permissions":
+  { "Note":
+    {"description": "Creates and edits your note documents."
+    }
+  , "Tree":
+    {"description": "Sorts your notes within a tree structure."
+    }
   }
 }
