@@ -18,7 +18,7 @@ class exports.NoteView extends Backbone.View
         @$el.remove()
 
     constructor: (@homeView, @onIFrameLoaded) ->
-        super()
+        super
 
         @$el = $("#note-full")
 
@@ -31,9 +31,7 @@ class exports.NoteView extends Backbone.View
         @breadcrumb = @$ '#note-full-breadcrumb'
 
         @editor = new CNeditor(@$('#editor-container')[0], @onIFrameLoaded)
-        #@$('#editor-container').niceScroll
-            #cursorcolor: "#CCC"
-            #enablekeyboard: false
+
         @configureButtons()
         @setTitleListeners()
         @setEditorFocusListener()
@@ -56,7 +54,9 @@ class exports.NoteView extends Backbone.View
             @savingState = 'dirty'
 
         @saveButton.click @saveEditorContent
-        @$('#editor-container').on 'saveRequest', @saveEditorContent
+        @$('#editor-container').on 'saveRequest', =>
+            @savingState = 'dirty' #force save on Ctrl+S
+            @saveEditorContent()
 
     setTitleListeners: ->
         @noteFullTitle.live "keypress", (event) =>
@@ -152,6 +152,10 @@ class exports.NoteView extends Backbone.View
         @fileList.configure @model
         @fileList.render()
 
+    updateEditorReminderCf: (title) =>
+        @editor.setReminderCf "note #{title}",
+            app: 'notes'
+            url: "note/#{@model.id}/"
 
     # Hide title and editor, show spinner
     showLoading: ->
@@ -170,6 +174,7 @@ class exports.NoteView extends Backbone.View
     ###
     setTitle: (title) ->
         @noteFullTitle.val title
+        @updateEditorReminderCf(title)
 
     ###
     # Stop saving timer if any and force saving of editor content.
@@ -189,6 +194,7 @@ class exports.NoteView extends Backbone.View
                 else if @savingState is 'saving'
                     @savingState = 'clean'
 
+                @homeView.latestView.refresh()
                 @saveButton.addClass "active"
                 @saveButton.spin() #stop spinning
                 callback(error) if typeof callback is 'function'
@@ -239,6 +245,7 @@ class exports.NoteView extends Backbone.View
             hash = event.target.hash.substring(1)
             path = hash.split("/")
             id = path[1]
+            app.router.navigate "note/#{id}"
             app.homeView.selectNote id
 
     ###*
