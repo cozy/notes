@@ -110,6 +110,7 @@ action 'update', ->
             send success: 'Note updated', 200
 
     saveAttributes = (isToIndex, note, newData) ->
+        newData.lastModificationValueOf = (new Date()).getTime()
         if isToIndex
             note.updateAttributes newData, (err) ->
                 if err
@@ -191,6 +192,15 @@ action 'search', ->
                 send error: "search failed", 500
             else
                 send notes
+
+action 'latest', ->
+    query =
+        descending: true
+        limit: 10
+
+    Note.request 'lastmodified', query, (err, notes) ->
+        if err then send error: "latestfailed", 500
+        else send notes
 
 ###
 ## Attach a file to given note.

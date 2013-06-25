@@ -15,7 +15,7 @@ getPreview = (note) ->
 
 
 class NotesCollection extends Backbone.Collection
-      
+
     model: Note
     url: 'notes/'
 
@@ -25,7 +25,8 @@ class NotesCollection extends Backbone.Collection
     # Select which field from backend response to use for parsing to populate
     # collection.
     parse: (response) ->
-        response.rows
+        response.rows or response
+
     @search: (query, callback) ->
 
         if query.length > 0

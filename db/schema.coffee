@@ -6,7 +6,8 @@ Note = define 'Note', ->
     property 'title'                , String , index: true
     property 'content'              , String
     property 'creationDate'         , Date   , default: Date
-    property 'lastModificationDate' , Date   , default: Date
+    property 'lastModificationDate'    , Date   , default: Date
+    property 'lastModificationValueOf' , Number, default: -> (new Date()).getTime()
     property 'tags'                 , [String]
     property 'parent_id'            , String
     property 'path'                 , String

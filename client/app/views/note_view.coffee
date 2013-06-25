@@ -192,6 +192,7 @@ class exports.NoteView extends Backbone.View
                 else if @savingState is 'saving'
                     @savingState = 'clean'
 
+                @homeView.latestView.refresh()
                 @saveButton.addClass "active"
                 @saveButton.spin() #stop spinning
                 callback(error) if typeof callback is 'function'
@@ -242,6 +243,7 @@ class exports.NoteView extends Backbone.View
             hash = event.target.hash.substring(1)
             path = hash.split("/")
             id = path[1]
+            app.router.navigate "note/#{id}"
             app.homeView.selectNote id
 
     ###*

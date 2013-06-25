@@ -1,5 +1,6 @@
 Tree = require("./widgets/tree").Tree
 NoteView = require("./note_view").NoteView
+LatestView = require("./latest_view").LatestView
 Note = require("../models/note").Note
 NotesCollection = require("../collections/notes")
 SearchView = require './search_view'
@@ -36,7 +37,8 @@ class exports.HomeView extends Backbone.View
         @noteView = new NoteView @, @onIFrameLoaded
         @noteFull = @$ "#note-full"
         @noteFull.hide()
-        @helpInfo = @$ "#help-info"
+        @latestView = new LatestView()
+        @latestView.$el.appendTo $('#note-area')
         @searchView = new SearchView @$("#search-view")
 
         @$el.layout
@@ -190,7 +192,7 @@ class exports.HomeView extends Backbone.View
 
     search: (query) =>
         if @tree?
-            @helpInfo.hide()
+            @latestView.$el.hide()
             @tree.widget.jstree "search", query
             NotesCollection.search query, (notes) =>
                 @searchView.fill notes, query
@@ -273,10 +275,10 @@ class exports.HomeView extends Backbone.View
             app.router.navigate "note#{path}", trigger: false
 
             if not id? or id is "tree-node-all"
-                @helpInfo.show()
+                @latestView.$el.show()
                 @noteFull.hide()
             else
-                @helpInfo.hide()
+                @latestView.$el.hide()
                 @noteView.showLoading()
                 Note.getNote id, (note) =>
                     @noteView.hideLoading()
@@ -307,8 +309,9 @@ class exports.HomeView extends Backbone.View
     ###
     selectNote: (noteId) =>
         if not noteId? or noteId in ["all", 'tree-node-all'] or noteId.length is 0
-            @helpInfo.show()
+            @latestView.$el.show()
             @noteFull.hide()
+            @tree?.widget.jstree "deselect_all"
             @tree?.widget.jstree "search", ""
             @searchView.hide()
         else
