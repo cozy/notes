@@ -45140,7 +45140,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
         } else {
           textNode = sel.range.startContainer;
           startOffset = sel.range.startOffset;
-          if (startOffset === 0) {
+          if (startOffset === 0 || startOffset === 1 && textNode.textContent.charCodeAt(0) === 160) {
             bp = selection.setBpPreviousSegEnd(textNode);
             textNode = bp.cont;
             startOffset = bp.offset;
@@ -48678,12 +48678,15 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
           return a.dataset.id === b.dataset.id;
         };
       };
-      _ref = this.oldList || [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        oldseg = _ref[_i];
-        if (!this._tagList.some(iz(oldseg))) {
-          if (oldseg.dataset.type === 'reminder') {
-            this.remove(oldseg);
+      if (!this.isFullReplaceContent) {
+        console.log("HERE");
+        _ref = this.oldList || [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          oldseg = _ref[_i];
+          if (!this._tagList.some(iz(oldseg))) {
+            if (oldseg.dataset.type === 'reminder') {
+              this.remove(oldseg);
+            }
           }
         }
       }
@@ -48733,9 +48736,11 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
             model = new this.models.Alarm({
               id: seg.dataset.id
             });
-            model.fetch().fail(function() {
-              _this.models.alarmCollection.remove(model);
-              return _this.remove(seg);
+            model.fetch({
+              error: function() {
+                _this.models.alarmCollection.remove(model);
+                return _this.remove(seg);
+              }
             });
             return this.models.alarmCollection.add(model);
           }
@@ -48749,7 +48754,6 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
     Tags.prototype.remove = function(seg) {
       var model;
 
-      console.log('Tags.remove', seg);
       this._tagList = _.without(this._tagList, seg);
       switch (seg.dataset.type) {
         case 'reminder':

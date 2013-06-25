@@ -1463,7 +1463,10 @@ window.require.register("views/note_view", function(exports, require, module) {
         return _this.savingState = 'dirty';
       });
       this.saveButton.click(this.saveEditorContent);
-      return this.$('#editor-container').on('saveRequest', this.saveEditorContent);
+      return this.$('#editor-container').on('saveRequest', function() {
+        _this.savingState = 'dirty';
+        return _this.saveEditorContent();
+      });
     };
 
     NoteView.prototype.setTitleListeners = function() {

@@ -54,7 +54,9 @@ class exports.NoteView extends Backbone.View
             @savingState = 'dirty'
 
         @saveButton.click @saveEditorContent
-        @$('#editor-container').on 'saveRequest', @saveEditorContent
+        @$('#editor-container').on 'saveRequest', =>
+            @savingState = 'dirty' #force save on Ctrl+S
+            @saveEditorContent()
 
     setTitleListeners: ->
         @noteFullTitle.live "keypress", (event) =>
