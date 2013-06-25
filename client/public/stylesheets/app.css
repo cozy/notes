@@ -8678,24 +8678,38 @@ iframe {
   right: 15px;
   top: 112px;
 }
-#search-view {
+#search-view,
+#latest-view {
   font-family: main, helvetica;
 }
-#search-view span {
+#search-view span,
+#latest-view span {
   font-style: italic;
 }
-#search-view h1 {
+#search-view h1,
+#latest-view h1 {
   font-size: 16px;
   padding: 10px;
 }
 #search-view a,
-#search-view a:visited {
+#latest-view a,
+#search-view a:visited,
+#latest-view a:visited {
   color: #222;
 }
-#search-view h2 {
+#search-view h2,
+#latest-view h2 {
   font-size: 25px;
 }
-#search-view .search-result {
+#search-view h2 span.date,
+#latest-view h2 span.date {
+  float: right;
+  font-style: normal;
+  font-size: 20px;
+  color: #4d4d4d;
+}
+#search-view .search-result,
+#latest-view .search-result {
   margin: 10px;
   padding: 0 20px;
   border: 1px solid #fdfdfd;

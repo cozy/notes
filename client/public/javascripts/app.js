@@ -117,7 +117,7 @@ window.require.register("collections/notes", function(exports, require, module) 
     }
 
     NotesCollection.prototype.parse = function(response) {
-      return response.rows;
+      return response.rows || response;
     };
 
     NotesCollection.search = function(query, callback) {
@@ -860,7 +860,7 @@ window.require.register("routers/main_router", function(exports, require, module
   
 });
 window.require.register("views/home_view", function(exports, require, module) {
-  var Note, NoteView, NotesCollection, SearchView, Tree, slugify,
+  var LatestView, Note, NoteView, NotesCollection, SearchView, Tree, slugify,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -868,6 +868,8 @@ window.require.register("views/home_view", function(exports, require, module) {
   Tree = require("./widgets/tree").Tree;
 
   NoteView = require("./note_view").NoteView;
+
+  LatestView = require("./latest_view").LatestView;
 
   Note = require("../models/note").Note;
 
@@ -945,7 +947,8 @@ window.require.register("views/home_view", function(exports, require, module) {
       this.noteView = new NoteView(this, this.onIFrameLoaded);
       this.noteFull = this.$("#note-full");
       this.noteFull.hide();
-      this.helpInfo = this.$("#help-info");
+      this.latestView = new LatestView();
+      this.latestView.$el.appendTo($('#note-area'));
       this.searchView = new SearchView(this.$("#search-view"));
       return this.$el.layout({
         size: "250",
@@ -1124,7 +1127,7 @@ window.require.register("views/home_view", function(exports, require, module) {
     HomeView.prototype.search = function(query) {
       var _this = this;
       if (this.tree != null) {
-        this.helpInfo.hide();
+        this.latestView.$el.hide();
         this.tree.widget.jstree("search", query);
         return NotesCollection.search(query, function(notes) {
           _this.searchView.fill(notes, query);
@@ -1249,10 +1252,10 @@ window.require.register("views/home_view", function(exports, require, module) {
           trigger: false
         });
         if (!(id != null) || id === "tree-node-all") {
-          _this.helpInfo.show();
+          _this.latestView.$el.show();
           return _this.noteFull.hide();
         } else {
-          _this.helpInfo.hide();
+          _this.latestView.$el.hide();
           _this.noteView.showLoading();
           return Note.getNote(id, function(note) {
             _this.noteView.hideLoading();
@@ -1296,12 +1299,15 @@ window.require.register("views/home_view", function(exports, require, module) {
 
 
     HomeView.prototype.selectNote = function(noteId) {
-      var _ref;
+      var _ref, _ref1;
       if (!(noteId != null) || (noteId === "all" || noteId === 'tree-node-all') || noteId.length === 0) {
-        this.helpInfo.show();
+        this.latestView.$el.show();
         this.noteFull.hide();
         if ((_ref = this.tree) != null) {
-          _ref.widget.jstree("search", "");
+          _ref.widget.jstree("deselect_all");
+        }
+        if ((_ref1 = this.tree) != null) {
+          _ref1.widget.jstree("search", "");
         }
         return this.searchView.hide();
       } else {
@@ -1321,6 +1327,64 @@ window.require.register("views/home_view", function(exports, require, module) {
     };
 
     return HomeView;
+
+  })(Backbone.View);
+  
+});
+window.require.register("views/latest_view", function(exports, require, module) {
+  var NoteCollection,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  NoteCollection = require('collections/notes');
+
+  exports.LatestView = (function(_super) {
+
+    __extends(LatestView, _super);
+
+    function LatestView() {
+      this.render = __bind(this.render, this);
+      return LatestView.__super__.constructor.apply(this, arguments);
+    }
+
+    LatestView.prototype.id = 'latest-view';
+
+    LatestView.prototype.itemTemplate = require('views/templates/search_result');
+
+    LatestView.prototype.initialize = function() {
+      this.collection = new NoteCollection();
+      return this.refresh();
+    };
+
+    LatestView.prototype.refresh = function() {
+      this.collection.reset([]);
+      return this.collection.fetch({
+        url: 'notes/latest/',
+        success: this.render
+      });
+    };
+
+    LatestView.prototype.render = function() {
+      var _this = this;
+      this.$el.html("");
+      this.$el.append("<h1>Latest Notes</h1>");
+      if (this.collection.length === 0) {
+        return this.$el.append("<p>You have no notes, use the tree on the left tocreate one.</p>");
+      } else {
+        return this.collection.each(function(note) {
+          var date;
+          date = Date.create(note.lastModificationValueOf);
+          date = date.long();
+          return _this.$el.append(_this.itemTemplate({
+            note: note,
+            date: date
+          }));
+        });
+      }
+    };
+
+    return LatestView;
 
   })(Backbone.View);
   
@@ -1571,6 +1635,7 @@ window.require.register("views/note_view", function(exports, require, module) {
           } else if (_this.savingState === 'saving') {
             _this.savingState = 'clean';
           }
+          _this.homeView.latestView.refresh();
           _this.saveButton.addClass("active");
           _this.saveButton.spin();
           if (typeof callback === 'function') {
@@ -1628,6 +1693,7 @@ window.require.register("views/note_view", function(exports, require, module) {
         hash = event.target.hash.substring(1);
         path = hash.split("/");
         id = path[1];
+        app.router.navigate("note/" + id);
         return app.homeView.selectNote(id);
       });
     };
@@ -1666,7 +1732,7 @@ window.require.register("views/search_view", function(exports, require, module) 
     }
 
     SearchView.prototype.fill = function(notes, query) {
-      var note, template, _i, _len, _results;
+      var date, note, template, _i, _len, _results;
       this.results.html(null);
       this.queryTitle.html(" " + query);
       template = require('views/templates/search_result');
@@ -1674,8 +1740,11 @@ window.require.register("views/search_view", function(exports, require, module) 
         _results = [];
         for (_i = 0, _len = notes.length; _i < _len; _i++) {
           note = notes[_i];
+          date = Date.create(note.lastModificationValueOf);
+          date = date.format();
           _results.push(this.results.append(template({
-            note: note
+            note: note,
+            date: date
           })));
         }
         return _results;
@@ -1731,7 +1800,7 @@ window.require.register("views/templates/home", function(exports, require, modul
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="nav" class="ui-layout-west"><div id="tree"></div></div><div id="note-area" class="ui-layout-center"><div id="search-view"></div><div id="help-info">You don\'t have any note selected yet. To select a note use the tree\non your left.</div><div id="note-full" class="note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><input id="note-full-title"/><div id="editor"></div></div><div class="clearfix"></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
+  buf.push('<div id="nav" class="ui-layout-west"><div id="tree"></div></div><div id="note-area" class="ui-layout-center"><div id="search-view"></div><div id="latest-view"></div><div id="note-full" class="note-full"><div id="note-full-breadcrumb">/</div><div id="note-style"><input id="note-full-title"/><div id="editor"></div></div><div class="clearfix"></div></div></div><div id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" class="modal hide fade in"><div class="modal-header"><h3 id="myModalLabel">Warning!</h3></div><div class="modal-body"><p>You are about to delete this note and all its children. Do you want to continue?</p></div><div class="modal-footer"><button id="modal-yes" data-dismiss="modal" aria-hidden="true" class="btn">Yes</button><button data-dismiss="modal" aria-hidden="true" class="btn">No</button></div></div>');
   }
   return buf.join("");
   };
@@ -1753,9 +1822,9 @@ window.require.register("views/templates/search_result", function(exports, requi
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div class="search-result"><h2> <a');
+  buf.push('<div class="search-result"><h2><span class="date">' + escape((interp = date) == null ? '' : interp) + '</span><a');
   buf.push(attrs({ 'href':("#note/" + (note.id) + "/" + (note.slugPath) + "") }, {"href":true}));
-  buf.push('>' + escape((interp = note.title) == null ? '' : interp) + '</a></h2><p><' + (note.preview) + '> </' + (note.preview) + '></p></div>');
+  buf.push('> ' + escape((interp = note.title) == null ? '' : interp) + '</a></h2><p><' + (note.preview) + '></' + (note.preview) + '></p></div>');
   }
   return buf.join("");
   };
@@ -1777,7 +1846,7 @@ window.require.register("views/templates/tree_buttons", function(exports, requir
   var buf = [];
   with (locals || {}) {
   var interp;
-  buf.push('<div id="tree-buttons"><div id="tree-create" class="button"><i class="icon-plus"></i></div><div id="tree-rename" class="button"><i class="icon-pencil"></i></div><div id="tree-remove" class="button"><i class="icon-remove"></i></div></div><div id="tree-top-buttons"><input id="tree-search-field" type="text" class="span2"/><i id="suppr-button" style="display: none" class="icon-remove-circle"></i></div><div id="my-notes"><img id="my-notes-pic" src="img/my-notes.png"/><div id="create-note"></div></div>');
+  buf.push('<div id="tree-buttons"><div id="tree-create" class="button"><i class="icon-plus"></i></div><div id="tree-rename" class="button"><i class="icon-pencil"></i></div><div id="tree-remove" class="button"><i class="icon-remove"></i></div></div><div id="tree-top-buttons"><input id="tree-search-field" type="text" class="span2"/><i id="suppr-button" style="display: none" class="icon-remove-circle"></i></div><div id="my-notes"><a href="#note/all"><img id="my-notes-pic" src="img/my-notes.png"/></a><div id="create-note"></div></div>');
   }
   return buf.join("");
   };

@@ -48249,7 +48249,6 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
         _this = this;
 
       updateItems = function() {
-        console.log('updateItems', contactCollection);
         return _this._auto.setItems('contact', contactCollection.map(function(contact) {
           return {
             text: contact.get('fn'),
@@ -48258,12 +48257,23 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
           };
         }));
       };
-      contactCollection.on({
-        'add': updateItems,
-        'remove': updateItems,
-        'change:name': updateItems
-      });
-      return updateItems();
+      if (contactCollection.length) {
+        updateItems();
+        return contactCollection.on({
+          'add': updateItems,
+          'remove': updateItems,
+          'change:name': updateItems
+        });
+      } else {
+        return contactCollection.once('sync', function() {
+          updateItems();
+          return contactCollection.on({
+            'add': updateItems,
+            'remove': updateItems,
+            'change:name': updateItems
+          });
+        });
+      }
     };
 
     /**
