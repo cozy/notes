@@ -42740,7 +42740,9 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
       this._tasksToBeSaved = {};
       this._tasksModifSinceLastHistory = {};
       ExternalModels.initialize(function(err) {
-        console.log(err);
+        if (err) {
+          console.log(err);
+        }
         realtimer.watch(ExternalModels.contactCollection);
         if (_this.editorTarget.nodeName === "IFRAME") {
           _this.isInIframe = true;
@@ -47510,7 +47512,6 @@ window.require.register("CNeditor/externalmodels", function(exports, require, mo
     Alarm.setDefaultCf = function(description, related) {
       var _this = this;
 
-      console.log('setting Cf', description);
       if (description) {
         Alarm.reminderCf.description = description;
       }
@@ -47562,6 +47563,17 @@ window.require.register("CNeditor/externalmodels", function(exports, require, mo
     model: Contact
   });
 
+  Contact.load = function(cb) {
+    return module.exports.contactCollection.fetch({
+      success: function() {
+        return cb(null);
+      },
+      error: function(err) {
+        return cb(err);
+      }
+    });
+  };
+
   /*
   # Tasks model
   # TODO : use a collection
@@ -47602,6 +47614,35 @@ window.require.register("CNeditor/externalmodels", function(exports, require, mo
 
   })(Backbone.Model);
 
+  Task.getOrCreateInbox = function(callback) {
+    return request.get('/apps/todos/todolists', function(err, lists) {
+      var inbox, todolist;
+
+      if (err) {
+        module.exports.taskCanBeUsed = false;
+        return callback(err);
+      }
+      if (inbox = _.findWhere(lists.rows, {
+        title: 'Inbox'
+      })) {
+        Task.todolistId = inbox.id;
+        return callback(null);
+      }
+      todolist = {
+        title: 'Inbox',
+        parent_id: 'tree-node-all'
+      };
+      return request.post('/apps/todos/todolists', todolist, function(err, inbox) {
+        if (err) {
+          module.exports.taskCanBeUsed = false;
+          return callback(err);
+        }
+        Task.todolistId = inbox.id;
+        return callback(null);
+      });
+    });
+  };
+
   /*
   # Initializer : ask home to see what is installed
   # -> fetch contacts
@@ -47610,20 +47651,16 @@ window.require.register("CNeditor/externalmodels", function(exports, require, mo
 
 
   module.exports.initialize = function(callback) {
-    var isAgenda;
-
     if (callback == null) {
       callback = function() {};
     }
-    isAgenda = function(app) {
-      return app.name === 'agenda';
-    };
     return request.get('/api/applications', function(err, apps) {
-      var app, _i, _len, _ref3;
+      var action, actions, app, cnt, _i, _j, _len, _len1, _ref3, _results;
 
       if (err) {
         return callback(err);
       }
+      actions = [];
       _ref3 = (apps != null ? apps.rows : void 0) || [];
       for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
         app = _ref3[_i];
@@ -47633,44 +47670,34 @@ window.require.register("CNeditor/externalmodels", function(exports, require, mo
         switch (app.slug) {
           case 'contacts':
             module.exports.contactCanBeUsed = true;
-            module.exports.contactCollection.fetch();
+            actions.push(Contact.load);
             break;
           case 'agenda':
             module.exports.alarmCanBeUsed = true;
             break;
           case 'todos':
             module.exports.taskCanBeUsed = true;
+            actions.push(Task.getOrCreateInbox);
         }
       }
-      if (!module.exports.taskCanBeUsed) {
-        return callback(null);
-      }
-      return request.get('/apps/todos/todolists', function(err, lists) {
-        var inbox, todolist;
-
-        if (err) {
-          module.exports.taskCanBeUsed = false;
-          return callback(err);
-        }
-        if (inbox = _.findWhere(lists.rows, {
-          title: 'Inbox'
-        })) {
-          Task.todolistId = inbox.id;
-          return callback(null);
-        }
-        todolist = {
-          title: 'Inbox',
-          parent_id: 'tree-node-all'
-        };
-        return request.post('/apps/todos/todolists', todolist, function(err, inbox) {
+      cnt = actions.length;
+      err = null;
+      _results = [];
+      for (_j = 0, _len1 = actions.length; _j < _len1; _j++) {
+        action = actions[_j];
+        _results.push(action(function(err) {
           if (err) {
-            module.exports.taskCanBeUsed = false;
+            if (err == null) {
+              err = err;
+            }
+          }
+          cnt--;
+          if (cnt === 0) {
             return callback(err);
           }
-          Task.todolistId = inbox.id;
-          return callback(null);
-        });
-      });
+        }));
+      }
+      return _results;
     });
   };
   
@@ -48248,6 +48275,11 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
       var updateItems,
         _this = this;
 
+      if (contactCollection.length === 0) {
+        contactCollection.once('sync', function() {
+          return _this.realtimeContacts(contactCollection);
+        });
+      }
       updateItems = function() {
         return _this._auto.setItems('contact', contactCollection.map(function(contact) {
           return {
@@ -48257,23 +48289,12 @@ window.require.register("CNeditor/hot-string", function(exports, require, module
           };
         }));
       };
-      if (contactCollection.length) {
-        updateItems();
-        return contactCollection.on({
-          'add': updateItems,
-          'remove': updateItems,
-          'change:name': updateItems
-        });
-      } else {
-        return contactCollection.once('sync', function() {
-          updateItems();
-          return contactCollection.on({
-            'add': updateItems,
-            'remove': updateItems,
-            'change:name': updateItems
-          });
-        });
-      }
+      updateItems();
+      return contactCollection.on({
+        'add': updateItems,
+        'remove': updateItems,
+        'change:name': updateItems
+      });
     };
 
     /**
