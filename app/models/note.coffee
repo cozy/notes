@@ -3,7 +3,6 @@ module.exports = (compound, Note) ->
     Tree = compound.models.Tree
 
     async = require 'async'
-    requests = require '../../common/requests'
 
     Note.all = (callback) -> Note.request "all", callback
 
@@ -15,32 +14,95 @@ module.exports = (compound, Note) ->
     Note.destroyAll = (callback) ->
         Note.requestDestroy "all", callback
 
-
-    ###*
-     * Destroy a note and its children and update the tree.
-     * @param  {string} nodeId id of the note to delete
-     * @param  {function} cbk    cbk(error) is executed at the end returning null or the error.
     ###
-    Note.destroy = (nodeId, cbk)->
+    # Old notes were stored with stringified path, this reverses it
+    ###
+    Note.patchPath = (note, callback) ->
+        if typeof note.path is 'string'
+            path = JSON.parse(note.path)
+            note.updateAttributes path: path, callback
+        else
+            callback()
 
-        # called in parallele to delete each note in the db
-        _deleteNote = (noteId,cbk)->
-            Note.find noteId, (err, note)->
-                note.destroy cbk
-        
-        # vars
-        dataTree = Tree.dataTree
 
-        # walk through dataTree to remove the node and all its children
-        nodesToDelete = dataTree.removeNode(nodeId)
-        nodesToDelete.push(nodeId)
+    Note.tree = (callback) ->
+        Note.rawRequest "tree", {}, (err, notes) ->
 
-        # deletion in // of all the notes in the db
-        async.forEach nodesToDelete, _deleteNote, (err)->
+            byId = {}
+            tree = children:[], data:'All', attr: id: 'tree-node-all'
+            for note in notes
+                format =
+                    parent: note.key
+                    children: []
+                    data: note.value
+                    attr: id: note.id
 
-            # then we can save the tree
-            Tree.tree.updateAttributes struct: dataTree.toJson(), (err) ->
-                if err
-                    cbk(err)
-                else
-                    cbk(null)
+                byId[note.id] = format
+                tree.children.push format if note.key is 'tree-node-all'
+
+
+            for key, format of byId
+                byId[format.parent]?.children.push format
+                delete format.parent
+
+            callback null, tree
+
+
+    Note::moveOrRename = (newTitle, newParent, callback) ->
+
+
+        parent_id = newParent or @parent_id
+        title = newTitle or @title
+
+        if parent_id is 'tree-node-all'
+            @updatePath [title], callback
+
+        else
+            Note.find parent_id, (err, parent) =>
+                path = parent.path.slice(0)
+                path.push title
+                @updatePath path, callback
+
+    Note::updatePath = (newPath, callback) ->
+
+        oldPath = @path.slice(0) # [a, b, oldtitle]
+
+
+        # arguments to be passed to splice
+        # replace oldPath by newPath
+        # ~ path.splice 0, oldPath.length, newPath[0], newPath[1], ..., title
+        spliceArgs = newPath.slice(0) # newpath = [d, e, newtitle]
+        spliceArgs.unshift oldPath.length
+        spliceArgs.unshift 0 # [0, 3, d, e, newtitle]
+
+
+        # console.log oldPath
+        # console.log spliceArgs
+
+        #get note and subnotes
+        query =
+            startkey: oldPath # [a, b, oldtitle]
+            endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
+
+        Note.request "path", query, (err, notes) ->
+
+            # console.log query, spliceArgs, notes.length
+            # console.log notes
+            return callback err if err or not notes
+
+            async.each notes, (note, cb) ->
+                path = note.path
+                path.splice.apply path, spliceArgs
+                note.updateAttributes path: path, cb
+            , callback
+
+    Note::destroyWithChildren = (callback) ->
+
+        oldPath = @path.slice(0)
+        query =
+            startkey: oldPath # [a, b, oldtitle]
+            endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
+
+        console.log " QUERYIS = ", query
+
+        Note.requestDestroy "path", query, callback

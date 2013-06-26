@@ -79,566 +79,6 @@
   globals.require.brunch = true;
 })();
 
-window.require.register("CNeditor/selection", function(exports, require, module) {
-  var µ;
-
-  µ = {};
-
-  /* ------------------------------------------------------------------------
-  # UTILITY FUNCTIONS
-  # used to set ranges and help normalize selection
-  #
-  # parameters: elt  :  a dom object with only textNode children
-  #
-  # note: with google chrome, it seems that non visible elements
-  #       cannot be selected with rangy (that's where 'blank' comes in)
-  */
-
-
-  /**
-   * Called only once from the editor - TODO : role to be verified
-  */
-
-
-  µ.cleanSelection = function(startLine, endLine, range) {
-    var endNode, startNode;
-
-    if (startLine === null) {
-      startLine = endLine;
-      endLine = endLine.lineNext;
-      µ.putStartOnStart(range, startLine.line$[0].firstElementChild);
-      endLine.line$.prepend('<span></span>');
-      return µ.putEndOnStart(range, endLine.line$[0].firstElementChild);
-    } else {
-      startNode = startLine.line$[0].lastElementChild.previousElementSibling;
-      endNode = endLine.line$[0].lastElementChild.previousElementSibling;
-      range.setStartAfter(startNode, 0);
-      return range.setEndAfter(endNode, 0);
-    }
-  };
-
-  µ.selectAll = function(editor) {
-    var range, sel;
-
-    range = document.createRange();
-    range.setStartBefore(editor.linesDiv.firstChild);
-    range.setEndAfter(editor.linesDiv.lastChild);
-    µ.normalize(range);
-    sel = editor.getEditorSelection();
-    sel.removeAllRanges();
-    return sel.addRange(range);
-  };
-
-  /**
-   * Called only once from the editor - TODO : role to be verified
-  */
-
-
-  µ.cloneEndFragment = function(range, endLine) {
-    var range4fragment;
-
-    range4fragment = rangy.createRangyRange();
-    range4fragment.setStart(range.endContainer, range.endOffset);
-    range4fragment.setEndAfter(endLine.line$[0].lastChild);
-    return range4fragment.cloneContents();
-  };
-
-  /* ------------------------------------------------------------------------
-  #  normalize(range)
-  #
-  #  Modify 'range' containers and offsets so it represent a clean selection
-  #  that starts and ends inside a textNode.
-  #
-  #  Set the flag isEmptyLine to true if an empty line is being normalized
-  #  so further suppr ~ backspace work properly.
-  #
-  #  All possible breakpoints :
-      - <span>|<nodeText>|Text |node content|</nodeText>|<any>...</nodeText>|</span>
-             BP1        BP2   BP3          BP4         BP5             BP6
-
-      - <div>|<span>...</span>|<any>...</span>|</br>|</div>
-            BP7              BP8             BP9    BP10
-
-      - <body>|<div>...</div>|<div>...</div>|</body>
-             BP11           BP12           BP13
-
-
-      BP1 : <span>|<nodeText>
-
-          |     test    |               action              |
-          |-------------|-----------------------------------|
-          | cont = span | if cont.length = 0                |
-          | offset = 0  | * create nodeText                 |
-          |             | * BP2 => BP2                      |
-          |             | else if cont.child(0) = nodeText  |
-          |             | * BP2 => BP2                      |
-          |             | else if cont.child(0) != nodeText |
-          |             | * error                           |
-
-      BP2 : <nodeText>|Text node content</nodeText>
-
-          |       test      |  action |
-          |-----------------|---------|
-          | cont = nodeText | nothing |
-          | offset = 0      |         |
-
-      BP3 : <nodeText>Text |node content</nodeText>
-
-          |         test         |  action |
-          |----------------------|---------|
-          | cont = nodeText      | nothing |
-          | 0<offset<cont.length |         |
-
-      BP4 : <nodeText>Text node content|</nodeText>
-
-          |         test         |  action |
-          |----------------------|---------|
-          | cont = nodeText      | nothing |
-          | offset = cont.length |         |
-
-      BP5 & BP6 : </nodeText>|<any>
-          |               test              |            action           |
-          |---------------------------------|-----------------------------|
-          | cont != nodeText                | bpEnd(cont.child(offset-1)) |
-          | offset > 0                      |                             |
-          | cont.child(offset-1) = nodeText |                             |
-
-      BP7 : <div>|<span>...
-          |    test    |          action          |
-          |------------|--------------------------|
-          | cont = div | if cont.length = 0       |
-          | offset = 0 | * error                  |
-          |            | else                     |
-          |            | bpStart(cont.firstChild) |
-
-      BP8 & BP9 : ...</span>|<any>...
-          |             test            |            action           |
-          |-----------------------------|-----------------------------|
-          | cont != nodeText            | bpEnd(cont.child(offset-1)) |
-          | offset > 0                  |                             |
-          | cont.child(offset-1) = span |                             |
-
-      BP10 : </br>|</div>
-          |            test           |            action           |
-          |---------------------------|-----------------------------|
-          | cont != nodeText          | bpEnd(cont.child(offset-2)) |
-          | offset > 0                |                             |
-          | offset=cont.length        |                             |
-          | cont.child(offset-1) = br |                             |
-
-      BP11 : <body>|<div>...
-          |     test    |          action          |
-          |-------------|--------------------------|
-          | cont = body | bpStart(cont.firstChild) |
-          | offset = 0  |                          |
-
-      BP12 : </div>|<any>
-          |            test            |            action           |
-          |----------------------------|-----------------------------|
-          | cont != nodeText           | bpEnd(cont.child(offset-1)) |
-          | offset > 0                 |                             |
-          | offset=cont.length         |                             |
-          | cont.child(offset-1) = div |                             |
-
-
-      BP13 : ...</div>|</body>
-          |         test         |         action        |
-          |----------------------|-----------------------|
-          | cont = body          | bpEnd(cont.lastChild) |
-          | offset = cont.length |                       |
-  */
-
-
-  µ.normalize = function(rg, preferNext) {
-    var isCollapsed, newEndBP, newStartBP;
-
-    isCollapsed = rg.collapsed;
-    newStartBP = µ.normalizeBP(rg.startContainer, rg.startOffset, preferNext);
-    rg.setStart(newStartBP.cont, newStartBP.offset);
-    if (isCollapsed) {
-      rg.collapse(true);
-      newEndBP = newStartBP;
-    } else {
-      newEndBP = µ.normalizeBP(rg.endContainer, rg.endOffset, preferNext);
-      rg.setEnd(newEndBP.cont, newEndBP.offset);
-    }
-    return [newStartBP, newEndBP];
-  };
-
-  /**
-   * Returns a break point in the most pertinent text node given a random bp.
-   * @param  {element} cont   the container of the break point
-   * @param  {number} offset offset of the break point
-   * @param  {boolean} preferNext [optional] if true, in case BP8, we will choose
-   *                              to go in next sibling - if it exists - rather
-   *                              than in the previous one.
-   * @return {object} the suggested break point : {cont:newCont,offset:newOffset}
-  */
-
-
-  µ.normalizeBP = function(cont, offset, preferNext) {
-    var newCont, newOffset, res, _ref;
-
-    if (cont.nodeName === '#text') {
-      res = {
-        cont: cont,
-        offset: offset
-      };
-    } else if ((_ref = cont.nodeName) === 'SPAN' || _ref === 'A') {
-      if (offset > 0) {
-        newCont = cont.childNodes[offset - 1];
-        newOffset = newCont.length;
-      } else if (cont.childNodes.length > 0) {
-        newCont = cont.firstChild;
-        newOffset = 0;
-      } else {
-        newCont = document.createTextNode('');
-        cont.appendChild(newCont);
-        newOffset = 0;
-      }
-    } else if (cont.nodeName === 'DIV' && cont.id !== "editor-lines") {
-      if (offset === 0) {
-        if (µ.isSegment(cont.firstChild)) {
-          res = µ.normalizeBP(cont.firstChild, 0);
-        } else {
-          res = µ.normalizeBP(cont.firstChild.nextSibling, 0);
-        }
-      } else if (offset === 1 && !µ.isSegment(cont.firstChild)) {
-        res = µ.normalizeBP(cont.firstChild.nextSibling, 0);
-      } else if (offset < cont.children.length - 1) {
-        if (preferNext) {
-          newCont = cont.children[offset];
-          if (newCont.nodeName === 'BR') {
-            newCont = cont.children[offset - 1];
-          }
-          newOffset = 0;
-          res = µ.normalizeBP(newCont, newOffset);
-        } else {
-          newCont = cont.children[offset - 1];
-          newOffset = newCont.childNodes.length;
-          res = µ.normalizeBP(newCont, newOffset);
-        }
-      } else {
-        newCont = cont.children[cont.children.length - 2];
-        newOffset = newCont.childNodes.length;
-        res = µ.normalizeBP(newCont, newOffset);
-      }
-    } else if (cont.nodeName === 'DIV' && cont.id === "editor-lines") {
-      if (offset === 0) {
-        newCont = cont.firstChild;
-        newOffset = 0;
-        res = µ.normalizeBP(newCont, newOffset);
-      } else if (offset === cont.childNodes.length) {
-        newCont = cont.lastChild;
-        newOffset = newCont.childNodes.length;
-        res = µ.normalizeBP(newCont, newOffset);
-      } else {
-        newCont = cont.children[offset - 1];
-        newOffset = newCont.childNodes.length;
-        res = µ.normalizeBP(newCont, newOffset);
-      }
-    } else if (cont.nodeName === 'BR') {
-      newCont = cont.previousSibling;
-      newOffset = newCont.childNodes.length;
-      res = µ.normalizeBP(newCont, newOffset);
-    }
-    if (!res) {
-      res = {
-        cont: newCont,
-        offset: newOffset
-      };
-    }
-    return res;
-  };
-
-  /**
-   * Normalize an array of breakpoints.
-   * @param  {Array} bps   An array of break points to normalize
-   * @param  {boolean} preferNext [optional] if true, in case BP8, we will choose
-   *                              to go in next sibling - if it exists - rather
-   *                              than in the previous one.
-   * @return {Array} A ref to the array of normalized bp.
-  */
-
-
-  µ.normalizeBPs = function(bps, preferNext) {
-    var bp, newBp, _i, _len;
-
-    for (_i = 0, _len = bps.length; _i < _len; _i++) {
-      bp = bps[_i];
-      newBp = µ.normalizeBP(bp.cont, bp.offset, preferNext);
-      bp.cont = newBp.cont;
-      bp.offset = newBp.offset;
-    }
-    return bps;
-  };
-
-  /**
-   * return the div corresponding to an element inside a line and tells wheter
-   * the breabk point is at the end or at the beginning of the line
-   * @param  {element} cont   the container of the break point
-   * @param  {number} offset offset of the break point
-   * @return {object}        {div[element], isStart[bool], isEnd[bool]}
-  */
-
-
-  µ.getLineDivIsStartIsEnd = function(cont, offset) {
-    var index, isEnd, isStart, n, nodeI, parent, segmentI, _ref;
-
-    if (cont.nodeName === 'DIV' && (cont.id != null) && cont.id.substr(0, 5) === 'CNID_') {
-      if (cont.textContent === '') {
-        return {
-          div: cont,
-          isStart: true,
-          isEnd: true
-        };
-      }
-      isStart = offset === 0;
-      n = cont.childNodes.length;
-      isEnd = (offset === n) || (offset === n - 1);
-      return {
-        div: cont,
-        isStart: isStart,
-        isEnd: isEnd
-      };
-    } else {
-      if (cont.length != null) {
-        isStart = offset === 0;
-        isEnd = offset === cont.length;
-      } else {
-        isStart = offset === 0;
-        isEnd = offset === cont.childNodes.length;
-      }
-    }
-    parent = cont.parentNode;
-    while (!(parent.nodeName === 'DIV' && (parent.id != null) && parent.id.substr(0, 5) === 'CNID_') && parent.parentNode !== null) {
-      index = µ.getNodeIndex(cont);
-      isStart = isStart && (index === 0);
-      isEnd = isEnd && (index === parent.childNodes.length - 1);
-      cont = parent;
-      parent = parent.parentNode;
-    }
-    if (parent.textContent === '') {
-      return {
-        div: parent,
-        isStart: true,
-        isEnd: true
-      };
-    }
-    _ref = µ.getSegmentIndex(cont), segmentI = _ref[0], nodeI = _ref[1];
-    n = parent.childNodes.length;
-    isStart = isStart && (segmentI === 0);
-    isEnd = isEnd && ((nodeI === n - 1) || (nodeI === n - 2));
-    return {
-      div: parent,
-      isStart: isStart,
-      isEnd: isEnd
-    };
-  };
-
-  µ.putStartOnStart = function(range, elt) {
-    var blank, offset;
-
-    if ((elt != null ? elt.firstChild : void 0) != null) {
-      offset = elt.firstChild.textContent.length;
-      if (offset === 0) {
-        elt.firstChild.data = " ";
-      }
-      return range.setStart(elt.firstChild, 0);
-    } else if (elt != null) {
-      blank = document.createTextNode(" ");
-      elt.appendChild(blank);
-      return range.setStart(blank, 0);
-    }
-  };
-
-  µ.putEndOnStart = function(range, elt) {
-    var blank, offset;
-
-    if ((elt != null ? elt.firstChild : void 0) != null) {
-      offset = elt.firstChild.textContent.length;
-      if (offset === 0) {
-        elt.firstChild.data = " ";
-      }
-      return range.setEnd(elt.firstChild, 0);
-    } else if (elt != null) {
-      blank = document.createTextNode(" ");
-      elt.appendChild(blank);
-      return range.setEnd(blank, 0);
-    }
-  };
-
-  /**
-   * Returns the DIV of the line where the break point is.
-   * @param  {element} cont   The contener of the break point
-   * @param  {number} offset Offset of the break point.
-   * @return {element}        The DIV of the line where the break point is.
-  */
-
-
-  µ.getLineDiv = function(cont, offset) {
-    var startDiv;
-
-    if (cont.nodeName === 'DIV') {
-      if (cont.id === 'editor-lines') {
-        startDiv = cont.children[offset];
-      } else {
-        startDiv = µ._getLineDiv(cont);
-      }
-    } else {
-      startDiv = µ._getLineDiv(cont);
-    }
-    return startDiv;
-  };
-
-  µ._getLineDiv = function(elt) {
-    var parent;
-
-    parent = elt;
-    while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
-      parent = parent.parentNode;
-    }
-    return parent;
-  };
-
-  /**
-   * Returns the segment (span or a or lineDiv) of the line where the break
-   * point is. If the break point is not in a segment, ie in the line div or even
-   * in editor-lines, then it is the line div that will be returned.
-   * @param  {element} cont   The contener of the break point
-   * @param  {number} offset  Offset of the break point. Optional if cont is a
-   *                          text node
-   * @return {element}        The DIV of the line where the break point is.
-  */
-
-
-  µ.getSegment = function(cont, offset) {
-    var startDiv;
-
-    if (cont.nodeName === 'DIV') {
-      if (cont.id === 'editor-lines') {
-        startDiv = cont.children[Math.min(offset, cont.children.length - 1)];
-      } else if ((cont.id != null) && cont.id.substr(0, 5) === 'CNID_') {
-        startDiv = cont;
-      } else {
-        startDiv = µ.getNestedSegment(cont);
-      }
-    } else {
-      startDiv = µ.getNestedSegment(cont);
-    }
-    return startDiv;
-  };
-
-  µ.getNestedSegment = function(elt) {
-    var parent;
-
-    parent = elt.parentNode;
-    while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
-      elt = parent;
-      parent = elt.parentNode;
-    }
-    return elt;
-  };
-
-  µ.isSegment = function(segment) {
-    return segment.nodeName !== 'BR' && !segment.classList.contains('CNE_task_btn');
-  };
-
-  µ.getNextSegment = function(seg) {
-    seg = seg.nextSibling;
-    while (seg && !µ.isSegment(seg)) {
-      seg = seg.nextSibling;
-    }
-    return seg;
-  };
-
-  /**
-   * returns previous segment if one, none otherwise
-   * @param  {Element} seg The source segment
-   * @return {element}     Returns previous segment if one, none otherwise
-  */
-
-
-  µ.getPrevSegment = function(seg) {
-    seg = seg.previousSibling;
-    while (seg && !µ.isSegment(seg)) {
-      seg = seg.previousSibling;
-    }
-    return seg;
-  };
-
-  /**
-   * Returns the normalized break point at the end of the previous segment of the
-   * segment of an element.
-   * @param {[type]} elmt [description]
-  */
-
-
-  µ.setBpPreviousSegEnd = function(elmt) {
-    var bp, index, seg;
-
-    seg = µ.getNestedSegment(elmt);
-    index = µ.getNodeIndex(seg);
-    return bp = µ.normalizeBP(seg.parentNode, index);
-  };
-
-  /**
-   * Returns the normalized break point at the start of the next segment of the
-   * segment of an element.
-   * @param {[type]} elmt [description]
-  */
-
-
-  µ.setBpNextSegEnd = function(elmt) {
-    var bp, index, seg;
-
-    seg = µ.getNestedSegment(elmt);
-    index = µ.getNodeIndex(seg) + 1;
-    return bp = µ.normalizeBP(seg.parentNode, index, true);
-  };
-
-  /**
-   * Returns [segmentIndex,nodeIndex]
-   * @param  {Element} segment The segment to find it's indexes
-   * @return {Array}         [segmentIndex,nodeIndex]
-  */
-
-
-  µ.getSegmentIndex = function(segment) {
-    var i, segmentI, sibling, _i, _len, _ref;
-
-    segmentI = 0;
-    _ref = segment.parentNode.childNodes;
-    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-      sibling = _ref[i];
-      if (sibling.classList.contains('CNE_task_btn')) {
-        segmentI += -1;
-      }
-      if (sibling === segment) {
-        segmentI += i;
-        break;
-      }
-    }
-    return [segmentI, i];
-  };
-
-  µ.getNodeIndex = function(node) {
-    var i, index, sibling, _i, _len, _ref;
-
-    _ref = node.parentNode.childNodes;
-    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-      sibling = _ref[i];
-      if (sibling === node) {
-        index = i;
-        break;
-      }
-    }
-    return index;
-  };
-
-  module.exports = µ;
-  
-});
 window.require.register("CNeditor/md2cozy", function(exports, require, module) {
   /* ------------------------------------------------------------------------
   #  MARKUP LANGUAGE CONVERTERS
@@ -885,6 +325,145 @@ window.require.register("CNeditor/md2cozy", function(exports, require, module) {
   };
 
   exports.md2cozy = md2cozy;
+  
+});
+window.require.register("CNeditor/task", function(exports, require, module) {
+  var Task, request, _ref,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  request = require("./request");
+
+  module.exports = Task = (function(_super) {
+    var checkInboxExists, checkTodoInstalled, createInbox, getApps, getLists, isFromNote, isTodo, noCallback;
+
+    __extends(Task, _super);
+
+    function Task() {
+      _ref = Task.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    Task.prototype.url = function() {
+      if (this.isNew()) {
+        return "/apps/todos/todolists/" + Task.todolistId + "/tasks";
+      } else {
+        return "/apps/todos/tasks/" + this.id;
+      }
+    };
+
+    Task.prototype.defaults = function() {
+      return {
+        done: false
+      };
+    };
+
+    Task.prototype.parse = function(data) {
+      if (data.rows) {
+        return data.rows[0];
+      } else {
+        return data;
+      }
+    };
+
+    noCallback = function() {};
+
+    isTodo = function(app) {
+      return app.name === 'todos';
+    };
+
+    isFromNote = function(todolist) {
+      return todolist.title === 'Inbox';
+    };
+
+    getApps = function(callback) {
+      return request.get('/api/applications', callback);
+    };
+
+    checkTodoInstalled = function(apps, callback) {
+      if (apps.rows.some(isTodo)) {
+        return callback(null, true);
+      } else {
+        return callback('notinstalled', false);
+      }
+    };
+
+    getLists = function(callback) {
+      return request.get('/apps/todos/todolists', callback);
+    };
+
+    checkInboxExists = function(lists, callback) {
+      var inbox;
+
+      inbox = _.find(lists.rows, isFromNote);
+      if (inbox) {
+        return callback(null, inbox);
+      } else {
+        return callback('noinbox');
+      }
+    };
+
+    createInbox = function(callback) {
+      var todolist;
+
+      todolist = {
+        title: 'Inbox',
+        parent_id: 'tree-node-all'
+      };
+      return request.post('/apps/todos/todolists', todolist, callback);
+    };
+
+    Task.initialize = function(callback) {
+      var fail, success;
+
+      fail = function(err) {
+        Task.canBeUsed = false;
+        Task.error = err;
+        if (typeof callback === 'function') {
+          return callback(false);
+        }
+      };
+      success = function(inbox) {
+        Task.todolistId = inbox.id;
+        Task.canBeUsed = true;
+        if (typeof callback === 'function') {
+          return callback(true);
+        }
+      };
+      return getApps(function(err, apps) {
+        if (err) {
+          return fail(err);
+        }
+        return checkTodoInstalled(apps, function(err, isInstalled) {
+          if (err) {
+            return fail(err);
+          }
+          return getLists(function(err, lists) {
+            if (err) {
+              return fail(err);
+            }
+            return checkInboxExists(lists, function(err, inbox) {
+              if (inbox) {
+                return success(inbox);
+              }
+              if (err !== 'noinbox') {
+                return fail(err);
+              }
+              return createInbox(function(err, inbox) {
+                if (err) {
+                  return fail(err);
+                }
+                return success(inbox);
+              });
+            });
+          });
+        });
+      });
+    };
+
+    return Task;
+
+  })(Backbone.Model);
   
 });
 window.require.register("CNeditor/realtimer", function(exports, require, module) {
@@ -24892,6 +24471,122 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);;
+window.require.register("CNeditor/alarm", function(exports, require, module) {
+  var Alarm, request, _ref,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  request = require("./request");
+
+  module.exports = Alarm = (function(_super) {
+    var checkAlarmInstalled, getApps, isAlarm, noCallback;
+
+    __extends(Alarm, _super);
+
+    function Alarm() {
+      _ref = Alarm.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    Alarm.prototype.urlRoot = "/apps/agenda/alarms";
+
+    Alarm.dateFormat = "{Dow} {Mon} {dd} {yyyy} {HH}:{mm}:00";
+
+    Alarm.prototype.validate = function(attrs, options) {
+      var allowedActions, errors;
+
+      errors = [];
+      if (!attrs.description || attrs.description === "") {
+        errors.push({
+          field: 'description',
+          value: "A description must be set."
+        });
+      }
+      if (!attrs.action || attrs.action === "") {
+        errors.push({
+          field: 'action',
+          value: "An action must be set."
+        });
+      }
+      allowedActions = ['DISPLAY', 'EMAIL'];
+      if (allowedActions.indexOf(attrs.action) === -1) {
+        errors.push({
+          field: 'action',
+          value: "A valid action must be set."
+        });
+      }
+      if (!attrs.trigg || !new Date.create(attrs.trigg).isValid()) {
+        errors.push({
+          field: 'triggdate',
+          value: "The date or time format might be invalid. " + "It must be \"dd/mm/yyyy hh:mm\"."
+        });
+      }
+      if (errors.length > 0) {
+        return errors;
+      }
+    };
+
+    Alarm.prototype.getDateObject = function() {
+      return new Date.create(this.get('trigg'));
+    };
+
+    Alarm.prototype.getFormattedDate = function(formatter) {
+      return this.getDateObject().format(formatter);
+    };
+
+    noCallback = function() {};
+
+    isAlarm = function(app) {
+      return app.name === 'agenda';
+    };
+
+    getApps = function(callback) {
+      return request.get('/api/applications', callback);
+    };
+
+    checkAlarmInstalled = function(apps, callback) {
+      if (apps.rows.some(isAlarm)) {
+        return callback(null, true);
+      } else {
+        return callback('notinstalled');
+      }
+    };
+
+    Alarm.initialize = function(callback) {
+      var fail, success;
+
+      fail = function(err) {
+        Alarm.canBeUsed = false;
+        Alarm.error = err;
+        if (typeof callback === 'function') {
+          return callback(false);
+        }
+      };
+      success = function() {
+        Alarm.canBeUsed = true;
+        if (typeof callback === 'function') {
+          return callback(true);
+        }
+      };
+      return getApps(function(err, apps) {
+        if (err) {
+          return fail(err);
+        }
+        return checkAlarmInstalled(apps, function(err) {
+          if (err) {
+            return fail(err);
+          } else {
+            return success();
+          }
+        });
+      });
+    };
+
+    return Alarm;
+
+  })(Backbone.Model);
+  
+});
 window.require.register("CNeditor/autocomplete", function(exports, require, module) {
   var AutoComplete;
 
@@ -33145,295 +32840,6 @@ window.require.register("CNeditor/tags", function(exports, require, module) {
     };
 
     return Tags;
-
-  })();
-  
-});
-window.require.register("CNeditor/urlpopover", function(exports, require, module) {
-  /** -----------------------------------------------------------------------
-   * initialise the popover during the editor initialization.
-  */
-
-  var UrlPopover,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
-
-  module.exports = UrlPopover = (function() {
-    function UrlPopover(editor) {
-      var btnCancel, btnDelete, btnOK, textInput, urlInput, _ref, _ref1,
-        _this = this;
-
-      this.editor = editor;
-      this.validate = __bind(this.validate, this);
-      this.cancel = __bind(this.cancel, this);
-      this.clickOut = __bind(this.clickOut, this);
-      this.isOn = false;
-      this.el = document.createElement('div');
-      this.el.id = 'CNE_urlPopover';
-      this.el.className = 'CNE_urlpop';
-      this.el.setAttribute.contentEditable = false;
-      this.el.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">\n        (Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
-      this.el.titleElt = this.el.firstChild;
-      this.el.link = this.el.getElementsByTagName('A')[0];
-      _ref = this.el.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
-      btnOK.addEventListener('click', this.validate);
-      btnCancel.addEventListener('click', function(e) {
-        e.stopPropagation();
-        return _this.cancel(false);
-      });
-      btnDelete.addEventListener('click', function() {
-        _this.el.urlInput.value = '';
-        return _this.validate();
-      });
-      _ref1 = this.el.querySelectorAll('input'), urlInput = _ref1[0], textInput = _ref1[1];
-      this.el.urlInput = urlInput;
-      this.el.textInput = textInput;
-      this.el.addEventListener('keypress', function(e) {
-        if (e.keyCode === 13) {
-          _this.validate();
-          e.stopPropagation();
-        } else if (e.keyCode === 27) {
-          _this.cancel(false);
-        }
-        return false;
-      });
-      this.editor.editorBody.addEventListener('mouseup', this.clickOut);
-      return true;
-    }
-
-    /** -----------------------------------------------------------------------
-     * Show, positionate and initialise the popover for link edition.
-     * @param  {array} segments  An array with the segments of
-     *                           the link [<a>,...<a>]. Must be created even if
-     *                           it is a creation in order to put a background
-     *                           on the segment where the link will be.
-     * @param  {boolean} isLinkCreation True is it is a creation. In this case,
-     *                                  if the process is canceled, the initial
-     *                                  state without link will be restored.
-    */
-
-
-    UrlPopover.prototype.show = function(segments, isLinkCreation) {
-      var href, seg, txt, _i, _j, _len, _len1;
-
-      this.editor.disable();
-      this.isOn = true;
-      this.isLinkCreation = isLinkCreation;
-      this.el.initialSelRg = this.editor.currentSel.theoricalRange.cloneRange();
-      this.el.segments = segments;
-      seg = segments[0];
-      this.el.style.left = seg.offsetLeft + 'px';
-      this.el.style.top = seg.offsetTop + 20 + 'px';
-      href = seg.href;
-      if (href === '' || href === 'http:///') {
-        href = 'http://';
-      }
-      this.el.urlInput.value = href;
-      txt = '';
-      for (_i = 0, _len = segments.length; _i < _len; _i++) {
-        seg = segments[_i];
-        txt += seg.textContent;
-      }
-      this.el.textInput.value = txt;
-      this.el.initialTxt = txt;
-      if (isLinkCreation) {
-        this.el.titleElt.textContent = 'Create Link';
-        this.el.link.style.display = 'none';
-      } else {
-        this.el.titleElt.textContent = 'Edit Link';
-        this.el.link.style.display = 'inline-block';
-        this.el.link.href = href;
-      }
-      seg.parentElement.parentElement.appendChild(this.el);
-      this.el.urlInput.select();
-      this.el.urlInput.focus();
-      for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
-        seg = segments[_j];
-        seg.classList.add('CNE_url_in_edition');
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * The callback for a click outside the popover
-    */
-
-
-    UrlPopover.prototype.clickOut = function(e) {
-      var elt;
-
-      elt = e.target;
-      while (elt !== this.el && elt !== this.editor.editorBody) {
-        elt = elt.parentNode;
-      }
-      if (elt === this.el) {
-        return this.cancel(true);
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Close the popover and revert modifications if isLinkCreation == true
-     * @param  {boolean} doNotRestoreOginalSel If true, lets the caret at its
-     *                                         position (used when you click
-     *                                         outside url popover in order not
-     *                                         to loose the new selection)
-    */
-
-
-    UrlPopover.prototype.cancel = function(doNotRestoreOginalSel) {
-      var bp1, bp2, bps, lineDiv, s0, s1, seg, segments, sel, _i, _len;
-
-      segments = this.el.segments;
-      if (!this.isOn) {
-        return;
-      }
-      this.el.parentElement.removeChild(this.el);
-      this.isOn = false;
-      for (_i = 0, _len = segments.length; _i < _len; _i++) {
-        seg = segments[_i];
-        seg.classList.remove('CNE_url_in_edition');
-      }
-      if (this.isLinkCreation) {
-        s0 = segments[0];
-        s1 = segments[segments.length - 1];
-        bp1 = {
-          cont: s0,
-          offset: 0
-        };
-        bp2 = {
-          cont: s1,
-          offset: s1.childNodes.length
-        };
-        bps = [bp1, bp2];
-        selection.normalizeBPs(bps);
-        lineDiv = selection._getLineDiv(s0);
-        this.editor._applyAhrefToSegments(s0, s1, bps, false, '');
-        this.editor._fusionSimilarSegments(lineDiv, bps);
-        if (!doNotRestoreOginalSel) {
-          this.setSelectionBp(bp1, bp2);
-        }
-      } else if (!doNotRestoreOginalSel) {
-        sel = getEditorSelection();
-        sel.removeAllRanges();
-        sel.addRange(this.el.initialSelRg);
-      }
-      this.editor.setFocus();
-      this.editor.enable();
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Close the popover and applies modifications to the link.
-    */
-
-
-    UrlPopover.prototype.validate = function(event) {
-      var bp, bp1, bp2, bps, i, l, lastSeg, lineDiv, parent, rg, seg, segments, sel, _i, _j, _k, _len, _len1, _ref;
-
-      if (event) {
-        event.stopPropagation();
-      }
-      segments = this.el.segments;
-      if (this.el.urlInput.value === '' && this.isLinkCreation) {
-        this.cancel(false);
-        return true;
-      }
-      this.el.parentElement.removeChild(this.el);
-      this.isOn = false;
-      for (_i = 0, _len = segments.length; _i < _len; _i++) {
-        seg = segments[_i];
-        seg.classList.remove('CNE_url_in_edition');
-      }
-      if (!this.isLinkCreation) {
-        sel = getEditorSelection();
-        sel.removeAllRanges();
-        sel.addRange(this.el.initialSelRg);
-        this.editor._history.addStep();
-      }
-      lineDiv = segments[0].parentElement;
-      if (this.el.urlInput.value === '') {
-        l = segments.length;
-        bp1 = {
-          cont: segments[0].firstChild,
-          offset: 0
-        };
-        bp2 = {
-          cont: segments[l - 1].firstChild,
-          offset: segments[l - 1].firstChild.length
-        };
-        bps = [bp1, bp2];
-        this.editor._applyAhrefToSegments(segments[0], segments[l - 1], bps, false, '');
-        this.editor._fusionSimilarSegments(lineDiv, bps);
-        rg = document.createRange();
-        bp1 = bps[0];
-        bp2 = bps[1];
-        rg.setStart(bp1.cont, bp1.offset);
-        rg.setEnd(bp2.cont, bp2.offset);
-        sel = getEditorSelection();
-        sel.removeAllRanges();
-        sel.addRange(rg);
-        this.editor.setFocus();
-        this.editor.enable();
-        this.editorTarget$.trigger(jQuery.Event('onChange'));
-        return true;
-      } else if (this.el.initialTxt === this.el.textInput.value) {
-        for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
-          seg = segments[_j];
-          seg.href = this.el.urlInput.value;
-        }
-        lastSeg = seg;
-      } else {
-        seg = segments[0];
-        seg.href = this.el.urlInput.value;
-        seg.textContent = this.el.textInput.value;
-        parent = seg.parentNode;
-        for (i = _k = 1, _ref = segments.length - 1; _k <= _ref; i = _k += 1) {
-          seg = segments[i];
-          parent.removeChild(seg);
-        }
-        lastSeg = segments[0];
-      }
-      i = selection.getSegmentIndex(lastSeg);
-      i = i[1];
-      bp = selection.normalizeBP(lineDiv, i + 1);
-      this.editor._fusionSimilarSegments(lineDiv, [bp]);
-      bp = this.insertSpaceAfterUrl(selection.getNestedSegment(bp.cont));
-      this._setCaret(bp.cont, bp.offset);
-      this.setFocus();
-      this.editor.enable();
-      this.editorTarget$.trigger(jQuery.Event('onChange'));
-      if (lineDiv.dataset.type === 'task') {
-        return this._stackTaskChange(lineDiv.task, 'modified');
-      }
-    };
-
-    /**
-     * returns a break point, collapsed after a space caracter immediately
-     * following a given segment. A segment will we inserted if required.
-     * @param  {[type]} seg [description]
-     * @return {Object}     {cont,offset} : the break point
-    */
-
-
-    UrlPopover.prototype.insertSpaceAfterUrl = function(seg) {
-      var bp, index, nextSeg, span, txtNode;
-
-      nextSeg = seg.nextSibling;
-      if (nextSeg.nodeName === 'BR') {
-        span = this.editor._insertSegmentAfterSeg(seg);
-        bp = {
-          cont: span.firstChild,
-          offset: 1
-        };
-      } else {
-        index = selection.getSegmentIndex(seg)[1] + 1;
-        bp = selection.normalizeBP(seg.parentElement, index, true);
-        txtNode = bp.cont;
-        bp.offset = 0;
-      }
-      return bp;
-    };
-
-    return UrlPopover;
 
   })();
   

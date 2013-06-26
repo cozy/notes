@@ -16,7 +16,7 @@ client = new Client "http://localhost:8888/"
 
 
 ###
-# HELPERS 
+# HELPERS
 ###
 
 # vars used through the tests :
@@ -24,7 +24,7 @@ notesList = rnotes = {}
 note1  = note2  = note3  = null # notes with data chosen on client side
 id1    = id2    = id3    = null # notes ids
 rnote1 = rnote2 = rnote3 = null # retrieved notes from the serveur
-note4=note5=note6=note7=note8=note9=null
+note4 = note5 = note6 = note7 = note8 = note9 = null
 noteToDestroy =null
 updateData    = null
 
@@ -54,8 +54,9 @@ Tree = null
 Note = null
 
 before (done) ->
+    @timeout 5000
     @app.listen(8888)
-    {Tree, Note} = @app.compound.models
+    {Note} = @app.compound.models
     helpers.cleanDb done
 
 after (done) ->
@@ -96,29 +97,28 @@ describe "/notes", ->
                     note1.title.should.equal 'Note1 title'
                     note2.title.should.equal 'Note2 title'
                     note3.title.should.equal 'Note3 title'
-                    should.exist note3.path.length
-                    note3.path.should.be.a('object').and.have.property('length')
+                    note3.path.length.should.eql 2
                     done()
 
-        it "should create the Tree.tree model and a Tree.dataTree", ->
-            should.exist Tree.tree
-            should.exist Tree.tree.struct
-            should.exist Tree.dataTree
-            should.exist Tree.dataTree.root
-            should.exist Tree.dataTree.nodes
-            
-        it "should produce an internal tree with root->node1->node3 & root->node2 ", (done)->
-            root  = Tree.dataTree.root
-            node1 = Tree.dataTree.nodes[note1.id]
-            node2 = Tree.dataTree.nodes[note2.id]
-            node3 = Tree.dataTree.nodes[note3.id]
-            node1._parent.should.equal root
-            node2._parent.should.equal root
-            node3._parent.should.equal node1
-            root.children[0].should.equal node1
-            root.children[1].should.equal node2
-            node1.children[0].should.equal node3
-            done()
+        # it "should create the Tree.tree model and a Tree.dataTree", ->
+        #     should.exist Tree.tree
+        #     should.exist Tree.tree.struct
+        #     should.exist Tree.dataTree
+        #     should.exist Tree.dataTree.root
+        #     should.exist Tree.dataTree.nodes
+
+        # it "should produce an internal tree with root->node1->node3 & root->node2 ", (done)->
+        #     root  = Tree.dataTree.root
+        #     node1 = Tree.dataTree.nodes[note1.id]
+        #     node2 = Tree.dataTree.nodes[note2.id]
+        #     node3 = Tree.dataTree.nodes[note3.id]
+        #     node1._parent.should.equal root
+        #     node2._parent.should.equal root
+        #     node3._parent.should.equal node1
+        #     root.children[0].should.equal node1
+        #     root.children[1].should.equal node2
+        #     node1.children[0].should.equal node3
+        #     done()
 
         it 'should store a correct tree', (done)->
             client.get "tree/", (error, response, tree) ->
@@ -140,7 +140,7 @@ describe "/notes", ->
 
 
     describe "- GET -", ->
-            
+
         it "should get back all the notes", (done) ->
 
             client.get "notes/", (error, resp, notes) ->
@@ -201,13 +201,17 @@ describe "/notes/:id", ->
                 content : "\n+ 01 - modified\n"
             client.put "notes/#{note1.id}", updateData, (err, resp, data) ->
                 resp.statusCode.should.equal 200
-                client.get "notes/", (err, resp, notes) ->
-                    resp.statusCode.should.equal 200
-                    retrieveNotes(notes)
-                    done()
+                done()
+
+        it "when i fetch the note", (done) ->
+            client.get "notes/", (err, resp, notes) ->
+                resp.statusCode.should.equal 200
+                retrieveNotes(notes)
+                done()
 
         it "should update the note title & content", (done)->
             rnote1.title.should.equal   updateData.title
+            console.log rnote1.path
             rnote1.path[0].should.eql  updateData.title
             rnote1.content.should.equal updateData.content
             done()
@@ -298,6 +302,8 @@ describe "Test in many different cases", ->
 
     describe ":creation of a complex tree", ->
         it "should success", (done)->
+            content = "very special content for indexation testing"
+
             async.series [
                 createNoteFunction "Recipe", "tree-node-all", "\n+ 01\n", (err, resp, body)->
                     note4=body
@@ -305,7 +311,6 @@ describe "Test in many different cases", ->
                     note5=body
                 createNoteFunction "Cassoulet", "tree-node-all", "\n+ 01\n", (err, resp, body)->
                     note6=body
-                content = "very special content for indexation testing"
                 createNoteFunction "Pizza - the true one !", "tree-node-all", content, (err, resp, body)->
                     note7=body
             ], ->
@@ -347,22 +352,22 @@ describe "DEL - notes/:id", ->
                 should.equal note9.id in ids, true
                 done()
 
-        it "should updated the tree", (done) ->
-            should.equal Tree.dataTree.nodes[note1.id], undefined
-            should.equal Tree.dataTree.nodes[note2.id], undefined
-            should.equal Tree.dataTree.nodes[note3.id], undefined
-            should.equal Tree.dataTree.nodes[note8.id], undefined
-            Tree.dataTree.nodes[note4.id].should.exist
-            Tree.dataTree.nodes[note5.id].should.exist
-            Tree.dataTree.nodes[note6.id].should.exist
-            Tree.dataTree.nodes[note7.id].should.exist
-            Tree.dataTree.nodes[note9.id].should.exist
-            Tree.dataTree.root.children.length.should.equal 2
+        # it "should updated the tree", (done) ->
+        #     should.equal Tree.dataTree.nodes[note1.id], undefined
+        #     should.equal Tree.dataTree.nodes[note2.id], undefined
+        #     should.equal Tree.dataTree.nodes[note3.id], undefined
+        #     should.equal Tree.dataTree.nodes[note8.id], undefined
+        #     Tree.dataTree.nodes[note4.id].should.exist
+        #     Tree.dataTree.nodes[note5.id].should.exist
+        #     Tree.dataTree.nodes[note6.id].should.exist
+        #     Tree.dataTree.nodes[note7.id].should.exist
+        #     Tree.dataTree.nodes[note9.id].should.exist
+        #     Tree.dataTree.root.children.length.should.equal 2
 
-            Tree.dataTree.root.children[0]._id.should.equal note9.id
-            Tree.dataTree.root.children[1]._id.should.equal note4.id
-            done()
-        
+        #     Tree.dataTree.root.children[0]._id.should.equal note9.id
+        #     Tree.dataTree.root.children[1]._id.should.equal note4.id
+        #     done()
+
 
 describe "/notes/search", ->
     describe "POST", ->
@@ -378,7 +383,7 @@ describe "/notes/search", ->
         it "when you delete given note", (done) ->
             client.del "notes/#{note7.id}", (err, resp, notes) ->
                 done()
-            
+
         it "should returned no note", (done) ->
             data = query: "special"
             client.post "notes/search", data, (err, resp, notes) ->
@@ -399,10 +404,10 @@ describe "/notes/:id/attachments", ->
                              './test/test-get.png', ->
                 fileStats = fs.statSync('./test/test.png')
                 resultStats = fs.statSync('./test/test-get.png')
-            
+
                 resultStats.size.should.equal fileStats.size
                 done()
-            
+
     describe "DELETE/GET", ->
         it "When you delete a file", (done) ->
             client.del "notes/#{note6.id}/files/test.png", (err, res, body) =>

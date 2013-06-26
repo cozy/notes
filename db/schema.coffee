@@ -10,7 +10,7 @@ Note = define 'Note', ->
     property 'lastModificationValueOf' , Number, default: -> (new Date()).getTime()
     property 'tags'                 , [String]
     property 'parent_id'            , String
-    property 'path'                 , String
+    property 'path'                 , Object #should be [String], but retrocompatibility
     property 'humanPath'            , [String]
     property '_attachments'         , Object
     property 'version'              , String
