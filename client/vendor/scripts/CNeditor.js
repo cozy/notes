@@ -26904,7 +26904,11 @@ window.require.register("CNeditor/contactpopover", function(exports, require, mo
         } else {
           name = dp.type + ' ' + dp.name.replace('smail', 'postal');
         }
-        html += "<dt>" + name + "</dt><dd>" + value + "</dd>";
+        html += "<dt>" + name + "</dt><dd>" + value;
+        if (dp.name === 'about' && dp.type === 'cozy') {
+          html += '<a href="' + dp.value + '/public/talk/" target="_blank">[T]</a>';
+        }
+        html += "</dd>";
       }
       html += '</dl>';
       this.el.innerHTML = html;
