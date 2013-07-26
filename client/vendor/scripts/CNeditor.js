@@ -26877,6 +26877,7 @@ window.require.register("CNeditor/contactpopover", function(exports, require, mo
     function ContactPopover() {
       this.el = document.createElement('DIV');
       this.el.id = 'contactpopover';
+      this.el.contentEditable = false;
       this.isOn = false;
     }
 
@@ -26913,7 +26914,7 @@ window.require.register("CNeditor/contactpopover", function(exports, require, mo
       }
       html += '</dl>';
       if (cozy) {
-        html += "<a href=\"" + cozy + "/public/talk/\" target=\"_blank\">\n    <i class=\"icon-facetime-video\"></i> Call with video\n</a>";
+        html += "<a style=\"display: block; margin-left: 40px; margin-bottom: 10px;\" href=\"" + cozy + "/public/talk/\" target=\"_blank\">\n    <i class=\"icon-facetime-video\"></i> Call with video\n</a>";
       }
       this.el.innerHTML = html;
       segment.appendChild(this.el);
