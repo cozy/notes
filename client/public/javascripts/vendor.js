@@ -42636,8 +42636,9 @@ window.require.register("CNeditor/contactpopover", function(exports, require, mo
     };
 
     ContactPopover.prototype.show = function(segment, model) {
-      var dp, html, name, value, _i, _len, _ref;
+      var cozy, dp, html, name, value, _i, _len, _ref;
 
+      cozy = null;
       html = '<dl class="dl-horizontal">';
       _ref = model.get('datapoints');
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -42650,11 +42651,14 @@ window.require.register("CNeditor/contactpopover", function(exports, require, mo
         }
         html += "<dt>" + name + "</dt><dd>" + value;
         if (dp.name === 'about' && dp.type === 'cozy') {
-          html += '<a href="' + dp.value + '/public/talk/" target="_blank">[T]</a>';
+          cozy = dp.value;
         }
         html += "</dd>";
       }
       html += '</dl>';
+      if (cozy) {
+        html += "<a href=\"" + cozy + "/public/talk/\" target=\"_blank\">\n    <i class=\"icon-facetime-video\"></i> Call with video\n</a>";
+      }
       this.el.innerHTML = html;
       segment.appendChild(this.el);
       return this.isOn = true;
