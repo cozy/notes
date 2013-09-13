@@ -31640,7 +31640,7 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
 
 
     CNeditor.prototype.doHotStringAction = function(autoItem) {
-      var bp, hs, reg, taskDiv, txt;
+      var bp, hs, line, reg, taskDiv, txt;
 
       hs = this._hotString;
       if (!(autoItem != null ? autoItem.type : void 0)) {
@@ -31682,6 +31682,15 @@ window.require.register("CNeditor/editor", function(exports, require, module) {
             }
             this.editorTarget$.trigger(jQuery.Event('onChange'));
             this.newPosition = true;
+            line = this._lines[taskDiv.id];
+            if (!line.lineNext) {
+              this._insertLineAfter({
+                sourceLine: line,
+                targetLineType: 'Tu',
+                targetLineDepthAbs: line.lineDepthAbs,
+                targetLineDepthRel: line.lineDepthRel
+              });
+            }
             return true;
           }
           break;
