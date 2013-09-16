@@ -26877,6 +26877,7 @@ window.require.register("CNeditor/contactpopover", function(exports, require, mo
     function ContactPopover() {
       this.el = document.createElement('DIV');
       this.el.id = 'contactpopover';
+      this.el.contentEditable = false;
       this.isOn = false;
     }
 
@@ -26892,8 +26893,9 @@ window.require.register("CNeditor/contactpopover", function(exports, require, mo
     };
 
     ContactPopover.prototype.show = function(segment, model) {
-      var dp, html, name, value, _i, _len, _ref;
+      var cozy, dp, html, name, value, _i, _len, _ref;
 
+      cozy = null;
       html = '<dl class="dl-horizontal">';
       _ref = model.get('datapoints');
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -26904,9 +26906,16 @@ window.require.register("CNeditor/contactpopover", function(exports, require, mo
         } else {
           name = dp.type + ' ' + dp.name.replace('smail', 'postal');
         }
-        html += "<dt>" + name + "</dt><dd>" + value + "</dd>";
+        html += "<dt>" + name + "</dt><dd>" + value;
+        if (dp.name === 'about' && dp.type === 'cozy') {
+          cozy = dp.value;
+        }
+        html += "</dd>";
       }
       html += '</dl>';
+      if (cozy) {
+        html += "<a style=\"display: block; margin-left: 40px; margin-bottom: 10px;\" href=\"" + cozy + "/public/talk/\" target=\"_blank\">\n    <i class=\"icon-facetime-video\"></i> Call with video\n</a>";
+      }
       this.el.innerHTML = html;
       segment.appendChild(this.el);
       return this.isOn = true;
