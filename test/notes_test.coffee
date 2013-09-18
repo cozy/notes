@@ -1,17 +1,11 @@
+americano = require 'americano'
+RealtimeAdapter = require 'cozy-realtime-adapter'
 should = require 'should'
 async = require 'async'
 fs = require 'fs'
-compoundInstantiator = require('../server')
-helpers = require('./helpers')
-
+helpers = require './helpers'
 
 Client = require('request-json').JsonClient
-
-URL = require 'url'
-
-app = require '../server'
-helpers = require "./helpers"
-
 client = new Client "http://localhost:8888/"
 
 
@@ -48,21 +42,22 @@ createNoteFunction = (title, parentNote_id, content, creationCbk) ->
             creationCbk(error, response, body)
             syncCallback()
 
-before helpers.init(compoundInstantiator)
-
-Tree = null
-Note = null
-
 before (done) ->
     @timeout 5000
-    @app.listen(8888)
-    {Note} = @app.compound.models
-    helpers.cleanDb done
+    americano.start
+        name: 'Notes'
+        port: 8888
+        root: __dirname + '/..'
+    , (app, server) =>
+        # @TODO change this once americano PR#10 has been merged
+        app.param 'id', require('../server/controllers/notes').find
+        RealtimeAdapter server: server, ['note.*', 'task.*', 'alarm.*']
+        @server = server
+        helpers.cleanDB done
 
 after (done) ->
-    @app.compound.server.close()
-    # helpers.cleanDb done
-    done()
+    @server.close()
+    helpers.cleanDB done
 
 
 ###
@@ -211,7 +206,6 @@ describe "/notes/:id", ->
 
         it "should update the note title & content", (done)->
             rnote1.title.should.equal   updateData.title
-            console.log rnote1.path
             rnote1.path[0].should.eql  updateData.title
             rnote1.content.should.equal updateData.content
             done()
@@ -326,7 +320,7 @@ describe "DEL - notes/:id", ->
         it "should success", (done) ->
 
             client.del "notes/#{note1.id}", (err, resp, body) ->
-                resp.statusCode.should.equal 200
+                resp.statusCode.should.equal 204
                 done()
 
         it "should have destroyed the note1", (done) ->
@@ -395,7 +389,7 @@ describe "/notes/:id/attachments", ->
 
         it "When you post a file for a given note", (done) ->
             client.sendFile "notes/#{note6.id}/files/", "./test/test.png", (err, res, body) =>
-                should.not.exist err
+                # should.not.exist err
                 res.statusCode.should.equal 200
                 done()
 
@@ -405,13 +399,15 @@ describe "/notes/:id/attachments", ->
                 fileStats = fs.statSync('./test/test.png')
                 resultStats = fs.statSync('./test/test-get.png')
 
+                fs.unlinkSync('./test/test-get.png')
+
                 resultStats.size.should.equal fileStats.size
                 done()
 
     describe "DELETE/GET", ->
         it "When you delete a file", (done) ->
             client.del "notes/#{note6.id}/files/test.png", (err, res, body) =>
-                should.not.exist err
+                # should.not.exist err
                 res.statusCode.should.equal 200
                 done()
 

@@ -1,108 +1,103 @@
-module.exports = (compound, Note) ->
+async     = require 'async'
+americano = require 'americano-cozy'
 
-    Tree = compound.models.Tree
-
-    async = require 'async'
-
-    Note.all = (callback) -> Note.request "all", callback
-
-    ###
-    # Delete all notes.
-    # This method doesn't update the tree.
-    # USE FOR INIT DATABASE ONLY
-    ###
-    Note.destroyAll = (callback) ->
-        Note.requestDestroy "all", callback
-
-    ###
-    # Old notes were stored with stringified path, this reverses it
-    ###
-    Note.patchPath = (note, callback) ->
-        if typeof note.path is 'string'
-            path = JSON.parse(note.path)
-            note.updateAttributes path: path, callback
-        else
-            callback()
+module.exports = Note = americano.getModel 'Note',
+    title                   : type: String , index: true
+    content                 : type: String , default: ''
+    creationDate            : type: Date   , default: Date
+    lastModificationDate    : type: Date   , default: Date
+    lastModificationValueOf : type: Number, default: -> (new Date()).getTime()
+    tags                    : [String]
+    parent_id               : String
+    path                    : Object # should be [String], but retrocompatibility with stringified pathes
+    humanPath               : [String]
+    _attachments            : Object
+    version                 : String
 
 
-    Note.tree = (callback) ->
-        Note.rawRequest "tree", {}, (err, notes) ->
+Note.all = (callback) ->
+    Note.request "all", callback
 
-            byId = {}
-            tree = children:[], data:'All', attr: id: 'tree-node-all'
-            for note in notes
-                format =
-                    parent: note.key
-                    children: []
-                    data: note.value
-                    attr: id: note.id
+Note.destroyAll = (callback) ->
+    Note.requestDestroy "all", callback
 
-                byId[note.id] = format
-                tree.children.push format if note.key is 'tree-node-all'
+Note::patchPath = (callback) ->
 
+    return callback null unless typeof @path is 'string'
 
-            for key, format of byId
-                byId[format.parent]?.children.push format
-                delete format.parent
+    path = JSON.parse @path
+    @updateAttributes path: path, callback
 
-            callback null, tree
+Note.tree = (callback) ->
+    Note.rawRequest "tree", {}, (err, notes) ->
 
+        return callback err if err
 
-    Note::moveOrRename = (newTitle, newParent, callback) ->
+        byId = {}
+        tree = children:[], data:'All', attr: id: 'tree-node-all'
+        for note in notes
+            format =
+                parent: note.key
+                children: []
+                data: note.value
+                attr: id: note.id
 
-
-        parent_id = newParent or @parent_id
-        title = newTitle or @title
-
-        if parent_id is 'tree-node-all'
-            @updatePath [title], callback
-
-        else
-            Note.find parent_id, (err, parent) =>
-                path = parent.path.slice(0)
-                path.push title
-                @updatePath path, callback
-
-    Note::updatePath = (newPath, callback) ->
-
-        oldPath = @path.slice(0) # [a, b, oldtitle]
+            byId[note.id] = format
+            tree.children.push format if note.key is 'tree-node-all'
 
 
-        # arguments to be passed to splice
-        # replace oldPath by newPath
-        # ~ path.splice 0, oldPath.length, newPath[0], newPath[1], ..., title
-        spliceArgs = newPath.slice(0) # newpath = [d, e, newtitle]
-        spliceArgs.unshift oldPath.length
-        spliceArgs.unshift 0 # [0, 3, d, e, newtitle]
+        for key, format of byId
+            byId[format.parent]?.children.push format
+            delete format.parent
+
+        callback null, tree
+
+Note::moveOrRename = (newTitle, newParent, callback) ->
+    parent_id = newParent or @parent_id
+    title = newTitle or @title
+
+    if parent_id is 'tree-node-all'
+        @updatePath [title], callback
+
+    else
+        Note.find parent_id, (err, parent) =>
+            path = parent.path.slice(0)
+            path.push title
+            @updatePath path, callback
+
+Note::updatePath = (newPath, callback) ->
+
+    oldPath = @path.slice(0) # [a, b, oldtitle]
 
 
-        # console.log oldPath
-        # console.log spliceArgs
+    # arguments to be passed to splice
+    # replace oldPath by newPath
+    # ~ path.splice 0, oldPath.length, newPath[0], newPath[1], ..., title
+    spliceArgs = newPath.slice(0) # newpath = [d, e, newtitle]
+    spliceArgs.unshift oldPath.length
+    spliceArgs.unshift 0 # [0, 3, d, e, newtitle]
 
-        #get note and subnotes
-        query =
-            startkey: oldPath # [a, b, oldtitle]
-            endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
+    #get note and subnotes
+    query =
+        startkey: oldPath # [a, b, oldtitle]
+        endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
 
-        Note.request "path", query, (err, notes) ->
+    Note.request "path", query, (err, notes) ->
 
-            # console.log query, spliceArgs, notes.length
-            # console.log notes
-            return callback err if err or not notes
+        return callback err if err or not notes
 
-            async.each notes, (note, cb) ->
-                path = note.path
-                path.splice.apply path, spliceArgs
-                note.updateAttributes path: path, cb
-            , callback
+        async.each notes, (note, cb) ->
+            path = note.path
+            path.splice.apply path, spliceArgs
+            note.updateAttributes path: path, cb
+        , (err) ->
+            callback err, newPath
 
-    Note::destroyWithChildren = (callback) ->
+Note::destroyWithChildren = (callback) ->
 
-        oldPath = @path.slice(0)
-        query =
-            startkey: oldPath # [a, b, oldtitle]
-            endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
+    oldPath = @path.slice(0)
+    query =
+        startkey: oldPath # [a, b, oldtitle]
+        endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
 
-        console.log " QUERYIS = ", query
-
-        Note.requestDestroy "path", query, callback
+    Note.requestDestroy "path", query, callback

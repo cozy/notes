@@ -1,42 +1,30 @@
-async = require('async')
+async = require 'async'
+Note  = require '../models/note'
 ###--------------------------------------#
 # Helpers
 ###
 
-###
-# Return to client a note list like this
-# { length: number of note, rows: note list }
-###
-returnNotes = (err, notes) ->
-    if err
-        console.log err
-        send error: "Retrieve notes failed.", 500
-    else
-        send length: notes.length, rows: notes
 
-
-handle = (msg, code) ->
+handleErr = (res, msg, code) ->
     msg  ?= 'An error occured'
     code ?= 500
 
     console.log msg.stack or msg
-    send error: (msg.message or msg), code
+    res.send error: (msg.message or msg), code
 
 
 ###
 # Grab note corresponding to id given in url before
 # update, destroy or show actions
 ###
-before 'load note', ->
+module.exports.find = (req, res, next, id) ->
 
-    Note.find params.id, (err, note) =>
-        return handle err if err
-        return handle 'Note not found', 404 if note is null
+    Note.find id, (err, note) =>
+        return handleErr res, err if err
+        return handleErr res, 'Note not found', 404 if note is null
 
-        @note = note
+        req.note = note
         next()
-
-, only: ['destroy', 'show', 'update', 'addFile', 'getFile', 'delFile']
 
 
 ###--------------------------------------#
@@ -46,14 +34,16 @@ before 'load note', ->
 ###
 # Return all notes
 ###
-action 'all', ->
-    Note.all(returnNotes)
+module.exports.all = (req, res) ->
+    Note.all (err, notes) ->
+        return res.send error: "Retrieve notes failed", 500 if err
+        res.send length: notes.length, rows: notes
 
 ###
 # Return a note
 ###
-action 'show', ->
-    send @note, 200
+module.exports.show = (req, res) ->
+    res.send req.note, 200
 
 ###
 # Create a new note from data given in the body of request
@@ -62,16 +52,18 @@ action 'show', ->
 #                 parent_id : "the parent note, mandatory, null if root"}
 #          Other attributes of a note are optionnal (content, tags)
 ###
-action 'create', ->
+module.exports.create = (req, res) ->
+
+    body = req.body
 
     doCreate = (data) ->
         Note.create data, (err, note) ->
-            return handle err if err
+            return handleErr res, err if err
 
             note.index ["title", "content"], (err) ->
                 console.log 'Indexing error', err if err
                 # success even if indexing error
-                send note, 201
+                res.send note, 201
 
     # console.log body.parent_id
 
@@ -91,110 +83,110 @@ action 'create', ->
 #   change of the parent_id (move in the tree)
 #   change of the content
 ###
-action 'update', ->
+module.exports.update = (req, res) ->
+
+    body = req.body
+
 
     hasChanged = (body, note, attr) ->
         body[attr] and (body[attr] isnt note[attr])
 
-    changedTitle =   hasChanged body, @note, 'title'
-    changedParent =  hasChanged body, @note, 'parent_id'
-    changedContent = hasChanged body, @note, 'content'
+    changedTitle =   hasChanged body, req.note, 'title'
+    changedParent =  hasChanged body, req.note, 'parent_id'
+    changedContent = hasChanged body, req.note, 'content'
 
     # array of operations to be performed
     ops = []
 
     if changedTitle or changedParent
         # will change the note path and its children's
-        ops.push (cb) =>
-            @note.moveOrRename body.title, body.parent_id, (err) =>
-                # console.log "MOVE OR RENAME DONE", err
-                cb()
+        ops.push (cb) ->
+            req.note.moveOrRename body.title, body.parent_id, (err, newPath) ->
+                body.path = newPath
+                cb err
 
     ops.push (cb) =>
         body.lastModificationValueOf = (new Date()).getTime()
-        @note.updateAttributes body, cb
+        req.note.updateAttributes body, cb
 
 
     if changedTitle or changedContent
         # update the index
-        ops.push (cb) => @note.index ["title", "content"], (err) ->
+        ops.push (cb) => req.note.index ["title", "content"], (err) ->
             console.log err
             #ignore errors on indexing
             cb()
 
-
-    # console.log "BEFORE SERIES : ops", ops
-
     async.series ops, (err) ->
         # console.log "AFTERSERIES : ", err
-        return handle err if err
+        return handleErr res, err if err
 
-        send success: 'Note updated', 200
+        res.send success: 'Note updated', 200
 
 
 ## Remove given note from db.
-action 'destroy', ->
-    @note.destroyWithChildren (err) ->
-        return handle err if err
-        send success: 'Note succesfuly deleted', 200
+module.exports.destroy = (req, res) ->
+    req.note.destroyWithChildren (err) ->
+        return handleErr res, err if err
+        res.send success: 'Note succesfuly deleted', 204
 
 ###
 ## Perform a search for given query inside Cozy search engine.
 ###
-action 'search', ->
-    return handle "wrong request format", 400 unless body.query?
+module.exports.search = (req, res) ->
+    return handleErr res, "wrong request format", 400 unless req.body.query?
 
-    Note.search body.query, (err, notes) ->
-        return handle err if err
+    Note.search req.body.query, (err, notes) ->
+        return handleErr res, err if err
 
-        send notes
+        res.send notes
 
 ###
 # Return 10 more recents notes
 ###
-action 'latest', ->
+module.exports.latest = (req, res) ->
     query =
         descending: true
         limit: 10
 
     Note.request 'lastmodified', query, (err, notes) ->
-        return handle err if err
+        return handleErr res, err if err
 
-        send notes
+        res.send notes
 
 ###
 # return the tree of all notes
 ###
-action 'tree', ->
+module.exports.tree = (req, res) ->
     Note.tree (err, tree) ->
-        return handle err if err
+        return handleErr res, err if err
 
-        send JSON.stringify tree
+        res.send JSON.stringify tree
 
 ###
 ## Attach a file to given note.
 ###
-action 'addFile', ->
+module.exports.addFile = (req, res) ->
     file = req.files["qqfile"] or req.files["file"]
-    return handle "no files", 400 unless file?
+    return handleErr res, "no files", 400 unless file?
 
-    @note.attachFile file.path, {name: file.name}, (err) ->
-        return handle err if err
+    req.note.attachFile file.path, {name: file.name}, (err) ->
+        # return handleErr res, err if err
 
-        send success: true, msg:"Upload succeeds", 200
+        res.send success: true, msg:"Upload succeeds", 200
 
 ###
 ## Send corresponding to given name for given note.
 ###
-action 'getFile', ->
-    name = params.name
+module.exports.getFile = (req, res) ->
+    name = req.params.name
 
-    @note.getFile name, (err, resp, body) ->
-        return handle err if err
-        return handle 'File not found', 404 if resp?.statusCode is 404
-        return handle() if not resp? or resp.statusCode isnt 200
+    req.note.getFile name, (err, resp, body) ->
+        # return handleErr res, err if err
+        return handleErr res, 'File not found', 404 if resp?.statusCode is 404
+        return handleErr res if not resp? or resp.statusCode isnt 200
 
-        send 200
+        res.send 200
 
     .pipe(res)
 
@@ -202,10 +194,10 @@ action 'getFile', ->
 ###
 ## Delete corresponding to given name for given note.
 ###
-action 'delFile', ->
-    name = params.name
+module.exports.delFile = (req, res) ->
+    name = req.params.name
 
-    @note.removeFile name, (err, body) ->
-        return handle err if err
+    req.note.removeFile name, (err, body) ->
+        return handleErr res, err if err
 
-        send succes: true, msg: 'File deleted', 200
+        res.send succes: true, msg: 'File deleted', 200

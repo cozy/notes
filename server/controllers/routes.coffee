@@ -1,24 +1,29 @@
-exports.routes = (map) ->
+notes = require './notes'
 
-    # routes for notes interactions
-    map.get  '/notes'                , 'notes#all'
-    map.get  '/notes/latest'         , 'notes#latest'
-    map.post '/notes'                , 'notes#create'
-    map.post '/notes/search'         , 'notes#search'
-    map.post '/notes/:id/files'      , 'notes#addFile'
-    map.get  '/notes/:id/files/:name', 'notes#getFile'
-    map.del  '/notes/:id/files/:name', 'notes#delFile'
-    map.get  '/notes/:id'            , 'notes#show'
-    map.put  '/notes/:id'            , 'notes#update'
+module.exports =
 
-    map.del  '/notes/:id'            , 'notes#destroy'
+    "tree":
+        get:    notes.tree
 
-    # routes for tree interactions
-    map.get  '/tree'                 , 'notes#tree'
+    "notes":
+        get:    notes.all
+        post:   notes.create
 
-    # map.get  '/tree'      , 'tree#tree'
-    # # routes for tests array storage in mongo -
-    # # remove only when the corresponding test ... fails
-    # # cf test/array-storage_test.coffee
-    # map.post '/test/arraystorage' , 'testArrayObj#create'
-    # map.get  '/test/arraystorage/:id' , 'testArrayObj#show'
+    "notes/latest":
+        get:    notes.latest
+
+    "notes/search":
+        post:   notes.search
+
+    "notes/:id":
+        get:    notes.show
+        put:    notes.update
+        delete: notes.destroy
+
+    "notes/:id/files":
+        post:   notes.addFile
+
+    "notes/:id/files/:name":
+        get:    notes.getFile
+        delete: notes.delFile
+
