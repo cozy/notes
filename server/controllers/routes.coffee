@@ -6,6 +6,8 @@ tasks = require './tasks'
 module.exports =
 
     # CONTACT MODEL
+    "contactid":
+        param: contacts.fetch
 
     "contacts":
         get:    contacts.list
@@ -14,6 +16,9 @@ module.exports =
         # no Update / Delete
 
     # ALARM MODEL
+
+    "alarmid":
+        param:  alarms.fetch
 
     "alarms":
         get:    alarms.list
@@ -24,6 +29,9 @@ module.exports =
         delete: alarms.delete
 
     # TASK MODEL
+
+    "taskid":
+        param:  tasks.fetch
 
     "tasks":
         get:    tasks.list
@@ -37,6 +45,9 @@ module.exports =
 
     "tree":
         get:    notes.tree
+
+    "noteid":
+        param:   notes.fetch
 
     "notes":
         get:    notes.all

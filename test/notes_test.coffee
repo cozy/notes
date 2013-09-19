@@ -51,9 +51,6 @@ describe 'NOTES', ->
             port: 8888
             root: __dirname + '/..'
         , (app, server) =>
-            # @TODO change this once americano PR#10 has been merged
-            app.param 'noteid', require('../server/controllers/notes').fetch
-            RealtimeAdapter server: server, ['note.*', 'task.*', 'alarm.*']
             @server = server
             helpers.cleanDB done
 

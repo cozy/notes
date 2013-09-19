@@ -7,7 +7,7 @@ helpers = require './helpers'
 Client = require('request-json').JsonClient
 client = new Client "http://localhost:8888/"
 
-describe 'OTHERS', ->
+describe 'LINKED MODELS', ->
 
     before (done) ->
         @timeout 5000
@@ -16,13 +16,6 @@ describe 'OTHERS', ->
             port: 8888
             root: __dirname + '/..'
         , (app, server) =>
-            # @TODO change this once americano PR#10 has been merged
-            app.param 'noteid', require('../server/controllers/notes').fetch
-            contactsCtl = require('../server/controllers/contacts')
-            app.param 'contactid', contactsCtl.fetch
-            app.param 'alarmid', require('../server/controllers/alarms').fetch
-            app.param 'taskid', require('../server/controllers/tasks').fetch
-
             @server = server
             helpers.cleanDB done
 
