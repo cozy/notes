@@ -37,6 +37,12 @@
     },
     "Task": {
       "description": "Create tasks from a note"
+    },
+    "TodoList": {
+      "description": "Create the \"inbox\" TodoList"
+    },
+    "Tree": {
+      "description": "Find the Inbox TodoList"
     }
   }
 }

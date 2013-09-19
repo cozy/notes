@@ -17,7 +17,7 @@ handleErr = (res, msg, code) ->
 # Grab note corresponding to id given in url before
 # update, destroy or show actions
 ###
-module.exports.find = (req, res, next, id) ->
+module.exports.fetch = (req, res, next, id) ->
 
     Note.find id, (err, note) =>
         return handleErr res, err if err

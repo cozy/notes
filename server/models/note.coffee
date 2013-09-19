@@ -9,7 +9,8 @@ module.exports = Note = americano.getModel 'Note',
     lastModificationValueOf : type: Number, default: -> (new Date()).getTime()
     tags                    : [String]
     parent_id               : String
-    path                    : Object # should be [String], but retrocompatibility with stringified pathes
+    # path should be [String], but retrocompatibility with stringified pathes
+    path                    : Object
     humanPath               : [String]
     _attachments            : Object
     version                 : String
