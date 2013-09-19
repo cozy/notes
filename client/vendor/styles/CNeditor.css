@@ -184,7 +184,8 @@
   cursor: pointer;
   width: 16px;
   height: 16px;
-}.reminder-title {
+}
+.reminder-title {
   border-top-left-radius: 5px;
   border-top-right-radius: 5px;
   border-bottom-left-radius: 0px;
@@ -319,6 +320,7 @@ span.b {
 .SUGG_selected > span {
   color: #464646;
 }
+
 @font-face {
   font-family: 'fontello';
   src: url("../font/fontello.eot?68878619");
@@ -1024,7 +1026,7 @@ a {
   cursor: pointer;
 }
 .CNE_url_in_edition {
-  background-color: #f00;
+  background-color: #fe8800;
 }
 .CNE_strong {
   font-weight: bold;
@@ -1131,3 +1133,6 @@ a {
   font-size: 13px;
   width: 250px;
 }
+
+
+/*@ sourceMappingURL=CNeditor.css.map*/
