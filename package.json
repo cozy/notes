@@ -5,11 +5,12 @@
   "engines": [
     "node >= 0.6.0"
   ],
+  "repository": "https://github.com/mycozycloud/cozy-notes.git",
   "main": "server.coffee",
   "dependencies": {
     "coffee-script": "= 1.4.0",
     "async": ">= 0.1.22",
-    "americano": "~0.2.5",
+    "americano": "~0.2.8",
     "americano-cozy": "~0.1.2",
     "cozy-realtime-adapter": "= 0.11.0"
   },
