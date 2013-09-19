@@ -94,6 +94,8 @@ Note::updatePath = (newPath, callback) ->
         , (err) ->
             callback err, newPath
 
+###
+ VERSION TO BE USED WHEN THE DS PR#34 is in production
 Note::destroyWithChildren = (callback) ->
 
     oldPath = @path.slice(0)
@@ -102,3 +104,18 @@ Note::destroyWithChildren = (callback) ->
         endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
 
     Note.requestDestroy "path", query, callback
+###
+# TMP VERSION - to be replaced with above
+Note::destroyWithChildren = (callback) ->
+
+    oldPath = @path.slice(0)
+    query =
+        startkey: oldPath # [a, b, oldtitle]
+        endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
+
+    Note.request "path", query, (err, notes) ->
+
+        destroyOne = (note, cb) -> note.destroy cb
+        async.each notes, destroyOne, (err) ->
+
+            callback err
