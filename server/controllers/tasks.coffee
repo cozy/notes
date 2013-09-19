@@ -23,7 +23,7 @@ module.exports.create = (req, res) ->
 
         Task.create data, (err, task) ->
             return res.send error: err, 500 if err
-            res.send task
+            res.send task, 201
 
 module.exports.read = (req, res) ->
     res.send req.task
@@ -36,7 +36,7 @@ module.exports.update = (req, res) ->
     req.task.updateAttributes updates, (err, task) ->
         return res.send error: err, 500 if err
 
-        res.send task
+        res.send task, 200
 
 module.exports.delete = (req, res) ->
     req.task.destroy (err) ->

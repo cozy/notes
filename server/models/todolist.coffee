@@ -7,7 +7,6 @@ module.exports = Todolist = americano.getModel 'TodoList',
 
 Todolist.getOrCreateInbox = (callback) ->
     Todolist.all (err, lists) ->
-        console.log "GOC lists = ", lists
         return callback err if err
         for list in lists when list.title is 'Inbox'
             return callback null, list.id

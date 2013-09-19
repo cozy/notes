@@ -14,23 +14,19 @@ module.exports.list = (req, res) ->
         res.send alarms
 
 module.exports.create = (req, res) ->
-    console.log "ALARM CREATE", req.body
     delete req.body.id
-    console.log req.body.description
     Alarm.create req.body, (err, alarm) ->
-        console.log "RESULT = ", alarm
         return res.send error: err, 500 if err
-        res.send alarm
+        res.send alarm, 201
 
 module.exports.read = (req, res) ->
     res.send req.alarm
 
 module.exports.update = (req, res) ->
-    console.log "ALARM UPDATE", req.body
     req.alarm.updateAttributes req.body, (err, alarm) ->
         return res.send error: err, 500 if err
 
-        res.send alarm
+        res.send alarm, 200
 
 module.exports.delete = (req, res) ->
     req.alarm.destroy (err) ->

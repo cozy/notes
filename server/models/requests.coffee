@@ -2,17 +2,17 @@ americano = require 'americano-cozy'
 
 module.exports =
     note:
-        all: americano.defaultRequests.all
+        all:  (note) -> emit note._id, note
         path: (note) -> emit note.path, note
         tree: (note) -> emit note.parent_id, note.title
         lastmodified: (note) -> emit note.lastModificationValueOf, note
     alarm:
-        all: americano.defaultRequests.all
+        all: (doc) -> emit doc._id, doc
     contact:
-        all: americano.defaultRequests.all
+        all: (doc) -> emit doc._id, doc
     todolist:
         all: (doc) -> emit doc._id, doc
     tree:
         all: (doc) -> emit doc.type, doc
     task:
-        all: americano.defaultRequests.all
+        all: (doc) -> emit doc._id, doc
