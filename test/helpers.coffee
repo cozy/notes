@@ -31,3 +31,38 @@ module.exports.createThreeContacts = (done) ->
         Contact.create contact, callback
 
     , done
+
+
+module.exports.cleanModelCache = (done) ->
+    americano = require('americano-cozy')
+    delete americano.db.models.Note
+    delete americano.db.definitions.Note
+    delete americano.db.adapter._models.Note
+    done()
+
+
+module.exports.createOldNote = (done) ->
+
+    # Create oldSchool model's definition
+    americano = require('americano-cozy')
+
+    # replace jugglingdb model def with old
+    Note = americano.getModel 'Note',
+        title                   : type: String , index: true
+        content                 : type: String , default: ''
+        parent_id               : String
+        path                    : String
+        version                 : String
+
+    old =
+        title     : "test"
+        content   : "ctest"
+        parent_id : "tree-node-all"
+        path      : JSON.stringify ["test"]
+        version   : "1"
+
+    # create one instance
+    Note.create old, (err, note) =>
+        return done err if err
+        @oldnoteid = note.id
+        done()

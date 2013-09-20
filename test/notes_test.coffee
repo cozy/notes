@@ -42,6 +42,24 @@ createNoteFunction = (title, parentNote_id, content, creationCbk) ->
             creationCbk(error, response, body)
             syncCallback()
 
+describe "patching old notes (with stringified path)", ->
+
+    before helpers.cleanModelCache
+    before helpers.createOldNote
+    before helpers.cleanModelCache
+
+    it "should unstringify all pathes", (done) ->
+        # Force reloading / redefinition of new Note definition
+        delete require.cache[require.resolve('../server/models/note')]
+        Note = require '../server/models/note'
+        Note.patchAllPathes (err) =>
+            return done err if err
+            Note.find @oldnoteid, (err, note) ->
+                return done err if err
+                note.path.should.be.an.array
+                note.path[0].should.eql "test"
+                note.destroy done
+
 describe 'NOTES', ->
 
     before (done) ->

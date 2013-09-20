@@ -1,10 +1,16 @@
 americano       = require 'americano'
 RealtimeAdapter = require 'cozy-realtime-adapter'
+Note            = require './models/note'
 
-americano.start
-    name: 'Notes'
-    port: process.env.PORT or 9201
+Note.patchAllPathes (err) ->
 
-, (app, server) ->
+    if err
+        console.log "Failled to patch notes"
+        process.exit 1
 
-    RealtimeAdapter server: server, ['note.*', 'task.*', 'alarm.*']
+    americano.start
+        name: 'Notes'
+        port: process.env.PORT or 9201
+
+    , (app, server) ->
+        RealtimeAdapter server: server, ['note.*', 'task.*', 'alarm.*', 'contact.*']

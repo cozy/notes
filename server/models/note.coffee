@@ -1,6 +1,8 @@
 async     = require 'async'
 americano = require 'americano-cozy'
 
+Auto = (x) -> x
+
 module.exports = Note = americano.getModel 'Note',
     title                   : type: String , index: true
     content                 : type: String , default: ''
@@ -9,11 +11,13 @@ module.exports = Note = americano.getModel 'Note',
     lastModificationValueOf : type: Number, default: -> (new Date()).getTime()
     tags                    : [String]
     parent_id               : String
-    # path should be [String], but retrocompatibility with stringified pathes
-    path                    : Object
+    path                    : Auto # v2: [String] or v1: String
     humanPath               : [String]
     _attachments            : Object
     version                 : String
+
+# This path thing is probably a dirty hack
+# but I am fed up with trying to make it work
 
 
 Note.all = (callback) ->
@@ -22,12 +26,19 @@ Note.all = (callback) ->
 Note.destroyAll = (callback) ->
     Note.requestDestroy "all", callback
 
-Note::patchPath = (callback) ->
+Note.patchAllPathes = (callback) ->
+    Note.all (err, notes) ->
+        return callback err if err
+        async.each notes, (note, cb) ->
+            return cb null if note.version is '2'
 
-    return callback null unless typeof @path is 'string'
+            updates =
+                path: note.path
+                version: '2'
 
-    path = JSON.parse @path
-    @updateAttributes path: path, callback
+            note.updateAttributes updates, callback
+
+        , callback
 
 Note.tree = (callback) ->
     Note.rawRequest "tree", {}, (err, notes) ->
