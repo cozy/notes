@@ -1,6 +1,6 @@
 americano       = require 'americano'
 RealtimeAdapter = require 'cozy-realtime-adapter'
-Note            = require './models/note'
+Note            = require './server/models/note'
 
 americano.start
     name: 'Notes'
