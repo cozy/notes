@@ -39,7 +39,7 @@ task 'tests', 'run server tests, ./test is parsed by default, otherwise use -f o
     if not(options.dir or options.file)
         testFiles = walk("test", [])
     runTests testFiles
-    
+
 task 'tests:client', 'run client tests through mocha', (opts) ->
     options     = opts
     uiTestFiles = walk("client/test", [])
@@ -74,3 +74,15 @@ task "xunit:client", "", ->
     exec command, (err, stdout, stderr) ->
         console.log stdout
 
+task 'convert', 'convert coffee-script to JS', ->
+    files = walk "server", []
+    console.log "Convert to JS..."
+    command = "coffee -cb server.coffee #{files.join ' '} "
+    exec command, (err, stdout, stderr) ->
+        console.log stdout
+        if err
+            console.log "Running compilation caught exception: \n" + err
+            process.exit 1
+        else
+            console.log "Convertion succeeded."
+            process.exit 0
