@@ -8,7 +8,6 @@
   "repository": "https://github.com/mycozycloud/cozy-notes.git",
   "main": "server.js",
   "dependencies": {
-    "coffee-script": "= 1.4.0",
     "async": ">= 0.1.22",
     "americano": "~0.2.8",
     "americano-cozy": "~0.1.2",
