@@ -52,11 +52,13 @@ module.exports.createOldNote = (done) ->
         content                 : type: String , default: ''
         parent_id               : String
         path                    : String
+        tags                    : String
         version                 : String
 
     old =
         title     : "test"
         content   : "ctest"
+        tags      : "[]"
         parent_id : "tree-node-all"
         path      : JSON.stringify ["test"]
         version   : "1"
@@ -69,6 +71,7 @@ module.exports.createOldNote = (done) ->
         old =
             title     : "toast"
             content   : "ctoast"
+            tags      : []
             parent_id : @oldnoteid
             path      : JSON.stringify ["test", "toast"]
             version   : "1"

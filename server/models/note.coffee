@@ -9,9 +9,9 @@ module.exports = Note = americano.getModel 'Note',
     creationDate            : type: Date   , default: Date
     lastModificationDate    : type: Date   , default: Date
     lastModificationValueOf : type: Number, default: -> (new Date()).getTime()
-    tags                    : [String]
     parent_id               : String
     path                    : Auto # v2: [String] or v1: String
+    tags                    : Auto
     humanPath               : [String]
     _attachments            : Object
     version                 : String
@@ -37,6 +37,7 @@ Note.patchAllPathes = (callback) ->
             console.log "YES, need patch"
 
             updates =
+                tags: note.tags
                 path: note.path
                 version: '2'
 
