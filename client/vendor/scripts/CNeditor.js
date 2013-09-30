@@ -37,7 +37,7 @@
     return function(name) {
       var dir = dirname(path);
       var absolute = expand(dir, name);
-      return globals.require(absolute);
+      return globals.require(absolute, path);
     };
   };
 
@@ -48,8 +48,9 @@
     return exports;
   };
 
-  var require = function(name) {
+  var require = function(name, loaderPath) {
     var path = expand(name, '.');
+    if (loaderPath == null) loaderPath = '/';
 
     if (has(cache, path)) return cache[path];
     if (has(modules, path)) return initModule(path, modules[path]);
@@ -58,7 +59,7 @@
     if (has(cache, dirIndex)) return cache[dirIndex];
     if (has(modules, dirIndex)) return initModule(dirIndex, modules[dirIndex]);
 
-    throw new Error('Cannot find module "' + name + '"');
+    throw new Error('Cannot find module "' + name + '" from '+ '"' + loaderPath + '"');
   };
 
   var define = function(bundle, fn) {
@@ -73,877 +74,1070 @@
     }
   };
 
+  var list = function() {
+    var result = [];
+    for (var item in modules) {
+      if (has(modules, item)) {
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
   globals.require = require;
   globals.require.define = define;
   globals.require.register = define;
+  globals.require.list = list;
   globals.require.brunch = true;
 })();
+require.register("CNeditor/selection", function(exports, require, module) {
+var µ;
 
-window.require.register("CNeditor/selection", function(exports, require, module) {
-  var µ;
+µ = {};
 
-  µ = {};
-
-  /* ------------------------------------------------------------------------
-  # UTILITY FUNCTIONS
-  # used to set ranges and help normalize selection
-  #
-  # parameters: elt  :  a dom object with only textNode children
-  #
-  # note: with google chrome, it seems that non visible elements
-  #       cannot be selected with rangy (that's where 'blank' comes in)
-  */
-
-
-  /**
-   * Called only once from the editor - TODO : role to be verified
-  */
+/* ------------------------------------------------------------------------
+# UTILITY FUNCTIONS
+# used to set ranges and help normalize selection
+#
+# parameters: elt  :  a dom object with only textNode children
+#
+# note: with google chrome, it seems that non visible elements
+#       cannot be selected with rangy (that's where 'blank' comes in)
+*/
 
 
-  µ.cleanSelection = function(startLine, endLine, range) {
-    var endNode, startNode;
+/**
+ * Called only once from the editor - TODO : role to be verified
+*/
 
-    if (startLine === null) {
-      startLine = endLine;
-      endLine = endLine.lineNext;
-      µ.putStartOnStart(range, startLine.line$[0].firstElementChild);
-      endLine.line$.prepend('<span></span>');
-      return µ.putEndOnStart(range, endLine.line$[0].firstElementChild);
+
+µ.cleanSelection = function(startLine, endLine, range) {
+  var endNode, startNode;
+
+  if (startLine === null) {
+    startLine = endLine;
+    endLine = endLine.lineNext;
+    µ.putStartOnStart(range, startLine.line$[0].firstElementChild);
+    endLine.line$.prepend('<span></span>');
+    return µ.putEndOnStart(range, endLine.line$[0].firstElementChild);
+  } else {
+    startNode = startLine.line$[0].lastElementChild.previousElementSibling;
+    endNode = endLine.line$[0].lastElementChild.previousElementSibling;
+    range.setStartAfter(startNode, 0);
+    return range.setEndAfter(endNode, 0);
+  }
+};
+
+µ.selectAll = function(editor) {
+  var range, sel;
+
+  range = document.createRange();
+  range.setStartBefore(editor.linesDiv.firstChild);
+  range.setEndAfter(editor.linesDiv.lastChild);
+  µ.normalize(range);
+  sel = editor.getEditorSelection();
+  sel.removeAllRanges();
+  return sel.addRange(range);
+};
+
+/**
+ * Called only once from the editor - TODO : role to be verified
+*/
+
+
+µ.cloneEndFragment = function(range, endLine) {
+  var range4fragment;
+
+  range4fragment = rangy.createRangyRange();
+  range4fragment.setStart(range.endContainer, range.endOffset);
+  range4fragment.setEndAfter(endLine.line$[0].lastChild);
+  return range4fragment.cloneContents();
+};
+
+/* ------------------------------------------------------------------------
+#  normalize(range)
+#
+#  Modify 'range' containers and offsets so it represent a clean selection
+#  that starts and ends inside a textNode.
+#
+#  Set the flag isEmptyLine to true if an empty line is being normalized
+#  so further suppr ~ backspace work properly.
+#
+#  All possible breakpoints :
+    - <span>|<nodeText>|Text |node content|</nodeText>|<any>...</nodeText>|</span>
+           BP1        BP2   BP3          BP4         BP5             BP6
+
+    - <div>|<span>...</span>|<any>...</span>|</br>|</div>
+          BP7              BP8             BP9    BP10
+
+    - <body>|<div>...</div>|<div>...</div>|</body>
+           BP11           BP12           BP13
+
+
+    BP1 : <span>|<nodeText>
+
+        |     test    |               action              |
+        |-------------|-----------------------------------|
+        | cont = span | if cont.length = 0                |
+        | offset = 0  | * create nodeText                 |
+        |             | * BP2 => BP2                      |
+        |             | else if cont.child(0) = nodeText  |
+        |             | * BP2 => BP2                      |
+        |             | else if cont.child(0) != nodeText |
+        |             | * error                           |
+
+    BP2 : <nodeText>|Text node content</nodeText>
+
+        |       test      |  action |
+        |-----------------|---------|
+        | cont = nodeText | nothing |
+        | offset = 0      |         |
+
+    BP3 : <nodeText>Text |node content</nodeText>
+
+        |         test         |  action |
+        |----------------------|---------|
+        | cont = nodeText      | nothing |
+        | 0<offset<cont.length |         |
+
+    BP4 : <nodeText>Text node content|</nodeText>
+
+        |         test         |  action |
+        |----------------------|---------|
+        | cont = nodeText      | nothing |
+        | offset = cont.length |         |
+
+    BP5 & BP6 : </nodeText>|<any>
+        |               test              |            action           |
+        |---------------------------------|-----------------------------|
+        | cont != nodeText                | bpEnd(cont.child(offset-1)) |
+        | offset > 0                      |                             |
+        | cont.child(offset-1) = nodeText |                             |
+
+    BP7 : <div>|<span>...
+        |    test    |          action          |
+        |------------|--------------------------|
+        | cont = div | if cont.length = 0       |
+        | offset = 0 | * error                  |
+        |            | else                     |
+        |            | bpStart(cont.firstChild) |
+
+    BP8 & BP9 : ...</span>|<any>...
+        |             test            |            action           |
+        |-----------------------------|-----------------------------|
+        | cont != nodeText            | bpEnd(cont.child(offset-1)) |
+        | offset > 0                  |                             |
+        | cont.child(offset-1) = span |                             |
+
+    BP10 : </br>|</div>
+        |            test           |            action           |
+        |---------------------------|-----------------------------|
+        | cont != nodeText          | bpEnd(cont.child(offset-2)) |
+        | offset > 0                |                             |
+        | offset=cont.length        |                             |
+        | cont.child(offset-1) = br |                             |
+
+    BP11 : <body>|<div>...
+        |     test    |          action          |
+        |-------------|--------------------------|
+        | cont = body | bpStart(cont.firstChild) |
+        | offset = 0  |                          |
+
+    BP12 : </div>|<any>
+        |            test            |            action           |
+        |----------------------------|-----------------------------|
+        | cont != nodeText           | bpEnd(cont.child(offset-1)) |
+        | offset > 0                 |                             |
+        | offset=cont.length         |                             |
+        | cont.child(offset-1) = div |                             |
+
+
+    BP13 : ...</div>|</body>
+        |         test         |         action        |
+        |----------------------|-----------------------|
+        | cont = body          | bpEnd(cont.lastChild) |
+        | offset = cont.length |                       |
+*/
+
+
+µ.normalize = function(rg, preferNext) {
+  var isCollapsed, newEndBP, newStartBP;
+
+  isCollapsed = rg.collapsed;
+  newStartBP = µ.normalizeBP(rg.startContainer, rg.startOffset, preferNext);
+  rg.setStart(newStartBP.cont, newStartBP.offset);
+  if (isCollapsed) {
+    rg.collapse(true);
+    newEndBP = newStartBP;
+  } else {
+    newEndBP = µ.normalizeBP(rg.endContainer, rg.endOffset, preferNext);
+    rg.setEnd(newEndBP.cont, newEndBP.offset);
+  }
+  return [newStartBP, newEndBP];
+};
+
+/**
+ * Returns a break point in the most pertinent text node given a random bp.
+ * @param  {element} cont   the container of the break point
+ * @param  {number} offset offset of the break point
+ * @param  {boolean} preferNext [optional] if true, in case BP8, we will choose
+ *                              to go in next sibling - if it exists - rather
+ *                              than in the previous one.
+ * @return {object} the suggested break point : {cont:newCont,offset:newOffset}
+*/
+
+
+µ.normalizeBP = function(cont, offset, preferNext) {
+  var newCont, newOffset, res, _ref;
+
+  if (cont.nodeName === '#text') {
+    res = {
+      cont: cont,
+      offset: offset
+    };
+  } else if ((_ref = cont.nodeName) === 'SPAN' || _ref === 'A') {
+    if (offset > 0) {
+      newCont = cont.childNodes[offset - 1];
+      newOffset = newCont.length;
+    } else if (cont.childNodes.length > 0) {
+      newCont = cont.firstChild;
+      newOffset = 0;
     } else {
-      startNode = startLine.line$[0].lastElementChild.previousElementSibling;
-      endNode = endLine.line$[0].lastElementChild.previousElementSibling;
-      range.setStartAfter(startNode, 0);
-      return range.setEndAfter(endNode, 0);
+      newCont = document.createTextNode('');
+      cont.appendChild(newCont);
+      newOffset = 0;
     }
-  };
-
-  µ.selectAll = function(editor) {
-    var range, sel;
-
-    range = document.createRange();
-    range.setStartBefore(editor.linesDiv.firstChild);
-    range.setEndAfter(editor.linesDiv.lastChild);
-    µ.normalize(range);
-    sel = editor.getEditorSelection();
-    sel.removeAllRanges();
-    return sel.addRange(range);
-  };
-
-  /**
-   * Called only once from the editor - TODO : role to be verified
-  */
-
-
-  µ.cloneEndFragment = function(range, endLine) {
-    var range4fragment;
-
-    range4fragment = rangy.createRangyRange();
-    range4fragment.setStart(range.endContainer, range.endOffset);
-    range4fragment.setEndAfter(endLine.line$[0].lastChild);
-    return range4fragment.cloneContents();
-  };
-
-  /* ------------------------------------------------------------------------
-  #  normalize(range)
-  #
-  #  Modify 'range' containers and offsets so it represent a clean selection
-  #  that starts and ends inside a textNode.
-  #
-  #  Set the flag isEmptyLine to true if an empty line is being normalized
-  #  so further suppr ~ backspace work properly.
-  #
-  #  All possible breakpoints :
-      - <span>|<nodeText>|Text |node content|</nodeText>|<any>...</nodeText>|</span>
-             BP1        BP2   BP3          BP4         BP5             BP6
-
-      - <div>|<span>...</span>|<any>...</span>|</br>|</div>
-            BP7              BP8             BP9    BP10
-
-      - <body>|<div>...</div>|<div>...</div>|</body>
-             BP11           BP12           BP13
-
-
-      BP1 : <span>|<nodeText>
-
-          |     test    |               action              |
-          |-------------|-----------------------------------|
-          | cont = span | if cont.length = 0                |
-          | offset = 0  | * create nodeText                 |
-          |             | * BP2 => BP2                      |
-          |             | else if cont.child(0) = nodeText  |
-          |             | * BP2 => BP2                      |
-          |             | else if cont.child(0) != nodeText |
-          |             | * error                           |
-
-      BP2 : <nodeText>|Text node content</nodeText>
-
-          |       test      |  action |
-          |-----------------|---------|
-          | cont = nodeText | nothing |
-          | offset = 0      |         |
-
-      BP3 : <nodeText>Text |node content</nodeText>
-
-          |         test         |  action |
-          |----------------------|---------|
-          | cont = nodeText      | nothing |
-          | 0<offset<cont.length |         |
-
-      BP4 : <nodeText>Text node content|</nodeText>
-
-          |         test         |  action |
-          |----------------------|---------|
-          | cont = nodeText      | nothing |
-          | offset = cont.length |         |
-
-      BP5 & BP6 : </nodeText>|<any>
-          |               test              |            action           |
-          |---------------------------------|-----------------------------|
-          | cont != nodeText                | bpEnd(cont.child(offset-1)) |
-          | offset > 0                      |                             |
-          | cont.child(offset-1) = nodeText |                             |
-
-      BP7 : <div>|<span>...
-          |    test    |          action          |
-          |------------|--------------------------|
-          | cont = div | if cont.length = 0       |
-          | offset = 0 | * error                  |
-          |            | else                     |
-          |            | bpStart(cont.firstChild) |
-
-      BP8 & BP9 : ...</span>|<any>...
-          |             test            |            action           |
-          |-----------------------------|-----------------------------|
-          | cont != nodeText            | bpEnd(cont.child(offset-1)) |
-          | offset > 0                  |                             |
-          | cont.child(offset-1) = span |                             |
-
-      BP10 : </br>|</div>
-          |            test           |            action           |
-          |---------------------------|-----------------------------|
-          | cont != nodeText          | bpEnd(cont.child(offset-2)) |
-          | offset > 0                |                             |
-          | offset=cont.length        |                             |
-          | cont.child(offset-1) = br |                             |
-
-      BP11 : <body>|<div>...
-          |     test    |          action          |
-          |-------------|--------------------------|
-          | cont = body | bpStart(cont.firstChild) |
-          | offset = 0  |                          |
-
-      BP12 : </div>|<any>
-          |            test            |            action           |
-          |----------------------------|-----------------------------|
-          | cont != nodeText           | bpEnd(cont.child(offset-1)) |
-          | offset > 0                 |                             |
-          | offset=cont.length         |                             |
-          | cont.child(offset-1) = div |                             |
-
-
-      BP13 : ...</div>|</body>
-          |         test         |         action        |
-          |----------------------|-----------------------|
-          | cont = body          | bpEnd(cont.lastChild) |
-          | offset = cont.length |                       |
-  */
-
-
-  µ.normalize = function(rg, preferNext) {
-    var isCollapsed, newEndBP, newStartBP;
-
-    isCollapsed = rg.collapsed;
-    newStartBP = µ.normalizeBP(rg.startContainer, rg.startOffset, preferNext);
-    rg.setStart(newStartBP.cont, newStartBP.offset);
-    if (isCollapsed) {
-      rg.collapse(true);
-      newEndBP = newStartBP;
-    } else {
-      newEndBP = µ.normalizeBP(rg.endContainer, rg.endOffset, preferNext);
-      rg.setEnd(newEndBP.cont, newEndBP.offset);
-    }
-    return [newStartBP, newEndBP];
-  };
-
-  /**
-   * Returns a break point in the most pertinent text node given a random bp.
-   * @param  {element} cont   the container of the break point
-   * @param  {number} offset offset of the break point
-   * @param  {boolean} preferNext [optional] if true, in case BP8, we will choose
-   *                              to go in next sibling - if it exists - rather
-   *                              than in the previous one.
-   * @return {object} the suggested break point : {cont:newCont,offset:newOffset}
-  */
-
-
-  µ.normalizeBP = function(cont, offset, preferNext) {
-    var newCont, newOffset, res, _ref;
-
-    if (cont.nodeName === '#text') {
-      res = {
-        cont: cont,
-        offset: offset
-      };
-    } else if ((_ref = cont.nodeName) === 'SPAN' || _ref === 'A') {
-      if (offset > 0) {
-        newCont = cont.childNodes[offset - 1];
-        newOffset = newCont.length;
-      } else if (cont.childNodes.length > 0) {
-        newCont = cont.firstChild;
-        newOffset = 0;
+  } else if (cont.nodeName === 'DIV' && cont.id !== "editor-lines") {
+    if (offset === 0) {
+      if (µ.isSegment(cont.firstChild)) {
+        res = µ.normalizeBP(cont.firstChild, 0);
       } else {
-        newCont = document.createTextNode('');
-        cont.appendChild(newCont);
-        newOffset = 0;
-      }
-    } else if (cont.nodeName === 'DIV' && cont.id !== "editor-lines") {
-      if (offset === 0) {
-        if (µ.isSegment(cont.firstChild)) {
-          res = µ.normalizeBP(cont.firstChild, 0);
-        } else {
-          res = µ.normalizeBP(cont.firstChild.nextSibling, 0);
-        }
-      } else if (offset === 1 && !µ.isSegment(cont.firstChild)) {
         res = µ.normalizeBP(cont.firstChild.nextSibling, 0);
-      } else if (offset < cont.children.length - 1) {
-        if (preferNext) {
-          newCont = cont.children[offset];
-          if (newCont.nodeName === 'BR') {
-            newCont = cont.children[offset - 1];
-          }
-          newOffset = 0;
-          res = µ.normalizeBP(newCont, newOffset);
-        } else {
-          newCont = cont.children[offset - 1];
-          newOffset = newCont.childNodes.length;
-          res = µ.normalizeBP(newCont, newOffset);
-        }
-      } else {
-        newCont = cont.children[cont.children.length - 2];
-        newOffset = newCont.childNodes.length;
-        res = µ.normalizeBP(newCont, newOffset);
       }
-    } else if (cont.nodeName === 'DIV' && cont.id === "editor-lines") {
-      if (offset === 0) {
-        newCont = cont.firstChild;
+    } else if (offset === 1 && !µ.isSegment(cont.firstChild)) {
+      res = µ.normalizeBP(cont.firstChild.nextSibling, 0);
+    } else if (offset < cont.children.length - 1) {
+      if (preferNext) {
+        newCont = cont.children[offset];
+        if (newCont.nodeName === 'BR') {
+          newCont = cont.children[offset - 1];
+        }
         newOffset = 0;
-        res = µ.normalizeBP(newCont, newOffset);
-      } else if (offset === cont.childNodes.length) {
-        newCont = cont.lastChild;
-        newOffset = newCont.childNodes.length;
         res = µ.normalizeBP(newCont, newOffset);
       } else {
         newCont = cont.children[offset - 1];
         newOffset = newCont.childNodes.length;
         res = µ.normalizeBP(newCont, newOffset);
       }
-    } else if (cont.nodeName === 'BR') {
-      newCont = cont.previousSibling;
+    } else {
+      newCont = cont.children[cont.children.length - 2];
       newOffset = newCont.childNodes.length;
       res = µ.normalizeBP(newCont, newOffset);
     }
-    if (!res) {
-      res = {
-        cont: newCont,
-        offset: newOffset
-      };
+  } else if (cont.nodeName === 'DIV' && cont.id === "editor-lines") {
+    if (offset === 0) {
+      newCont = cont.firstChild;
+      newOffset = 0;
+      res = µ.normalizeBP(newCont, newOffset);
+    } else if (offset === cont.childNodes.length) {
+      newCont = cont.lastChild;
+      newOffset = newCont.childNodes.length;
+      res = µ.normalizeBP(newCont, newOffset);
+    } else {
+      newCont = cont.children[offset - 1];
+      newOffset = newCont.childNodes.length;
+      res = µ.normalizeBP(newCont, newOffset);
     }
-    return res;
-  };
+  } else if (cont.nodeName === 'BR') {
+    newCont = cont.previousSibling;
+    newOffset = newCont.childNodes.length;
+    res = µ.normalizeBP(newCont, newOffset);
+  }
+  if (!res) {
+    res = {
+      cont: newCont,
+      offset: newOffset
+    };
+  }
+  return res;
+};
 
-  /**
-   * Normalize an array of breakpoints.
-   * @param  {Array} bps   An array of break points to normalize
-   * @param  {boolean} preferNext [optional] if true, in case BP8, we will choose
-   *                              to go in next sibling - if it exists - rather
-   *                              than in the previous one.
-   * @return {Array} A ref to the array of normalized bp.
-  */
-
-
-  µ.normalizeBPs = function(bps, preferNext) {
-    var bp, newBp, _i, _len;
-
-    for (_i = 0, _len = bps.length; _i < _len; _i++) {
-      bp = bps[_i];
-      newBp = µ.normalizeBP(bp.cont, bp.offset, preferNext);
-      bp.cont = newBp.cont;
-      bp.offset = newBp.offset;
-    }
-    return bps;
-  };
-
-  /**
-   * return the div corresponding to an element inside a line and tells wheter
-   * the breabk point is at the end or at the beginning of the line
-   * @param  {element} cont   the container of the break point
-   * @param  {number} offset offset of the break point
-   * @return {object}        {div[element], isStart[bool], isEnd[bool]}
-  */
+/**
+ * Normalize an array of breakpoints.
+ * @param  {Array} bps   An array of break points to normalize
+ * @param  {boolean} preferNext [optional] if true, in case BP8, we will choose
+ *                              to go in next sibling - if it exists - rather
+ *                              than in the previous one.
+ * @return {Array} A ref to the array of normalized bp.
+*/
 
 
-  µ.getLineDivIsStartIsEnd = function(cont, offset) {
-    var index, isEnd, isStart, n, nodeI, parent, segmentI, _ref;
+µ.normalizeBPs = function(bps, preferNext) {
+  var bp, newBp, _i, _len;
 
-    if (cont.nodeName === 'DIV' && (cont.id != null) && cont.id.substr(0, 5) === 'CNID_') {
-      if (cont.textContent === '') {
-        return {
-          div: cont,
-          isStart: true,
-          isEnd: true
-        };
-      }
-      isStart = offset === 0;
-      n = cont.childNodes.length;
-      isEnd = (offset === n) || (offset === n - 1);
+  for (_i = 0, _len = bps.length; _i < _len; _i++) {
+    bp = bps[_i];
+    newBp = µ.normalizeBP(bp.cont, bp.offset, preferNext);
+    bp.cont = newBp.cont;
+    bp.offset = newBp.offset;
+  }
+  return bps;
+};
+
+/**
+ * return the div corresponding to an element inside a line and tells wheter
+ * the breabk point is at the end or at the beginning of the line
+ * @param  {element} cont   the container of the break point
+ * @param  {number} offset offset of the break point
+ * @return {object}        {div[element], isStart[bool], isEnd[bool]}
+*/
+
+
+µ.getLineDivIsStartIsEnd = function(cont, offset) {
+  var index, isEnd, isStart, n, nodeI, parent, segmentI, _ref;
+
+  if (cont.nodeName === 'DIV' && (cont.id != null) && cont.id.substr(0, 5) === 'CNID_') {
+    if (cont.textContent === '') {
       return {
         div: cont,
-        isStart: isStart,
-        isEnd: isEnd
-      };
-    } else {
-      if (cont.length != null) {
-        isStart = offset === 0;
-        isEnd = offset === cont.length;
-      } else {
-        isStart = offset === 0;
-        isEnd = offset === cont.childNodes.length;
-      }
-    }
-    parent = cont.parentNode;
-    while (!(parent.nodeName === 'DIV' && (parent.id != null) && parent.id.substr(0, 5) === 'CNID_') && parent.parentNode !== null) {
-      index = µ.getNodeIndex(cont);
-      isStart = isStart && (index === 0);
-      isEnd = isEnd && (index === parent.childNodes.length - 1);
-      cont = parent;
-      parent = parent.parentNode;
-    }
-    if (parent.textContent === '') {
-      return {
-        div: parent,
         isStart: true,
         isEnd: true
       };
     }
-    _ref = µ.getSegmentIndex(cont), segmentI = _ref[0], nodeI = _ref[1];
-    n = parent.childNodes.length;
-    isStart = isStart && (segmentI === 0);
-    isEnd = isEnd && ((nodeI === n - 1) || (nodeI === n - 2));
+    isStart = offset === 0;
+    n = cont.childNodes.length;
+    isEnd = (offset === n) || (offset === n - 1);
     return {
-      div: parent,
+      div: cont,
       isStart: isStart,
       isEnd: isEnd
     };
-  };
-
-  µ.putStartOnStart = function(range, elt) {
-    var blank, offset;
-
-    if ((elt != null ? elt.firstChild : void 0) != null) {
-      offset = elt.firstChild.textContent.length;
-      if (offset === 0) {
-        elt.firstChild.data = " ";
-      }
-      return range.setStart(elt.firstChild, 0);
-    } else if (elt != null) {
-      blank = document.createTextNode(" ");
-      elt.appendChild(blank);
-      return range.setStart(blank, 0);
+  } else {
+    if (cont.length != null) {
+      isStart = offset === 0;
+      isEnd = offset === cont.length;
+    } else {
+      isStart = offset === 0;
+      isEnd = offset === cont.childNodes.length;
     }
+  }
+  parent = cont.parentNode;
+  while (!(parent.nodeName === 'DIV' && (parent.id != null) && parent.id.substr(0, 5) === 'CNID_') && parent.parentNode !== null) {
+    index = µ.getNodeIndex(cont);
+    isStart = isStart && (index === 0);
+    isEnd = isEnd && (index === parent.childNodes.length - 1);
+    cont = parent;
+    parent = parent.parentNode;
+  }
+  if (parent.textContent === '') {
+    return {
+      div: parent,
+      isStart: true,
+      isEnd: true
+    };
+  }
+  _ref = µ.getSegmentIndex(cont), segmentI = _ref[0], nodeI = _ref[1];
+  n = parent.childNodes.length;
+  isStart = isStart && (segmentI === 0);
+  isEnd = isEnd && ((nodeI === n - 1) || (nodeI === n - 2));
+  return {
+    div: parent,
+    isStart: isStart,
+    isEnd: isEnd
   };
+};
 
-  µ.putEndOnStart = function(range, elt) {
-    var blank, offset;
+µ.putStartOnStart = function(range, elt) {
+  var blank, offset;
 
-    if ((elt != null ? elt.firstChild : void 0) != null) {
-      offset = elt.firstChild.textContent.length;
-      if (offset === 0) {
-        elt.firstChild.data = " ";
-      }
-      return range.setEnd(elt.firstChild, 0);
-    } else if (elt != null) {
-      blank = document.createTextNode(" ");
-      elt.appendChild(blank);
-      return range.setEnd(blank, 0);
+  if ((elt != null ? elt.firstChild : void 0) != null) {
+    offset = elt.firstChild.textContent.length;
+    if (offset === 0) {
+      elt.firstChild.data = " ";
     }
-  };
+    return range.setStart(elt.firstChild, 0);
+  } else if (elt != null) {
+    blank = document.createTextNode(" ");
+    elt.appendChild(blank);
+    return range.setStart(blank, 0);
+  }
+};
 
-  /**
-   * Returns the DIV of the line where the break point is.
-   * @param  {element} cont   The contener of the break point
-   * @param  {number} offset Offset of the break point.
-   * @return {element}        The DIV of the line where the break point is.
-  */
+µ.putEndOnStart = function(range, elt) {
+  var blank, offset;
+
+  if ((elt != null ? elt.firstChild : void 0) != null) {
+    offset = elt.firstChild.textContent.length;
+    if (offset === 0) {
+      elt.firstChild.data = " ";
+    }
+    return range.setEnd(elt.firstChild, 0);
+  } else if (elt != null) {
+    blank = document.createTextNode(" ");
+    elt.appendChild(blank);
+    return range.setEnd(blank, 0);
+  }
+};
+
+/**
+ * Returns the DIV of the line where the break point is.
+ * @param  {element} cont   The contener of the break point
+ * @param  {number} offset Offset of the break point.
+ * @return {element}        The DIV of the line where the break point is.
+*/
 
 
-  µ.getLineDiv = function(cont, offset) {
-    var startDiv;
+µ.getLineDiv = function(cont, offset) {
+  var startDiv;
 
-    if (cont.nodeName === 'DIV') {
-      if (cont.id === 'editor-lines') {
-        startDiv = cont.children[offset];
-      } else {
-        startDiv = µ._getLineDiv(cont);
-      }
+  if (cont.nodeName === 'DIV') {
+    if (cont.id === 'editor-lines') {
+      startDiv = cont.children[offset];
     } else {
       startDiv = µ._getLineDiv(cont);
     }
-    return startDiv;
-  };
+  } else {
+    startDiv = µ._getLineDiv(cont);
+  }
+  return startDiv;
+};
 
-  µ._getLineDiv = function(elt) {
-    var parent;
+µ._getLineDiv = function(elt) {
+  var parent;
 
-    parent = elt;
-    while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
-      parent = parent.parentNode;
-    }
-    return parent;
-  };
+  parent = elt;
+  while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
+    parent = parent.parentNode;
+  }
+  return parent;
+};
 
-  /**
-   * Returns the segment (span or a or lineDiv) of the line where the break
-   * point is. If the break point is not in a segment, ie in the line div or even
-   * in editor-lines, then it is the line div that will be returned.
-   * @param  {element} cont   The contener of the break point
-   * @param  {number} offset  Offset of the break point. Optional if cont is a
-   *                          text node
-   * @return {element}        The DIV of the line where the break point is.
-  */
+/**
+ * Returns the segment (span or a or lineDiv) of the line where the break
+ * point is. If the break point is not in a segment, ie in the line div or even
+ * in editor-lines, then it is the line div that will be returned.
+ * @param  {element} cont   The contener of the break point
+ * @param  {number} offset  Offset of the break point. Optional if cont is a
+ *                          text node
+ * @return {element}        The DIV of the line where the break point is.
+*/
 
 
-  µ.getSegment = function(cont, offset) {
-    var startDiv;
+µ.getSegment = function(cont, offset) {
+  var startDiv;
 
-    if (cont.nodeName === 'DIV') {
-      if (cont.id === 'editor-lines') {
-        startDiv = cont.children[Math.min(offset, cont.children.length - 1)];
-      } else if ((cont.id != null) && cont.id.substr(0, 5) === 'CNID_') {
-        startDiv = cont;
-      } else {
-        startDiv = µ.getNestedSegment(cont);
-      }
+  if (cont.nodeName === 'DIV') {
+    if (cont.id === 'editor-lines') {
+      startDiv = cont.children[Math.min(offset, cont.children.length - 1)];
+    } else if ((cont.id != null) && cont.id.substr(0, 5) === 'CNID_') {
+      startDiv = cont;
     } else {
       startDiv = µ.getNestedSegment(cont);
     }
-    return startDiv;
-  };
+  } else {
+    startDiv = µ.getNestedSegment(cont);
+  }
+  return startDiv;
+};
 
-  µ.getNestedSegment = function(elt) {
-    var parent;
+µ.getNestedSegment = function(elt) {
+  var parent;
 
+  parent = elt.parentNode;
+  while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
+    elt = parent;
     parent = elt.parentNode;
-    while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
-      elt = parent;
-      parent = elt.parentNode;
-    }
-    return elt;
-  };
+  }
+  return elt;
+};
 
-  µ.isSegment = function(segment) {
-    return segment.nodeName !== 'BR' && !segment.classList.contains('CNE_task_btn');
-  };
+µ.isSegment = function(segment) {
+  return segment.nodeName !== 'BR' && !segment.classList.contains('CNE_task_btn');
+};
 
-  µ.getNextSegment = function(seg) {
+µ.getNextSegment = function(seg) {
+  seg = seg.nextSibling;
+  while (seg && !µ.isSegment(seg)) {
     seg = seg.nextSibling;
-    while (seg && !µ.isSegment(seg)) {
-      seg = seg.nextSibling;
-    }
-    return seg;
-  };
+  }
+  return seg;
+};
 
-  /**
-   * returns previous segment if one, none otherwise
-   * @param  {Element} seg The source segment
-   * @return {element}     Returns previous segment if one, none otherwise
-  */
+/**
+ * returns previous segment if one, none otherwise
+ * @param  {Element} seg The source segment
+ * @return {element}     Returns previous segment if one, none otherwise
+*/
 
 
-  µ.getPrevSegment = function(seg) {
+µ.getPrevSegment = function(seg) {
+  seg = seg.previousSibling;
+  while (seg && !µ.isSegment(seg)) {
     seg = seg.previousSibling;
-    while (seg && !µ.isSegment(seg)) {
-      seg = seg.previousSibling;
+  }
+  return seg;
+};
+
+/**
+ * Returns the normalized break point at the end of the previous segment of the
+ * segment of an element.
+ * @param {[type]} elmt [description]
+*/
+
+
+µ.setBpPreviousSegEnd = function(elmt) {
+  var bp, index, seg;
+
+  seg = µ.getNestedSegment(elmt);
+  index = µ.getNodeIndex(seg);
+  return bp = µ.normalizeBP(seg.parentNode, index);
+};
+
+/**
+ * Returns the normalized break point at the start of the next segment of the
+ * segment of an element.
+ * @param {[type]} elmt [description]
+*/
+
+
+µ.setBpNextSegEnd = function(elmt) {
+  var bp, index, seg;
+
+  seg = µ.getNestedSegment(elmt);
+  index = µ.getNodeIndex(seg) + 1;
+  return bp = µ.normalizeBP(seg.parentNode, index, true);
+};
+
+/**
+ * Returns [segmentIndex,nodeIndex]
+ * @param  {Element} segment The segment to find it's indexes
+ * @return {Array}         [segmentIndex,nodeIndex]
+*/
+
+
+µ.getSegmentIndex = function(segment) {
+  var i, segmentI, sibling, _i, _len, _ref;
+
+  segmentI = 0;
+  _ref = segment.parentNode.childNodes;
+  for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+    sibling = _ref[i];
+    if (sibling.classList.contains('CNE_task_btn')) {
+      segmentI += -1;
     }
-    return seg;
-  };
-
-  /**
-   * Returns the normalized break point at the end of the previous segment of the
-   * segment of an element.
-   * @param {[type]} elmt [description]
-  */
-
-
-  µ.setBpPreviousSegEnd = function(elmt) {
-    var bp, index, seg;
-
-    seg = µ.getNestedSegment(elmt);
-    index = µ.getNodeIndex(seg);
-    return bp = µ.normalizeBP(seg.parentNode, index);
-  };
-
-  /**
-   * Returns the normalized break point at the start of the next segment of the
-   * segment of an element.
-   * @param {[type]} elmt [description]
-  */
-
-
-  µ.setBpNextSegEnd = function(elmt) {
-    var bp, index, seg;
-
-    seg = µ.getNestedSegment(elmt);
-    index = µ.getNodeIndex(seg) + 1;
-    return bp = µ.normalizeBP(seg.parentNode, index, true);
-  };
-
-  /**
-   * Returns [segmentIndex,nodeIndex]
-   * @param  {Element} segment The segment to find it's indexes
-   * @return {Array}         [segmentIndex,nodeIndex]
-  */
-
-
-  µ.getSegmentIndex = function(segment) {
-    var i, segmentI, sibling, _i, _len, _ref;
-
-    segmentI = 0;
-    _ref = segment.parentNode.childNodes;
-    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-      sibling = _ref[i];
-      if (sibling.classList.contains('CNE_task_btn')) {
-        segmentI += -1;
-      }
-      if (sibling === segment) {
-        segmentI += i;
-        break;
-      }
+    if (sibling === segment) {
+      segmentI += i;
+      break;
     }
-    return [segmentI, i];
-  };
+  }
+  return [segmentI, i];
+};
 
-  µ.getNodeIndex = function(node) {
-    var i, index, sibling, _i, _len, _ref;
+µ.getNodeIndex = function(node) {
+  var i, index, sibling, _i, _len, _ref;
 
-    _ref = node.parentNode.childNodes;
-    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-      sibling = _ref[i];
-      if (sibling === node) {
-        index = i;
-        break;
-      }
+  _ref = node.parentNode.childNodes;
+  for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+    sibling = _ref[i];
+    if (sibling === node) {
+      index = i;
+      break;
     }
-    return index;
-  };
+  }
+  return index;
+};
 
-  module.exports = µ;
-  
+module.exports = µ;
+
 });
-window.require.register("CNeditor/md2cozy", function(exports, require, module) {
-  /* ------------------------------------------------------------------------
-  #  MARKUP LANGUAGE CONVERTERS
-  # _cozy2md (Read a string of editor html code format and turns it into a
-  #           string in markdown format)
-  # _md2cozy (Read a string of html code given by showdown and turns it into
-  #           a string of editor html code)
-  */
 
-  var md2cozy;
+;require.register("CNeditor/md2cozy", function(exports, require, module) {
+/* ------------------------------------------------------------------------
+#  MARKUP LANGUAGE CONVERTERS
+# _cozy2md (Read a string of editor html code format and turns it into a
+#           string in markdown format)
+# _md2cozy (Read a string of html code given by showdown and turns it into
+#           a string of editor html code)
+*/
 
-  md2cozy = {};
+var md2cozy;
 
-  if (!String.prototype.trim) {
-    String.prototype.trim = function() {
-      return this.replace(/^\s+|\s+$/g, '');
+md2cozy = {};
+
+if (!String.prototype.trim) {
+  String.prototype.trim = function() {
+    return this.replace(/^\s+|\s+$/g, '');
+  };
+}
+
+/* ------------------------------------------------------------------------
+#  _cozy2md
+# Turns line elements form editor into a string in markdown format
+*/
+
+
+md2cozy.cozy2md = function(linesDiv) {
+  var line, lineMetaData, lines, markCode, prevLineMetaData, segment, _i, _j, _len, _len1, _ref, _ref1;
+
+  md2cozy.currentDepth = 0;
+  lines = [];
+  prevLineMetaData = null;
+  _ref = linesDiv.children();
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    line = _ref[_i];
+    if (line.id === 'CNE_urlPopover') {
+      continue;
+    }
+    line = $(line);
+    lineMetaData = md2cozy.getLineMetadata(line.attr('class'));
+    markCode = md2cozy.buildMarkdownPrefix(lineMetaData, prevLineMetaData);
+    prevLineMetaData = lineMetaData;
+    _ref1 = line.children();
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      segment = _ref1[_j];
+      if (segment.nodeType === 1) {
+        markCode += md2cozy.convertInlineEltToMarkdown($(segment));
+      } else {
+        markCode += $(segment).text();
+      }
+    }
+    lines.push(markCode);
+  }
+  return lines.join('');
+};
+
+md2cozy.getLineMetadata = function(name) {
+  var data, depth, type;
+
+  if (name != null) {
+    data = name.split("-");
+    type = data[0];
+    depth = parseInt(data[1], 10);
+    return {
+      type: type,
+      depth: depth
+    };
+  } else {
+    return {
+      type: null,
+      depth: null
     };
   }
+};
 
-  /* ------------------------------------------------------------------------
-  #  _cozy2md
-  # Turns line elements form editor into a string in markdown format
-  */
+md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
+  var blanks, dieses, i, nbBlanks, prefix, _i, _j, _k, _ref, _ref1, _ref2;
 
-
-  md2cozy.cozy2md = function(linesDiv) {
-    var line, lineMetaData, lines, markCode, prevLineMetaData, segment, _i, _j, _len, _len1, _ref, _ref1;
-
-    md2cozy.currentDepth = 0;
-    lines = [];
-    prevLineMetaData = null;
-    _ref = linesDiv.children();
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      line = _ref[_i];
-      if (line.id === 'CNE_urlPopover') {
-        continue;
+  blanks = "";
+  switch (metadata.type) {
+    case 'Th':
+      dieses = '';
+      for (i = _i = 1, _ref = metadata.depth; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
+        dieses += '#';
       }
-      line = $(line);
-      lineMetaData = md2cozy.getLineMetadata(line.attr('class'));
-      markCode = md2cozy.buildMarkdownPrefix(lineMetaData, prevLineMetaData);
-      prevLineMetaData = lineMetaData;
-      _ref1 = line.children();
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        segment = _ref1[_j];
-        if (segment.nodeType === 1) {
-          markCode += md2cozy.convertInlineEltToMarkdown($(segment));
-        } else {
-          markCode += $(segment).text();
+      md2cozy.currentDepth = metadata.depth;
+      prefix = "" + dieses + " ";
+      if (prevMetadata != null) {
+        prefix = "\n\n" + prefix;
+      }
+      return prefix;
+    case 'Lh':
+      return "\n\n";
+    case 'Tu':
+      nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
+      if (nbBlanks > 0) {
+        for (i = _j = 0, _ref1 = nbBlanks - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+          blanks += '    ';
         }
       }
-      lines.push(markCode);
-    }
-    return lines.join('');
-  };
-
-  md2cozy.getLineMetadata = function(name) {
-    var data, depth, type;
-
-    if (name != null) {
-      data = name.split("-");
-      type = data[0];
-      depth = parseInt(data[1], 10);
-      return {
-        type: type,
-        depth: depth
-      };
-    } else {
-      return {
-        type: null,
-        depth: null
-      };
-    }
-  };
-
-  md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
-    var blanks, dieses, i, nbBlanks, prefix, _i, _j, _k, _ref, _ref1, _ref2;
-
-    blanks = "";
-    switch (metadata.type) {
-      case 'Th':
-        dieses = '';
-        for (i = _i = 1, _ref = metadata.depth; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
-          dieses += '#';
+      prefix = "" + blanks + "* ";
+      if ((prevMetadata != null ? prevMetadata.type : void 0) === "Tu" || (prevMetadata != null ? prevMetadata.type : void 0) === "Lu") {
+        prefix = "\n" + prefix;
+      } else if (prevMetadata != null) {
+        prefix = "\n\n" + prefix;
+      }
+      return prefix;
+    case 'Lu':
+      nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
+      if (nbBlanks > 0) {
+        for (i = _k = 0, _ref2 = nbBlanks - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
+          blanks += '    ';
         }
-        md2cozy.currentDepth = metadata.depth;
-        prefix = "" + dieses + " ";
-        if (prevMetadata != null) {
-          prefix = "\n\n" + prefix;
-        }
-        return prefix;
-      case 'Lh':
-        return "\n\n";
-      case 'Tu':
-        nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
-        if (nbBlanks > 0) {
-          for (i = _j = 0, _ref1 = nbBlanks - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
-            blanks += '    ';
-          }
-        }
-        prefix = "" + blanks + "* ";
-        if ((prevMetadata != null ? prevMetadata.type : void 0) === "Tu" || (prevMetadata != null ? prevMetadata.type : void 0) === "Lu") {
-          prefix = "\n" + prefix;
-        } else if (prevMetadata != null) {
-          prefix = "\n\n" + prefix;
-        }
-        return prefix;
-      case 'Lu':
-        nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
-        if (nbBlanks > 0) {
-          for (i = _k = 0, _ref2 = nbBlanks - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
-            blanks += '    ';
-          }
-        }
-        return "\n\n" + blanks + " ";
-      default:
-        return '';
-    }
-  };
+      }
+      return "\n\n" + blanks + " ";
+    default:
+      return '';
+  }
+};
 
-  md2cozy.convertInlineEltToMarkdown = function(obj) {
-    var alt, classList, href, src, title;
+md2cozy.convertInlineEltToMarkdown = function(obj) {
+  var alt, classList, href, src, title;
 
-    switch (obj[0].nodeName) {
-      case 'A':
-        title = obj.attr('title') != null ? obj.attr('title') : "";
-        href = obj.attr('href') != null ? obj.attr('href') : "";
-        return '[' + obj.html() + '](' + href + ' "' + title + '")';
-      case 'IMG':
-        title = obj.attr('title') != null ? obj.attr('title') : "";
-        alt = obj.attr('alt') != null ? obj.attr('alt') : "";
-        src = obj.attr('src') != null ? obj.attr('src') : "";
-        return '![' + alt + '](' + src + ' "' + title + '")';
-      case 'SPAN':
-        classList = obj[0].classList;
-        if (classList.contains('CNE_strong')) {
-          return '**' + obj.text() + '**';
-        } else if (classList.contains('CNE_underline')) {
-          return obj.text();
-        } else {
-          return obj.text();
-        }
-        break;
-      default:
-        return '';
-    }
-  };
+  switch (obj[0].nodeName) {
+    case 'A':
+      title = obj.attr('title') != null ? obj.attr('title') : "";
+      href = obj.attr('href') != null ? obj.attr('href') : "";
+      return '[' + obj.html() + '](' + href + ' "' + title + '")';
+    case 'IMG':
+      title = obj.attr('title') != null ? obj.attr('title') : "";
+      alt = obj.attr('alt') != null ? obj.attr('alt') : "";
+      src = obj.attr('src') != null ? obj.attr('src') : "";
+      return '![' + alt + '](' + src + ' "' + title + '")';
+    case 'SPAN':
+      classList = obj[0].classList;
+      if (classList.contains('CNE_strong')) {
+        return '**' + obj.text() + '**';
+      } else if (classList.contains('CNE_underline')) {
+        return obj.text();
+      } else {
+        return obj.text();
+      }
+      break;
+    default:
+      return '';
+  }
+};
 
-  /* ------------------------------------------------------------------------
-  # Read a string of html code given by showdown and turns it into a string
-  # of editor html code
-  */
+/* ------------------------------------------------------------------------
+# Read a string of html code given by showdown and turns it into a string
+# of editor html code
+*/
 
 
-  md2cozy.md2cozy = function(text) {
-    var conv, cozyCode, htmlCode;
+md2cozy.md2cozy = function(text) {
+  var conv, cozyCode, htmlCode;
 
-    conv = new Showdown.converter();
-    htmlCode = $(conv.makeHtml(text));
-    cozyCode = '';
-    md2cozy.currentId = 0;
-    md2cozy.editorDepth = 0;
-    htmlCode.each(function() {
-      return cozyCode += md2cozy.parseLine($(this));
+  conv = new Showdown.converter();
+  htmlCode = $(conv.makeHtml(text));
+  cozyCode = '';
+  md2cozy.currentId = 0;
+  md2cozy.editorDepth = 0;
+  htmlCode.each(function() {
+    return cozyCode += md2cozy.parseLine($(this));
+  });
+  if (cozyCode.length === 0) {
+    cozyCode = md2cozy.buildEditorLine("Tu", 1, null);
+  }
+  return cozyCode;
+};
+
+md2cozy.parseLine = function(obj) {
+  var tag;
+
+  tag = obj[0].tagName;
+  if ((tag != null) && tag[0] === "H") {
+    md2cozy.editorDepth = parseInt(tag[1], 10);
+    return md2cozy.buildEditorLine("Th", md2cozy.editorDepth, obj);
+  } else if ((tag != null) && tag === "P") {
+    return md2cozy.buildEditorLine("Lh", md2cozy.editorDepth, obj);
+  } else {
+    return md2cozy.parseList(obj);
+  }
+};
+
+md2cozy.buildEditorLine = function(type, depth, obj) {
+  var code;
+
+  md2cozy.currentId++;
+  code = '';
+  if (obj != null) {
+    obj.contents().each(function() {
+      var name;
+
+      name = this.nodeName;
+      if (name === "#text") {
+        return code += "<span>" + ($(this).text()) + "</span>";
+      } else if (this.tagName != null) {
+        $(this).wrap('<div></div>');
+        code += "" + ($(this).parent().html());
+        return $(this).unwrap();
+      }
     });
-    if (cozyCode.length === 0) {
-      cozyCode = md2cozy.buildEditorLine("Tu", 1, null);
-    }
-    return cozyCode;
-  };
+  }
+  if (code === "") {
+    code = "<span></span>";
+  }
+  return ("<div id=CNID_" + md2cozy.currentId + " class=" + type + "-" + depth + ">") + code + "<br></div>";
+};
 
-  md2cozy.parseLine = function(obj) {
-    var tag;
+md2cozy.parseList = function(obj) {
+  var child, cozyCode, i, nodeName, tag, type, _i, _len, _ref;
 
-    tag = obj[0].tagName;
-    if ((tag != null) && tag[0] === "H") {
-      md2cozy.editorDepth = parseInt(tag[1], 10);
-      return md2cozy.buildEditorLine("Th", md2cozy.editorDepth, obj);
-    } else if ((tag != null) && tag === "P") {
-      return md2cozy.buildEditorLine("Lh", md2cozy.editorDepth, obj);
-    } else {
-      return md2cozy.parseList(obj);
-    }
-  };
-
-  md2cozy.buildEditorLine = function(type, depth, obj) {
-    var code;
-
-    md2cozy.currentId++;
-    code = '';
-    if (obj != null) {
-      obj.contents().each(function() {
-        var name;
-
-        name = this.nodeName;
-        if (name === "#text") {
-          return code += "<span>" + ($(this).text()) + "</span>";
-        } else if (this.tagName != null) {
-          $(this).wrap('<div></div>');
-          code += "" + ($(this).parent().html());
-          return $(this).unwrap();
-        }
-      });
-    }
-    if (code === "") {
-      code = "<span></span>";
-    }
-    return ("<div id=CNID_" + md2cozy.currentId + " class=" + type + "-" + depth + ">") + code + "<br></div>";
-  };
-
-  md2cozy.parseList = function(obj) {
-    var child, cozyCode, i, nodeName, tag, type, _i, _len, _ref;
-
-    tag = obj[0].tagName;
-    cozyCode = "";
-    if ((tag != null) && tag === "UL") {
-      md2cozy.editorDepth++;
-      obj.children().each(function() {
-        return cozyCode += md2cozy.parseList($(this));
-      });
-      md2cozy.editorDepth--;
-    } else if ((tag != null) && tag === "LI" && (obj.contents().get(0) != null)) {
-      _ref = obj[0].childNodes;
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        child = _ref[i];
-        child = $(child);
-        type = "Lu";
-        if (i === 0) {
-          type = "Tu";
-        }
-        nodeName = child[0].nodeName;
-        if (nodeName === "#text" && child.text().trim() !== "") {
-          child = child.clone().wrap('<p></p>').parent();
-          cozyCode += md2cozy.buildEditorLine(type, md2cozy.editorDepth, child);
-        } else if (nodeName === "P") {
-          cozyCode += md2cozy.buildEditorLine(type, md2cozy.editorDepth, child);
-        } else {
-          cozyCode += md2cozy.parseList(child);
-        }
+  tag = obj[0].tagName;
+  cozyCode = "";
+  if ((tag != null) && tag === "UL") {
+    md2cozy.editorDepth++;
+    obj.children().each(function() {
+      return cozyCode += md2cozy.parseList($(this));
+    });
+    md2cozy.editorDepth--;
+  } else if ((tag != null) && tag === "LI" && (obj.contents().get(0) != null)) {
+    _ref = obj[0].childNodes;
+    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+      child = _ref[i];
+      child = $(child);
+      type = "Lu";
+      if (i === 0) {
+        type = "Tu";
       }
-    } else if ((tag != null) && tag === "P") {
-      cozyCode += md2cozy.buildEditorLine("Lu", md2cozy.editorDepth, obj);
+      nodeName = child[0].nodeName;
+      if (nodeName === "#text" && child.text().trim() !== "") {
+        child = child.clone().wrap('<p></p>').parent();
+        cozyCode += md2cozy.buildEditorLine(type, md2cozy.editorDepth, child);
+      } else if (nodeName === "P") {
+        cozyCode += md2cozy.buildEditorLine(type, md2cozy.editorDepth, child);
+      } else {
+        cozyCode += md2cozy.parseList(child);
+      }
     }
-    return cozyCode;
+  } else if ((tag != null) && tag === "P") {
+    cozyCode += md2cozy.buildEditorLine("Lu", md2cozy.editorDepth, obj);
+  }
+  return cozyCode;
+};
+
+exports.md2cozy = md2cozy;
+
+});
+
+;require.register("CNeditor/realtimer", function(exports, require, module) {
+var ExternalModels, SocketListener, realtimer, _ref,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+ExternalModels = require('./externalmodels');
+
+SocketListener = (function(_super) {
+  __extends(SocketListener, _super);
+
+  function SocketListener() {
+    _ref = SocketListener.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  SocketListener.prototype.models = {
+    'task': ExternalModels.Task,
+    'alarm': ExternalModels.Alarm,
+    'contact': ExternalModels.Contact
   };
 
-  exports.md2cozy = md2cozy;
-  
-});
-window.require.register("CNeditor/realtimer", function(exports, require, module) {
-  var ExternalModels, SocketListener, realtimer, _ref,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  SocketListener.prototype.events = ['alarm.update', 'alarm.delete', 'contact.create', 'contact.update', 'contact.delete', 'task.update', 'task.delete'];
 
-  ExternalModels = require('./externalmodels');
+  SocketListener.prototype.onRemoteCreate = function(model) {
+    var collection, _i, _len, _ref1, _results;
 
-  SocketListener = (function(_super) {
-    __extends(SocketListener, _super);
-
-    function SocketListener() {
-      _ref = SocketListener.__super__.constructor.apply(this, arguments);
-      return _ref;
-    }
-
-    SocketListener.prototype.models = {
-      'task': ExternalModels.Task,
-      'alarm': ExternalModels.Alarm,
-      'contact': ExternalModels.Contact
-    };
-
-    SocketListener.prototype.events = ['alarm.update', 'alarm.delete', 'contact.create', 'contact.update', 'contact.delete', 'task.update', 'task.delete'];
-
-    SocketListener.prototype.onRemoteCreate = function(model) {
-      var collection, _i, _len, _ref1, _results;
-
-      _ref1 = this.collections;
-      _results = [];
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        collection = _ref1[_i];
-        if (model instanceof collection.model) {
-          _results.push(collection.add(model));
-        } else {
-          _results.push(void 0);
-        }
+    _ref1 = this.collections;
+    _results = [];
+    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+      collection = _ref1[_i];
+      if (model instanceof collection.model) {
+        _results.push(collection.add(model));
+      } else {
+        _results.push(void 0);
       }
-      return _results;
-    };
+    }
+    return _results;
+  };
 
-    SocketListener.prototype.onRemoteDelete = function(model) {
-      return model.trigger('destroy', model, model.collection, {});
-    };
+  SocketListener.prototype.onRemoteDelete = function(model) {
+    return model.trigger('destroy', model, model.collection, {});
+  };
 
-    return SocketListener;
+  return SocketListener;
 
-  })(CozySocketListener);
+})(CozySocketListener);
 
-  realtimer = new SocketListener();
+realtimer = new SocketListener();
 
-  realtimer.watch(ExternalModels.contactCollection);
+realtimer.watch(ExternalModels.contactCollection);
 
-  realtimer.watch(ExternalModels.alarmCollection);
+realtimer.watch(ExternalModels.alarmCollection);
 
-  module.exports = realtimer;
-  
+module.exports = realtimer;
+
 });
+
+;
+jade = (function(exports){
 /*!
+ * Jade - runtime
+ * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+ * MIT Licensed
+ */
+
+/**
+ * Lame Array.isArray() polyfill for now.
+ */
+
+if (!Array.isArray) {
+  Array.isArray = function(arr){
+    return '[object Array]' == Object.prototype.toString.call(arr);
+  };
+}
+
+/**
+ * Lame Object.keys() polyfill for now.
+ */
+
+if (!Object.keys) {
+  Object.keys = function(obj){
+    var arr = [];
+    for (var key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        arr.push(key);
+      }
+    }
+    return arr;
+  }
+}
+
+/**
+ * Merge two attribute objects giving precedence
+ * to values in object `b`. Classes are special-cased
+ * allowing for arrays and merging/joining appropriately
+ * resulting in a string.
+ *
+ * @param {Object} a
+ * @param {Object} b
+ * @return {Object} a
+ * @api private
+ */
+
+exports.merge = function merge(a, b) {
+  var ac = a['class'];
+  var bc = b['class'];
+
+  if (ac || bc) {
+    ac = ac || [];
+    bc = bc || [];
+    if (!Array.isArray(ac)) ac = [ac];
+    if (!Array.isArray(bc)) bc = [bc];
+    ac = ac.filter(nulls);
+    bc = bc.filter(nulls);
+    a['class'] = ac.concat(bc).join(' ');
+  }
+
+  for (var key in b) {
+    if (key != 'class') {
+      a[key] = b[key];
+    }
+  }
+
+  return a;
+};
+
+/**
+ * Filter null `val`s.
+ *
+ * @param {Mixed} val
+ * @return {Mixed}
+ * @api private
+ */
+
+function nulls(val) {
+  return val != null;
+}
+
+/**
+ * Render the given attributes object.
+ *
+ * @param {Object} obj
+ * @param {Object} escaped
+ * @return {String}
+ * @api private
+ */
+
+exports.attrs = function attrs(obj, escaped){
+  var buf = []
+    , terse = obj.terse;
+
+  delete obj.terse;
+  var keys = Object.keys(obj)
+    , len = keys.length;
+
+  if (len) {
+    buf.push('');
+    for (var i = 0; i < len; ++i) {
+      var key = keys[i]
+        , val = obj[key];
+
+      if ('boolean' == typeof val || null == val) {
+        if (val) {
+          terse
+            ? buf.push(key)
+            : buf.push(key + '="' + key + '"');
+        }
+      } else if (0 == key.indexOf('data') && 'string' != typeof val) {
+        buf.push(key + "='" + JSON.stringify(val) + "'");
+      } else if ('class' == key && Array.isArray(val)) {
+        buf.push(key + '="' + exports.escape(val.join(' ')) + '"');
+      } else if (escaped && escaped[key]) {
+        buf.push(key + '="' + exports.escape(val) + '"');
+      } else {
+        buf.push(key + '="' + val + '"');
+      }
+    }
+  }
+
+  return buf.join(' ');
+};
+
+/**
+ * Escape the given string of `html`.
+ *
+ * @param {String} html
+ * @return {String}
+ * @api private
+ */
+
+exports.escape = function escape(html){
+  return String(html)
+    .replace(/&(?!(\w+|\#\d+);)/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+};
+
+/**
+ * Re-throw the given `err` in context to the
+ * the jade in `filename` at the given `lineno`.
+ *
+ * @param {Error} err
+ * @param {String} filename
+ * @param {String} lineno
+ * @api private
+ */
+
+exports.rethrow = function rethrow(err, filename, lineno){
+  if (!filename) throw err;
+
+  var context = 3
+    , str = require('fs').readFileSync(filename, 'utf8')
+    , lines = str.split('\n')
+    , start = Math.max(lineno - context, 0)
+    , end = Math.min(lines.length, lineno + context);
+
+  // Error context
+  var context = lines.slice(start, end).map(function(line, i){
+    var curr = i + start + 1;
+    return (curr == lineno ? '  > ' : '    ')
+      + curr
+      + '| '
+      + line;
+  }).join('\n');
+
+  // Alter exception message
+  err.path = filename;
+  err.message = (filename || 'Jade') + ':' + lineno
+    + '\n' + context + '\n\n' + err.message;
+  throw err;
+};
+
+  return exports;
+
+})({});
+
+;/*!
  * jQuery JavaScript Library v1.8.2
  * http://jquery.com/
  *
@@ -10383,8 +10577,8 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 }
 
 })( window );
-;
-/**
+
+;/**
  * @license Rangy, a cross-browser JavaScript range and selection library
  * http://code.google.com/p/rangy/
  *
@@ -13608,8 +13802,8 @@ rangy.createModule("DomUtil", function(api, module) {
         win = null;
     });
 });
-;
-/*
+
+;/*
  Serializer module for Rangy.
  Serializes Ranges and Selections. An example use would be to store a user's selection on a particular page in a
  cookie or local storage and restore it on the user's next visit to the same page.
@@ -13631,8 +13825,8 @@ e+") and target root node ("+d+") do not match");e=m(c[1],a,b);a=m(c[2],a,b);b=g
 c.split("|");for(var e=g.getSelection(b),d=[],f=0,h=c.length;f<h;++f)d[f]=q(c[f],a,b.document);e.setRanges(d);return e}g.requireModules(["WrappedSelection","WrappedRange"]);if(typeof encodeURIComponent=="undefined"||typeof decodeURIComponent=="undefined")n.fail("Global object is missing encodeURIComponent and/or decodeURIComponent method");var u=function(){var c=null;return function(a){for(var b=[],e=0,d=a.length,f;e<d;++e){f=a.charCodeAt(e);if(f<128)b.push(f);else f<2048?b.push(f>>6|192,f&63|128):
 b.push(f>>12|224,f>>6&63|128,f&63|128)}a=-1;if(!c){e=[];d=0;for(var h;d<256;++d){h=d;for(f=8;f--;)if((h&1)==1)h=h>>>1^3988292384;else h>>>=1;e[d]=h>>>0}c=e}e=c;d=0;for(f=b.length;d<f;++d){h=(a^b[d])&255;a=a>>>8^e[h]}return(a^-1)>>>0}}(),i=g.dom;g.serializePosition=l;g.deserializePosition=m;g.serializeRange=p;g.deserializeRange=q;g.canDeserializeRange=r;g.serializeSelection=s;g.deserializeSelection=t;g.canDeserializeSelection=function(c,a,b){var e;if(a)e=b?b.document:i.getDocument(a);else{b=b||window;
 a=b.document.documentElement}c=c.split("|");b=0;for(var d=c.length;b<d;++b)if(!r(c[b],a,e))return false;return true};g.restoreSelectionFromCookie=function(c){c=c||window;var a;a:{a=c.document.cookie.split(/[;,]/);for(var b=0,e=a.length,d;b<e;++b){d=a[b].split("=");if(d[0].replace(/^\s+/,"")=="rangySerializedSelection")if(d=d[1]){a=decodeURIComponent(d.replace(/\s+$/,""));break a}}a=null}a&&t(a,c.doc)};g.saveSelectionCookie=function(c,a){c=c||window;a=typeof a=="object"?a:{};var b=a.expires?";expires="+
-a.expires.toUTCString():"",e=a.path?";path="+a.path:"",d=a.domain?";domain="+a.domain:"",f=a.secure?";secure":"",h=s(g.getSelection(c));c.document.cookie=encodeURIComponent("rangySerializedSelection")+"="+encodeURIComponent(h)+b+e+d+f};g.getElementChecksum=j});;
-//
+a.expires.toUTCString():"",e=a.path?";path="+a.path:"",d=a.domain?";domain="+a.domain:"",f=a.secure?";secure":"",h=s(g.getSelection(c));c.document.cookie=encodeURIComponent("rangySerializedSelection")+"="+encodeURIComponent(h)+b+e+d+f};g.getElementChecksum=j});
+;//
 // showdown.js -- A javascript port of Markdown.
 //
 // Copyright (c) 2007 John Fraser.
@@ -14972,8 +15166,8 @@ var escapeCharacters_callback = function(wholeMatch,m1) {
 } // end of Showdown.converter
 
 // export
-if (typeof module !== 'undefined') module.exports = Showdown;;
-// Generated by CoffeeScript 1.6.2
+if (typeof module !== 'undefined') module.exports = Showdown;
+;// Generated by CoffeeScript 1.6.2
 (function() {
   var CozySocketListener, global,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
@@ -15221,8 +15415,8 @@ if (typeof module !== 'undefined') module.exports = Showdown;;
   global.CozySocketListener = CozySocketListener;
 
 }).call(this);
-;
-/*
+
+;/*
  *  Sugar Library v1.3.9
  *
  *  Freely distributable and licensed under the MIT-style license.
@@ -19776,8 +19970,8 @@ Date.addLocale('zh-TW', {
 
   });
 
-})();;
-//     Backbone.js 1.0.0
+})();
+;//     Backbone.js 1.0.0
 
 //     (c) 2010-2013 Jeremy Ashkenas, DocumentCloud Inc.
 //     Backbone may be freely distributed under the MIT license.
@@ -21348,8 +21542,8 @@ Date.addLocale('zh-TW', {
   };
 
 }).call(this);
-;
-/*
+
+;/*
 
  CSS Beautifier
 ---------------
@@ -21547,8 +21741,8 @@ function css_beautify(source_text, options) {
 
 if (typeof exports !== "undefined")
     exports.css_beautify = css_beautify;
-;
-/*
+
+;/*
 
  Style HTML
 ---------------
@@ -22085,8 +22279,8 @@ function style_html(html_source, options) {
   }
   return multi_parser.output.join('');
 }
-;
-/*jslint onevar: false, plusplus: false */
+
+;/*jslint onevar: false, plusplus: false */
 /*
 
  JS Beautifier
@@ -23305,194 +23499,14 @@ function js_beautify(js_source_text, options) {
 // and you will be able to `var js_beautify = require("beautify").js_beautify`.
 if (typeof exports !== "undefined")
     exports.js_beautify = js_beautify;
-;
-/*!
+
+;/*!
 * Bootstrap.js by @fat & @mdo
 * Copyright 2012 Twitter, Inc.
 * http://www.apache.org/licenses/LICENSE-2.0.txt
 */
-!function($){"use strict";$(function(){$.support.transition=function(){var transitionEnd=function(){var name,el=document.createElement("bootstrap"),transEndEventNames={WebkitTransition:"webkitTransitionEnd",MozTransition:"transitionend",OTransition:"oTransitionEnd otransitionend",transition:"transitionend"};for(name in transEndEventNames)if(void 0!==el.style[name])return transEndEventNames[name]}();return transitionEnd&&{end:transitionEnd}}()})}(window.jQuery),!function($){"use strict";var dismiss='[data-dismiss="alert"]',Alert=function(el){$(el).on("click",dismiss,this.close)};Alert.prototype.close=function(e){function removeElement(){$parent.trigger("closed").remove()}var $parent,$this=$(this),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),e&&e.preventDefault(),$parent.length||($parent=$this.hasClass("alert")?$this:$this.parent()),$parent.trigger(e=$.Event("close")),e.isDefaultPrevented()||($parent.removeClass("in"),$.support.transition&&$parent.hasClass("fade")?$parent.on($.support.transition.end,removeElement):removeElement())};var old=$.fn.alert;$.fn.alert=function(option){return this.each(function(){var $this=$(this),data=$this.data("alert");data||$this.data("alert",data=new Alert(this)),"string"==typeof option&&data[option].call($this)})},$.fn.alert.Constructor=Alert,$.fn.alert.noConflict=function(){return $.fn.alert=old,this},$(document).on("click.alert.data-api",dismiss,Alert.prototype.close)}(window.jQuery),!function($){"use strict";var Button=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.button.defaults,options)};Button.prototype.setState=function(state){var d="disabled",$el=this.$element,data=$el.data(),val=$el.is("input")?"val":"html";state+="Text",data.resetText||$el.data("resetText",$el[val]()),$el[val](data[state]||this.options[state]),setTimeout(function(){"loadingText"==state?$el.addClass(d).attr(d,d):$el.removeClass(d).removeAttr(d)},0)},Button.prototype.toggle=function(){var $parent=this.$element.closest('[data-toggle="buttons-radio"]');$parent&&$parent.find(".active").removeClass("active"),this.$element.toggleClass("active")};var old=$.fn.button;$.fn.button=function(option){return this.each(function(){var $this=$(this),data=$this.data("button"),options="object"==typeof option&&option;data||$this.data("button",data=new Button(this,options)),"toggle"==option?data.toggle():option&&data.setState(option)})},$.fn.button.defaults={loadingText:"loading..."},$.fn.button.Constructor=Button,$.fn.button.noConflict=function(){return $.fn.button=old,this},$(document).on("click.button.data-api","[data-toggle^=button]",function(e){var $btn=$(e.target);$btn.hasClass("btn")||($btn=$btn.closest(".btn")),$btn.button("toggle")})}(window.jQuery),!function($){"use strict";var Carousel=function(element,options){this.$element=$(element),this.options=options,"hover"==this.options.pause&&this.$element.on("mouseenter",$.proxy(this.pause,this)).on("mouseleave",$.proxy(this.cycle,this))};Carousel.prototype={cycle:function(e){return e||(this.paused=!1),this.options.interval&&!this.paused&&(this.interval=setInterval($.proxy(this.next,this),this.options.interval)),this},to:function(pos){var $active=this.$element.find(".item.active"),children=$active.parent().children(),activePos=children.index($active),that=this;if(!(pos>children.length-1||0>pos))return this.sliding?this.$element.one("slid",function(){that.to(pos)}):activePos==pos?this.pause().cycle():this.slide(pos>activePos?"next":"prev",$(children[pos]))},pause:function(e){return e||(this.paused=!0),this.$element.find(".next, .prev").length&&$.support.transition.end&&(this.$element.trigger($.support.transition.end),this.cycle()),clearInterval(this.interval),this.interval=null,this},next:function(){return this.sliding?void 0:this.slide("next")},prev:function(){return this.sliding?void 0:this.slide("prev")},slide:function(type,next){var e,$active=this.$element.find(".item.active"),$next=next||$active[type](),isCycling=this.interval,direction="next"==type?"left":"right",fallback="next"==type?"first":"last",that=this;if(this.sliding=!0,isCycling&&this.pause(),$next=$next.length?$next:this.$element.find(".item")[fallback](),e=$.Event("slide",{relatedTarget:$next[0]}),!$next.hasClass("active")){if($.support.transition&&this.$element.hasClass("slide")){if(this.$element.trigger(e),e.isDefaultPrevented())return;$next.addClass(type),$next[0].offsetWidth,$active.addClass(direction),$next.addClass(direction),this.$element.one($.support.transition.end,function(){$next.removeClass([type,direction].join(" ")).addClass("active"),$active.removeClass(["active",direction].join(" ")),that.sliding=!1,setTimeout(function(){that.$element.trigger("slid")},0)})}else{if(this.$element.trigger(e),e.isDefaultPrevented())return;$active.removeClass("active"),$next.addClass("active"),this.sliding=!1,this.$element.trigger("slid")}return isCycling&&this.cycle(),this}}};var old=$.fn.carousel;$.fn.carousel=function(option){return this.each(function(){var $this=$(this),data=$this.data("carousel"),options=$.extend({},$.fn.carousel.defaults,"object"==typeof option&&option),action="string"==typeof option?option:options.slide;data||$this.data("carousel",data=new Carousel(this,options)),"number"==typeof option?data.to(option):action?data[action]():options.interval&&data.cycle()})},$.fn.carousel.defaults={interval:5e3,pause:"hover"},$.fn.carousel.Constructor=Carousel,$.fn.carousel.noConflict=function(){return $.fn.carousel=old,this},$(document).on("click.carousel.data-api","[data-slide]",function(e){var href,$this=$(this),$target=$($this.attr("data-target")||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")),options=$.extend({},$target.data(),$this.data());$target.carousel(options),e.preventDefault()})}(window.jQuery),!function($){"use strict";var Collapse=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.collapse.defaults,options),this.options.parent&&(this.$parent=$(this.options.parent)),this.options.toggle&&this.toggle()};Collapse.prototype={constructor:Collapse,dimension:function(){var hasWidth=this.$element.hasClass("width");return hasWidth?"width":"height"},show:function(){var dimension,scroll,actives,hasData;if(!this.transitioning){if(dimension=this.dimension(),scroll=$.camelCase(["scroll",dimension].join("-")),actives=this.$parent&&this.$parent.find("> .accordion-group > .in"),actives&&actives.length){if(hasData=actives.data("collapse"),hasData&&hasData.transitioning)return;actives.collapse("hide"),hasData||actives.data("collapse",null)}this.$element[dimension](0),this.transition("addClass",$.Event("show"),"shown"),$.support.transition&&this.$element[dimension](this.$element[0][scroll])}},hide:function(){var dimension;this.transitioning||(dimension=this.dimension(),this.reset(this.$element[dimension]()),this.transition("removeClass",$.Event("hide"),"hidden"),this.$element[dimension](0))},reset:function(size){var dimension=this.dimension();return this.$element.removeClass("collapse")[dimension](size||"auto")[0].offsetWidth,this.$element[null!==size?"addClass":"removeClass"]("collapse"),this},transition:function(method,startEvent,completeEvent){var that=this,complete=function(){"show"==startEvent.type&&that.reset(),that.transitioning=0,that.$element.trigger(completeEvent)};this.$element.trigger(startEvent),startEvent.isDefaultPrevented()||(this.transitioning=1,this.$element[method]("in"),$.support.transition&&this.$element.hasClass("collapse")?this.$element.one($.support.transition.end,complete):complete())},toggle:function(){this[this.$element.hasClass("in")?"hide":"show"]()}};var old=$.fn.collapse;$.fn.collapse=function(option){return this.each(function(){var $this=$(this),data=$this.data("collapse"),options="object"==typeof option&&option;data||$this.data("collapse",data=new Collapse(this,options)),"string"==typeof option&&data[option]()})},$.fn.collapse.defaults={toggle:!0},$.fn.collapse.Constructor=Collapse,$.fn.collapse.noConflict=function(){return $.fn.collapse=old,this},$(document).on("click.collapse.data-api","[data-toggle=collapse]",function(e){var href,$this=$(this),target=$this.attr("data-target")||e.preventDefault()||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,""),option=$(target).data("collapse")?"toggle":$this.data();$this[$(target).hasClass("in")?"addClass":"removeClass"]("collapsed"),$(target).collapse(option)})}(window.jQuery),!function($){"use strict";function clearMenus(){$(toggle).each(function(){getParent($(this)).removeClass("open")})}function getParent($this){var $parent,selector=$this.attr("data-target");return selector||(selector=$this.attr("href"),selector=selector&&/#/.test(selector)&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),$parent.length||($parent=$this.parent()),$parent}var toggle="[data-toggle=dropdown]",Dropdown=function(element){var $el=$(element).on("click.dropdown.data-api",this.toggle);$("html").on("click.dropdown.data-api",function(){$el.parent().removeClass("open")})};Dropdown.prototype={constructor:Dropdown,toggle:function(){var $parent,isActive,$this=$(this);if(!$this.is(".disabled, :disabled"))return $parent=getParent($this),isActive=$parent.hasClass("open"),clearMenus(),isActive||$parent.toggleClass("open"),$this.focus(),!1},keydown:function(e){var $this,$items,$parent,isActive,index;if(/(38|40|27)/.test(e.keyCode)&&($this=$(this),e.preventDefault(),e.stopPropagation(),!$this.is(".disabled, :disabled"))){if($parent=getParent($this),isActive=$parent.hasClass("open"),!isActive||isActive&&27==e.keyCode)return $this.click();$items=$("[role=menu] li:not(.divider):visible a",$parent),$items.length&&(index=$items.index($items.filter(":focus")),38==e.keyCode&&index>0&&index--,40==e.keyCode&&$items.length-1>index&&index++,~index||(index=0),$items.eq(index).focus())}}};var old=$.fn.dropdown;$.fn.dropdown=function(option){return this.each(function(){var $this=$(this),data=$this.data("dropdown");data||$this.data("dropdown",data=new Dropdown(this)),"string"==typeof option&&data[option].call($this)})},$.fn.dropdown.Constructor=Dropdown,$.fn.dropdown.noConflict=function(){return $.fn.dropdown=old,this},$(document).on("click.dropdown.data-api touchstart.dropdown.data-api",clearMenus).on("click.dropdown touchstart.dropdown.data-api",".dropdown form",function(e){e.stopPropagation()}).on("touchstart.dropdown.data-api",".dropdown-menu",function(e){e.stopPropagation()}).on("click.dropdown.data-api touchstart.dropdown.data-api",toggle,Dropdown.prototype.toggle).on("keydown.dropdown.data-api touchstart.dropdown.data-api",toggle+", [role=menu]",Dropdown.prototype.keydown)}(window.jQuery),!function($){"use strict";var Modal=function(element,options){this.options=options,this.$element=$(element).delegate('[data-dismiss="modal"]',"click.dismiss.modal",$.proxy(this.hide,this)),this.options.remote&&this.$element.find(".modal-body").load(this.options.remote)};Modal.prototype={constructor:Modal,toggle:function(){return this[this.isShown?"hide":"show"]()},show:function(){var that=this,e=$.Event("show");this.$element.trigger(e),this.isShown||e.isDefaultPrevented()||(this.isShown=!0,this.escape(),this.backdrop(function(){var transition=$.support.transition&&that.$element.hasClass("fade");that.$element.parent().length||that.$element.appendTo(document.body),that.$element.show(),transition&&that.$element[0].offsetWidth,that.$element.addClass("in").attr("aria-hidden",!1),that.enforceFocus(),transition?that.$element.one($.support.transition.end,function(){that.$element.focus().trigger("shown")}):that.$element.focus().trigger("shown")}))},hide:function(e){e&&e.preventDefault(),e=$.Event("hide"),this.$element.trigger(e),this.isShown&&!e.isDefaultPrevented()&&(this.isShown=!1,this.escape(),$(document).off("focusin.modal"),this.$element.removeClass("in").attr("aria-hidden",!0),$.support.transition&&this.$element.hasClass("fade")?this.hideWithTransition():this.hideModal())},enforceFocus:function(){var that=this;$(document).on("focusin.modal",function(e){that.$element[0]===e.target||that.$element.has(e.target).length||that.$element.focus()})},escape:function(){var that=this;this.isShown&&this.options.keyboard?this.$element.on("keyup.dismiss.modal",function(e){27==e.which&&that.hide()}):this.isShown||this.$element.off("keyup.dismiss.modal")},hideWithTransition:function(){var that=this,timeout=setTimeout(function(){that.$element.off($.support.transition.end),that.hideModal()},500);this.$element.one($.support.transition.end,function(){clearTimeout(timeout),that.hideModal()})},hideModal:function(){this.$element.hide().trigger("hidden"),this.backdrop()},removeBackdrop:function(){this.$backdrop.remove(),this.$backdrop=null},backdrop:function(callback){var animate=this.$element.hasClass("fade")?"fade":"";if(this.isShown&&this.options.backdrop){var doAnimate=$.support.transition&&animate;this.$backdrop=$('<div class="modal-backdrop '+animate+'" />').appendTo(document.body),this.$backdrop.click("static"==this.options.backdrop?$.proxy(this.$element[0].focus,this.$element[0]):$.proxy(this.hide,this)),doAnimate&&this.$backdrop[0].offsetWidth,this.$backdrop.addClass("in"),doAnimate?this.$backdrop.one($.support.transition.end,callback):callback()}else!this.isShown&&this.$backdrop?(this.$backdrop.removeClass("in"),$.support.transition&&this.$element.hasClass("fade")?this.$backdrop.one($.support.transition.end,$.proxy(this.removeBackdrop,this)):this.removeBackdrop()):callback&&callback()}};var old=$.fn.modal;$.fn.modal=function(option){return this.each(function(){var $this=$(this),data=$this.data("modal"),options=$.extend({},$.fn.modal.defaults,$this.data(),"object"==typeof option&&option);data||$this.data("modal",data=new Modal(this,options)),"string"==typeof option?data[option]():options.show&&data.show()})},$.fn.modal.defaults={backdrop:!0,keyboard:!0,show:!0},$.fn.modal.Constructor=Modal,$.fn.modal.noConflict=function(){return $.fn.modal=old,this},$(document).on("click.modal.data-api",'[data-toggle="modal"]',function(e){var $this=$(this),href=$this.attr("href"),$target=$($this.attr("data-target")||href&&href.replace(/.*(?=#[^\s]+$)/,"")),option=$target.data("modal")?"toggle":$.extend({remote:!/#/.test(href)&&href},$target.data(),$this.data());e.preventDefault(),$target.modal(option).one("hide",function(){$this.focus()})})}(window.jQuery),!function($){"use strict";var Tooltip=function(element,options){this.init("tooltip",element,options)};Tooltip.prototype={constructor:Tooltip,init:function(type,element,options){var eventIn,eventOut;this.type=type,this.$element=$(element),this.options=this.getOptions(options),this.enabled=!0,"click"==this.options.trigger?this.$element.on("click."+this.type,this.options.selector,$.proxy(this.toggle,this)):"manual"!=this.options.trigger&&(eventIn="hover"==this.options.trigger?"mouseenter":"focus",eventOut="hover"==this.options.trigger?"mouseleave":"blur",this.$element.on(eventIn+"."+this.type,this.options.selector,$.proxy(this.enter,this)),this.$element.on(eventOut+"."+this.type,this.options.selector,$.proxy(this.leave,this))),this.options.selector?this._options=$.extend({},this.options,{trigger:"manual",selector:""}):this.fixTitle()},getOptions:function(options){return options=$.extend({},$.fn[this.type].defaults,options,this.$element.data()),options.delay&&"number"==typeof options.delay&&(options.delay={show:options.delay,hide:options.delay}),options},enter:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return self.options.delay&&self.options.delay.show?(clearTimeout(this.timeout),self.hoverState="in",this.timeout=setTimeout(function(){"in"==self.hoverState&&self.show()},self.options.delay.show),void 0):self.show()},leave:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return this.timeout&&clearTimeout(this.timeout),self.options.delay&&self.options.delay.hide?(self.hoverState="out",this.timeout=setTimeout(function(){"out"==self.hoverState&&self.hide()},self.options.delay.hide),void 0):self.hide()},show:function(){var $tip,inside,pos,actualWidth,actualHeight,placement,tp;if(this.hasContent()&&this.enabled){switch($tip=this.tip(),this.setContent(),this.options.animation&&$tip.addClass("fade"),placement="function"==typeof this.options.placement?this.options.placement.call(this,$tip[0],this.$element[0]):this.options.placement,inside=/in/.test(placement),$tip.detach().css({top:0,left:0,display:"block"}).insertAfter(this.$element),pos=this.getPosition(inside),actualWidth=$tip[0].offsetWidth,actualHeight=$tip[0].offsetHeight,inside?placement.split(" ")[1]:placement){case"bottom":tp={top:pos.top+pos.height,left:pos.left+pos.width/2-actualWidth/2};break;case"top":tp={top:pos.top-actualHeight,left:pos.left+pos.width/2-actualWidth/2};break;case"left":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left-actualWidth};break;case"right":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left+pos.width}}$tip.offset(tp).addClass(placement).addClass("in")}},setContent:function(){var $tip=this.tip(),title=this.getTitle();$tip.find(".tooltip-inner")[this.options.html?"html":"text"](title),$tip.removeClass("fade in top bottom left right")},hide:function(){function removeWithAnimation(){var timeout=setTimeout(function(){$tip.off($.support.transition.end).detach()},500);$tip.one($.support.transition.end,function(){clearTimeout(timeout),$tip.detach()})}var $tip=this.tip();return $tip.removeClass("in"),$.support.transition&&this.$tip.hasClass("fade")?removeWithAnimation():$tip.detach(),this},fixTitle:function(){var $e=this.$element;($e.attr("title")||"string"!=typeof $e.attr("data-original-title"))&&$e.attr("data-original-title",$e.attr("title")||"").removeAttr("title")},hasContent:function(){return this.getTitle()},getPosition:function(inside){return $.extend({},inside?{top:0,left:0}:this.$element.offset(),{width:this.$element[0].offsetWidth,height:this.$element[0].offsetHeight})},getTitle:function(){var title,$e=this.$element,o=this.options;return title=$e.attr("data-original-title")||("function"==typeof o.title?o.title.call($e[0]):o.title)},tip:function(){return this.$tip=this.$tip||$(this.options.template)},validate:function(){this.$element[0].parentNode||(this.hide(),this.$element=null,this.options=null)},enable:function(){this.enabled=!0},disable:function(){this.enabled=!1},toggleEnabled:function(){this.enabled=!this.enabled},toggle:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);self[self.tip().hasClass("in")?"hide":"show"]()},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}};var old=$.fn.tooltip;$.fn.tooltip=function(option){return this.each(function(){var $this=$(this),data=$this.data("tooltip"),options="object"==typeof option&&option;data||$this.data("tooltip",data=new Tooltip(this,options)),"string"==typeof option&&data[option]()})},$.fn.tooltip.Constructor=Tooltip,$.fn.tooltip.defaults={animation:!0,placement:"top",selector:!1,template:'<div class="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',trigger:"hover",title:"",delay:0,html:!1},$.fn.tooltip.noConflict=function(){return $.fn.tooltip=old,this}}(window.jQuery),!function($){"use strict";var Popover=function(element,options){this.init("popover",element,options)};Popover.prototype=$.extend({},$.fn.tooltip.Constructor.prototype,{constructor:Popover,setContent:function(){var $tip=this.tip(),title=this.getTitle(),content=this.getContent();$tip.find(".popover-title")[this.options.html?"html":"text"](title),$tip.find(".popover-content")[this.options.html?"html":"text"](content),$tip.removeClass("fade top bottom left right in")},hasContent:function(){return this.getTitle()||this.getContent()},getContent:function(){var content,$e=this.$element,o=this.options;return content=$e.attr("data-content")||("function"==typeof o.content?o.content.call($e[0]):o.content)},tip:function(){return this.$tip||(this.$tip=$(this.options.template)),this.$tip},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}});var old=$.fn.popover;$.fn.popover=function(option){return this.each(function(){var $this=$(this),data=$this.data("popover"),options="object"==typeof option&&option;data||$this.data("popover",data=new Popover(this,options)),"string"==typeof option&&data[option]()})},$.fn.popover.Constructor=Popover,$.fn.popover.defaults=$.extend({},$.fn.tooltip.defaults,{placement:"right",trigger:"click",content:"",template:'<div class="popover"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"></div></div></div>'}),$.fn.popover.noConflict=function(){return $.fn.popover=old,this}}(window.jQuery),!function($){"use strict";function ScrollSpy(element,options){var href,process=$.proxy(this.process,this),$element=$(element).is("body")?$(window):$(element);this.options=$.extend({},$.fn.scrollspy.defaults,options),this.$scrollElement=$element.on("scroll.scroll-spy.data-api",process),this.selector=(this.options.target||(href=$(element).attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")||"")+" .nav li > a",this.$body=$("body"),this.refresh(),this.process()}ScrollSpy.prototype={constructor:ScrollSpy,refresh:function(){var $targets,self=this;this.offsets=$([]),this.targets=$([]),$targets=this.$body.find(this.selector).map(function(){var $el=$(this),href=$el.data("target")||$el.attr("href"),$href=/^#\w/.test(href)&&$(href);return $href&&$href.length&&[[$href.position().top+self.$scrollElement.scrollTop(),href]]||null}).sort(function(a,b){return a[0]-b[0]}).each(function(){self.offsets.push(this[0]),self.targets.push(this[1])})},process:function(){var i,scrollTop=this.$scrollElement.scrollTop()+this.options.offset,scrollHeight=this.$scrollElement[0].scrollHeight||this.$body[0].scrollHeight,maxScroll=scrollHeight-this.$scrollElement.height(),offsets=this.offsets,targets=this.targets,activeTarget=this.activeTarget;if(scrollTop>=maxScroll)return activeTarget!=(i=targets.last()[0])&&this.activate(i);for(i=offsets.length;i--;)activeTarget!=targets[i]&&scrollTop>=offsets[i]&&(!offsets[i+1]||offsets[i+1]>=scrollTop)&&this.activate(targets[i])},activate:function(target){var active,selector;this.activeTarget=target,$(this.selector).parent(".active").removeClass("active"),selector=this.selector+'[data-target="'+target+'"],'+this.selector+'[href="'+target+'"]',active=$(selector).parent("li").addClass("active"),active.parent(".dropdown-menu").length&&(active=active.closest("li.dropdown").addClass("active")),active.trigger("activate")}};var old=$.fn.scrollspy;$.fn.scrollspy=function(option){return this.each(function(){var $this=$(this),data=$this.data("scrollspy"),options="object"==typeof option&&option;data||$this.data("scrollspy",data=new ScrollSpy(this,options)),"string"==typeof option&&data[option]()})},$.fn.scrollspy.Constructor=ScrollSpy,$.fn.scrollspy.defaults={offset:10},$.fn.scrollspy.noConflict=function(){return $.fn.scrollspy=old,this},$(window).on("load",function(){$('[data-spy="scroll"]').each(function(){var $spy=$(this);$spy.scrollspy($spy.data())})})}(window.jQuery),!function($){"use strict";var Tab=function(element){this.element=$(element)};Tab.prototype={constructor:Tab,show:function(){var previous,$target,e,$this=this.element,$ul=$this.closest("ul:not(.dropdown-menu)"),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$this.parent("li").hasClass("active")||(previous=$ul.find(".active:last a")[0],e=$.Event("show",{relatedTarget:previous}),$this.trigger(e),e.isDefaultPrevented()||($target=$(selector),this.activate($this.parent("li"),$ul),this.activate($target,$target.parent(),function(){$this.trigger({type:"shown",relatedTarget:previous})})))},activate:function(element,container,callback){function next(){$active.removeClass("active").find("> .dropdown-menu > .active").removeClass("active"),element.addClass("active"),transition?(element[0].offsetWidth,element.addClass("in")):element.removeClass("fade"),element.parent(".dropdown-menu")&&element.closest("li.dropdown").addClass("active"),callback&&callback()}var $active=container.find("> .active"),transition=callback&&$.support.transition&&$active.hasClass("fade");transition?$active.one($.support.transition.end,next):next(),$active.removeClass("in")}};var old=$.fn.tab;$.fn.tab=function(option){return this.each(function(){var $this=$(this),data=$this.data("tab");data||$this.data("tab",data=new Tab(this)),"string"==typeof option&&data[option]()})},$.fn.tab.Constructor=Tab,$.fn.tab.noConflict=function(){return $.fn.tab=old,this},$(document).on("click.tab.data-api",'[data-toggle="tab"], [data-toggle="pill"]',function(e){e.preventDefault(),$(this).tab("show")})}(window.jQuery),!function($){"use strict";var Typeahead=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.typeahead.defaults,options),this.matcher=this.options.matcher||this.matcher,this.sorter=this.options.sorter||this.sorter,this.highlighter=this.options.highlighter||this.highlighter,this.updater=this.options.updater||this.updater,this.source=this.options.source,this.$menu=$(this.options.menu),this.shown=!1,this.listen()};Typeahead.prototype={constructor:Typeahead,select:function(){var val=this.$menu.find(".active").attr("data-value");return this.$element.val(this.updater(val)).change(),this.hide()},updater:function(item){return item},show:function(){var pos=$.extend({},this.$element.position(),{height:this.$element[0].offsetHeight});return this.$menu.insertAfter(this.$element).css({top:pos.top+pos.height,left:pos.left}).show(),this.shown=!0,this},hide:function(){return this.$menu.hide(),this.shown=!1,this},lookup:function(){var items;return this.query=this.$element.val(),!this.query||this.query.length<this.options.minLength?this.shown?this.hide():this:(items=$.isFunction(this.source)?this.source(this.query,$.proxy(this.process,this)):this.source,items?this.process(items):this)},process:function(items){var that=this;return items=$.grep(items,function(item){return that.matcher(item)}),items=this.sorter(items),items.length?this.render(items.slice(0,this.options.items)).show():this.shown?this.hide():this},matcher:function(item){return~item.toLowerCase().indexOf(this.query.toLowerCase())},sorter:function(items){for(var item,beginswith=[],caseSensitive=[],caseInsensitive=[];item=items.shift();)item.toLowerCase().indexOf(this.query.toLowerCase())?~item.indexOf(this.query)?caseSensitive.push(item):caseInsensitive.push(item):beginswith.push(item);return beginswith.concat(caseSensitive,caseInsensitive)},highlighter:function(item){var query=this.query.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g,"\\$&");return item.replace(RegExp("("+query+")","ig"),function($1,match){return"<strong>"+match+"</strong>"})},render:function(items){var that=this;return items=$(items).map(function(i,item){return i=$(that.options.item).attr("data-value",item),i.find("a").html(that.highlighter(item)),i[0]}),items.first().addClass("active"),this.$menu.html(items),this},next:function(){var active=this.$menu.find(".active").removeClass("active"),next=active.next();next.length||(next=$(this.$menu.find("li")[0])),next.addClass("active")},prev:function(){var active=this.$menu.find(".active").removeClass("active"),prev=active.prev();prev.length||(prev=this.$menu.find("li").last()),prev.addClass("active")},listen:function(){this.$element.on("blur",$.proxy(this.blur,this)).on("keypress",$.proxy(this.keypress,this)).on("keyup",$.proxy(this.keyup,this)),this.eventSupported("keydown")&&this.$element.on("keydown",$.proxy(this.keydown,this)),this.$menu.on("click",$.proxy(this.click,this)).on("mouseenter","li",$.proxy(this.mouseenter,this))},eventSupported:function(eventName){var isSupported=eventName in this.$element;return isSupported||(this.$element.setAttribute(eventName,"return;"),isSupported="function"==typeof this.$element[eventName]),isSupported},move:function(e){if(this.shown){switch(e.keyCode){case 9:case 13:case 27:e.preventDefault();break;case 38:e.preventDefault(),this.prev();break;case 40:e.preventDefault(),this.next()}e.stopPropagation()}},keydown:function(e){this.suppressKeyPressRepeat=~$.inArray(e.keyCode,[40,38,9,13,27]),this.move(e)},keypress:function(e){this.suppressKeyPressRepeat||this.move(e)},keyup:function(e){switch(e.keyCode){case 40:case 38:case 16:case 17:case 18:break;case 9:case 13:if(!this.shown)return;this.select();break;case 27:if(!this.shown)return;this.hide();break;default:this.lookup()}e.stopPropagation(),e.preventDefault()},blur:function(){var that=this;setTimeout(function(){that.hide()},150)},click:function(e){e.stopPropagation(),e.preventDefault(),this.select()},mouseenter:function(e){this.$menu.find(".active").removeClass("active"),$(e.currentTarget).addClass("active")}};var old=$.fn.typeahead;$.fn.typeahead=function(option){return this.each(function(){var $this=$(this),data=$this.data("typeahead"),options="object"==typeof option&&option;data||$this.data("typeahead",data=new Typeahead(this,options)),"string"==typeof option&&data[option]()})},$.fn.typeahead.defaults={source:[],items:8,menu:'<ul class="typeahead dropdown-menu"></ul>',item:'<li><a href="#"></a></li>',minLength:1},$.fn.typeahead.Constructor=Typeahead,$.fn.typeahead.noConflict=function(){return $.fn.typeahead=old,this},$(document).on("focus.typeahead.data-api",'[data-provide="typeahead"]',function(e){var $this=$(this);$this.data("typeahead")||(e.preventDefault(),$this.typeahead($this.data()))})}(window.jQuery),!function($){"use strict";var Affix=function(element,options){this.options=$.extend({},$.fn.affix.defaults,options),this.$window=$(window).on("scroll.affix.data-api",$.proxy(this.checkPosition,this)).on("click.affix.data-api",$.proxy(function(){setTimeout($.proxy(this.checkPosition,this),1)},this)),this.$element=$(element),this.checkPosition()};Affix.prototype.checkPosition=function(){if(this.$element.is(":visible")){var affix,scrollHeight=$(document).height(),scrollTop=this.$window.scrollTop(),position=this.$element.offset(),offset=this.options.offset,offsetBottom=offset.bottom,offsetTop=offset.top,reset="affix affix-top affix-bottom";"object"!=typeof offset&&(offsetBottom=offsetTop=offset),"function"==typeof offsetTop&&(offsetTop=offset.top()),"function"==typeof offsetBottom&&(offsetBottom=offset.bottom()),affix=null!=this.unpin&&scrollTop+this.unpin<=position.top?!1:null!=offsetBottom&&position.top+this.$element.height()>=scrollHeight-offsetBottom?"bottom":null!=offsetTop&&offsetTop>=scrollTop?"top":!1,this.affixed!==affix&&(this.affixed=affix,this.unpin="bottom"==affix?position.top-scrollTop:null,this.$element.removeClass(reset).addClass("affix"+(affix?"-"+affix:"")))}};var old=$.fn.affix;$.fn.affix=function(option){return this.each(function(){var $this=$(this),data=$this.data("affix"),options="object"==typeof option&&option;data||$this.data("affix",data=new Affix(this,options)),"string"==typeof option&&data[option]()})},$.fn.affix.Constructor=Affix,$.fn.affix.defaults={offset:0},$.fn.affix.noConflict=function(){return $.fn.affix=old,this},$(window).on("load",function(){$('[data-spy="affix"]').each(function(){var $spy=$(this),data=$spy.data();data.offset=data.offset||{},data.offsetBottom&&(data.offset.bottom=data.offsetBottom),data.offsetTop&&(data.offset.top=data.offsetTop),$spy.affix(data)})})}(window.jQuery);;
-
-jade = (function(exports){
-/*!
- * Jade - runtime
- * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
- * MIT Licensed
- */
-
-/**
- * Lame Array.isArray() polyfill for now.
- */
-
-if (!Array.isArray) {
-  Array.isArray = function(arr){
-    return '[object Array]' == Object.prototype.toString.call(arr);
-  };
-}
-
-/**
- * Lame Object.keys() polyfill for now.
- */
-
-if (!Object.keys) {
-  Object.keys = function(obj){
-    var arr = [];
-    for (var key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        arr.push(key);
-      }
-    }
-    return arr;
-  }
-}
-
-/**
- * Merge two attribute objects giving precedence
- * to values in object `b`. Classes are special-cased
- * allowing for arrays and merging/joining appropriately
- * resulting in a string.
- *
- * @param {Object} a
- * @param {Object} b
- * @return {Object} a
- * @api private
- */
-
-exports.merge = function merge(a, b) {
-  var ac = a['class'];
-  var bc = b['class'];
-
-  if (ac || bc) {
-    ac = ac || [];
-    bc = bc || [];
-    if (!Array.isArray(ac)) ac = [ac];
-    if (!Array.isArray(bc)) bc = [bc];
-    ac = ac.filter(nulls);
-    bc = bc.filter(nulls);
-    a['class'] = ac.concat(bc).join(' ');
-  }
-
-  for (var key in b) {
-    if (key != 'class') {
-      a[key] = b[key];
-    }
-  }
-
-  return a;
-};
-
-/**
- * Filter null `val`s.
- *
- * @param {Mixed} val
- * @return {Mixed}
- * @api private
- */
-
-function nulls(val) {
-  return val != null;
-}
-
-/**
- * Render the given attributes object.
- *
- * @param {Object} obj
- * @param {Object} escaped
- * @return {String}
- * @api private
- */
-
-exports.attrs = function attrs(obj, escaped){
-  var buf = []
-    , terse = obj.terse;
-
-  delete obj.terse;
-  var keys = Object.keys(obj)
-    , len = keys.length;
-
-  if (len) {
-    buf.push('');
-    for (var i = 0; i < len; ++i) {
-      var key = keys[i]
-        , val = obj[key];
-
-      if ('boolean' == typeof val || null == val) {
-        if (val) {
-          terse
-            ? buf.push(key)
-            : buf.push(key + '="' + key + '"');
-        }
-      } else if (0 == key.indexOf('data') && 'string' != typeof val) {
-        buf.push(key + "='" + JSON.stringify(val) + "'");
-      } else if ('class' == key && Array.isArray(val)) {
-        buf.push(key + '="' + exports.escape(val.join(' ')) + '"');
-      } else if (escaped && escaped[key]) {
-        buf.push(key + '="' + exports.escape(val) + '"');
-      } else {
-        buf.push(key + '="' + val + '"');
-      }
-    }
-  }
-
-  return buf.join(' ');
-};
-
-/**
- * Escape the given string of `html`.
- *
- * @param {String} html
- * @return {String}
- * @api private
- */
-
-exports.escape = function escape(html){
-  return String(html)
-    .replace(/&(?!(\w+|\#\d+);)/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-};
-
-/**
- * Re-throw the given `err` in context to the
- * the jade in `filename` at the given `lineno`.
- *
- * @param {Error} err
- * @param {String} filename
- * @param {String} lineno
- * @api private
- */
-
-exports.rethrow = function rethrow(err, filename, lineno){
-  if (!filename) throw err;
-
-  var context = 3
-    , str = require('fs').readFileSync(filename, 'utf8')
-    , lines = str.split('\n')
-    , start = Math.max(lineno - context, 0)
-    , end = Math.min(lines.length, lineno + context);
-
-  // Error context
-  var context = lines.slice(start, end).map(function(line, i){
-    var curr = i + start + 1;
-    return (curr == lineno ? '  > ' : '    ')
-      + curr
-      + '| '
-      + line;
-  }).join('\n');
-
-  // Alter exception message
-  err.path = filename;
-  err.message = (filename || 'Jade') + ':' + lineno
-    + '\n' + context + '\n\n' + err.message;
-  throw err;
-};
-
-  return exports;
-
-})({});
-;
-/*! jQuery UI - v1.8.23 - 2012-08-15
+!function($){"use strict";$(function(){$.support.transition=function(){var transitionEnd=function(){var name,el=document.createElement("bootstrap"),transEndEventNames={WebkitTransition:"webkitTransitionEnd",MozTransition:"transitionend",OTransition:"oTransitionEnd otransitionend",transition:"transitionend"};for(name in transEndEventNames)if(void 0!==el.style[name])return transEndEventNames[name]}();return transitionEnd&&{end:transitionEnd}}()})}(window.jQuery),!function($){"use strict";var dismiss='[data-dismiss="alert"]',Alert=function(el){$(el).on("click",dismiss,this.close)};Alert.prototype.close=function(e){function removeElement(){$parent.trigger("closed").remove()}var $parent,$this=$(this),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),e&&e.preventDefault(),$parent.length||($parent=$this.hasClass("alert")?$this:$this.parent()),$parent.trigger(e=$.Event("close")),e.isDefaultPrevented()||($parent.removeClass("in"),$.support.transition&&$parent.hasClass("fade")?$parent.on($.support.transition.end,removeElement):removeElement())};var old=$.fn.alert;$.fn.alert=function(option){return this.each(function(){var $this=$(this),data=$this.data("alert");data||$this.data("alert",data=new Alert(this)),"string"==typeof option&&data[option].call($this)})},$.fn.alert.Constructor=Alert,$.fn.alert.noConflict=function(){return $.fn.alert=old,this},$(document).on("click.alert.data-api",dismiss,Alert.prototype.close)}(window.jQuery),!function($){"use strict";var Button=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.button.defaults,options)};Button.prototype.setState=function(state){var d="disabled",$el=this.$element,data=$el.data(),val=$el.is("input")?"val":"html";state+="Text",data.resetText||$el.data("resetText",$el[val]()),$el[val](data[state]||this.options[state]),setTimeout(function(){"loadingText"==state?$el.addClass(d).attr(d,d):$el.removeClass(d).removeAttr(d)},0)},Button.prototype.toggle=function(){var $parent=this.$element.closest('[data-toggle="buttons-radio"]');$parent&&$parent.find(".active").removeClass("active"),this.$element.toggleClass("active")};var old=$.fn.button;$.fn.button=function(option){return this.each(function(){var $this=$(this),data=$this.data("button"),options="object"==typeof option&&option;data||$this.data("button",data=new Button(this,options)),"toggle"==option?data.toggle():option&&data.setState(option)})},$.fn.button.defaults={loadingText:"loading..."},$.fn.button.Constructor=Button,$.fn.button.noConflict=function(){return $.fn.button=old,this},$(document).on("click.button.data-api","[data-toggle^=button]",function(e){var $btn=$(e.target);$btn.hasClass("btn")||($btn=$btn.closest(".btn")),$btn.button("toggle")})}(window.jQuery),!function($){"use strict";var Carousel=function(element,options){this.$element=$(element),this.options=options,"hover"==this.options.pause&&this.$element.on("mouseenter",$.proxy(this.pause,this)).on("mouseleave",$.proxy(this.cycle,this))};Carousel.prototype={cycle:function(e){return e||(this.paused=!1),this.options.interval&&!this.paused&&(this.interval=setInterval($.proxy(this.next,this),this.options.interval)),this},to:function(pos){var $active=this.$element.find(".item.active"),children=$active.parent().children(),activePos=children.index($active),that=this;if(!(pos>children.length-1||0>pos))return this.sliding?this.$element.one("slid",function(){that.to(pos)}):activePos==pos?this.pause().cycle():this.slide(pos>activePos?"next":"prev",$(children[pos]))},pause:function(e){return e||(this.paused=!0),this.$element.find(".next, .prev").length&&$.support.transition.end&&(this.$element.trigger($.support.transition.end),this.cycle()),clearInterval(this.interval),this.interval=null,this},next:function(){return this.sliding?void 0:this.slide("next")},prev:function(){return this.sliding?void 0:this.slide("prev")},slide:function(type,next){var e,$active=this.$element.find(".item.active"),$next=next||$active[type](),isCycling=this.interval,direction="next"==type?"left":"right",fallback="next"==type?"first":"last",that=this;if(this.sliding=!0,isCycling&&this.pause(),$next=$next.length?$next:this.$element.find(".item")[fallback](),e=$.Event("slide",{relatedTarget:$next[0]}),!$next.hasClass("active")){if($.support.transition&&this.$element.hasClass("slide")){if(this.$element.trigger(e),e.isDefaultPrevented())return;$next.addClass(type),$next[0].offsetWidth,$active.addClass(direction),$next.addClass(direction),this.$element.one($.support.transition.end,function(){$next.removeClass([type,direction].join(" ")).addClass("active"),$active.removeClass(["active",direction].join(" ")),that.sliding=!1,setTimeout(function(){that.$element.trigger("slid")},0)})}else{if(this.$element.trigger(e),e.isDefaultPrevented())return;$active.removeClass("active"),$next.addClass("active"),this.sliding=!1,this.$element.trigger("slid")}return isCycling&&this.cycle(),this}}};var old=$.fn.carousel;$.fn.carousel=function(option){return this.each(function(){var $this=$(this),data=$this.data("carousel"),options=$.extend({},$.fn.carousel.defaults,"object"==typeof option&&option),action="string"==typeof option?option:options.slide;data||$this.data("carousel",data=new Carousel(this,options)),"number"==typeof option?data.to(option):action?data[action]():options.interval&&data.cycle()})},$.fn.carousel.defaults={interval:5e3,pause:"hover"},$.fn.carousel.Constructor=Carousel,$.fn.carousel.noConflict=function(){return $.fn.carousel=old,this},$(document).on("click.carousel.data-api","[data-slide]",function(e){var href,$this=$(this),$target=$($this.attr("data-target")||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")),options=$.extend({},$target.data(),$this.data());$target.carousel(options),e.preventDefault()})}(window.jQuery),!function($){"use strict";var Collapse=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.collapse.defaults,options),this.options.parent&&(this.$parent=$(this.options.parent)),this.options.toggle&&this.toggle()};Collapse.prototype={constructor:Collapse,dimension:function(){var hasWidth=this.$element.hasClass("width");return hasWidth?"width":"height"},show:function(){var dimension,scroll,actives,hasData;if(!this.transitioning){if(dimension=this.dimension(),scroll=$.camelCase(["scroll",dimension].join("-")),actives=this.$parent&&this.$parent.find("> .accordion-group > .in"),actives&&actives.length){if(hasData=actives.data("collapse"),hasData&&hasData.transitioning)return;actives.collapse("hide"),hasData||actives.data("collapse",null)}this.$element[dimension](0),this.transition("addClass",$.Event("show"),"shown"),$.support.transition&&this.$element[dimension](this.$element[0][scroll])}},hide:function(){var dimension;this.transitioning||(dimension=this.dimension(),this.reset(this.$element[dimension]()),this.transition("removeClass",$.Event("hide"),"hidden"),this.$element[dimension](0))},reset:function(size){var dimension=this.dimension();return this.$element.removeClass("collapse")[dimension](size||"auto")[0].offsetWidth,this.$element[null!==size?"addClass":"removeClass"]("collapse"),this},transition:function(method,startEvent,completeEvent){var that=this,complete=function(){"show"==startEvent.type&&that.reset(),that.transitioning=0,that.$element.trigger(completeEvent)};this.$element.trigger(startEvent),startEvent.isDefaultPrevented()||(this.transitioning=1,this.$element[method]("in"),$.support.transition&&this.$element.hasClass("collapse")?this.$element.one($.support.transition.end,complete):complete())},toggle:function(){this[this.$element.hasClass("in")?"hide":"show"]()}};var old=$.fn.collapse;$.fn.collapse=function(option){return this.each(function(){var $this=$(this),data=$this.data("collapse"),options="object"==typeof option&&option;data||$this.data("collapse",data=new Collapse(this,options)),"string"==typeof option&&data[option]()})},$.fn.collapse.defaults={toggle:!0},$.fn.collapse.Constructor=Collapse,$.fn.collapse.noConflict=function(){return $.fn.collapse=old,this},$(document).on("click.collapse.data-api","[data-toggle=collapse]",function(e){var href,$this=$(this),target=$this.attr("data-target")||e.preventDefault()||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,""),option=$(target).data("collapse")?"toggle":$this.data();$this[$(target).hasClass("in")?"addClass":"removeClass"]("collapsed"),$(target).collapse(option)})}(window.jQuery),!function($){"use strict";function clearMenus(){$(toggle).each(function(){getParent($(this)).removeClass("open")})}function getParent($this){var $parent,selector=$this.attr("data-target");return selector||(selector=$this.attr("href"),selector=selector&&/#/.test(selector)&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),$parent.length||($parent=$this.parent()),$parent}var toggle="[data-toggle=dropdown]",Dropdown=function(element){var $el=$(element).on("click.dropdown.data-api",this.toggle);$("html").on("click.dropdown.data-api",function(){$el.parent().removeClass("open")})};Dropdown.prototype={constructor:Dropdown,toggle:function(){var $parent,isActive,$this=$(this);if(!$this.is(".disabled, :disabled"))return $parent=getParent($this),isActive=$parent.hasClass("open"),clearMenus(),isActive||$parent.toggleClass("open"),$this.focus(),!1},keydown:function(e){var $this,$items,$parent,isActive,index;if(/(38|40|27)/.test(e.keyCode)&&($this=$(this),e.preventDefault(),e.stopPropagation(),!$this.is(".disabled, :disabled"))){if($parent=getParent($this),isActive=$parent.hasClass("open"),!isActive||isActive&&27==e.keyCode)return $this.click();$items=$("[role=menu] li:not(.divider):visible a",$parent),$items.length&&(index=$items.index($items.filter(":focus")),38==e.keyCode&&index>0&&index--,40==e.keyCode&&$items.length-1>index&&index++,~index||(index=0),$items.eq(index).focus())}}};var old=$.fn.dropdown;$.fn.dropdown=function(option){return this.each(function(){var $this=$(this),data=$this.data("dropdown");data||$this.data("dropdown",data=new Dropdown(this)),"string"==typeof option&&data[option].call($this)})},$.fn.dropdown.Constructor=Dropdown,$.fn.dropdown.noConflict=function(){return $.fn.dropdown=old,this},$(document).on("click.dropdown.data-api touchstart.dropdown.data-api",clearMenus).on("click.dropdown touchstart.dropdown.data-api",".dropdown form",function(e){e.stopPropagation()}).on("touchstart.dropdown.data-api",".dropdown-menu",function(e){e.stopPropagation()}).on("click.dropdown.data-api touchstart.dropdown.data-api",toggle,Dropdown.prototype.toggle).on("keydown.dropdown.data-api touchstart.dropdown.data-api",toggle+", [role=menu]",Dropdown.prototype.keydown)}(window.jQuery),!function($){"use strict";var Modal=function(element,options){this.options=options,this.$element=$(element).delegate('[data-dismiss="modal"]',"click.dismiss.modal",$.proxy(this.hide,this)),this.options.remote&&this.$element.find(".modal-body").load(this.options.remote)};Modal.prototype={constructor:Modal,toggle:function(){return this[this.isShown?"hide":"show"]()},show:function(){var that=this,e=$.Event("show");this.$element.trigger(e),this.isShown||e.isDefaultPrevented()||(this.isShown=!0,this.escape(),this.backdrop(function(){var transition=$.support.transition&&that.$element.hasClass("fade");that.$element.parent().length||that.$element.appendTo(document.body),that.$element.show(),transition&&that.$element[0].offsetWidth,that.$element.addClass("in").attr("aria-hidden",!1),that.enforceFocus(),transition?that.$element.one($.support.transition.end,function(){that.$element.focus().trigger("shown")}):that.$element.focus().trigger("shown")}))},hide:function(e){e&&e.preventDefault(),e=$.Event("hide"),this.$element.trigger(e),this.isShown&&!e.isDefaultPrevented()&&(this.isShown=!1,this.escape(),$(document).off("focusin.modal"),this.$element.removeClass("in").attr("aria-hidden",!0),$.support.transition&&this.$element.hasClass("fade")?this.hideWithTransition():this.hideModal())},enforceFocus:function(){var that=this;$(document).on("focusin.modal",function(e){that.$element[0]===e.target||that.$element.has(e.target).length||that.$element.focus()})},escape:function(){var that=this;this.isShown&&this.options.keyboard?this.$element.on("keyup.dismiss.modal",function(e){27==e.which&&that.hide()}):this.isShown||this.$element.off("keyup.dismiss.modal")},hideWithTransition:function(){var that=this,timeout=setTimeout(function(){that.$element.off($.support.transition.end),that.hideModal()},500);this.$element.one($.support.transition.end,function(){clearTimeout(timeout),that.hideModal()})},hideModal:function(){this.$element.hide().trigger("hidden"),this.backdrop()},removeBackdrop:function(){this.$backdrop.remove(),this.$backdrop=null},backdrop:function(callback){var animate=this.$element.hasClass("fade")?"fade":"";if(this.isShown&&this.options.backdrop){var doAnimate=$.support.transition&&animate;this.$backdrop=$('<div class="modal-backdrop '+animate+'" />').appendTo(document.body),this.$backdrop.click("static"==this.options.backdrop?$.proxy(this.$element[0].focus,this.$element[0]):$.proxy(this.hide,this)),doAnimate&&this.$backdrop[0].offsetWidth,this.$backdrop.addClass("in"),doAnimate?this.$backdrop.one($.support.transition.end,callback):callback()}else!this.isShown&&this.$backdrop?(this.$backdrop.removeClass("in"),$.support.transition&&this.$element.hasClass("fade")?this.$backdrop.one($.support.transition.end,$.proxy(this.removeBackdrop,this)):this.removeBackdrop()):callback&&callback()}};var old=$.fn.modal;$.fn.modal=function(option){return this.each(function(){var $this=$(this),data=$this.data("modal"),options=$.extend({},$.fn.modal.defaults,$this.data(),"object"==typeof option&&option);data||$this.data("modal",data=new Modal(this,options)),"string"==typeof option?data[option]():options.show&&data.show()})},$.fn.modal.defaults={backdrop:!0,keyboard:!0,show:!0},$.fn.modal.Constructor=Modal,$.fn.modal.noConflict=function(){return $.fn.modal=old,this},$(document).on("click.modal.data-api",'[data-toggle="modal"]',function(e){var $this=$(this),href=$this.attr("href"),$target=$($this.attr("data-target")||href&&href.replace(/.*(?=#[^\s]+$)/,"")),option=$target.data("modal")?"toggle":$.extend({remote:!/#/.test(href)&&href},$target.data(),$this.data());e.preventDefault(),$target.modal(option).one("hide",function(){$this.focus()})})}(window.jQuery),!function($){"use strict";var Tooltip=function(element,options){this.init("tooltip",element,options)};Tooltip.prototype={constructor:Tooltip,init:function(type,element,options){var eventIn,eventOut;this.type=type,this.$element=$(element),this.options=this.getOptions(options),this.enabled=!0,"click"==this.options.trigger?this.$element.on("click."+this.type,this.options.selector,$.proxy(this.toggle,this)):"manual"!=this.options.trigger&&(eventIn="hover"==this.options.trigger?"mouseenter":"focus",eventOut="hover"==this.options.trigger?"mouseleave":"blur",this.$element.on(eventIn+"."+this.type,this.options.selector,$.proxy(this.enter,this)),this.$element.on(eventOut+"."+this.type,this.options.selector,$.proxy(this.leave,this))),this.options.selector?this._options=$.extend({},this.options,{trigger:"manual",selector:""}):this.fixTitle()},getOptions:function(options){return options=$.extend({},$.fn[this.type].defaults,options,this.$element.data()),options.delay&&"number"==typeof options.delay&&(options.delay={show:options.delay,hide:options.delay}),options},enter:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return self.options.delay&&self.options.delay.show?(clearTimeout(this.timeout),self.hoverState="in",this.timeout=setTimeout(function(){"in"==self.hoverState&&self.show()},self.options.delay.show),void 0):self.show()},leave:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return this.timeout&&clearTimeout(this.timeout),self.options.delay&&self.options.delay.hide?(self.hoverState="out",this.timeout=setTimeout(function(){"out"==self.hoverState&&self.hide()},self.options.delay.hide),void 0):self.hide()},show:function(){var $tip,inside,pos,actualWidth,actualHeight,placement,tp;if(this.hasContent()&&this.enabled){switch($tip=this.tip(),this.setContent(),this.options.animation&&$tip.addClass("fade"),placement="function"==typeof this.options.placement?this.options.placement.call(this,$tip[0],this.$element[0]):this.options.placement,inside=/in/.test(placement),$tip.detach().css({top:0,left:0,display:"block"}).insertAfter(this.$element),pos=this.getPosition(inside),actualWidth=$tip[0].offsetWidth,actualHeight=$tip[0].offsetHeight,inside?placement.split(" ")[1]:placement){case"bottom":tp={top:pos.top+pos.height,left:pos.left+pos.width/2-actualWidth/2};break;case"top":tp={top:pos.top-actualHeight,left:pos.left+pos.width/2-actualWidth/2};break;case"left":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left-actualWidth};break;case"right":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left+pos.width}}$tip.offset(tp).addClass(placement).addClass("in")}},setContent:function(){var $tip=this.tip(),title=this.getTitle();$tip.find(".tooltip-inner")[this.options.html?"html":"text"](title),$tip.removeClass("fade in top bottom left right")},hide:function(){function removeWithAnimation(){var timeout=setTimeout(function(){$tip.off($.support.transition.end).detach()},500);$tip.one($.support.transition.end,function(){clearTimeout(timeout),$tip.detach()})}var $tip=this.tip();return $tip.removeClass("in"),$.support.transition&&this.$tip.hasClass("fade")?removeWithAnimation():$tip.detach(),this},fixTitle:function(){var $e=this.$element;($e.attr("title")||"string"!=typeof $e.attr("data-original-title"))&&$e.attr("data-original-title",$e.attr("title")||"").removeAttr("title")},hasContent:function(){return this.getTitle()},getPosition:function(inside){return $.extend({},inside?{top:0,left:0}:this.$element.offset(),{width:this.$element[0].offsetWidth,height:this.$element[0].offsetHeight})},getTitle:function(){var title,$e=this.$element,o=this.options;return title=$e.attr("data-original-title")||("function"==typeof o.title?o.title.call($e[0]):o.title)},tip:function(){return this.$tip=this.$tip||$(this.options.template)},validate:function(){this.$element[0].parentNode||(this.hide(),this.$element=null,this.options=null)},enable:function(){this.enabled=!0},disable:function(){this.enabled=!1},toggleEnabled:function(){this.enabled=!this.enabled},toggle:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);self[self.tip().hasClass("in")?"hide":"show"]()},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}};var old=$.fn.tooltip;$.fn.tooltip=function(option){return this.each(function(){var $this=$(this),data=$this.data("tooltip"),options="object"==typeof option&&option;data||$this.data("tooltip",data=new Tooltip(this,options)),"string"==typeof option&&data[option]()})},$.fn.tooltip.Constructor=Tooltip,$.fn.tooltip.defaults={animation:!0,placement:"top",selector:!1,template:'<div class="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',trigger:"hover",title:"",delay:0,html:!1},$.fn.tooltip.noConflict=function(){return $.fn.tooltip=old,this}}(window.jQuery),!function($){"use strict";var Popover=function(element,options){this.init("popover",element,options)};Popover.prototype=$.extend({},$.fn.tooltip.Constructor.prototype,{constructor:Popover,setContent:function(){var $tip=this.tip(),title=this.getTitle(),content=this.getContent();$tip.find(".popover-title")[this.options.html?"html":"text"](title),$tip.find(".popover-content")[this.options.html?"html":"text"](content),$tip.removeClass("fade top bottom left right in")},hasContent:function(){return this.getTitle()||this.getContent()},getContent:function(){var content,$e=this.$element,o=this.options;return content=$e.attr("data-content")||("function"==typeof o.content?o.content.call($e[0]):o.content)},tip:function(){return this.$tip||(this.$tip=$(this.options.template)),this.$tip},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}});var old=$.fn.popover;$.fn.popover=function(option){return this.each(function(){var $this=$(this),data=$this.data("popover"),options="object"==typeof option&&option;data||$this.data("popover",data=new Popover(this,options)),"string"==typeof option&&data[option]()})},$.fn.popover.Constructor=Popover,$.fn.popover.defaults=$.extend({},$.fn.tooltip.defaults,{placement:"right",trigger:"click",content:"",template:'<div class="popover"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"></div></div></div>'}),$.fn.popover.noConflict=function(){return $.fn.popover=old,this}}(window.jQuery),!function($){"use strict";function ScrollSpy(element,options){var href,process=$.proxy(this.process,this),$element=$(element).is("body")?$(window):$(element);this.options=$.extend({},$.fn.scrollspy.defaults,options),this.$scrollElement=$element.on("scroll.scroll-spy.data-api",process),this.selector=(this.options.target||(href=$(element).attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")||"")+" .nav li > a",this.$body=$("body"),this.refresh(),this.process()}ScrollSpy.prototype={constructor:ScrollSpy,refresh:function(){var $targets,self=this;this.offsets=$([]),this.targets=$([]),$targets=this.$body.find(this.selector).map(function(){var $el=$(this),href=$el.data("target")||$el.attr("href"),$href=/^#\w/.test(href)&&$(href);return $href&&$href.length&&[[$href.position().top+self.$scrollElement.scrollTop(),href]]||null}).sort(function(a,b){return a[0]-b[0]}).each(function(){self.offsets.push(this[0]),self.targets.push(this[1])})},process:function(){var i,scrollTop=this.$scrollElement.scrollTop()+this.options.offset,scrollHeight=this.$scrollElement[0].scrollHeight||this.$body[0].scrollHeight,maxScroll=scrollHeight-this.$scrollElement.height(),offsets=this.offsets,targets=this.targets,activeTarget=this.activeTarget;if(scrollTop>=maxScroll)return activeTarget!=(i=targets.last()[0])&&this.activate(i);for(i=offsets.length;i--;)activeTarget!=targets[i]&&scrollTop>=offsets[i]&&(!offsets[i+1]||offsets[i+1]>=scrollTop)&&this.activate(targets[i])},activate:function(target){var active,selector;this.activeTarget=target,$(this.selector).parent(".active").removeClass("active"),selector=this.selector+'[data-target="'+target+'"],'+this.selector+'[href="'+target+'"]',active=$(selector).parent("li").addClass("active"),active.parent(".dropdown-menu").length&&(active=active.closest("li.dropdown").addClass("active")),active.trigger("activate")}};var old=$.fn.scrollspy;$.fn.scrollspy=function(option){return this.each(function(){var $this=$(this),data=$this.data("scrollspy"),options="object"==typeof option&&option;data||$this.data("scrollspy",data=new ScrollSpy(this,options)),"string"==typeof option&&data[option]()})},$.fn.scrollspy.Constructor=ScrollSpy,$.fn.scrollspy.defaults={offset:10},$.fn.scrollspy.noConflict=function(){return $.fn.scrollspy=old,this},$(window).on("load",function(){$('[data-spy="scroll"]').each(function(){var $spy=$(this);$spy.scrollspy($spy.data())})})}(window.jQuery),!function($){"use strict";var Tab=function(element){this.element=$(element)};Tab.prototype={constructor:Tab,show:function(){var previous,$target,e,$this=this.element,$ul=$this.closest("ul:not(.dropdown-menu)"),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$this.parent("li").hasClass("active")||(previous=$ul.find(".active:last a")[0],e=$.Event("show",{relatedTarget:previous}),$this.trigger(e),e.isDefaultPrevented()||($target=$(selector),this.activate($this.parent("li"),$ul),this.activate($target,$target.parent(),function(){$this.trigger({type:"shown",relatedTarget:previous})})))},activate:function(element,container,callback){function next(){$active.removeClass("active").find("> .dropdown-menu > .active").removeClass("active"),element.addClass("active"),transition?(element[0].offsetWidth,element.addClass("in")):element.removeClass("fade"),element.parent(".dropdown-menu")&&element.closest("li.dropdown").addClass("active"),callback&&callback()}var $active=container.find("> .active"),transition=callback&&$.support.transition&&$active.hasClass("fade");transition?$active.one($.support.transition.end,next):next(),$active.removeClass("in")}};var old=$.fn.tab;$.fn.tab=function(option){return this.each(function(){var $this=$(this),data=$this.data("tab");data||$this.data("tab",data=new Tab(this)),"string"==typeof option&&data[option]()})},$.fn.tab.Constructor=Tab,$.fn.tab.noConflict=function(){return $.fn.tab=old,this},$(document).on("click.tab.data-api",'[data-toggle="tab"], [data-toggle="pill"]',function(e){e.preventDefault(),$(this).tab("show")})}(window.jQuery),!function($){"use strict";var Typeahead=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.typeahead.defaults,options),this.matcher=this.options.matcher||this.matcher,this.sorter=this.options.sorter||this.sorter,this.highlighter=this.options.highlighter||this.highlighter,this.updater=this.options.updater||this.updater,this.source=this.options.source,this.$menu=$(this.options.menu),this.shown=!1,this.listen()};Typeahead.prototype={constructor:Typeahead,select:function(){var val=this.$menu.find(".active").attr("data-value");return this.$element.val(this.updater(val)).change(),this.hide()},updater:function(item){return item},show:function(){var pos=$.extend({},this.$element.position(),{height:this.$element[0].offsetHeight});return this.$menu.insertAfter(this.$element).css({top:pos.top+pos.height,left:pos.left}).show(),this.shown=!0,this},hide:function(){return this.$menu.hide(),this.shown=!1,this},lookup:function(){var items;return this.query=this.$element.val(),!this.query||this.query.length<this.options.minLength?this.shown?this.hide():this:(items=$.isFunction(this.source)?this.source(this.query,$.proxy(this.process,this)):this.source,items?this.process(items):this)},process:function(items){var that=this;return items=$.grep(items,function(item){return that.matcher(item)}),items=this.sorter(items),items.length?this.render(items.slice(0,this.options.items)).show():this.shown?this.hide():this},matcher:function(item){return~item.toLowerCase().indexOf(this.query.toLowerCase())},sorter:function(items){for(var item,beginswith=[],caseSensitive=[],caseInsensitive=[];item=items.shift();)item.toLowerCase().indexOf(this.query.toLowerCase())?~item.indexOf(this.query)?caseSensitive.push(item):caseInsensitive.push(item):beginswith.push(item);return beginswith.concat(caseSensitive,caseInsensitive)},highlighter:function(item){var query=this.query.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g,"\\$&");return item.replace(RegExp("("+query+")","ig"),function($1,match){return"<strong>"+match+"</strong>"})},render:function(items){var that=this;return items=$(items).map(function(i,item){return i=$(that.options.item).attr("data-value",item),i.find("a").html(that.highlighter(item)),i[0]}),items.first().addClass("active"),this.$menu.html(items),this},next:function(){var active=this.$menu.find(".active").removeClass("active"),next=active.next();next.length||(next=$(this.$menu.find("li")[0])),next.addClass("active")},prev:function(){var active=this.$menu.find(".active").removeClass("active"),prev=active.prev();prev.length||(prev=this.$menu.find("li").last()),prev.addClass("active")},listen:function(){this.$element.on("blur",$.proxy(this.blur,this)).on("keypress",$.proxy(this.keypress,this)).on("keyup",$.proxy(this.keyup,this)),this.eventSupported("keydown")&&this.$element.on("keydown",$.proxy(this.keydown,this)),this.$menu.on("click",$.proxy(this.click,this)).on("mouseenter","li",$.proxy(this.mouseenter,this))},eventSupported:function(eventName){var isSupported=eventName in this.$element;return isSupported||(this.$element.setAttribute(eventName,"return;"),isSupported="function"==typeof this.$element[eventName]),isSupported},move:function(e){if(this.shown){switch(e.keyCode){case 9:case 13:case 27:e.preventDefault();break;case 38:e.preventDefault(),this.prev();break;case 40:e.preventDefault(),this.next()}e.stopPropagation()}},keydown:function(e){this.suppressKeyPressRepeat=~$.inArray(e.keyCode,[40,38,9,13,27]),this.move(e)},keypress:function(e){this.suppressKeyPressRepeat||this.move(e)},keyup:function(e){switch(e.keyCode){case 40:case 38:case 16:case 17:case 18:break;case 9:case 13:if(!this.shown)return;this.select();break;case 27:if(!this.shown)return;this.hide();break;default:this.lookup()}e.stopPropagation(),e.preventDefault()},blur:function(){var that=this;setTimeout(function(){that.hide()},150)},click:function(e){e.stopPropagation(),e.preventDefault(),this.select()},mouseenter:function(e){this.$menu.find(".active").removeClass("active"),$(e.currentTarget).addClass("active")}};var old=$.fn.typeahead;$.fn.typeahead=function(option){return this.each(function(){var $this=$(this),data=$this.data("typeahead"),options="object"==typeof option&&option;data||$this.data("typeahead",data=new Typeahead(this,options)),"string"==typeof option&&data[option]()})},$.fn.typeahead.defaults={source:[],items:8,menu:'<ul class="typeahead dropdown-menu"></ul>',item:'<li><a href="#"></a></li>',minLength:1},$.fn.typeahead.Constructor=Typeahead,$.fn.typeahead.noConflict=function(){return $.fn.typeahead=old,this},$(document).on("focus.typeahead.data-api",'[data-provide="typeahead"]',function(e){var $this=$(this);$this.data("typeahead")||(e.preventDefault(),$this.typeahead($this.data()))})}(window.jQuery),!function($){"use strict";var Affix=function(element,options){this.options=$.extend({},$.fn.affix.defaults,options),this.$window=$(window).on("scroll.affix.data-api",$.proxy(this.checkPosition,this)).on("click.affix.data-api",$.proxy(function(){setTimeout($.proxy(this.checkPosition,this),1)},this)),this.$element=$(element),this.checkPosition()};Affix.prototype.checkPosition=function(){if(this.$element.is(":visible")){var affix,scrollHeight=$(document).height(),scrollTop=this.$window.scrollTop(),position=this.$element.offset(),offset=this.options.offset,offsetBottom=offset.bottom,offsetTop=offset.top,reset="affix affix-top affix-bottom";"object"!=typeof offset&&(offsetBottom=offsetTop=offset),"function"==typeof offsetTop&&(offsetTop=offset.top()),"function"==typeof offsetBottom&&(offsetBottom=offset.bottom()),affix=null!=this.unpin&&scrollTop+this.unpin<=position.top?!1:null!=offsetBottom&&position.top+this.$element.height()>=scrollHeight-offsetBottom?"bottom":null!=offsetTop&&offsetTop>=scrollTop?"top":!1,this.affixed!==affix&&(this.affixed=affix,this.unpin="bottom"==affix?position.top-scrollTop:null,this.$element.removeClass(reset).addClass("affix"+(affix?"-"+affix:"")))}};var old=$.fn.affix;$.fn.affix=function(option){return this.each(function(){var $this=$(this),data=$this.data("affix"),options="object"==typeof option&&option;data||$this.data("affix",data=new Affix(this,options)),"string"==typeof option&&data[option]()})},$.fn.affix.Constructor=Affix,$.fn.affix.defaults={offset:0},$.fn.affix.noConflict=function(){return $.fn.affix=old,this},$(window).on("load",function(){$('[data-spy="affix"]').each(function(){var $spy=$(this),data=$spy.data();data.offset=data.offset||{},data.offsetBottom&&(data.offset.bottom=data.offsetBottom),data.offsetTop&&(data.offset.top=data.offsetTop),$spy.affix(data)})})}(window.jQuery);
+;/*! jQuery UI - v1.8.23 - 2012-08-15
 * https://github.com/jquery/jquery-ui
 * Includes: jquery.ui.core.js
 * Copyright (c) 2012 AUTHORS.txt; Licensed MIT, GPL */
@@ -23508,8 +23522,8 @@ exports.rethrow = function rethrow(err, filename, lineno){
 * https://github.com/jquery/jquery-ui
 * Includes: jquery.ui.draggable.js
 * Copyright (c) 2012 AUTHORS.txt; Licensed MIT, GPL */
-(function(a,b){a.widget("ui.draggable",a.ui.mouse,{widgetEventPrefix:"drag",options:{addClasses:!0,appendTo:"parent",axis:!1,connectToSortable:!1,containment:!1,cursor:"auto",cursorAt:!1,grid:!1,handle:!1,helper:"original",iframeFix:!1,opacity:!1,refreshPositions:!1,revert:!1,revertDuration:500,scope:"default",scroll:!0,scrollSensitivity:20,scrollSpeed:20,snap:!1,snapMode:"both",snapTolerance:20,stack:!1,zIndex:!1},_create:function(){this.options.helper=="original"&&!/^(?:r|a|f)/.test(this.element.css("position"))&&(this.element[0].style.position="relative"),this.options.addClasses&&this.element.addClass("ui-draggable"),this.options.disabled&&this.element.addClass("ui-draggable-disabled"),this._mouseInit()},destroy:function(){if(!this.element.data("draggable"))return;return this.element.removeData("draggable").unbind(".draggable").removeClass("ui-draggable ui-draggable-dragging ui-draggable-disabled"),this._mouseDestroy(),this},_mouseCapture:function(b){var c=this.options;return this.helper||c.disabled||a(b.target).is(".ui-resizable-handle")?!1:(this.handle=this._getHandle(b),this.handle?(c.iframeFix&&a(c.iframeFix===!0?"iframe":c.iframeFix).each(function(){a('<div class="ui-draggable-iframeFix" style="background: #fff;"></div>').css({width:this.offsetWidth+"px",height:this.offsetHeight+"px",position:"absolute",opacity:"0.001",zIndex:1e3}).css(a(this).offset()).appendTo("body")}),!0):!1)},_mouseStart:function(b){var c=this.options;return this.helper=this._createHelper(b),this.helper.addClass("ui-draggable-dragging"),this._cacheHelperProportions(),a.ui.ddmanager&&(a.ui.ddmanager.current=this),this._cacheMargins(),this.cssPosition=this.helper.css("position"),this.scrollParent=this.helper.scrollParent(),this.offset=this.positionAbs=this.element.offset(),this.offset={top:this.offset.top-this.margins.top,left:this.offset.left-this.margins.left},a.extend(this.offset,{click:{left:b.pageX-this.offset.left,top:b.pageY-this.offset.top},parent:this._getParentOffset(),relative:this._getRelativeOffset()}),this.originalPosition=this.position=this._generatePosition(b),this.originalPageX=b.pageX,this.originalPageY=b.pageY,c.cursorAt&&this._adjustOffsetFromHelper(c.cursorAt),c.containment&&this._setContainment(),this._trigger("start",b)===!1?(this._clear(),!1):(this._cacheHelperProportions(),a.ui.ddmanager&&!c.dropBehaviour&&a.ui.ddmanager.prepareOffsets(this,b),this._mouseDrag(b,!0),a.ui.ddmanager&&a.ui.ddmanager.dragStart(this,b),!0)},_mouseDrag:function(b,c){this.position=this._generatePosition(b),this.positionAbs=this._convertPositionTo("absolute");if(!c){var d=this._uiHash();if(this._trigger("drag",b,d)===!1)return this._mouseUp({}),!1;this.position=d.position}if(!this.options.axis||this.options.axis!="y")this.helper[0].style.left=this.position.left+"px";if(!this.options.axis||this.options.axis!="x")this.helper[0].style.top=this.position.top+"px";return a.ui.ddmanager&&a.ui.ddmanager.drag(this,b),!1},_mouseStop:function(b){var c=!1;a.ui.ddmanager&&!this.options.dropBehaviour&&(c=a.ui.ddmanager.drop(this,b)),this.dropped&&(c=this.dropped,this.dropped=!1);var d=this.element[0],e=!1;while(d&&(d=d.parentNode))d==document&&(e=!0);if(!e&&this.options.helper==="original")return!1;if(this.options.revert=="invalid"&&!c||this.options.revert=="valid"&&c||this.options.revert===!0||a.isFunction(this.options.revert)&&this.options.revert.call(this.element,c)){var f=this;a(this.helper).animate(this.originalPosition,parseInt(this.options.revertDuration,10),function(){f._trigger("stop",b)!==!1&&f._clear()})}else this._trigger("stop",b)!==!1&&this._clear();return!1},_mouseUp:function(b){return this.options.iframeFix===!0&&a("div.ui-draggable-iframeFix").each(function(){this.parentNode.removeChild(this)}),a.ui.ddmanager&&a.ui.ddmanager.dragStop(this,b),a.ui.mouse.prototype._mouseUp.call(this,b)},cancel:function(){return this.helper.is(".ui-draggable-dragging")?this._mouseUp({}):this._clear(),this},_getHandle:function(b){var c=!this.options.handle||!a(this.options.handle,this.element).length?!0:!1;return a(this.options.handle,this.element).find("*").andSelf().each(function(){this==b.target&&(c=!0)}),c},_createHelper:function(b){var c=this.options,d=a.isFunction(c.helper)?a(c.helper.apply(this.element[0],[b])):c.helper=="clone"?this.element.clone().removeAttr("id"):this.element;return d.parents("body").length||d.appendTo(c.appendTo=="parent"?this.element[0].parentNode:c.appendTo),d[0]!=this.element[0]&&!/(fixed|absolute)/.test(d.css("position"))&&d.css("position","absolute"),d},_adjustOffsetFromHelper:function(b){typeof b=="string"&&(b=b.split(" ")),a.isArray(b)&&(b={left:+b[0],top:+b[1]||0}),"left"in b&&(this.offset.click.left=b.left+this.margins.left),"right"in b&&(this.offset.click.left=this.helperProportions.width-b.right+this.margins.left),"top"in b&&(this.offset.click.top=b.top+this.margins.top),"bottom"in b&&(this.offset.click.top=this.helperProportions.height-b.bottom+this.margins.top)},_getParentOffset:function(){this.offsetParent=this.helper.offsetParent();var b=this.offsetParent.offset();this.cssPosition=="absolute"&&this.scrollParent[0]!=document&&a.ui.contains(this.scrollParent[0],this.offsetParent[0])&&(b.left+=this.scrollParent.scrollLeft(),b.top+=this.scrollParent.scrollTop());if(this.offsetParent[0]==document.body||this.offsetParent[0].tagName&&this.offsetParent[0].tagName.toLowerCase()=="html"&&a.browser.msie)b={top:0,left:0};return{top:b.top+(parseInt(this.offsetParent.css("borderTopWidth"),10)||0),left:b.left+(parseInt(this.offsetParent.css("borderLeftWidth"),10)||0)}},_getRelativeOffset:function(){if(this.cssPosition=="relative"){var a=this.element.position();return{top:a.top-(parseInt(this.helper.css("top"),10)||0)+this.scrollParent.scrollTop(),left:a.left-(parseInt(this.helper.css("left"),10)||0)+this.scrollParent.scrollLeft()}}return{top:0,left:0}},_cacheMargins:function(){this.margins={left:parseInt(this.element.css("marginLeft"),10)||0,top:parseInt(this.element.css("marginTop"),10)||0,right:parseInt(this.element.css("marginRight"),10)||0,bottom:parseInt(this.element.css("marginBottom"),10)||0}},_cacheHelperProportions:function(){this.helperProportions={width:this.helper.outerWidth(),height:this.helper.outerHeight()}},_setContainment:function(){var b=this.options;b.containment=="parent"&&(b.containment=this.helper[0].parentNode);if(b.containment=="document"||b.containment=="window")this.containment=[b.containment=="document"?0:a(window).scrollLeft()-this.offset.relative.left-this.offset.parent.left,b.containment=="document"?0:a(window).scrollTop()-this.offset.relative.top-this.offset.parent.top,(b.containment=="document"?0:a(window).scrollLeft())+a(b.containment=="document"?document:window).width()-this.helperProportions.width-this.margins.left,(b.containment=="document"?0:a(window).scrollTop())+(a(b.containment=="document"?document:window).height()||document.body.parentNode.scrollHeight)-this.helperProportions.height-this.margins.top];if(!/^(document|window|parent)$/.test(b.containment)&&b.containment.constructor!=Array){var c=a(b.containment),d=c[0];if(!d)return;var e=c.offset(),f=a(d).css("overflow")!="hidden";this.containment=[(parseInt(a(d).css("borderLeftWidth"),10)||0)+(parseInt(a(d).css("paddingLeft"),10)||0),(parseInt(a(d).css("borderTopWidth"),10)||0)+(parseInt(a(d).css("paddingTop"),10)||0),(f?Math.max(d.scrollWidth,d.offsetWidth):d.offsetWidth)-(parseInt(a(d).css("borderLeftWidth"),10)||0)-(parseInt(a(d).css("paddingRight"),10)||0)-this.helperProportions.width-this.margins.left-this.margins.right,(f?Math.max(d.scrollHeight,d.offsetHeight):d.offsetHeight)-(parseInt(a(d).css("borderTopWidth"),10)||0)-(parseInt(a(d).css("paddingBottom"),10)||0)-this.helperProportions.height-this.margins.top-this.margins.bottom],this.relative_container=c}else b.containment.constructor==Array&&(this.containment=b.containment)},_convertPositionTo:function(b,c){c||(c=this.position);var d=b=="absolute"?1:-1,e=this.options,f=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,g=/(html|body)/i.test(f[0].tagName);return{top:c.top+this.offset.relative.top*d+this.offset.parent.top*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollTop():g?0:f.scrollTop())*d),left:c.left+this.offset.relative.left*d+this.offset.parent.left*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():g?0:f.scrollLeft())*d)}},_generatePosition:function(b){var c=this.options,d=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,e=/(html|body)/i.test(d[0].tagName),f=b.pageX,g=b.pageY;if(this.originalPosition){var h;if(this.containment){if(this.relative_container){var i=this.relative_container.offset();h=[this.containment[0]+i.left,this.containment[1]+i.top,this.containment[2]+i.left,this.containment[3]+i.top]}else h=this.containment;b.pageX-this.offset.click.left<h[0]&&(f=h[0]+this.offset.click.left),b.pageY-this.offset.click.top<h[1]&&(g=h[1]+this.offset.click.top),b.pageX-this.offset.click.left>h[2]&&(f=h[2]+this.offset.click.left),b.pageY-this.offset.click.top>h[3]&&(g=h[3]+this.offset.click.top)}if(c.grid){var j=c.grid[1]?this.originalPageY+Math.round((g-this.originalPageY)/c.grid[1])*c.grid[1]:this.originalPageY;g=h?j-this.offset.click.top<h[1]||j-this.offset.click.top>h[3]?j-this.offset.click.top<h[1]?j+c.grid[1]:j-c.grid[1]:j:j;var k=c.grid[0]?this.originalPageX+Math.round((f-this.originalPageX)/c.grid[0])*c.grid[0]:this.originalPageX;f=h?k-this.offset.click.left<h[0]||k-this.offset.click.left>h[2]?k-this.offset.click.left<h[0]?k+c.grid[0]:k-c.grid[0]:k:k}}return{top:g-this.offset.click.top-this.offset.relative.top-this.offset.parent.top+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollTop():e?0:d.scrollTop()),left:f-this.offset.click.left-this.offset.relative.left-this.offset.parent.left+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():e?0:d.scrollLeft())}},_clear:function(){this.helper.removeClass("ui-draggable-dragging"),this.helper[0]!=this.element[0]&&!this.cancelHelperRemoval&&this.helper.remove(),this.helper=null,this.cancelHelperRemoval=!1},_trigger:function(b,c,d){return d=d||this._uiHash(),a.ui.plugin.call(this,b,[c,d]),b=="drag"&&(this.positionAbs=this._convertPositionTo("absolute")),a.Widget.prototype._trigger.call(this,b,c,d)},plugins:{},_uiHash:function(a){return{helper:this.helper,position:this.position,originalPosition:this.originalPosition,offset:this.positionAbs}}}),a.extend(a.ui.draggable,{version:"1.8.23"}),a.ui.plugin.add("draggable","connectToSortable",{start:function(b,c){var d=a(this).data("draggable"),e=d.options,f=a.extend({},c,{item:d.element});d.sortables=[],a(e.connectToSortable).each(function(){var c=a.data(this,"sortable");c&&!c.options.disabled&&(d.sortables.push({instance:c,shouldRevert:c.options.revert}),c.refreshPositions(),c._trigger("activate",b,f))})},stop:function(b,c){var d=a(this).data("draggable"),e=a.extend({},c,{item:d.element});a.each(d.sortables,function(){this.instance.isOver?(this.instance.isOver=0,d.cancelHelperRemoval=!0,this.instance.cancelHelperRemoval=!1,this.shouldRevert&&(this.instance.options.revert=!0),this.instance._mouseStop(b),this.instance.options.helper=this.instance.options._helper,d.options.helper=="original"&&this.instance.currentItem.css({top:"auto",left:"auto"})):(this.instance.cancelHelperRemoval=!1,this.instance._trigger("deactivate",b,e))})},drag:function(b,c){var d=a(this).data("draggable"),e=this,f=function(b){var c=this.offset.click.top,d=this.offset.click.left,e=this.positionAbs.top,f=this.positionAbs.left,g=b.height,h=b.width,i=b.top,j=b.left;return a.ui.isOver(e+c,f+d,i,j,g,h)};a.each(d.sortables,function(f){this.instance.positionAbs=d.positionAbs,this.instance.helperProportions=d.helperProportions,this.instance.offset.click=d.offset.click,this.instance._intersectsWith(this.instance.containerCache)?(this.instance.isOver||(this.instance.isOver=1,this.instance.currentItem=a(e).clone().removeAttr("id").appendTo(this.instance.element).data("sortable-item",!0),this.instance.options._helper=this.instance.options.helper,this.instance.options.helper=function(){return c.helper[0]},b.target=this.instance.currentItem[0],this.instance._mouseCapture(b,!0),this.instance._mouseStart(b,!0,!0),this.instance.offset.click.top=d.offset.click.top,this.instance.offset.click.left=d.offset.click.left,this.instance.offset.parent.left-=d.offset.parent.left-this.instance.offset.parent.left,this.instance.offset.parent.top-=d.offset.parent.top-this.instance.offset.parent.top,d._trigger("toSortable",b),d.dropped=this.instance.element,d.currentItem=d.element,this.instance.fromOutside=d),this.instance.currentItem&&this.instance._mouseDrag(b)):this.instance.isOver&&(this.instance.isOver=0,this.instance.cancelHelperRemoval=!0,this.instance.options.revert=!1,this.instance._trigger("out",b,this.instance._uiHash(this.instance)),this.instance._mouseStop(b,!0),this.instance.options.helper=this.instance.options._helper,this.instance.currentItem.remove(),this.instance.placeholder&&this.instance.placeholder.remove(),d._trigger("fromSortable",b),d.dropped=!1)})}}),a.ui.plugin.add("draggable","cursor",{start:function(b,c){var d=a("body"),e=a(this).data("draggable").options;d.css("cursor")&&(e._cursor=d.css("cursor")),d.css("cursor",e.cursor)},stop:function(b,c){var d=a(this).data("draggable").options;d._cursor&&a("body").css("cursor",d._cursor)}}),a.ui.plugin.add("draggable","opacity",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("opacity")&&(e._opacity=d.css("opacity")),d.css("opacity",e.opacity)},stop:function(b,c){var d=a(this).data("draggable").options;d._opacity&&a(c.helper).css("opacity",d._opacity)}}),a.ui.plugin.add("draggable","scroll",{start:function(b,c){var d=a(this).data("draggable");d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"&&(d.overflowOffset=d.scrollParent.offset())},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=!1;if(d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"){if(!e.axis||e.axis!="x")d.overflowOffset.top+d.scrollParent[0].offsetHeight-b.pageY<e.scrollSensitivity?d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop+e.scrollSpeed:b.pageY-d.overflowOffset.top<e.scrollSensitivity&&(d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop-e.scrollSpeed);if(!e.axis||e.axis!="y")d.overflowOffset.left+d.scrollParent[0].offsetWidth-b.pageX<e.scrollSensitivity?d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft+e.scrollSpeed:b.pageX-d.overflowOffset.left<e.scrollSensitivity&&(d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft-e.scrollSpeed)}else{if(!e.axis||e.axis!="x")b.pageY-a(document).scrollTop()<e.scrollSensitivity?f=a(document).scrollTop(a(document).scrollTop()-e.scrollSpeed):a(window).height()-(b.pageY-a(document).scrollTop())<e.scrollSensitivity&&(f=a(document).scrollTop(a(document).scrollTop()+e.scrollSpeed));if(!e.axis||e.axis!="y")b.pageX-a(document).scrollLeft()<e.scrollSensitivity?f=a(document).scrollLeft(a(document).scrollLeft()-e.scrollSpeed):a(window).width()-(b.pageX-a(document).scrollLeft())<e.scrollSensitivity&&(f=a(document).scrollLeft(a(document).scrollLeft()+e.scrollSpeed))}f!==!1&&a.ui.ddmanager&&!e.dropBehaviour&&a.ui.ddmanager.prepareOffsets(d,b)}}),a.ui.plugin.add("draggable","snap",{start:function(b,c){var d=a(this).data("draggable"),e=d.options;d.snapElements=[],a(e.snap.constructor!=String?e.snap.items||":data(draggable)":e.snap).each(function(){var b=a(this),c=b.offset();this!=d.element[0]&&d.snapElements.push({item:this,width:b.outerWidth(),height:b.outerHeight(),top:c.top,left:c.left})})},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=e.snapTolerance,g=c.offset.left,h=g+d.helperProportions.width,i=c.offset.top,j=i+d.helperProportions.height;for(var k=d.snapElements.length-1;k>=0;k--){var l=d.snapElements[k].left,m=l+d.snapElements[k].width,n=d.snapElements[k].top,o=n+d.snapElements[k].height;if(!(l-f<g&&g<m+f&&n-f<i&&i<o+f||l-f<g&&g<m+f&&n-f<j&&j<o+f||l-f<h&&h<m+f&&n-f<i&&i<o+f||l-f<h&&h<m+f&&n-f<j&&j<o+f)){d.snapElements[k].snapping&&d.options.snap.release&&d.options.snap.release.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=!1;continue}if(e.snapMode!="inner"){var p=Math.abs(n-j)<=f,q=Math.abs(o-i)<=f,r=Math.abs(l-h)<=f,s=Math.abs(m-g)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n-d.helperProportions.height,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l-d.helperProportions.width}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m}).left-d.margins.left)}var t=p||q||r||s;if(e.snapMode!="outer"){var p=Math.abs(n-i)<=f,q=Math.abs(o-j)<=f,r=Math.abs(l-g)<=f,s=Math.abs(m-h)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o-d.helperProportions.height,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m-d.helperProportions.width}).left-d.margins.left)}!d.snapElements[k].snapping&&(p||q||r||s||t)&&d.options.snap.snap&&d.options.snap.snap.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=p||q||r||s||t}}}),a.ui.plugin.add("draggable","stack",{start:function(b,c){var d=a(this).data("draggable").options,e=a.makeArray(a(d.stack)).sort(function(b,c){return(parseInt(a(b).css("zIndex"),10)||0)-(parseInt(a(c).css("zIndex"),10)||0)});if(!e.length)return;var f=parseInt(e[0].style.zIndex)||0;a(e).each(function(a){this.style.zIndex=f+a}),this[0].style.zIndex=f+e.length}}),a.ui.plugin.add("draggable","zIndex",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("zIndex")&&(e._zIndex=d.css("zIndex")),d.css("zIndex",e.zIndex)},stop:function(b,c){var d=a(this).data("draggable").options;d._zIndex&&a(c.helper).css("zIndex",d._zIndex)}})})(jQuery);;;
-/*
+(function(a,b){a.widget("ui.draggable",a.ui.mouse,{widgetEventPrefix:"drag",options:{addClasses:!0,appendTo:"parent",axis:!1,connectToSortable:!1,containment:!1,cursor:"auto",cursorAt:!1,grid:!1,handle:!1,helper:"original",iframeFix:!1,opacity:!1,refreshPositions:!1,revert:!1,revertDuration:500,scope:"default",scroll:!0,scrollSensitivity:20,scrollSpeed:20,snap:!1,snapMode:"both",snapTolerance:20,stack:!1,zIndex:!1},_create:function(){this.options.helper=="original"&&!/^(?:r|a|f)/.test(this.element.css("position"))&&(this.element[0].style.position="relative"),this.options.addClasses&&this.element.addClass("ui-draggable"),this.options.disabled&&this.element.addClass("ui-draggable-disabled"),this._mouseInit()},destroy:function(){if(!this.element.data("draggable"))return;return this.element.removeData("draggable").unbind(".draggable").removeClass("ui-draggable ui-draggable-dragging ui-draggable-disabled"),this._mouseDestroy(),this},_mouseCapture:function(b){var c=this.options;return this.helper||c.disabled||a(b.target).is(".ui-resizable-handle")?!1:(this.handle=this._getHandle(b),this.handle?(c.iframeFix&&a(c.iframeFix===!0?"iframe":c.iframeFix).each(function(){a('<div class="ui-draggable-iframeFix" style="background: #fff;"></div>').css({width:this.offsetWidth+"px",height:this.offsetHeight+"px",position:"absolute",opacity:"0.001",zIndex:1e3}).css(a(this).offset()).appendTo("body")}),!0):!1)},_mouseStart:function(b){var c=this.options;return this.helper=this._createHelper(b),this.helper.addClass("ui-draggable-dragging"),this._cacheHelperProportions(),a.ui.ddmanager&&(a.ui.ddmanager.current=this),this._cacheMargins(),this.cssPosition=this.helper.css("position"),this.scrollParent=this.helper.scrollParent(),this.offset=this.positionAbs=this.element.offset(),this.offset={top:this.offset.top-this.margins.top,left:this.offset.left-this.margins.left},a.extend(this.offset,{click:{left:b.pageX-this.offset.left,top:b.pageY-this.offset.top},parent:this._getParentOffset(),relative:this._getRelativeOffset()}),this.originalPosition=this.position=this._generatePosition(b),this.originalPageX=b.pageX,this.originalPageY=b.pageY,c.cursorAt&&this._adjustOffsetFromHelper(c.cursorAt),c.containment&&this._setContainment(),this._trigger("start",b)===!1?(this._clear(),!1):(this._cacheHelperProportions(),a.ui.ddmanager&&!c.dropBehaviour&&a.ui.ddmanager.prepareOffsets(this,b),this._mouseDrag(b,!0),a.ui.ddmanager&&a.ui.ddmanager.dragStart(this,b),!0)},_mouseDrag:function(b,c){this.position=this._generatePosition(b),this.positionAbs=this._convertPositionTo("absolute");if(!c){var d=this._uiHash();if(this._trigger("drag",b,d)===!1)return this._mouseUp({}),!1;this.position=d.position}if(!this.options.axis||this.options.axis!="y")this.helper[0].style.left=this.position.left+"px";if(!this.options.axis||this.options.axis!="x")this.helper[0].style.top=this.position.top+"px";return a.ui.ddmanager&&a.ui.ddmanager.drag(this,b),!1},_mouseStop:function(b){var c=!1;a.ui.ddmanager&&!this.options.dropBehaviour&&(c=a.ui.ddmanager.drop(this,b)),this.dropped&&(c=this.dropped,this.dropped=!1);var d=this.element[0],e=!1;while(d&&(d=d.parentNode))d==document&&(e=!0);if(!e&&this.options.helper==="original")return!1;if(this.options.revert=="invalid"&&!c||this.options.revert=="valid"&&c||this.options.revert===!0||a.isFunction(this.options.revert)&&this.options.revert.call(this.element,c)){var f=this;a(this.helper).animate(this.originalPosition,parseInt(this.options.revertDuration,10),function(){f._trigger("stop",b)!==!1&&f._clear()})}else this._trigger("stop",b)!==!1&&this._clear();return!1},_mouseUp:function(b){return this.options.iframeFix===!0&&a("div.ui-draggable-iframeFix").each(function(){this.parentNode.removeChild(this)}),a.ui.ddmanager&&a.ui.ddmanager.dragStop(this,b),a.ui.mouse.prototype._mouseUp.call(this,b)},cancel:function(){return this.helper.is(".ui-draggable-dragging")?this._mouseUp({}):this._clear(),this},_getHandle:function(b){var c=!this.options.handle||!a(this.options.handle,this.element).length?!0:!1;return a(this.options.handle,this.element).find("*").andSelf().each(function(){this==b.target&&(c=!0)}),c},_createHelper:function(b){var c=this.options,d=a.isFunction(c.helper)?a(c.helper.apply(this.element[0],[b])):c.helper=="clone"?this.element.clone().removeAttr("id"):this.element;return d.parents("body").length||d.appendTo(c.appendTo=="parent"?this.element[0].parentNode:c.appendTo),d[0]!=this.element[0]&&!/(fixed|absolute)/.test(d.css("position"))&&d.css("position","absolute"),d},_adjustOffsetFromHelper:function(b){typeof b=="string"&&(b=b.split(" ")),a.isArray(b)&&(b={left:+b[0],top:+b[1]||0}),"left"in b&&(this.offset.click.left=b.left+this.margins.left),"right"in b&&(this.offset.click.left=this.helperProportions.width-b.right+this.margins.left),"top"in b&&(this.offset.click.top=b.top+this.margins.top),"bottom"in b&&(this.offset.click.top=this.helperProportions.height-b.bottom+this.margins.top)},_getParentOffset:function(){this.offsetParent=this.helper.offsetParent();var b=this.offsetParent.offset();this.cssPosition=="absolute"&&this.scrollParent[0]!=document&&a.ui.contains(this.scrollParent[0],this.offsetParent[0])&&(b.left+=this.scrollParent.scrollLeft(),b.top+=this.scrollParent.scrollTop());if(this.offsetParent[0]==document.body||this.offsetParent[0].tagName&&this.offsetParent[0].tagName.toLowerCase()=="html"&&a.browser.msie)b={top:0,left:0};return{top:b.top+(parseInt(this.offsetParent.css("borderTopWidth"),10)||0),left:b.left+(parseInt(this.offsetParent.css("borderLeftWidth"),10)||0)}},_getRelativeOffset:function(){if(this.cssPosition=="relative"){var a=this.element.position();return{top:a.top-(parseInt(this.helper.css("top"),10)||0)+this.scrollParent.scrollTop(),left:a.left-(parseInt(this.helper.css("left"),10)||0)+this.scrollParent.scrollLeft()}}return{top:0,left:0}},_cacheMargins:function(){this.margins={left:parseInt(this.element.css("marginLeft"),10)||0,top:parseInt(this.element.css("marginTop"),10)||0,right:parseInt(this.element.css("marginRight"),10)||0,bottom:parseInt(this.element.css("marginBottom"),10)||0}},_cacheHelperProportions:function(){this.helperProportions={width:this.helper.outerWidth(),height:this.helper.outerHeight()}},_setContainment:function(){var b=this.options;b.containment=="parent"&&(b.containment=this.helper[0].parentNode);if(b.containment=="document"||b.containment=="window")this.containment=[b.containment=="document"?0:a(window).scrollLeft()-this.offset.relative.left-this.offset.parent.left,b.containment=="document"?0:a(window).scrollTop()-this.offset.relative.top-this.offset.parent.top,(b.containment=="document"?0:a(window).scrollLeft())+a(b.containment=="document"?document:window).width()-this.helperProportions.width-this.margins.left,(b.containment=="document"?0:a(window).scrollTop())+(a(b.containment=="document"?document:window).height()||document.body.parentNode.scrollHeight)-this.helperProportions.height-this.margins.top];if(!/^(document|window|parent)$/.test(b.containment)&&b.containment.constructor!=Array){var c=a(b.containment),d=c[0];if(!d)return;var e=c.offset(),f=a(d).css("overflow")!="hidden";this.containment=[(parseInt(a(d).css("borderLeftWidth"),10)||0)+(parseInt(a(d).css("paddingLeft"),10)||0),(parseInt(a(d).css("borderTopWidth"),10)||0)+(parseInt(a(d).css("paddingTop"),10)||0),(f?Math.max(d.scrollWidth,d.offsetWidth):d.offsetWidth)-(parseInt(a(d).css("borderLeftWidth"),10)||0)-(parseInt(a(d).css("paddingRight"),10)||0)-this.helperProportions.width-this.margins.left-this.margins.right,(f?Math.max(d.scrollHeight,d.offsetHeight):d.offsetHeight)-(parseInt(a(d).css("borderTopWidth"),10)||0)-(parseInt(a(d).css("paddingBottom"),10)||0)-this.helperProportions.height-this.margins.top-this.margins.bottom],this.relative_container=c}else b.containment.constructor==Array&&(this.containment=b.containment)},_convertPositionTo:function(b,c){c||(c=this.position);var d=b=="absolute"?1:-1,e=this.options,f=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,g=/(html|body)/i.test(f[0].tagName);return{top:c.top+this.offset.relative.top*d+this.offset.parent.top*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollTop():g?0:f.scrollTop())*d),left:c.left+this.offset.relative.left*d+this.offset.parent.left*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():g?0:f.scrollLeft())*d)}},_generatePosition:function(b){var c=this.options,d=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,e=/(html|body)/i.test(d[0].tagName),f=b.pageX,g=b.pageY;if(this.originalPosition){var h;if(this.containment){if(this.relative_container){var i=this.relative_container.offset();h=[this.containment[0]+i.left,this.containment[1]+i.top,this.containment[2]+i.left,this.containment[3]+i.top]}else h=this.containment;b.pageX-this.offset.click.left<h[0]&&(f=h[0]+this.offset.click.left),b.pageY-this.offset.click.top<h[1]&&(g=h[1]+this.offset.click.top),b.pageX-this.offset.click.left>h[2]&&(f=h[2]+this.offset.click.left),b.pageY-this.offset.click.top>h[3]&&(g=h[3]+this.offset.click.top)}if(c.grid){var j=c.grid[1]?this.originalPageY+Math.round((g-this.originalPageY)/c.grid[1])*c.grid[1]:this.originalPageY;g=h?j-this.offset.click.top<h[1]||j-this.offset.click.top>h[3]?j-this.offset.click.top<h[1]?j+c.grid[1]:j-c.grid[1]:j:j;var k=c.grid[0]?this.originalPageX+Math.round((f-this.originalPageX)/c.grid[0])*c.grid[0]:this.originalPageX;f=h?k-this.offset.click.left<h[0]||k-this.offset.click.left>h[2]?k-this.offset.click.left<h[0]?k+c.grid[0]:k-c.grid[0]:k:k}}return{top:g-this.offset.click.top-this.offset.relative.top-this.offset.parent.top+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollTop():e?0:d.scrollTop()),left:f-this.offset.click.left-this.offset.relative.left-this.offset.parent.left+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():e?0:d.scrollLeft())}},_clear:function(){this.helper.removeClass("ui-draggable-dragging"),this.helper[0]!=this.element[0]&&!this.cancelHelperRemoval&&this.helper.remove(),this.helper=null,this.cancelHelperRemoval=!1},_trigger:function(b,c,d){return d=d||this._uiHash(),a.ui.plugin.call(this,b,[c,d]),b=="drag"&&(this.positionAbs=this._convertPositionTo("absolute")),a.Widget.prototype._trigger.call(this,b,c,d)},plugins:{},_uiHash:function(a){return{helper:this.helper,position:this.position,originalPosition:this.originalPosition,offset:this.positionAbs}}}),a.extend(a.ui.draggable,{version:"1.8.23"}),a.ui.plugin.add("draggable","connectToSortable",{start:function(b,c){var d=a(this).data("draggable"),e=d.options,f=a.extend({},c,{item:d.element});d.sortables=[],a(e.connectToSortable).each(function(){var c=a.data(this,"sortable");c&&!c.options.disabled&&(d.sortables.push({instance:c,shouldRevert:c.options.revert}),c.refreshPositions(),c._trigger("activate",b,f))})},stop:function(b,c){var d=a(this).data("draggable"),e=a.extend({},c,{item:d.element});a.each(d.sortables,function(){this.instance.isOver?(this.instance.isOver=0,d.cancelHelperRemoval=!0,this.instance.cancelHelperRemoval=!1,this.shouldRevert&&(this.instance.options.revert=!0),this.instance._mouseStop(b),this.instance.options.helper=this.instance.options._helper,d.options.helper=="original"&&this.instance.currentItem.css({top:"auto",left:"auto"})):(this.instance.cancelHelperRemoval=!1,this.instance._trigger("deactivate",b,e))})},drag:function(b,c){var d=a(this).data("draggable"),e=this,f=function(b){var c=this.offset.click.top,d=this.offset.click.left,e=this.positionAbs.top,f=this.positionAbs.left,g=b.height,h=b.width,i=b.top,j=b.left;return a.ui.isOver(e+c,f+d,i,j,g,h)};a.each(d.sortables,function(f){this.instance.positionAbs=d.positionAbs,this.instance.helperProportions=d.helperProportions,this.instance.offset.click=d.offset.click,this.instance._intersectsWith(this.instance.containerCache)?(this.instance.isOver||(this.instance.isOver=1,this.instance.currentItem=a(e).clone().removeAttr("id").appendTo(this.instance.element).data("sortable-item",!0),this.instance.options._helper=this.instance.options.helper,this.instance.options.helper=function(){return c.helper[0]},b.target=this.instance.currentItem[0],this.instance._mouseCapture(b,!0),this.instance._mouseStart(b,!0,!0),this.instance.offset.click.top=d.offset.click.top,this.instance.offset.click.left=d.offset.click.left,this.instance.offset.parent.left-=d.offset.parent.left-this.instance.offset.parent.left,this.instance.offset.parent.top-=d.offset.parent.top-this.instance.offset.parent.top,d._trigger("toSortable",b),d.dropped=this.instance.element,d.currentItem=d.element,this.instance.fromOutside=d),this.instance.currentItem&&this.instance._mouseDrag(b)):this.instance.isOver&&(this.instance.isOver=0,this.instance.cancelHelperRemoval=!0,this.instance.options.revert=!1,this.instance._trigger("out",b,this.instance._uiHash(this.instance)),this.instance._mouseStop(b,!0),this.instance.options.helper=this.instance.options._helper,this.instance.currentItem.remove(),this.instance.placeholder&&this.instance.placeholder.remove(),d._trigger("fromSortable",b),d.dropped=!1)})}}),a.ui.plugin.add("draggable","cursor",{start:function(b,c){var d=a("body"),e=a(this).data("draggable").options;d.css("cursor")&&(e._cursor=d.css("cursor")),d.css("cursor",e.cursor)},stop:function(b,c){var d=a(this).data("draggable").options;d._cursor&&a("body").css("cursor",d._cursor)}}),a.ui.plugin.add("draggable","opacity",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("opacity")&&(e._opacity=d.css("opacity")),d.css("opacity",e.opacity)},stop:function(b,c){var d=a(this).data("draggable").options;d._opacity&&a(c.helper).css("opacity",d._opacity)}}),a.ui.plugin.add("draggable","scroll",{start:function(b,c){var d=a(this).data("draggable");d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"&&(d.overflowOffset=d.scrollParent.offset())},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=!1;if(d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"){if(!e.axis||e.axis!="x")d.overflowOffset.top+d.scrollParent[0].offsetHeight-b.pageY<e.scrollSensitivity?d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop+e.scrollSpeed:b.pageY-d.overflowOffset.top<e.scrollSensitivity&&(d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop-e.scrollSpeed);if(!e.axis||e.axis!="y")d.overflowOffset.left+d.scrollParent[0].offsetWidth-b.pageX<e.scrollSensitivity?d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft+e.scrollSpeed:b.pageX-d.overflowOffset.left<e.scrollSensitivity&&(d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft-e.scrollSpeed)}else{if(!e.axis||e.axis!="x")b.pageY-a(document).scrollTop()<e.scrollSensitivity?f=a(document).scrollTop(a(document).scrollTop()-e.scrollSpeed):a(window).height()-(b.pageY-a(document).scrollTop())<e.scrollSensitivity&&(f=a(document).scrollTop(a(document).scrollTop()+e.scrollSpeed));if(!e.axis||e.axis!="y")b.pageX-a(document).scrollLeft()<e.scrollSensitivity?f=a(document).scrollLeft(a(document).scrollLeft()-e.scrollSpeed):a(window).width()-(b.pageX-a(document).scrollLeft())<e.scrollSensitivity&&(f=a(document).scrollLeft(a(document).scrollLeft()+e.scrollSpeed))}f!==!1&&a.ui.ddmanager&&!e.dropBehaviour&&a.ui.ddmanager.prepareOffsets(d,b)}}),a.ui.plugin.add("draggable","snap",{start:function(b,c){var d=a(this).data("draggable"),e=d.options;d.snapElements=[],a(e.snap.constructor!=String?e.snap.items||":data(draggable)":e.snap).each(function(){var b=a(this),c=b.offset();this!=d.element[0]&&d.snapElements.push({item:this,width:b.outerWidth(),height:b.outerHeight(),top:c.top,left:c.left})})},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=e.snapTolerance,g=c.offset.left,h=g+d.helperProportions.width,i=c.offset.top,j=i+d.helperProportions.height;for(var k=d.snapElements.length-1;k>=0;k--){var l=d.snapElements[k].left,m=l+d.snapElements[k].width,n=d.snapElements[k].top,o=n+d.snapElements[k].height;if(!(l-f<g&&g<m+f&&n-f<i&&i<o+f||l-f<g&&g<m+f&&n-f<j&&j<o+f||l-f<h&&h<m+f&&n-f<i&&i<o+f||l-f<h&&h<m+f&&n-f<j&&j<o+f)){d.snapElements[k].snapping&&d.options.snap.release&&d.options.snap.release.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=!1;continue}if(e.snapMode!="inner"){var p=Math.abs(n-j)<=f,q=Math.abs(o-i)<=f,r=Math.abs(l-h)<=f,s=Math.abs(m-g)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n-d.helperProportions.height,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l-d.helperProportions.width}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m}).left-d.margins.left)}var t=p||q||r||s;if(e.snapMode!="outer"){var p=Math.abs(n-i)<=f,q=Math.abs(o-j)<=f,r=Math.abs(l-g)<=f,s=Math.abs(m-h)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o-d.helperProportions.height,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m-d.helperProportions.width}).left-d.margins.left)}!d.snapElements[k].snapping&&(p||q||r||s||t)&&d.options.snap.snap&&d.options.snap.snap.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=p||q||r||s||t}}}),a.ui.plugin.add("draggable","stack",{start:function(b,c){var d=a(this).data("draggable").options,e=a.makeArray(a(d.stack)).sort(function(b,c){return(parseInt(a(b).css("zIndex"),10)||0)-(parseInt(a(c).css("zIndex"),10)||0)});if(!e.length)return;var f=parseInt(e[0].style.zIndex)||0;a(e).each(function(a){this.style.zIndex=f+a}),this[0].style.zIndex=f+e.length}}),a.ui.plugin.add("draggable","zIndex",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("zIndex")&&(e._zIndex=d.css("zIndex")),d.css("zIndex",e.zIndex)},stop:function(b,c){var d=a(this).data("draggable").options;d._zIndex&&a(c.helper).css("zIndex",d._zIndex)}})})(jQuery);;
+;/*
  jquery.layout 1.3.0 - Release Candidate 30.62
  $Date: 2012-08-04 08:00:00 (Thu, 23 Aug 2012) $
  $Rev: 303006 $
@@ -23641,8 +23655,8 @@ addClose:function(a,c,d){b.layout.buttons.get(a,c,d,"close").attr("title",a.opti
 b.attr("pin");if(!(h&&f===(h=="down"))){var a=a.options[d],h=a.buttonClass+"-pin",j=h+"-"+d,d=h+"-up "+j+"-up",h=h+"-down "+j+"-down";b.attr("pin",f?"down":"up").attr("title",f?a.tips.Unpin:a.tips.Pin).removeClass(f?d:h).addClass(f?h:d)}},syncPinBtns:function(a,c,d){b.each(a.state[c].pins,function(f,h){b.layout.buttons.setPinState(a,b(h),c,d)})},_load:function(a){var c=b.layout.buttons;b.extend(a,{bindButton:function(b,d,j){return c.bind(a,b,d,j)},addToggleBtn:function(b,d,j){return c.addToggle(a,
 b,d,j)},addOpenBtn:function(b,d,j){return c.addOpen(a,b,d,j)},addCloseBtn:function(b,d){return c.addClose(a,b,d)},addPinBtn:function(b,d){return c.addPin(a,b,d)}});for(var d=0;d<4;d++)a.state[b.layout.config.borderPanes[d]].pins=[];a.options.autoBindCustomButtons&&c.init(a)},_unload:function(){}};b.layout.onLoad.push(b.layout.buttons._load);b.layout.plugins.browserZoom=!0;b.layout.defaults.browserZoomCheckInterval=1E3;b.layout.optionsMap.layout.push("browserZoomCheckInterval");b.layout.browserZoom=
 {_init:function(a){b.layout.browserZoom.ratio()!==false&&b.layout.browserZoom._setTimer(a)},_setTimer:function(a){if(!a.destroyed){var c=a.options,d=a.state,f=a.hasParentLayout?5E3:Math.max(c.browserZoomCheckInterval,100);setTimeout(function(){if(!a.destroyed&&c.resizeWithWindow){var f=b.layout.browserZoom.ratio();if(f!==d.browserZoom){d.browserZoom=f;a.resizeAll()}b.layout.browserZoom._setTimer(a)}},f)}},ratio:function(){function a(a,b){return(parseInt(a,10)/parseInt(b,10)*100).toFixed()}var c=window,
-d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r,y,D;return j.msie&&m>8||!j.msie?false:d.deviceXDPI?a(d.deviceXDPI,d.systemXDPI):j.webkit&&(r=f.body.getBoundingClientRect)?a(r.left-r.right,f.body.offsetWidth):j.webkit&&(y=c.outerWidth)?a(y,c.innerWidth):(y=d.width)&&(D=h.clientWidth)?a(y,D):false}};b.layout.onReady.push(b.layout.browserZoom._init)})(jQuery);;
-// Underscore.js 1.4.4
+d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r,y,D;return j.msie&&m>8||!j.msie?false:d.deviceXDPI?a(d.deviceXDPI,d.systemXDPI):j.webkit&&(r=f.body.getBoundingClientRect)?a(r.left-r.right,f.body.offsetWidth):j.webkit&&(y=c.outerWidth)?a(y,c.innerWidth):(y=d.width)&&(D=h.clientWidth)?a(y,D):false}};b.layout.onReady.push(b.layout.browserZoom._init)})(jQuery);
+;// Underscore.js 1.4.4
 // ===================
 
 // > http://underscorejs.org
@@ -24869,8 +24883,8 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
   });
 
 }).call(this);
-;
-/*!
+
+;/*!
  * Copyright (c) 2010 Chris O'Hara <cohara87@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -24891,6942 +24905,6955 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);;
-window.require.register("CNeditor/autocomplete", function(exports, require, module) {
-  var AutoComplete;
+ */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);
+;require.register("CNeditor/autocomplete", function(exports, require, module) {
+var AutoComplete;
 
-  require('./bootstrap-datepicker');
+require('./bootstrap-datepicker');
 
-  require('./bootstrap-timepicker');
+require('./bootstrap-timepicker');
 
-  module.exports = AutoComplete = (function() {
-    function AutoComplete(container, editor, hotString) {
-      var auto, reminderTitle,
-        _this = this;
+module.exports = AutoComplete = (function() {
+  function AutoComplete(container, editor, hotString) {
+    var auto, reminderTitle,
+      _this = this;
 
-      this.container = container;
-      this.editor = editor;
-      this.hotString = hotString;
-      this.tTags = [];
-      this.tTagsDiv = document.createElement('DIV');
-      this.tTagsDiv.className = 'SUGG_ttags';
-      this.contacts = [];
-      this.contactsDiv = document.createElement('DIV');
-      this.reminderDiv = document.createElement('DIV');
-      this.htagDiv = document.createElement('DIV');
-      this.reminderDiv.innerHTML = "<div class=\"reminder-title\">Add a reminder</div>\n<div class=\"date\" data-date=\"12-02-2012\" data-date-format=\"dd-mm-yyyy\">\n    <div class=\"reminder-input\">\n        <input class=\"datepicker-input\" size=\"16\" type=\"text\" value=\"12-02-2012\"/>\n        <input id=\"timepicker\" data-template=\"modal\" data-minute-step=\"1\" data-modal-backdrop=\"true\" type=\"text\"/>\n    </div>\n</div>";
-      this.datePick = $(this.reminderDiv.lastChild).datepicker();
-      this.datePick.show();
-      this.datePick.on('changeDate', function(e) {
-        var _ref;
+    this.container = container;
+    this.editor = editor;
+    this.hotString = hotString;
+    this.tTags = [];
+    this.tTagsDiv = document.createElement('DIV');
+    this.tTagsDiv.className = 'SUGG_ttags';
+    this.contacts = [];
+    this.contactsDiv = document.createElement('DIV');
+    this.reminderDiv = document.createElement('DIV');
+    this.htagDiv = document.createElement('DIV');
+    this.reminderDiv.innerHTML = "<div class=\"reminder-title\">Add a reminder</div>\n<div class=\"date\" data-date=\"12-02-2012\" data-date-format=\"dd-mm-yyyy\">\n    <div class=\"reminder-input\">\n        <input class=\"datepicker-input\" size=\"16\" type=\"text\" value=\"12-02-2012\"/>\n        <input id=\"timepicker\" data-template=\"modal\" data-minute-step=\"1\" data-modal-backdrop=\"true\" type=\"text\"/>\n    </div>\n</div>";
+    this.datePick = $(this.reminderDiv.lastChild).datepicker();
+    this.datePick.show();
+    this.datePick.on('changeDate', function(e) {
+      var _ref;
 
-        if ((_ref = _this._currentDate) == null) {
-          _this._currentDate = new Date();
-        }
-        _this._currentDate.setDate(e.date.getDate());
-        _this._currentDate.setMonth(e.date.getMonth());
-        return _this._currentDate.setFullYear(e.date.getFullYear());
-      });
-      this.timePick = $(this.reminderDiv.childNodes[2].firstElementChild.lastElementChild);
-      this.timePick.timepicker({
-        minuteStep: 1,
-        template: 'modal',
-        showSeconds: true,
-        showMeridian: false
-      });
-      this.timePick.timepicker().on('changeTime.timepicker', function(e) {
-        var _ref;
-
-        if ((_ref = this._currentDate) == null) {
-          this._currentDate = new Date();
-        }
-        this._currentDate.setHours(e.time.hours);
-        this._currentDate.setMinutes(e.time.minutes);
-        return this._currentDate.setSeconds(e.time.seconds);
-      });
-      reminderTitle = this.reminderDiv.querySelector('.reminder-title');
-      reminderTitle.addEventListener('click', function() {
-        return _this.hotString.validate();
-      });
-      this.regexStore = {};
-      this.isVisible = false;
-      auto = document.createElement('div');
-      auto.id = 'CNE_autocomplete';
-      auto.className = 'CNE_autocomplete';
-      auto.setAttribute('contentEditable', 'false');
-      auto.addEventListener('keypress', function(e) {
-        if (e.keyCode === 13) {
-          _this._validateUrlPopover();
-          e.stopPropagation();
-        } else if (e.keyCode === 27) {
-          _this._cancelUrlPopover(false);
-        }
-        return false;
-      });
-      auto.appendChild(this.tTagsDiv);
-      this.el = auto;
-      this._currentMode = 'contact';
-      auto.appendChild(this.contactsDiv);
-      this.setItems('tTags', [
-        {
-          text: 'contact',
-          type: 'ttag',
-          value: 'contact',
-          mention: ' (@)'
-        }, {
-          text: 'todo',
-          type: 'ttag',
-          value: 'todo'
-        }, {
-          text: 'reminder',
-          type: 'ttag',
-          value: 'reminder',
-          mention: ' (@@)'
-        }
-      ]);
-      this.setItems('contact', []);
-      return this;
-    }
-
-    /**
-     * Set items for a type of suggestions
-     * @param {String} type  'tTags', 'contact', 'htag'
-     * @param {Object} items Object {text, type, [mention]}
-    */
-
-
-    AutoComplete.prototype.setItems = function(type, items) {
-      var it, line, lines, _i, _len;
-
-      switch (type) {
-        case 'tTags':
-          this.tTags = items;
-          lines = this.tTagsDiv;
-          break;
-        case 'contact':
-          this.contacts = items;
-          lines = this.contactsDiv;
-          break;
-        case 'htag':
-          this.htags = items;
-          lines = this.htagDiv;
+      if ((_ref = _this._currentDate) == null) {
+        _this._currentDate = new Date();
       }
-      while (lines.firstChild) {
-        lines.removeChild(lines.firstChild);
+      _this._currentDate.setDate(e.date.getDate());
+      _this._currentDate.setMonth(e.date.getMonth());
+      return _this._currentDate.setFullYear(e.date.getFullYear());
+    });
+    this.timePick = $(this.reminderDiv.childNodes[2].firstElementChild.lastElementChild);
+    this.timePick.timepicker({
+      minuteStep: 1,
+      template: 'modal',
+      showSeconds: true,
+      showMeridian: false
+    });
+    this.timePick.timepicker().on('changeTime.timepicker', function(e) {
+      var _ref;
+
+      if ((_ref = this._currentDate) == null) {
+        this._currentDate = new Date();
       }
-      for (_i = 0, _len = items.length; _i < _len; _i++) {
-        it = items[_i];
-        line = this._createLine(it);
-        if (line) {
-          lines.appendChild(line);
-        }
-      }
-      return true;
-    };
-
-    /**
-     * Insert a suggestion line in the list of possible suggestions
-     * @param  {Object} item The item which can be suggested.
-     * @return {Object}      A ref to the created line.
-    */
-
-
-    AutoComplete.prototype._createLine = function(item) {
-      var c, line, span, t, type, _i, _len, _ref;
-
-      if (!item.text) {
-        return null;
-      }
-      line = document.createElement('LI');
-      type = item.type;
-      switch (type) {
-        case 'ttag':
-          line.className = 'SUGG_line_ttag';
-          break;
-        case 'contact':
-          line.className = 'SUGG_line_contact';
-          break;
-        case 'htag':
-          line.className = 'SUGG_line_htag';
-      }
-      t = ((_ref = item.text) != null ? _ref.split('') : void 0) || [];
-      for (_i = 0, _len = t.length; _i < _len; _i++) {
-        c = t[_i];
-        span = document.createElement('SPAN');
-        span.textContent = c;
-        line.appendChild(span);
-      }
-      if (item.mention) {
-        span = document.createElement('SPAN');
-        span.textContent = item.mention;
-        span.className = 'SUGG_mention';
-        line.appendChild(span);
-      }
-      line.item = item;
-      item.line = line;
-      return line;
-    };
-
-    /**
-     * Show the suggestion list
-     * @param  {Object} seg The segment of the editor to be positionned next to.
-     * @param  {String} typedTxt   The string typed by the user (hotstring)
-     * @param  {[type]} edLineDiv  The editor line div where the user is typing
-    */
-
-
-    AutoComplete.prototype.show = function(seg, typedTxt) {
-      var edLineDiv;
-
-      edLineDiv = seg.parentElement;
-      this.isVisible = true;
-      this.update(typedTxt);
-      this._position(seg);
-      return this.container.appendChild(this.el);
-    };
-
-    AutoComplete.prototype.setAllowedModes = function(modes) {
-      var m, ttag, _i, _j, _len, _len1, _ref;
-
-      this._modes = modes;
-      _ref = this.tTags;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        ttag = _ref[_i];
-        ttag.isInMode = false;
-        for (_j = 0, _len1 = modes.length; _j < _len1; _j++) {
-          m = modes[_j];
-          if (ttag.value === m) {
-            ttag.isInMode = true;
-            break;
-          }
-        }
-      }
-      return true;
-    };
-
-    /**
-     * set the autocomplete popover to a mode : contact, htag, reminder.
-     * @param {String} mode 'contact', 'htag', 'reminder'.
-    */
-
-
-    AutoComplete.prototype.setMode = function(mode) {
-      var now;
-
-      this._unSelectLine();
-      switch (mode) {
-        case 'ttag':
-          this._currentMode = 'ttag';
-          if (!this.tTagsDiv.parentNode) {
-            this.el.appendChild(this.tTagsDiv);
-          }
-          if (this.htagDiv.parentNode) {
-            this.el.removeChild(this.htagDiv);
-          }
-          if (this.contactsDiv.parentNode) {
-            this.el.removeChild(this.contactsDiv);
-          }
-          if (this.reminderDiv.parentNode) {
-            return this.el.removeChild(this.reminderDiv);
-          }
-          break;
-        case 'contact':
-          this._currentMode = 'contact';
-          if (!this.tTagsDiv.parentNode) {
-            this.el.appendChild(this.tTagsDiv);
-          }
-          if (this.htagDiv.parentNode) {
-            this.el.removeChild(this.htagDiv);
-          }
-          if (!this.contactsDiv.parentNode) {
-            this.el.appendChild(this.contactsDiv);
-          }
-          if (this.reminderDiv.parentNode) {
-            return this.el.removeChild(this.reminderDiv);
-          }
-          break;
-        case 'htag':
-          this._currentMode = 'htag';
-          if (this.tTagsDiv.parentNode) {
-            this.el.removeChild(this.tTagsDiv);
-          }
-          if (!this.htagDiv.parentNode) {
-            this.el.appendChild(this.htagDiv);
-          }
-          if (this.contactsDiv.parentNode) {
-            this.el.removeChild(this.contactsDiv);
-          }
-          if (this.reminderDiv.parentNode) {
-            return this.el.removeChild(this.reminderDiv);
-          }
-          break;
-        case 'reminder':
-          now = new Date();
-          this._currentDate = now;
-          this._initialDate = new Date();
-          this.datePick.datepicker('setValue', now);
-          this.timePick.timepicker('setTime', now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds());
-          this._currentMode = 'reminder';
-          if (this.tTagsDiv.parentNode) {
-            this.el.removeChild(this.tTagsDiv);
-          }
-          if (this.htagDiv.parentNode) {
-            this.el.removeChild(this.htagDiv);
-          }
-          if (this.contactsDiv.parentNode) {
-            this.el.removeChild(this.contactsDiv);
-          }
-          if (!this.reminderDiv.parentNode) {
-            return this.el.appendChild(this.reminderDiv);
-          }
-      }
-    };
-
-    AutoComplete.prototype.update = function(typedTxt) {
-      var it, items, nbrOfSuggestions, newdate, time, ttag, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
-
-      if (!this.isVisible) {
-        return;
-      }
-      nbrOfSuggestions = 0;
-      switch (this._currentMode) {
-        case 'ttag':
-          _ref = this.tTags;
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            ttag = _ref[_i];
-            if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
-              nbrOfSuggestions += 1;
-              ttag.line.style.display = 'block';
-            } else {
-              ttag.line.style.display = 'none';
-            }
-          }
-          items = [];
-          break;
-        case 'contact':
-          _ref1 = this.tTags;
-          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-            ttag = _ref1[_j];
-            if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
-              nbrOfSuggestions += 1;
-              ttag.line.style.display = 'block';
-            } else {
-              ttag.line.style.display = 'none';
-            }
-          }
-          items = this.contacts;
-          break;
-        case 'htag':
-          items = this.htags;
-          break;
-        case 'reminder':
-          newdate = Date.future(typedTxt);
-          if (newdate.isValid()) {
-            this._currentDate = newdate;
-            this.datePick.datepicker('setValue', this._currentDate);
-            time = this._currentDate.toTimeString().substring(0, 8);
-            this.timePick.timepicker('setTime', time);
-          }
-          return;
-      }
-      for (_k = 0, _len2 = items.length; _k < _len2; _k++) {
-        it = items[_k];
-        if (this._shouldDisp(it, typedTxt)) {
-          nbrOfSuggestions += 1;
-          it.line.style.display = 'block';
-        } else {
-          it.line.style.display = 'none';
-        }
-      }
-      this._sortItems();
-      this.nbrOfSuggestions = nbrOfSuggestions;
-      return true;
-    };
-
-    AutoComplete.prototype._position = function(span) {
-      this.el.style.left = span.offsetLeft + 'px';
-      this.el.style.top = span.offsetTop + 17 + 'px';
-      span.parentElement.normalize();
-      return true;
-    };
-
-    AutoComplete.prototype._sortItems = function() {};
-
-    AutoComplete.prototype._addLine = function(item) {
-      var line;
-
-      line = document.createElement('LI');
-      this._updateLine(line, item);
-      this.el.appendChild(line);
-      return line;
-    };
-
-    AutoComplete.prototype._updateLine = function(line, item, typedTxt) {
-      var c, span, t, type, _i, _len;
-
-      console.info('_updateLine');
-      type = item.type;
-      switch (type) {
-        case 'tag':
-          line.className = 'SUGG_line_tag';
-          break;
-        case 'contact':
-          line.className = 'SUGG_line_contact';
-      }
-      if (line.childNodes.length !== 0) {
-        line.innerHTML = '';
-      }
-      t = item.text.split('');
-      for (_i = 0, _len = t.length; _i < _len; _i++) {
-        c = t[_i];
-        span = document.createElement('SPAN');
-        span.textContent = c;
-        line.appendChild(span);
-      }
-      if (item.mention) {
-        span = document.createElement('SPAN');
-        span.textContent = item.mention;
-        span.className = 'mention';
-        line.appendChild(span);
-      }
-      return line.item = item;
-    };
-
-    AutoComplete.prototype._selectLine = function() {
-      if (this._selectedLine) {
-        return this._selectedLine.classList.add('SUGG_selected');
-      }
-    };
-
-    AutoComplete.prototype._unSelectLine = function() {
-      var line;
-
-      line = this._selectedLine;
-      if (line) {
-        line.classList.remove('SUGG_selected');
-        this._selectedLine = null;
-      }
-      return line;
-    };
-
-    AutoComplete.prototype._removeLine = function(line) {
-      return this.el.removeChild(line);
-    };
-
-    /**
-     * Hide auto complete and returns the current selected item, null if none.
-     * @return {[type]} [description]
-    */
-
-
-    AutoComplete.prototype.hide = function() {
-      var item;
-
-      if (!this.isVisible) {
-        return false;
-      }
-      this.container.removeChild(this.el);
-      this.isVisible = false;
-      item = this.getSelectedItem();
-      return item;
-    };
-
-    AutoComplete.prototype.getSelectedItem = function() {
-      var date, item;
-
-      switch (this._currentMode) {
-        case 'ttag':
-        case 'contact':
-          if (this._selectedLine) {
-            item = this._selectedLine.item;
-            this._unSelectLine();
-          } else {
-            item = null;
-            this._selectedLine = null;
-          }
-          break;
-        case 'htag':
-          if (this._selectedLine && this._selectedLine.item.type === 'htag') {
-            item = this._selectedLine.item;
-            this._unSelectLine();
-          } else {
-            item = null;
-            this._selectedLine = null;
-          }
-          break;
-        case 'reminder':
-          date = this._currentDate;
-          item = {
-            text: date,
-            type: 'reminder',
-            value: this._currentDate
-          };
-      }
-      return item;
-    };
-
-    AutoComplete.prototype._shouldDisp = function(item, typedTxt) {
-      var c, i, l, reg, regText, s, spans, typedCar;
-
-      if (this.regexStore[typedTxt]) {
-        reg = this.regexStore[typedTxt];
-      } else {
-        regText = typedTxt.replace(/\W/g, '').split('').join('[\\w ]*');
-        reg = new RegExp(regText, 'i');
-        this.regexStore[typedTxt] = reg;
-      }
-      if (item.text.match(reg)) {
-        typedCar = typedTxt.toLowerCase().split('');
-        c = typedCar.shift();
-        spans = item.line.childNodes;
-        i = 0;
-        l = spans.length;
-        if (item.line.lastChild.className === 'SUGG_mention') {
-          l -= 1;
-        }
-        while (i < l) {
-          s = spans[i];
-          if (s.textContent.toLowerCase() === c) {
-            s.className = 'b';
-            c = typedCar.shift();
-            if (c) {
-              i += 1;
-            } else {
-              i += 1;
-            }
-          } else {
-            s.className = '';
-            i += 1;
-          }
-        }
-        return true;
-      } else {
-        return false;
-      }
-    };
-
-    /**
-     * select previous suggestion in auto complete. Behaviour depends on the
-     * mode (reminder is different from contact for instance)
-    */
-
-
-    AutoComplete.prototype.up = function() {
-      var line, prev;
-
-      if (this.nbrOfSuggestions === 0) {
-        return;
-      }
-      if (!this._selectedLine) {
-        this._selectedLine = this.el.lastChild.lastChild;
-      } else {
-        line = this._unSelectLine();
-        prev = line.previousSibling;
-        if (prev) {
-          this._selectedLine = prev;
-        } else {
-          if (this._currentMode === 'reminder') {
-            this._selectedLine = line;
-            this._selectLine();
-            return true;
-          }
-          if (line.item.type === 'ttag') {
-            this._selectedLine = this.el.lastChild.lastChild;
-          } else {
-            this._selectedLine = this.el.firstChild.lastChild;
-          }
-        }
-      }
-      if (this._selectedLine.style.display === 'none') {
-        this.up();
-      } else {
-        this._selectLine();
-      }
-      return true;
-    };
-
-    /**
-     * select next suggestion in auto complete. Behaviour depends on the mode
-     * (reminder is different from contact for instance)
-    */
-
-
-    AutoComplete.prototype.down = function() {
-      var line, next;
-
-      if (this.nbrOfSuggestions === 0) {
-        return;
-      }
-      if (!this._selectedLine) {
-        this._selectedLine = this.el.firstChild.firstChild;
-      } else {
-        line = this._unSelectLine();
-        next = line.nextSibling;
-        if (next) {
-          if (this._currentMode === 'reminder') {
-            this._selectedLine = line;
-            this._selectLine();
-            return true;
-          }
-          this._selectedLine = next;
-        } else {
-          if (line.item.type === 'ttag') {
-            this._selectedLine = this.el.lastChild.firstChild;
-          } else {
-            this._selectedLine = this.el.firstChild.firstChild;
-          }
-        }
-      }
-      if (this._selectedLine.style.display === 'none') {
-        return this.down();
-      } else {
-        return this._selectLine();
-      }
-    };
-
-    AutoComplete.prototype.val = function() {
-      return this._selectedLine.item;
-    };
-
-    AutoComplete.prototype.isInTTags = function(text) {
-      var tag, _i, _len, _ref;
-
-      _ref = this.tTags;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        tag = _ref[_i];
-        if (text === tag.text) {
-          return tag;
-        }
+      this._currentDate.setHours(e.time.hours);
+      this._currentDate.setMinutes(e.time.minutes);
+      return this._currentDate.setSeconds(e.time.seconds);
+    });
+    reminderTitle = this.reminderDiv.querySelector('.reminder-title');
+    reminderTitle.addEventListener('click', function() {
+      return _this.hotString.validate();
+    });
+    this.regexStore = {};
+    this.isVisible = false;
+    auto = document.createElement('div');
+    auto.id = 'CNE_autocomplete';
+    auto.className = 'CNE_autocomplete';
+    auto.setAttribute('contentEditable', 'false');
+    auto.addEventListener('keypress', function(e) {
+      if (e.keyCode === 13) {
+        _this._validateUrlPopover();
+        e.stopPropagation();
+      } else if (e.keyCode === 27) {
+        _this._cancelUrlPopover(false);
       }
       return false;
-    };
+    });
+    auto.appendChild(this.tTagsDiv);
+    this.el = auto;
+    this._currentMode = 'contact';
+    auto.appendChild(this.contactsDiv);
+    this.setItems('tTags', [
+      {
+        text: 'contact',
+        type: 'ttag',
+        value: 'contact',
+        mention: ' (@)'
+      }, {
+        text: 'todo',
+        type: 'ttag',
+        value: 'todo'
+      }, {
+        text: 'reminder',
+        type: 'ttag',
+        value: 'reminder',
+        mention: ' (@@)'
+      }
+    ]);
+    this.setItems('contact', []);
+    return this;
+  }
 
-    return AutoComplete;
+  /**
+   * Set items for a type of suggestions
+   * @param {String} type  'tTags', 'contact', 'htag'
+   * @param {Object} items Object {text, type, [mention]}
+  */
 
-  })();
-  
+
+  AutoComplete.prototype.setItems = function(type, items) {
+    var it, line, lines, _i, _len;
+
+    switch (type) {
+      case 'tTags':
+        this.tTags = items;
+        lines = this.tTagsDiv;
+        break;
+      case 'contact':
+        this.contacts = items;
+        lines = this.contactsDiv;
+        break;
+      case 'htag':
+        this.htags = items;
+        lines = this.htagDiv;
+    }
+    while (lines.firstChild) {
+      lines.removeChild(lines.firstChild);
+    }
+    for (_i = 0, _len = items.length; _i < _len; _i++) {
+      it = items[_i];
+      line = this._createLine(it);
+      if (line) {
+        lines.appendChild(line);
+      }
+    }
+    return true;
+  };
+
+  /**
+   * Insert a suggestion line in the list of possible suggestions
+   * @param  {Object} item The item which can be suggested.
+   * @return {Object}      A ref to the created line.
+  */
+
+
+  AutoComplete.prototype._createLine = function(item) {
+    var c, line, span, t, type, _i, _len, _ref;
+
+    if (!item.text) {
+      return null;
+    }
+    line = document.createElement('LI');
+    type = item.type;
+    switch (type) {
+      case 'ttag':
+        line.className = 'SUGG_line_ttag';
+        break;
+      case 'contact':
+        line.className = 'SUGG_line_contact';
+        break;
+      case 'htag':
+        line.className = 'SUGG_line_htag';
+    }
+    t = ((_ref = item.text) != null ? _ref.split('') : void 0) || [];
+    for (_i = 0, _len = t.length; _i < _len; _i++) {
+      c = t[_i];
+      span = document.createElement('SPAN');
+      span.textContent = c;
+      line.appendChild(span);
+    }
+    if (item.mention) {
+      span = document.createElement('SPAN');
+      span.textContent = item.mention;
+      span.className = 'SUGG_mention';
+      line.appendChild(span);
+    }
+    line.item = item;
+    item.line = line;
+    return line;
+  };
+
+  /**
+   * Show the suggestion list
+   * @param  {Object} seg The segment of the editor to be positionned next to.
+   * @param  {String} typedTxt   The string typed by the user (hotstring)
+   * @param  {[type]} edLineDiv  The editor line div where the user is typing
+  */
+
+
+  AutoComplete.prototype.show = function(seg, typedTxt) {
+    var edLineDiv;
+
+    edLineDiv = seg.parentElement;
+    this.isVisible = true;
+    this.update(typedTxt);
+    this._position(seg);
+    return this.container.appendChild(this.el);
+  };
+
+  AutoComplete.prototype.setAllowedModes = function(modes) {
+    var m, ttag, _i, _j, _len, _len1, _ref;
+
+    this._modes = modes;
+    _ref = this.tTags;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      ttag = _ref[_i];
+      ttag.isInMode = false;
+      for (_j = 0, _len1 = modes.length; _j < _len1; _j++) {
+        m = modes[_j];
+        if (ttag.value === m) {
+          ttag.isInMode = true;
+          break;
+        }
+      }
+    }
+    return true;
+  };
+
+  /**
+   * set the autocomplete popover to a mode : contact, htag, reminder.
+   * @param {String} mode 'contact', 'htag', 'reminder'.
+  */
+
+
+  AutoComplete.prototype.setMode = function(mode) {
+    var now;
+
+    this._unSelectLine();
+    switch (mode) {
+      case 'ttag':
+        this._currentMode = 'ttag';
+        if (!this.tTagsDiv.parentNode) {
+          this.el.appendChild(this.tTagsDiv);
+        }
+        if (this.htagDiv.parentNode) {
+          this.el.removeChild(this.htagDiv);
+        }
+        if (this.contactsDiv.parentNode) {
+          this.el.removeChild(this.contactsDiv);
+        }
+        if (this.reminderDiv.parentNode) {
+          return this.el.removeChild(this.reminderDiv);
+        }
+        break;
+      case 'contact':
+        this._currentMode = 'contact';
+        if (!this.tTagsDiv.parentNode) {
+          this.el.appendChild(this.tTagsDiv);
+        }
+        if (this.htagDiv.parentNode) {
+          this.el.removeChild(this.htagDiv);
+        }
+        if (!this.contactsDiv.parentNode) {
+          this.el.appendChild(this.contactsDiv);
+        }
+        if (this.reminderDiv.parentNode) {
+          return this.el.removeChild(this.reminderDiv);
+        }
+        break;
+      case 'htag':
+        this._currentMode = 'htag';
+        if (this.tTagsDiv.parentNode) {
+          this.el.removeChild(this.tTagsDiv);
+        }
+        if (!this.htagDiv.parentNode) {
+          this.el.appendChild(this.htagDiv);
+        }
+        if (this.contactsDiv.parentNode) {
+          this.el.removeChild(this.contactsDiv);
+        }
+        if (this.reminderDiv.parentNode) {
+          return this.el.removeChild(this.reminderDiv);
+        }
+        break;
+      case 'reminder':
+        now = new Date();
+        this._currentDate = now;
+        this._initialDate = new Date();
+        this.datePick.datepicker('setValue', now);
+        this.timePick.timepicker('setTime', now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds());
+        this._currentMode = 'reminder';
+        if (this.tTagsDiv.parentNode) {
+          this.el.removeChild(this.tTagsDiv);
+        }
+        if (this.htagDiv.parentNode) {
+          this.el.removeChild(this.htagDiv);
+        }
+        if (this.contactsDiv.parentNode) {
+          this.el.removeChild(this.contactsDiv);
+        }
+        if (!this.reminderDiv.parentNode) {
+          return this.el.appendChild(this.reminderDiv);
+        }
+    }
+  };
+
+  AutoComplete.prototype.update = function(typedTxt) {
+    var it, items, nbrOfSuggestions, newdate, time, ttag, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
+
+    if (!this.isVisible) {
+      return;
+    }
+    nbrOfSuggestions = 0;
+    switch (this._currentMode) {
+      case 'ttag':
+        _ref = this.tTags;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          ttag = _ref[_i];
+          if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
+            nbrOfSuggestions += 1;
+            ttag.line.style.display = 'block';
+          } else {
+            ttag.line.style.display = 'none';
+          }
+        }
+        items = [];
+        break;
+      case 'contact':
+        _ref1 = this.tTags;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          ttag = _ref1[_j];
+          if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
+            nbrOfSuggestions += 1;
+            ttag.line.style.display = 'block';
+          } else {
+            ttag.line.style.display = 'none';
+          }
+        }
+        items = this.contacts;
+        break;
+      case 'htag':
+        items = this.htags;
+        break;
+      case 'reminder':
+        newdate = Date.future(typedTxt);
+        if (newdate.isValid()) {
+          this._currentDate = newdate;
+          this.datePick.datepicker('setValue', this._currentDate);
+          time = this._currentDate.toTimeString().substring(0, 8);
+          this.timePick.timepicker('setTime', time);
+        }
+        return;
+    }
+    for (_k = 0, _len2 = items.length; _k < _len2; _k++) {
+      it = items[_k];
+      if (this._shouldDisp(it, typedTxt)) {
+        nbrOfSuggestions += 1;
+        it.line.style.display = 'block';
+      } else {
+        it.line.style.display = 'none';
+      }
+    }
+    this._sortItems();
+    this.nbrOfSuggestions = nbrOfSuggestions;
+    return true;
+  };
+
+  AutoComplete.prototype._position = function(span) {
+    this.el.style.left = span.offsetLeft + 'px';
+    this.el.style.top = span.offsetTop + 17 + 'px';
+    span.parentElement.normalize();
+    return true;
+  };
+
+  AutoComplete.prototype._sortItems = function() {};
+
+  AutoComplete.prototype._addLine = function(item) {
+    var line;
+
+    line = document.createElement('LI');
+    this._updateLine(line, item);
+    this.el.appendChild(line);
+    return line;
+  };
+
+  AutoComplete.prototype._updateLine = function(line, item, typedTxt) {
+    var c, span, t, type, _i, _len;
+
+    console.info('_updateLine');
+    type = item.type;
+    switch (type) {
+      case 'tag':
+        line.className = 'SUGG_line_tag';
+        break;
+      case 'contact':
+        line.className = 'SUGG_line_contact';
+    }
+    if (line.childNodes.length !== 0) {
+      line.innerHTML = '';
+    }
+    t = item.text.split('');
+    for (_i = 0, _len = t.length; _i < _len; _i++) {
+      c = t[_i];
+      span = document.createElement('SPAN');
+      span.textContent = c;
+      line.appendChild(span);
+    }
+    if (item.mention) {
+      span = document.createElement('SPAN');
+      span.textContent = item.mention;
+      span.className = 'mention';
+      line.appendChild(span);
+    }
+    return line.item = item;
+  };
+
+  AutoComplete.prototype._selectLine = function() {
+    if (this._selectedLine) {
+      return this._selectedLine.classList.add('SUGG_selected');
+    }
+  };
+
+  AutoComplete.prototype._unSelectLine = function() {
+    var line;
+
+    line = this._selectedLine;
+    if (line) {
+      line.classList.remove('SUGG_selected');
+      this._selectedLine = null;
+    }
+    return line;
+  };
+
+  AutoComplete.prototype._removeLine = function(line) {
+    return this.el.removeChild(line);
+  };
+
+  /**
+   * Hide auto complete and returns the current selected item, null if none.
+   * @return {[type]} [description]
+  */
+
+
+  AutoComplete.prototype.hide = function() {
+    var item;
+
+    if (!this.isVisible) {
+      return false;
+    }
+    this.container.removeChild(this.el);
+    this.isVisible = false;
+    item = this.getSelectedItem();
+    return item;
+  };
+
+  AutoComplete.prototype.getSelectedItem = function() {
+    var date, item;
+
+    switch (this._currentMode) {
+      case 'ttag':
+      case 'contact':
+        if (this._selectedLine) {
+          item = this._selectedLine.item;
+          this._unSelectLine();
+        } else {
+          item = null;
+          this._selectedLine = null;
+        }
+        break;
+      case 'htag':
+        if (this._selectedLine && this._selectedLine.item.type === 'htag') {
+          item = this._selectedLine.item;
+          this._unSelectLine();
+        } else {
+          item = null;
+          this._selectedLine = null;
+        }
+        break;
+      case 'reminder':
+        date = this._currentDate;
+        item = {
+          text: date,
+          type: 'reminder',
+          value: this._currentDate
+        };
+    }
+    return item;
+  };
+
+  AutoComplete.prototype._shouldDisp = function(item, typedTxt) {
+    var c, i, l, reg, regText, s, spans, typedCar;
+
+    if (this.regexStore[typedTxt]) {
+      reg = this.regexStore[typedTxt];
+    } else {
+      regText = typedTxt.replace(/\W/g, '').split('').join('[\\w ]*');
+      reg = new RegExp(regText, 'i');
+      this.regexStore[typedTxt] = reg;
+    }
+    if (item.text.match(reg)) {
+      typedCar = typedTxt.toLowerCase().split('');
+      c = typedCar.shift();
+      spans = item.line.childNodes;
+      i = 0;
+      l = spans.length;
+      if (item.line.lastChild.className === 'SUGG_mention') {
+        l -= 1;
+      }
+      while (i < l) {
+        s = spans[i];
+        if (s.textContent.toLowerCase() === c) {
+          s.className = 'b';
+          c = typedCar.shift();
+          if (c) {
+            i += 1;
+          } else {
+            i += 1;
+          }
+        } else {
+          s.className = '';
+          i += 1;
+        }
+      }
+      return true;
+    } else {
+      return false;
+    }
+  };
+
+  /**
+   * select previous suggestion in auto complete. Behaviour depends on the
+   * mode (reminder is different from contact for instance)
+  */
+
+
+  AutoComplete.prototype.up = function() {
+    var line, prev;
+
+    if (this.nbrOfSuggestions === 0) {
+      return;
+    }
+    if (!this._selectedLine) {
+      this._selectedLine = this.el.lastChild.lastChild;
+    } else {
+      line = this._unSelectLine();
+      prev = line.previousSibling;
+      if (prev) {
+        this._selectedLine = prev;
+      } else {
+        if (this._currentMode === 'reminder') {
+          this._selectedLine = line;
+          this._selectLine();
+          return true;
+        }
+        if (line.item.type === 'ttag') {
+          this._selectedLine = this.el.lastChild.lastChild;
+        } else {
+          this._selectedLine = this.el.firstChild.lastChild;
+        }
+      }
+    }
+    if (this._selectedLine.style.display === 'none') {
+      this.up();
+    } else {
+      this._selectLine();
+    }
+    return true;
+  };
+
+  /**
+   * select next suggestion in auto complete. Behaviour depends on the mode
+   * (reminder is different from contact for instance)
+  */
+
+
+  AutoComplete.prototype.down = function() {
+    var line, next;
+
+    if (this.nbrOfSuggestions === 0) {
+      return;
+    }
+    if (!this._selectedLine) {
+      this._selectedLine = this.el.firstChild.firstChild;
+    } else {
+      line = this._unSelectLine();
+      next = line.nextSibling;
+      if (next) {
+        if (this._currentMode === 'reminder') {
+          this._selectedLine = line;
+          this._selectLine();
+          return true;
+        }
+        this._selectedLine = next;
+      } else {
+        if (line.item.type === 'ttag') {
+          this._selectedLine = this.el.lastChild.firstChild;
+        } else {
+          this._selectedLine = this.el.firstChild.firstChild;
+        }
+      }
+    }
+    if (this._selectedLine.style.display === 'none') {
+      return this.down();
+    } else {
+      return this._selectLine();
+    }
+  };
+
+  AutoComplete.prototype.val = function() {
+    return this._selectedLine.item;
+  };
+
+  AutoComplete.prototype.isInTTags = function(text) {
+    var tag, _i, _len, _ref;
+
+    _ref = this.tTags;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      tag = _ref[_i];
+      if (text === tag.text) {
+        return tag;
+      }
+    }
+    return false;
+  };
+
+  return AutoComplete;
+
+})();
+
 });
-window.require.register("CNeditor/bootstrap-datepicker", function(exports, require, module) {
-  /* =========================================================
-   * bootstrap-datepicker.js 
-   * http://www.eyecon.ro/bootstrap-datepicker
-   * =========================================================
-   * Copyright 2012 Stefan Petre
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License");
-   * you may not use this file except in compliance with the License.
-   * You may obtain a copy of the License at
-   *
-   * http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS,
-   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   * See the License for the specific language governing permissions and
-   * limitations under the License.
-   * ========================================================= */
-   
-  !function( $ ) {
-  	
-  	// Picker object
-  	
-  	var Datepicker = function(element, options){
-  		this.element = $(element);
-  		this.format = DPGlobal.parseFormat(options.format||this.element.data('date-format')||'mm/dd/yyyy');
-  		this.picker = $(DPGlobal.template)
-  							// .appendTo('body')
-  							.appendTo(element.parentElement)
-  							.on({
-  								click: $.proxy(this.click, this)//,
-  								//mousedown: $.proxy(this.mousedown, this)
-  							});
-  		this.isInput = this.element.is('input');
-  		this.component = this.element.is('.date') ? this.element.find('.add-on') : false;
-  		
-  		if (this.isInput) {
-  			this.element.on({
-  				focus: $.proxy(this.show, this),
-  				//blur: $.proxy(this.hide, this),
-  				keyup: $.proxy(this.update, this)
-  			});
-  		} else {
-  			if (this.component){
-  				this.component.on('click', $.proxy(this.show, this));
-  			} else {
-  				this.element.on('click', $.proxy(this.show, this));
-  			}
-  		}
-  	
-  		this.minViewMode = options.minViewMode||this.element.data('date-minviewmode')||0;
-  		if (typeof this.minViewMode === 'string') {
-  			switch (this.minViewMode) {
-  				case 'months':
-  					this.minViewMode = 1;
-  					break;
-  				case 'years':
-  					this.minViewMode = 2;
-  					break;
-  				default:
-  					this.minViewMode = 0;
-  					break;
-  			}
-  		}
-  		this.viewMode = options.viewMode||this.element.data('date-viewmode')||0;
-  		if (typeof this.viewMode === 'string') {
-  			switch (this.viewMode) {
-  				case 'months':
-  					this.viewMode = 1;
-  					break;
-  				case 'years':
-  					this.viewMode = 2;
-  					break;
-  				default:
-  					this.viewMode = 0;
-  					break;
-  			}
-  		}
-  		this.startViewMode = this.viewMode;
-  		this.weekStart = options.weekStart||this.element.data('date-weekstart')||0;
-  		this.weekEnd = this.weekStart === 0 ? 6 : this.weekStart - 1;
-  		this.onRender = options.onRender;
-  		this.fillDow();
-  		this.fillMonths();
-  		this.update();
-  		this.showMode();
-  	};
-  	
-  	Datepicker.prototype = {
-  		constructor: Datepicker,
-  		
-  		show: function(e) {
-  			this.picker.show();
-  			this.height = this.component ? this.component.outerHeight() : this.element.outerHeight();
-  			this.place();
-  			$(window).on('resize', $.proxy(this.place, this));
-  			if (e ) {
-  				e.stopPropagation();
-  				e.preventDefault();
-  			}
-  			if (!this.isInput) {
-  			}
-  			var that = this;
-  			$(document).on('mousedown', function(ev){
-  				if ($(ev.target).closest('.datepicker').length == 0) {
-  					that.hide();
-  				}
-  			});
-  			this.element.trigger({
-  				type: 'show',
-  				date: this.date
-  			});
-  		},
-  		
-  		hide: function(){
-  			this.picker.hide();
-  			$(window).off('resize', this.place);
-  			this.viewMode = this.startViewMode;
-  			this.showMode();
-  			if (!this.isInput) {
-  				$(document).off('mousedown', this.hide);
-  			}
-  			//this.set();
-  			this.element.trigger({
-  				type: 'hide',
-  				date: this.date
-  			});
-  		},
-  		
-  		set: function() {
-  			var formated = DPGlobal.formatDate(this.date, this.format);
-  			if (!this.isInput) {
-  				if (this.component){
-  					this.element.find('.datepicker-input').prop('value', formated);
-  				}
-  				this.element.data('date', formated);
-  			} else {
-  				this.element.prop('value', formated);
-  			}
-  		},
-  		
-  		setValue: function(newDate) {
-  			if (typeof newDate === 'string') {
-  				this.date = DPGlobal.parseDate(newDate, this.format);
-  			} else {
-  				this.date = new Date(newDate);
-  			}
-  			this.set();
-  			this.viewDate = new Date(this.date.getFullYear(), this.date.getMonth(), 1, 0, 0, 0, 0);
-  			this.fill();
-  		},
-  		
-  		place: function(){
-  			// var offset = this.component ? this.component.offset() : this.element.offset();
-  			// this.picker.css({
-  			// 	top: offset.top + this.height,
-  			// 	left: offset.left
-  			// });
-  		},
-  		
-  		update: function(newDate){
-  			this.date = DPGlobal.parseDate(
-  				typeof newDate === 'string' ? newDate : (this.isInput ? this.element.prop('value') : this.element.data('date')),
-  				this.format
-  			);
-  			this.viewDate = new Date(this.date.getFullYear(), this.date.getMonth(), 1, 0, 0, 0, 0);
-  			this.fill();
-  		},
-  		
-  		fillDow: function(){
-  			var dowCnt = this.weekStart;
-  			var html = '<tr>';
-  			while (dowCnt < this.weekStart + 7) {
-  				html += '<th class="dow">'+DPGlobal.dates.daysMin[(dowCnt++)%7]+'</th>';
-  			}
-  			html += '</tr>';
-  			this.picker.find('.datepicker-days thead').append(html);
-  		},
-  		
-  		fillMonths: function(){
-  			var html = '';
-  			var i = 0
-  			while (i < 12) {
-  				html += '<span class="month">'+DPGlobal.dates.monthsShort[i++]+'</span>';
-  			}
-  			this.picker.find('.datepicker-months td').append(html);
-  		},
-  		
-  		fill: function() {
-  			var d = new Date(this.viewDate),
-  				year = d.getFullYear(),
-  				month = d.getMonth(),
-  				currentDate = this.date.valueOf();
-  			this.picker.find('.datepicker-days th:eq(1)')
-  						.text(DPGlobal.dates.months[month]+' '+year);
-  			var prevMonth = new Date(year, month-1, 28,0,0,0,0),
-  				day = DPGlobal.getDaysInMonth(prevMonth.getFullYear(), prevMonth.getMonth());
-  			prevMonth.setDate(day);
-  			prevMonth.setDate(day - (prevMonth.getDay() - this.weekStart + 7)%7);
-  			var nextMonth = new Date(prevMonth);
-  			nextMonth.setDate(nextMonth.getDate() + 42);
-  			nextMonth = nextMonth.valueOf();
-  			var html = [];
-  			var clsName,
-  				prevY,
-  				prevM;
-  			while(prevMonth.valueOf() < nextMonth) {
-  				if (prevMonth.getDay() === this.weekStart) {
-  					html.push('<tr>');
-  				}
-  				clsName = this.onRender(prevMonth);
-  				prevY = prevMonth.getFullYear();
-  				prevM = prevMonth.getMonth();
-  				if ((prevM < month &&  prevY === year) ||  prevY < year) {
-  					clsName += ' old';
-  				} else if ((prevM > month && prevY === year) || prevY > year) {
-  					clsName += ' new';
-  				}
-  				if (prevMonth.valueOf() === currentDate) {
-  					clsName += ' active';
-  				}
-  				html.push('<td class="day '+clsName+'">'+prevMonth.getDate() + '</td>');
-  				if (prevMonth.getDay() === this.weekEnd) {
-  					html.push('</tr>');
-  				}
-  				prevMonth.setDate(prevMonth.getDate()+1);
-  			}
-  			this.picker.find('.datepicker-days tbody').empty().append(html.join(''));
-  			var currentYear = this.date.getFullYear();
-  			
-  			var months = this.picker.find('.datepicker-months')
-  						.find('th:eq(1)')
-  							.text(year)
-  							.end()
-  						.find('span').removeClass('active');
-  			if (currentYear === year) {
-  				months.eq(this.date.getMonth()).addClass('active');
-  			}
-  			
-  			html = '';
-  			year = parseInt(year/10, 10) * 10;
-  			var yearCont = this.picker.find('.datepicker-years')
-  								.find('th:eq(1)')
-  									.text(year + '-' + (year + 9))
-  									.end()
-  								.find('td');
-  			year -= 1;
-  			for (var i = -1; i < 11; i++) {
-  				html += '<span class="year'+(i === -1 || i === 10 ? ' old' : '')+(currentYear === year ? ' active' : '')+'">'+year+'</span>';
-  				year += 1;
-  			}
-  			yearCont.html(html);
-  		},
-  		
-  		click: function(e) {
-  			e.stopPropagation();
-  			e.preventDefault();
-  			var target = $(e.target).closest('span, td, th');
-  			if (target.length === 1) {
-  				switch(target[0].nodeName.toLowerCase()) {
-  					case 'th':
-  						switch(target[0].className) {
-  							case 'switch':
-  								this.showMode(1);
-  								break;
-  							case 'prev':
-  							case 'next':
-  								this.viewDate['set'+DPGlobal.modes[this.viewMode].navFnc].call(
-  									this.viewDate,
-  									this.viewDate['get'+DPGlobal.modes[this.viewMode].navFnc].call(this.viewDate) + 
-  									DPGlobal.modes[this.viewMode].navStep * (target[0].className === 'prev' ? -1 : 1)
-  								);
-  								this.fill();
-  								this.set();
-  								break;
-  						}
-  						break;
-  					case 'span':
-  						if (target.is('.month')) {
-  							var month = target.parent().find('span').index(target);
-  							this.viewDate.setMonth(month);
-  						} else {
-  							var year = parseInt(target.text(), 10)||0;
-  							this.viewDate.setFullYear(year);
-  						}
-  						if (this.viewMode !== 0) {
-  							this.date = new Date(this.viewDate);
-  							this.element.trigger({
-  								type: 'changeDate',
-  								date: this.date,
-  								viewMode: DPGlobal.modes[this.viewMode].clsName
-  							});
-  						}
-  						this.showMode(-1);
-  						this.fill();
-  						this.set();
-  						break;
-  					case 'td':
-  						if (target.is('.day') && !target.is('.disabled')){
-  							var day = parseInt(target.text(), 10)||1;
-  							var month = this.viewDate.getMonth();
-  							if (target.is('.old')) {
-  								month -= 1;
-  							} else if (target.is('.new')) {
-  								month += 1;
-  							}
-  							var year = this.viewDate.getFullYear();
-  							this.date = new Date(year, month, day,0,0,0,0);
-  							this.viewDate = new Date(year, month, Math.min(28, day),0,0,0,0);
-  							this.fill();
-  							this.set();
-  							this.element.trigger({
-  								type: 'changeDate',
-  								date: this.date,
-  								viewMode: DPGlobal.modes[this.viewMode].clsName
-  							});
-  						}
-  						break;
-  				}
-  			}
-  		},
-  		
-  		mousedown: function(e){
-  			e.stopPropagation();
-  			e.preventDefault();
-  		},
-  		
-  		showMode: function(dir) {
-  			if (dir) {
-  				this.viewMode = Math.max(this.minViewMode, Math.min(2, this.viewMode + dir));
-  			}
-  			this.picker.find('>div').hide().filter('.datepicker-'+DPGlobal.modes[this.viewMode].clsName).show();
-  		}
-  	};
-  	
-  	$.fn.datepicker = function ( option, val ) {
-  		return this.each(function () {
-  			var $this = $(this),
-  				data = $this.data('datepicker'),
-  				options = typeof option === 'object' && option;
-  			if (!data) {
-  				$this.data('datepicker', (data = new Datepicker(this, $.extend({}, $.fn.datepicker.defaults,options))));
-  			}
-  			if (typeof option === 'string') data[option](val);
-  		});
-  	};
-  
-  	$.fn.datepicker.defaults = {
-  		onRender: function(date) {
-  			return '';
-  		}
-  	};
-  	$.fn.datepicker.Constructor = Datepicker;
-  	
-  	var DPGlobal = {
-  		modes: [
-  			{
-  				clsName: 'days',
-  				navFnc: 'Month',
-  				navStep: 1
-  			},
-  			{
-  				clsName: 'months',
-  				navFnc: 'FullYear',
-  				navStep: 1
-  			},
-  			{
-  				clsName: 'years',
-  				navFnc: 'FullYear',
-  				navStep: 10
-  		}],
-  		dates:{
-  			days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-  			daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  			daysMin: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
-  			months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-  			monthsShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-  		},
-  		isLeapYear: function (year) {
-  			return (((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0))
-  		},
-  		getDaysInMonth: function (year, month) {
-  			return [31, (DPGlobal.isLeapYear(year) ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month]
-  		},
-  		parseFormat: function(format){
-  			var separator = format.match(/[.\/\-\s].*?/),
-  				parts = format.split(/\W+/);
-  			if (!separator || !parts || parts.length === 0){
-  				throw new Error("Invalid date format.");
-  			}
-  			return {separator: separator, parts: parts};
-  		},
-  		parseDate: function(date, format) {
-  			var parts = date.split(format.separator),
-  				date = new Date(),
-  				val;
-  			date.setHours(0);
-  			date.setMinutes(0);
-  			date.setSeconds(0);
-  			date.setMilliseconds(0);
-  			if (parts.length === format.parts.length) {
-  				var year = date.getFullYear(), day = date.getDate(), month = date.getMonth();
-  				for (var i=0, cnt = format.parts.length; i < cnt; i++) {
-  					val = parseInt(parts[i], 10)||1;
-  					switch(format.parts[i]) {
-  						case 'dd':
-  						case 'd':
-  							day = val;
-  							date.setDate(val);
-  							break;
-  						case 'mm':
-  						case 'm':
-  							month = val - 1;
-  							date.setMonth(val - 1);
-  							break;
-  						case 'yy':
-  							year = 2000 + val;
-  							date.setFullYear(2000 + val);
-  							break;
-  						case 'yyyy':
-  							year = val;
-  							date.setFullYear(val);
-  							break;
-  					}
-  				}
-  				date = new Date(year, month, day, 0 ,0 ,0);
-  			}
-  			return date;
-  		},
-  		formatDate: function(date, format){
-  			var val = {
-  				d: date.getDate(),
-  				m: date.getMonth() + 1,
-  				yy: date.getFullYear().toString().substring(2),
-  				yyyy: date.getFullYear()
-  			};
-  			val.dd = (val.d < 10 ? '0' : '') + val.d;
-  			val.mm = (val.m < 10 ? '0' : '') + val.m;
-  			var date = [];
-  			for (var i=0, cnt = format.parts.length; i < cnt; i++) {
-  				date.push(val[format.parts[i]]);
-  			}
-  			return date.join(format.separator);
-  		},
-  		headTemplate: '<thead>'+
-  							'<tr>'+
-  								'<th class="prev">&lsaquo;</th>'+
-  								'<th colspan="5" class="switch"></th>'+
-  								'<th class="next">&rsaquo;</th>'+
-  							'</tr>'+
-  						'</thead>',
-  		contTemplate: '<tbody><tr><td colspan="7"></td></tr></tbody>'
-  	};
-  	// DPGlobal.template = '<div class="datepicker dropdown-menu">'+
-  	DPGlobal.template = '<div class="datepicker">'+
-  							'<div class="datepicker-days">'+
-  								'<table class=" table-condensed">'+
-  									DPGlobal.headTemplate+
-  									'<tbody></tbody>'+
-  								'</table>'+
-  							'</div>'+
-  							'<div class="datepicker-months">'+
-  								'<table class="table-condensed">'+
-  									DPGlobal.headTemplate+
-  									DPGlobal.contTemplate+
-  								'</table>'+
-  							'</div>'+
-  							'<div class="datepicker-years">'+
-  								'<table class="table-condensed">'+
-  									DPGlobal.headTemplate+
-  									DPGlobal.contTemplate+
-  								'</table>'+
-  							'</div>'+
-  						'</div>';
-  
-  }( window.jQuery );
+
+;require.register("CNeditor/bootstrap-datepicker", function(exports, require, module) {
+/* =========================================================
+ * bootstrap-datepicker.js 
+ * http://www.eyecon.ro/bootstrap-datepicker
+ * =========================================================
+ * Copyright 2012 Stefan Petre
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ========================================================= */
+ 
+!function( $ ) {
+	
+	// Picker object
+	
+	var Datepicker = function(element, options){
+		this.element = $(element);
+		this.format = DPGlobal.parseFormat(options.format||this.element.data('date-format')||'mm/dd/yyyy');
+		this.picker = $(DPGlobal.template)
+							// .appendTo('body')
+							.appendTo(element.parentElement)
+							.on({
+								click: $.proxy(this.click, this)//,
+								//mousedown: $.proxy(this.mousedown, this)
+							});
+		this.isInput = this.element.is('input');
+		this.component = this.element.is('.date') ? this.element.find('.add-on') : false;
+		
+		if (this.isInput) {
+			this.element.on({
+				focus: $.proxy(this.show, this),
+				//blur: $.proxy(this.hide, this),
+				keyup: $.proxy(this.update, this)
+			});
+		} else {
+			if (this.component){
+				this.component.on('click', $.proxy(this.show, this));
+			} else {
+				this.element.on('click', $.proxy(this.show, this));
+			}
+		}
+	
+		this.minViewMode = options.minViewMode||this.element.data('date-minviewmode')||0;
+		if (typeof this.minViewMode === 'string') {
+			switch (this.minViewMode) {
+				case 'months':
+					this.minViewMode = 1;
+					break;
+				case 'years':
+					this.minViewMode = 2;
+					break;
+				default:
+					this.minViewMode = 0;
+					break;
+			}
+		}
+		this.viewMode = options.viewMode||this.element.data('date-viewmode')||0;
+		if (typeof this.viewMode === 'string') {
+			switch (this.viewMode) {
+				case 'months':
+					this.viewMode = 1;
+					break;
+				case 'years':
+					this.viewMode = 2;
+					break;
+				default:
+					this.viewMode = 0;
+					break;
+			}
+		}
+		this.startViewMode = this.viewMode;
+		this.weekStart = options.weekStart||this.element.data('date-weekstart')||0;
+		this.weekEnd = this.weekStart === 0 ? 6 : this.weekStart - 1;
+		this.onRender = options.onRender;
+		this.fillDow();
+		this.fillMonths();
+		this.update();
+		this.showMode();
+	};
+	
+	Datepicker.prototype = {
+		constructor: Datepicker,
+		
+		show: function(e) {
+			this.picker.show();
+			this.height = this.component ? this.component.outerHeight() : this.element.outerHeight();
+			this.place();
+			$(window).on('resize', $.proxy(this.place, this));
+			if (e ) {
+				e.stopPropagation();
+				e.preventDefault();
+			}
+			if (!this.isInput) {
+			}
+			var that = this;
+			$(document).on('mousedown', function(ev){
+				if ($(ev.target).closest('.datepicker').length == 0) {
+					that.hide();
+				}
+			});
+			this.element.trigger({
+				type: 'show',
+				date: this.date
+			});
+		},
+		
+		hide: function(){
+			this.picker.hide();
+			$(window).off('resize', this.place);
+			this.viewMode = this.startViewMode;
+			this.showMode();
+			if (!this.isInput) {
+				$(document).off('mousedown', this.hide);
+			}
+			//this.set();
+			this.element.trigger({
+				type: 'hide',
+				date: this.date
+			});
+		},
+		
+		set: function() {
+			var formated = DPGlobal.formatDate(this.date, this.format);
+			if (!this.isInput) {
+				if (this.component){
+					this.element.find('.datepicker-input').prop('value', formated);
+				}
+				this.element.data('date', formated);
+			} else {
+				this.element.prop('value', formated);
+			}
+		},
+		
+		setValue: function(newDate) {
+			if (typeof newDate === 'string') {
+				this.date = DPGlobal.parseDate(newDate, this.format);
+			} else {
+				this.date = new Date(newDate);
+			}
+			this.set();
+			this.viewDate = new Date(this.date.getFullYear(), this.date.getMonth(), 1, 0, 0, 0, 0);
+			this.fill();
+		},
+		
+		place: function(){
+			// var offset = this.component ? this.component.offset() : this.element.offset();
+			// this.picker.css({
+			// 	top: offset.top + this.height,
+			// 	left: offset.left
+			// });
+		},
+		
+		update: function(newDate){
+			this.date = DPGlobal.parseDate(
+				typeof newDate === 'string' ? newDate : (this.isInput ? this.element.prop('value') : this.element.data('date')),
+				this.format
+			);
+			this.viewDate = new Date(this.date.getFullYear(), this.date.getMonth(), 1, 0, 0, 0, 0);
+			this.fill();
+		},
+		
+		fillDow: function(){
+			var dowCnt = this.weekStart;
+			var html = '<tr>';
+			while (dowCnt < this.weekStart + 7) {
+				html += '<th class="dow">'+DPGlobal.dates.daysMin[(dowCnt++)%7]+'</th>';
+			}
+			html += '</tr>';
+			this.picker.find('.datepicker-days thead').append(html);
+		},
+		
+		fillMonths: function(){
+			var html = '';
+			var i = 0
+			while (i < 12) {
+				html += '<span class="month">'+DPGlobal.dates.monthsShort[i++]+'</span>';
+			}
+			this.picker.find('.datepicker-months td').append(html);
+		},
+		
+		fill: function() {
+			var d = new Date(this.viewDate),
+				year = d.getFullYear(),
+				month = d.getMonth(),
+				currentDate = this.date.valueOf();
+			this.picker.find('.datepicker-days th:eq(1)')
+						.text(DPGlobal.dates.months[month]+' '+year);
+			var prevMonth = new Date(year, month-1, 28,0,0,0,0),
+				day = DPGlobal.getDaysInMonth(prevMonth.getFullYear(), prevMonth.getMonth());
+			prevMonth.setDate(day);
+			prevMonth.setDate(day - (prevMonth.getDay() - this.weekStart + 7)%7);
+			var nextMonth = new Date(prevMonth);
+			nextMonth.setDate(nextMonth.getDate() + 42);
+			nextMonth = nextMonth.valueOf();
+			var html = [];
+			var clsName,
+				prevY,
+				prevM;
+			while(prevMonth.valueOf() < nextMonth) {
+				if (prevMonth.getDay() === this.weekStart) {
+					html.push('<tr>');
+				}
+				clsName = this.onRender(prevMonth);
+				prevY = prevMonth.getFullYear();
+				prevM = prevMonth.getMonth();
+				if ((prevM < month &&  prevY === year) ||  prevY < year) {
+					clsName += ' old';
+				} else if ((prevM > month && prevY === year) || prevY > year) {
+					clsName += ' new';
+				}
+				if (prevMonth.valueOf() === currentDate) {
+					clsName += ' active';
+				}
+				html.push('<td class="day '+clsName+'">'+prevMonth.getDate() + '</td>');
+				if (prevMonth.getDay() === this.weekEnd) {
+					html.push('</tr>');
+				}
+				prevMonth.setDate(prevMonth.getDate()+1);
+			}
+			this.picker.find('.datepicker-days tbody').empty().append(html.join(''));
+			var currentYear = this.date.getFullYear();
+			
+			var months = this.picker.find('.datepicker-months')
+						.find('th:eq(1)')
+							.text(year)
+							.end()
+						.find('span').removeClass('active');
+			if (currentYear === year) {
+				months.eq(this.date.getMonth()).addClass('active');
+			}
+			
+			html = '';
+			year = parseInt(year/10, 10) * 10;
+			var yearCont = this.picker.find('.datepicker-years')
+								.find('th:eq(1)')
+									.text(year + '-' + (year + 9))
+									.end()
+								.find('td');
+			year -= 1;
+			for (var i = -1; i < 11; i++) {
+				html += '<span class="year'+(i === -1 || i === 10 ? ' old' : '')+(currentYear === year ? ' active' : '')+'">'+year+'</span>';
+				year += 1;
+			}
+			yearCont.html(html);
+		},
+		
+		click: function(e) {
+			e.stopPropagation();
+			e.preventDefault();
+			var target = $(e.target).closest('span, td, th');
+			if (target.length === 1) {
+				switch(target[0].nodeName.toLowerCase()) {
+					case 'th':
+						switch(target[0].className) {
+							case 'switch':
+								this.showMode(1);
+								break;
+							case 'prev':
+							case 'next':
+								this.viewDate['set'+DPGlobal.modes[this.viewMode].navFnc].call(
+									this.viewDate,
+									this.viewDate['get'+DPGlobal.modes[this.viewMode].navFnc].call(this.viewDate) + 
+									DPGlobal.modes[this.viewMode].navStep * (target[0].className === 'prev' ? -1 : 1)
+								);
+								this.fill();
+								this.set();
+								break;
+						}
+						break;
+					case 'span':
+						if (target.is('.month')) {
+							var month = target.parent().find('span').index(target);
+							this.viewDate.setMonth(month);
+						} else {
+							var year = parseInt(target.text(), 10)||0;
+							this.viewDate.setFullYear(year);
+						}
+						if (this.viewMode !== 0) {
+							this.date = new Date(this.viewDate);
+							this.element.trigger({
+								type: 'changeDate',
+								date: this.date,
+								viewMode: DPGlobal.modes[this.viewMode].clsName
+							});
+						}
+						this.showMode(-1);
+						this.fill();
+						this.set();
+						break;
+					case 'td':
+						if (target.is('.day') && !target.is('.disabled')){
+							var day = parseInt(target.text(), 10)||1;
+							var month = this.viewDate.getMonth();
+							if (target.is('.old')) {
+								month -= 1;
+							} else if (target.is('.new')) {
+								month += 1;
+							}
+							var year = this.viewDate.getFullYear();
+							this.date = new Date(year, month, day,0,0,0,0);
+							this.viewDate = new Date(year, month, Math.min(28, day),0,0,0,0);
+							this.fill();
+							this.set();
+							this.element.trigger({
+								type: 'changeDate',
+								date: this.date,
+								viewMode: DPGlobal.modes[this.viewMode].clsName
+							});
+						}
+						break;
+				}
+			}
+		},
+		
+		mousedown: function(e){
+			e.stopPropagation();
+			e.preventDefault();
+		},
+		
+		showMode: function(dir) {
+			if (dir) {
+				this.viewMode = Math.max(this.minViewMode, Math.min(2, this.viewMode + dir));
+			}
+			this.picker.find('>div').hide().filter('.datepicker-'+DPGlobal.modes[this.viewMode].clsName).show();
+		}
+	};
+	
+	$.fn.datepicker = function ( option, val ) {
+		return this.each(function () {
+			var $this = $(this),
+				data = $this.data('datepicker'),
+				options = typeof option === 'object' && option;
+			if (!data) {
+				$this.data('datepicker', (data = new Datepicker(this, $.extend({}, $.fn.datepicker.defaults,options))));
+			}
+			if (typeof option === 'string') data[option](val);
+		});
+	};
+
+	$.fn.datepicker.defaults = {
+		onRender: function(date) {
+			return '';
+		}
+	};
+	$.fn.datepicker.Constructor = Datepicker;
+	
+	var DPGlobal = {
+		modes: [
+			{
+				clsName: 'days',
+				navFnc: 'Month',
+				navStep: 1
+			},
+			{
+				clsName: 'months',
+				navFnc: 'FullYear',
+				navStep: 1
+			},
+			{
+				clsName: 'years',
+				navFnc: 'FullYear',
+				navStep: 10
+		}],
+		dates:{
+			days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+			daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+			daysMin: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+			months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+			monthsShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+		},
+		isLeapYear: function (year) {
+			return (((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0))
+		},
+		getDaysInMonth: function (year, month) {
+			return [31, (DPGlobal.isLeapYear(year) ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month]
+		},
+		parseFormat: function(format){
+			var separator = format.match(/[.\/\-\s].*?/),
+				parts = format.split(/\W+/);
+			if (!separator || !parts || parts.length === 0){
+				throw new Error("Invalid date format.");
+			}
+			return {separator: separator, parts: parts};
+		},
+		parseDate: function(date, format) {
+			var parts = date.split(format.separator),
+				date = new Date(),
+				val;
+			date.setHours(0);
+			date.setMinutes(0);
+			date.setSeconds(0);
+			date.setMilliseconds(0);
+			if (parts.length === format.parts.length) {
+				var year = date.getFullYear(), day = date.getDate(), month = date.getMonth();
+				for (var i=0, cnt = format.parts.length; i < cnt; i++) {
+					val = parseInt(parts[i], 10)||1;
+					switch(format.parts[i]) {
+						case 'dd':
+						case 'd':
+							day = val;
+							date.setDate(val);
+							break;
+						case 'mm':
+						case 'm':
+							month = val - 1;
+							date.setMonth(val - 1);
+							break;
+						case 'yy':
+							year = 2000 + val;
+							date.setFullYear(2000 + val);
+							break;
+						case 'yyyy':
+							year = val;
+							date.setFullYear(val);
+							break;
+					}
+				}
+				date = new Date(year, month, day, 0 ,0 ,0);
+			}
+			return date;
+		},
+		formatDate: function(date, format){
+			var val = {
+				d: date.getDate(),
+				m: date.getMonth() + 1,
+				yy: date.getFullYear().toString().substring(2),
+				yyyy: date.getFullYear()
+			};
+			val.dd = (val.d < 10 ? '0' : '') + val.d;
+			val.mm = (val.m < 10 ? '0' : '') + val.m;
+			var date = [];
+			for (var i=0, cnt = format.parts.length; i < cnt; i++) {
+				date.push(val[format.parts[i]]);
+			}
+			return date.join(format.separator);
+		},
+		headTemplate: '<thead>'+
+							'<tr>'+
+								'<th class="prev">&lsaquo;</th>'+
+								'<th colspan="5" class="switch"></th>'+
+								'<th class="next">&rsaquo;</th>'+
+							'</tr>'+
+						'</thead>',
+		contTemplate: '<tbody><tr><td colspan="7"></td></tr></tbody>'
+	};
+	// DPGlobal.template = '<div class="datepicker dropdown-menu">'+
+	DPGlobal.template = '<div class="datepicker">'+
+							'<div class="datepicker-days">'+
+								'<table class=" table-condensed">'+
+									DPGlobal.headTemplate+
+									'<tbody></tbody>'+
+								'</table>'+
+							'</div>'+
+							'<div class="datepicker-months">'+
+								'<table class="table-condensed">'+
+									DPGlobal.headTemplate+
+									DPGlobal.contTemplate+
+								'</table>'+
+							'</div>'+
+							'<div class="datepicker-years">'+
+								'<table class="table-condensed">'+
+									DPGlobal.headTemplate+
+									DPGlobal.contTemplate+
+								'</table>'+
+							'</div>'+
+						'</div>';
+
+}( window.jQuery );
 });
-window.require.register("CNeditor/bootstrap-timepicker", function(exports, require, module) {
-  /*!
-   * Timepicker Component for Twitter Bootstrap
-   *
-   * Copyright 2013 Joris de Wit
-   *
-   * Contributors https://github.com/jdewit/bootstrap-timepicker/graphs/contributors
-   *
-   * For the full copyright and license information, please view the LICENSE
-   * file that was distributed with this source code.
-   */
-  ;(function($, window, document, undefined) {
-  
-    'use strict'; // jshint ;_;
-  
-    // TIMEPICKER PUBLIC CLASS DEFINITION
-    var Timepicker = function(element, options) {
-      this.widget = '';
-      this.$element = $(element);
-      this.defaultTime = options.defaultTime;
-      this.disableFocus = options.disableFocus;
-      this.isOpen = options.isOpen;
-      this.minuteStep = options.minuteStep;
-      this.modalBackdrop = options.modalBackdrop;
-      this.secondStep = options.secondStep;
-      this.showInputs = options.showInputs;
-      this.showMeridian = options.showMeridian;
-      this.showSeconds = options.showSeconds;
-      this.template = options.template;
-      this.appendWidgetTo = options.appendWidgetTo;
-  
-      this._init();
-    };
-  
-    Timepicker.prototype = {
-  
-      constructor: Timepicker,
-  
-      _init: function() {
-        var self = this;
-  
-        if (this.$element.parent().hasClass('input-append') || this.$element.parent().hasClass('input-prepend')) {
-            this.$element.parent('.input-append, .input-prepend').find('.add-on').on({
-              'click.timepicker': $.proxy(this.showWidget, this)
+
+;require.register("CNeditor/bootstrap-timepicker", function(exports, require, module) {
+/*!
+ * Timepicker Component for Twitter Bootstrap
+ *
+ * Copyright 2013 Joris de Wit
+ *
+ * Contributors https://github.com/jdewit/bootstrap-timepicker/graphs/contributors
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+;(function($, window, document, undefined) {
+
+  'use strict'; // jshint ;_;
+
+  // TIMEPICKER PUBLIC CLASS DEFINITION
+  var Timepicker = function(element, options) {
+    this.widget = '';
+    this.$element = $(element);
+    this.defaultTime = options.defaultTime;
+    this.disableFocus = options.disableFocus;
+    this.isOpen = options.isOpen;
+    this.minuteStep = options.minuteStep;
+    this.modalBackdrop = options.modalBackdrop;
+    this.secondStep = options.secondStep;
+    this.showInputs = options.showInputs;
+    this.showMeridian = options.showMeridian;
+    this.showSeconds = options.showSeconds;
+    this.template = options.template;
+    this.appendWidgetTo = options.appendWidgetTo;
+
+    this._init();
+  };
+
+  Timepicker.prototype = {
+
+    constructor: Timepicker,
+
+    _init: function() {
+      var self = this;
+
+      if (this.$element.parent().hasClass('input-append') || this.$element.parent().hasClass('input-prepend')) {
+          this.$element.parent('.input-append, .input-prepend').find('.add-on').on({
+            'click.timepicker': $.proxy(this.showWidget, this)
+          });
+          this.$element.on({
+            'focus.timepicker': $.proxy(this.highlightUnit, this),
+            'click.timepicker': $.proxy(this.highlightUnit, this),
+            'keydown.timepicker': $.proxy(this.elementKeydown, this),
+            'blur.timepicker': $.proxy(this.blurElement, this)
+          });
+      } else {
+        if (this.template) {
+          this.$element.on({
+            'focus.timepicker': $.proxy(this.showWidget, this),
+            'click.timepicker': $.proxy(this.showWidget, this),
+            'blur.timepicker': $.proxy(this.blurElement, this)
+          });
+        } else {
+          this.$element.on({
+            'focus.timepicker': $.proxy(this.highlightUnit, this),
+            'click.timepicker': $.proxy(this.highlightUnit, this),
+            'keydown.timepicker': $.proxy(this.elementKeydown, this),
+            'blur.timepicker': $.proxy(this.blurElement, this)
+          });
+        }
+      }
+
+      if (this.template !== false) {
+        this.$widget = $(this.getTemplate()).prependTo(this.$element.parents(this.appendWidgetTo)).on('click', $.proxy(this.widgetClick, this));
+      } else {
+        this.$widget = false;
+      }
+
+      if (this.showInputs && this.$widget !== false) {
+          this.$widget.find('input').each(function() {
+            $(this).on({
+              'click.timepicker': function() { $(this).select(); },
+              'keydown.timepicker': $.proxy(self.widgetKeydown, self)
             });
-            this.$element.on({
-              'focus.timepicker': $.proxy(this.highlightUnit, this),
-              'click.timepicker': $.proxy(this.highlightUnit, this),
-              'keydown.timepicker': $.proxy(this.elementKeydown, this),
-              'blur.timepicker': $.proxy(this.blurElement, this)
-            });
+          });
+      }
+
+      this.setDefaultTime(this.defaultTime);
+    },
+
+    blurElement: function() {
+      this.highlightedUnit = undefined;
+      this.updateFromElementVal();
+    },
+
+    decrementHour: function() {
+      if (this.showMeridian) {
+        if (this.hour === 1) {
+          this.hour = 12;
+        } else if (this.hour === 12) {
+          this.hour--;
+
+          return this.toggleMeridian();
+        } else if (this.hour === 0) {
+          this.hour = 11;
+
+          return this.toggleMeridian();
         } else {
-          if (this.template) {
-            this.$element.on({
-              'focus.timepicker': $.proxy(this.showWidget, this),
-              'click.timepicker': $.proxy(this.showWidget, this),
-              'blur.timepicker': $.proxy(this.blurElement, this)
-            });
-          } else {
-            this.$element.on({
-              'focus.timepicker': $.proxy(this.highlightUnit, this),
-              'click.timepicker': $.proxy(this.highlightUnit, this),
-              'keydown.timepicker': $.proxy(this.elementKeydown, this),
-              'blur.timepicker': $.proxy(this.blurElement, this)
-            });
-          }
+          this.hour--;
         }
-  
-        if (this.template !== false) {
-          this.$widget = $(this.getTemplate()).prependTo(this.$element.parents(this.appendWidgetTo)).on('click', $.proxy(this.widgetClick, this));
+      } else {
+        if (this.hour === 0) {
+          this.hour = 23;
         } else {
-          this.$widget = false;
+          this.hour--;
         }
-  
-        if (this.showInputs && this.$widget !== false) {
-            this.$widget.find('input').each(function() {
-              $(this).on({
-                'click.timepicker': function() { $(this).select(); },
-                'keydown.timepicker': $.proxy(self.widgetKeydown, self)
-              });
-            });
-        }
-  
-        this.setDefaultTime(this.defaultTime);
-      },
-  
-      blurElement: function() {
-        this.highlightedUnit = undefined;
-        this.updateFromElementVal();
-      },
-  
-      decrementHour: function() {
-        if (this.showMeridian) {
-          if (this.hour === 1) {
-            this.hour = 12;
-          } else if (this.hour === 12) {
-            this.hour--;
-  
-            return this.toggleMeridian();
-          } else if (this.hour === 0) {
-            this.hour = 11;
-  
-            return this.toggleMeridian();
-          } else {
-            this.hour--;
-          }
-        } else {
-          if (this.hour === 0) {
-            this.hour = 23;
-          } else {
-            this.hour--;
-          }
-        }
-        this.update();
-      },
-  
-      decrementMinute: function(step) {
-        var newVal;
-  
-        if (step) {
-          newVal = this.minute - step;
-        } else {
-          newVal = this.minute - this.minuteStep;
-        }
-  
-        if (newVal < 0) {
-          this.decrementHour();
-          this.minute = newVal + 60;
-        } else {
-          this.minute = newVal;
-        }
-        this.update();
-      },
-  
-      decrementSecond: function() {
-        var newVal = this.second - this.secondStep;
-  
-        if (newVal < 0) {
-          this.decrementMinute(true);
-          this.second = newVal + 60;
-        } else {
-          this.second = newVal;
-        }
-        this.update();
-      },
-  
-      elementKeydown: function(e) {
-        switch (e.keyCode) {
-          case 9: //tab
-            this.updateFromElementVal();
-  
-            switch (this.highlightedUnit) {
-              case 'hour':
+      }
+      this.update();
+    },
+
+    decrementMinute: function(step) {
+      var newVal;
+
+      if (step) {
+        newVal = this.minute - step;
+      } else {
+        newVal = this.minute - this.minuteStep;
+      }
+
+      if (newVal < 0) {
+        this.decrementHour();
+        this.minute = newVal + 60;
+      } else {
+        this.minute = newVal;
+      }
+      this.update();
+    },
+
+    decrementSecond: function() {
+      var newVal = this.second - this.secondStep;
+
+      if (newVal < 0) {
+        this.decrementMinute(true);
+        this.second = newVal + 60;
+      } else {
+        this.second = newVal;
+      }
+      this.update();
+    },
+
+    elementKeydown: function(e) {
+      switch (e.keyCode) {
+        case 9: //tab
+          this.updateFromElementVal();
+
+          switch (this.highlightedUnit) {
+            case 'hour':
+              e.preventDefault();
+              this.highlightNextUnit();
+            break;
+            case 'minute':
+              if (this.showMeridian || this.showSeconds) {
                 e.preventDefault();
                 this.highlightNextUnit();
-              break;
-              case 'minute':
-                if (this.showMeridian || this.showSeconds) {
-                  e.preventDefault();
-                  this.highlightNextUnit();
-                }
-              break;
-              case 'second':
-                if (this.showMeridian) {
-                  e.preventDefault();
-                  this.highlightNextUnit();
-                }
-              break;
-            }
-          break;
-          case 27: // escape
-            this.updateFromElementVal();
-          break;
-          case 37: // left arrow
-            e.preventDefault();
-            this.highlightPrevUnit();
-            this.updateFromElementVal();
-          break;
-          case 38: // up arrow
-            e.preventDefault();
-            switch (this.highlightedUnit) {
-              case 'hour':
-                this.incrementHour();
-                this.highlightHour();
-              break;
-              case 'minute':
-                this.incrementMinute();
-                this.highlightMinute();
-              break;
-              case 'second':
-                this.incrementSecond();
-                this.highlightSecond();
-              break;
-              case 'meridian':
-                this.toggleMeridian();
-                this.highlightMeridian();
-              break;
-            }
-          break;
-          case 39: // right arrow
-            e.preventDefault();
-            this.updateFromElementVal();
-            this.highlightNextUnit();
-          break;
-          case 40: // down arrow
-            e.preventDefault();
-            switch (this.highlightedUnit) {
-              case 'hour':
-                this.decrementHour();
-                this.highlightHour();
-              break;
-              case 'minute':
-                this.decrementMinute();
-                this.highlightMinute();
-              break;
-              case 'second':
-                this.decrementSecond();
-                this.highlightSecond();
-              break;
-              case 'meridian':
-                this.toggleMeridian();
-                this.highlightMeridian();
-              break;
-            }
-          break;
-        }
-      },
-  
-      formatTime: function(hour, minute, second, meridian) {
-        hour = hour < 10 ? '0' + hour : hour;
-        minute = minute < 10 ? '0' + minute : minute;
-        second = second < 10 ? '0' + second : second;
-  
-        return hour + ':' + minute + (this.showSeconds ? ':' + second : '') + (this.showMeridian ? ' ' + meridian : '');
-      },
-  
-      getCursorPosition: function() {
-        var input = this.$element.get(0);
-  
-        if ('selectionStart' in input) {// Standard-compliant browsers
-  
-          return input.selectionStart;
-        } else if (document.selection) {// IE fix
-          input.focus();
-          var sel = document.selection.createRange(),
-            selLen = document.selection.createRange().text.length;
-  
-          sel.moveStart('character', - input.value.length);
-  
-          return sel.text.length - selLen;
-        }
-      },
-  
-      getTemplate: function() {
-        var template,
-          hourTemplate,
-          minuteTemplate,
-          secondTemplate,
-          meridianTemplate,
-          templateContent;
-  
-        if (this.showInputs) {
-          hourTemplate = '<input type="text" name="hour" class="bootstrap-timepicker-hour" maxlength="2"/>';
-          minuteTemplate = '<input type="text" name="minute" class="bootstrap-timepicker-minute" maxlength="2"/>';
-          secondTemplate = '<input type="text" name="second" class="bootstrap-timepicker-second" maxlength="2"/>';
-          meridianTemplate = '<input type="text" name="meridian" class="bootstrap-timepicker-meridian" maxlength="2"/>';
-        } else {
-          hourTemplate = '<span class="bootstrap-timepicker-hour"></span>';
-          minuteTemplate = '<span class="bootstrap-timepicker-minute"></span>';
-          secondTemplate = '<span class="bootstrap-timepicker-second"></span>';
-          meridianTemplate = '<span class="bootstrap-timepicker-meridian"></span>';
-        }
-  
-        templateContent = '<table>'+
-           '<tr>'+
-             '<td><a href="#" data-action="incrementHour"><i class="icon-chevron-up"></i></a></td>'+
-             '<td class="separator">&nbsp;</td>'+
-             '<td><a href="#" data-action="incrementMinute"><i class="icon-chevron-up"></i></a></td>'+
-             (this.showSeconds ?
-               '<td class="separator">&nbsp;</td>'+
-               '<td><a href="#" data-action="incrementSecond"><i class="icon-chevron-up"></i></a></td>'
-             : '') +
-             (this.showMeridian ?
-               '<td class="separator">&nbsp;</td>'+
-               '<td class="meridian-column"><a href="#" data-action="toggleMeridian"><i class="icon-chevron-up"></i></a></td>'
-             : '') +
-           '</tr>'+
-           '<tr>'+
-             '<td>'+ hourTemplate +'</td> '+
-             '<td class="separator">:</td>'+
-             '<td>'+ minuteTemplate +'</td> '+
-             (this.showSeconds ?
-              '<td class="separator">:</td>'+
-              '<td>'+ secondTemplate +'</td>'
-             : '') +
-             (this.showMeridian ?
-              '<td class="separator">&nbsp;</td>'+
-              '<td>'+ meridianTemplate +'</td>'
-             : '') +
-           '</tr>'+
-           '<tr>'+
-             '<td><a href="#" data-action="decrementHour"><i class="icon-chevron-down"></i></a></td>'+
-             '<td class="separator"></td>'+
-             '<td><a href="#" data-action="decrementMinute"><i class="icon-chevron-down"></i></a></td>'+
-             (this.showSeconds ?
-              '<td class="separator">&nbsp;</td>'+
-              '<td><a href="#" data-action="decrementSecond"><i class="icon-chevron-down"></i></a></td>'
-             : '') +
-             (this.showMeridian ?
-              '<td class="separator">&nbsp;</td>'+
-              '<td><a href="#" data-action="toggleMeridian"><i class="icon-chevron-down"></i></a></td>'
-             : '') +
-           '</tr>'+
-         '</table>';
-  
-        switch(this.template) {
-          case 'modal':
-            template = '<div class="bootstrap-timepicker-widget modal hide fade in" data-backdrop="'+ (this.modalBackdrop ? 'true' : 'false') +'">'+
-              '<div class="modal-header">'+
-                '<a href="#" class="close" data-dismiss="modal">×</a>'+
-                '<h3>Pick a Time</h3>'+
-              '</div>'+
-              '<div class="modal-content">'+
-                templateContent +
-              '</div>'+
-              '<div class="modal-footer">'+
-                '<a href="#" class="btn btn-primary" data-dismiss="modal">OK</a>'+
-              '</div>'+
-            '</div>';
-          break;
-          case 'dropdown':
-            template = '<div class="bootstrap-timepicker-widget dropdown-menu">'+ templateContent +'</div>';
-          break;
-        }
-  
-        return template;
-      },
-  
-      getTime: function() {
-        return this.formatTime(this.hour, this.minute, this.second, this.meridian);
-      },
-  
-      hideWidget: function() {
-        if (this.isOpen === false) {
-          return;
-        }
-  
-              if (this.showInputs) {
-                  this.updateFromWidgetInputs();
               }
-  
-        this.$element.trigger({
-          'type': 'hide.timepicker',
-          'time': {
-              'value': this.getTime(),
-              'hours': this.hour,
-              'minutes': this.minute,
-              'seconds': this.second,
-              'meridian': this.meridian
-           }
-        });
-  
-        if (this.template === 'modal') {
-          this.$widget.modal('hide');
+            break;
+            case 'second':
+              if (this.showMeridian) {
+                e.preventDefault();
+                this.highlightNextUnit();
+              }
+            break;
+          }
+        break;
+        case 27: // escape
+          this.updateFromElementVal();
+        break;
+        case 37: // left arrow
+          e.preventDefault();
+          this.highlightPrevUnit();
+          this.updateFromElementVal();
+        break;
+        case 38: // up arrow
+          e.preventDefault();
+          switch (this.highlightedUnit) {
+            case 'hour':
+              this.incrementHour();
+              this.highlightHour();
+            break;
+            case 'minute':
+              this.incrementMinute();
+              this.highlightMinute();
+            break;
+            case 'second':
+              this.incrementSecond();
+              this.highlightSecond();
+            break;
+            case 'meridian':
+              this.toggleMeridian();
+              this.highlightMeridian();
+            break;
+          }
+        break;
+        case 39: // right arrow
+          e.preventDefault();
+          this.updateFromElementVal();
+          this.highlightNextUnit();
+        break;
+        case 40: // down arrow
+          e.preventDefault();
+          switch (this.highlightedUnit) {
+            case 'hour':
+              this.decrementHour();
+              this.highlightHour();
+            break;
+            case 'minute':
+              this.decrementMinute();
+              this.highlightMinute();
+            break;
+            case 'second':
+              this.decrementSecond();
+              this.highlightSecond();
+            break;
+            case 'meridian':
+              this.toggleMeridian();
+              this.highlightMeridian();
+            break;
+          }
+        break;
+      }
+    },
+
+    formatTime: function(hour, minute, second, meridian) {
+      hour = hour < 10 ? '0' + hour : hour;
+      minute = minute < 10 ? '0' + minute : minute;
+      second = second < 10 ? '0' + second : second;
+
+      return hour + ':' + minute + (this.showSeconds ? ':' + second : '') + (this.showMeridian ? ' ' + meridian : '');
+    },
+
+    getCursorPosition: function() {
+      var input = this.$element.get(0);
+
+      if ('selectionStart' in input) {// Standard-compliant browsers
+
+        return input.selectionStart;
+      } else if (document.selection) {// IE fix
+        input.focus();
+        var sel = document.selection.createRange(),
+          selLen = document.selection.createRange().text.length;
+
+        sel.moveStart('character', - input.value.length);
+
+        return sel.text.length - selLen;
+      }
+    },
+
+    getTemplate: function() {
+      var template,
+        hourTemplate,
+        minuteTemplate,
+        secondTemplate,
+        meridianTemplate,
+        templateContent;
+
+      if (this.showInputs) {
+        hourTemplate = '<input type="text" name="hour" class="bootstrap-timepicker-hour" maxlength="2"/>';
+        minuteTemplate = '<input type="text" name="minute" class="bootstrap-timepicker-minute" maxlength="2"/>';
+        secondTemplate = '<input type="text" name="second" class="bootstrap-timepicker-second" maxlength="2"/>';
+        meridianTemplate = '<input type="text" name="meridian" class="bootstrap-timepicker-meridian" maxlength="2"/>';
+      } else {
+        hourTemplate = '<span class="bootstrap-timepicker-hour"></span>';
+        minuteTemplate = '<span class="bootstrap-timepicker-minute"></span>';
+        secondTemplate = '<span class="bootstrap-timepicker-second"></span>';
+        meridianTemplate = '<span class="bootstrap-timepicker-meridian"></span>';
+      }
+
+      templateContent = '<table>'+
+         '<tr>'+
+           '<td><a href="#" data-action="incrementHour"><i class="icon-chevron-up"></i></a></td>'+
+           '<td class="separator">&nbsp;</td>'+
+           '<td><a href="#" data-action="incrementMinute"><i class="icon-chevron-up"></i></a></td>'+
+           (this.showSeconds ?
+             '<td class="separator">&nbsp;</td>'+
+             '<td><a href="#" data-action="incrementSecond"><i class="icon-chevron-up"></i></a></td>'
+           : '') +
+           (this.showMeridian ?
+             '<td class="separator">&nbsp;</td>'+
+             '<td class="meridian-column"><a href="#" data-action="toggleMeridian"><i class="icon-chevron-up"></i></a></td>'
+           : '') +
+         '</tr>'+
+         '<tr>'+
+           '<td>'+ hourTemplate +'</td> '+
+           '<td class="separator">:</td>'+
+           '<td>'+ minuteTemplate +'</td> '+
+           (this.showSeconds ?
+            '<td class="separator">:</td>'+
+            '<td>'+ secondTemplate +'</td>'
+           : '') +
+           (this.showMeridian ?
+            '<td class="separator">&nbsp;</td>'+
+            '<td>'+ meridianTemplate +'</td>'
+           : '') +
+         '</tr>'+
+         '<tr>'+
+           '<td><a href="#" data-action="decrementHour"><i class="icon-chevron-down"></i></a></td>'+
+           '<td class="separator"></td>'+
+           '<td><a href="#" data-action="decrementMinute"><i class="icon-chevron-down"></i></a></td>'+
+           (this.showSeconds ?
+            '<td class="separator">&nbsp;</td>'+
+            '<td><a href="#" data-action="decrementSecond"><i class="icon-chevron-down"></i></a></td>'
+           : '') +
+           (this.showMeridian ?
+            '<td class="separator">&nbsp;</td>'+
+            '<td><a href="#" data-action="toggleMeridian"><i class="icon-chevron-down"></i></a></td>'
+           : '') +
+         '</tr>'+
+       '</table>';
+
+      switch(this.template) {
+        case 'modal':
+          template = '<div class="bootstrap-timepicker-widget modal hide fade in" data-backdrop="'+ (this.modalBackdrop ? 'true' : 'false') +'">'+
+            '<div class="modal-header">'+
+              '<a href="#" class="close" data-dismiss="modal">×</a>'+
+              '<h3>Pick a Time</h3>'+
+            '</div>'+
+            '<div class="modal-content">'+
+              templateContent +
+            '</div>'+
+            '<div class="modal-footer">'+
+              '<a href="#" class="btn btn-primary" data-dismiss="modal">OK</a>'+
+            '</div>'+
+          '</div>';
+        break;
+        case 'dropdown':
+          template = '<div class="bootstrap-timepicker-widget dropdown-menu">'+ templateContent +'</div>';
+        break;
+      }
+
+      return template;
+    },
+
+    getTime: function() {
+      return this.formatTime(this.hour, this.minute, this.second, this.meridian);
+    },
+
+    hideWidget: function() {
+      if (this.isOpen === false) {
+        return;
+      }
+
+            if (this.showInputs) {
+                this.updateFromWidgetInputs();
+            }
+
+      this.$element.trigger({
+        'type': 'hide.timepicker',
+        'time': {
+            'value': this.getTime(),
+            'hours': this.hour,
+            'minutes': this.minute,
+            'seconds': this.second,
+            'meridian': this.meridian
+         }
+      });
+
+      if (this.template === 'modal') {
+        this.$widget.modal('hide');
+      } else {
+        this.$widget.removeClass('open');
+      }
+
+      $(document).off('mousedown.timepicker');
+
+      this.isOpen = false;
+    },
+
+    highlightUnit: function() {
+      this.position = this.getCursorPosition();
+      if (this.position >= 0 && this.position <= 2) {
+        this.highlightHour();
+      } else if (this.position >= 3 && this.position <= 5) {
+        this.highlightMinute();
+      } else if (this.position >= 6 && this.position <= 8) {
+        if (this.showSeconds) {
+          this.highlightSecond();
         } else {
-          this.$widget.removeClass('open');
+          this.highlightMeridian();
         }
-  
-        $(document).off('mousedown.timepicker');
-  
-        this.isOpen = false;
-      },
-  
-      highlightUnit: function() {
-        this.position = this.getCursorPosition();
-        if (this.position >= 0 && this.position <= 2) {
-          this.highlightHour();
-        } else if (this.position >= 3 && this.position <= 5) {
+      } else if (this.position >= 9 && this.position <= 11) {
+        this.highlightMeridian();
+      }
+    },
+
+    highlightNextUnit: function() {
+      switch (this.highlightedUnit) {
+        case 'hour':
           this.highlightMinute();
-        } else if (this.position >= 6 && this.position <= 8) {
+        break;
+        case 'minute':
+          if (this.showSeconds) {
+            this.highlightSecond();
+          } else if (this.showMeridian){
+            this.highlightMeridian();
+          } else {
+            this.highlightHour();
+          }
+        break;
+        case 'second':
+          if (this.showMeridian) {
+            this.highlightMeridian();
+          } else {
+            this.highlightHour();
+          }
+        break;
+        case 'meridian':
+          this.highlightHour();
+        break;
+      }
+    },
+
+    highlightPrevUnit: function() {
+      switch (this.highlightedUnit) {
+        case 'hour':
+          this.highlightMeridian();
+        break;
+        case 'minute':
+          this.highlightHour();
+        break;
+        case 'second':
+          this.highlightMinute();
+        break;
+        case 'meridian':
           if (this.showSeconds) {
             this.highlightSecond();
           } else {
-            this.highlightMeridian();
-          }
-        } else if (this.position >= 9 && this.position <= 11) {
-          this.highlightMeridian();
-        }
-      },
-  
-      highlightNextUnit: function() {
-        switch (this.highlightedUnit) {
-          case 'hour':
             this.highlightMinute();
-          break;
-          case 'minute':
-            if (this.showSeconds) {
-              this.highlightSecond();
-            } else if (this.showMeridian){
-              this.highlightMeridian();
-            } else {
-              this.highlightHour();
-            }
-          break;
-          case 'second':
-            if (this.showMeridian) {
-              this.highlightMeridian();
-            } else {
-              this.highlightHour();
-            }
-          break;
-          case 'meridian':
-            this.highlightHour();
-          break;
-        }
-      },
-  
-      highlightPrevUnit: function() {
-        switch (this.highlightedUnit) {
-          case 'hour':
-            this.highlightMeridian();
-          break;
-          case 'minute':
-            this.highlightHour();
-          break;
-          case 'second':
-            this.highlightMinute();
-          break;
-          case 'meridian':
-            if (this.showSeconds) {
-              this.highlightSecond();
-            } else {
-              this.highlightMinute();
-            }
-          break;
-        }
-      },
-  
-      highlightHour: function() {
-        var $element = this.$element.get(0);
-  
-        this.highlightedUnit = 'hour';
-  
-              if ($element.setSelectionRange) {
-                  setTimeout(function() {
-                      $element.setSelectionRange(0,2);
-                  }, 0);
-              }
-      },
-  
-      highlightMinute: function() {
-        var $element = this.$element.get(0);
-  
-        this.highlightedUnit = 'minute';
-  
-              if ($element.setSelectionRange) {
-                  setTimeout(function() {
-                      $element.setSelectionRange(3,5);
-                  }, 0);
-              }
-      },
-  
-      highlightSecond: function() {
-        var $element = this.$element.get(0);
-  
-        this.highlightedUnit = 'second';
-  
-              if ($element.setSelectionRange) {
-                  setTimeout(function() {
-                      $element.setSelectionRange(6,8);
-                  }, 0);
-              }
-      },
-  
-      highlightMeridian: function() {
-        var $element = this.$element.get(0);
-  
-        this.highlightedUnit = 'meridian';
-  
-              if ($element.setSelectionRange) {
-                  if (this.showSeconds) {
-                      setTimeout(function() {
-                          $element.setSelectionRange(9,11);
-                      }, 0);
-                  } else {
-                      setTimeout(function() {
-                          $element.setSelectionRange(6,8);
-                      }, 0);
-                  }
-              }
-      },
-  
-      incrementHour: function() {
-        if (this.showMeridian) {
-          if (this.hour === 11) {
-            this.hour++;
-            return this.toggleMeridian();
-          } else if (this.hour === 12) {
-            this.hour = 0;
           }
-        }
-        if (this.hour === 23) {
-          return this.hour = 0;
-        }
-        this.hour++;
-        this.update();
-      },
-  
-      incrementMinute: function(step) {
-        var newVal;
-  
-        if (step) {
-          newVal = this.minute + step;
-        } else {
-          newVal = this.minute + this.minuteStep - (this.minute % this.minuteStep);
-        }
-  
-        if (newVal > 59) {
-          this.incrementHour();
-          this.minute = newVal - 60;
-        } else {
-          this.minute = newVal;
-        }
-        this.update();
-      },
-  
-      incrementSecond: function() {
-        var newVal = this.second + this.secondStep - (this.second % this.secondStep);
-  
-        if (newVal > 59) {
-          this.incrementMinute(true);
-          this.second = newVal - 60;
-        } else {
-          this.second = newVal;
-        }
-        this.update();
-      },
-  
-      remove: function() {
-        $('document').off('.timepicker');
-        if (this.$widget) {
-          this.$widget.remove();
-        }
-        delete this.$element.data().timepicker;
-      },
-  
-      setDefaultTime: function(defaultTime){
-        if (!this.$element.val()) {
-          if (defaultTime === 'current') {
-            var dTime = new Date(),
-              hours = dTime.getHours(),
-              minutes = Math.floor(dTime.getMinutes() / this.minuteStep) * this.minuteStep,
-              seconds = Math.floor(dTime.getSeconds() / this.secondStep) * this.secondStep,
-              meridian = 'AM';
-  
-            if (this.showMeridian) {
-              if (hours === 0) {
-                hours = 12;
-              } else if (hours >= 12) {
-                if (hours > 12) {
-                  hours = hours - 12;
+        break;
+      }
+    },
+
+    highlightHour: function() {
+      var $element = this.$element.get(0);
+
+      this.highlightedUnit = 'hour';
+
+            if ($element.setSelectionRange) {
+                setTimeout(function() {
+                    $element.setSelectionRange(0,2);
+                }, 0);
+            }
+    },
+
+    highlightMinute: function() {
+      var $element = this.$element.get(0);
+
+      this.highlightedUnit = 'minute';
+
+            if ($element.setSelectionRange) {
+                setTimeout(function() {
+                    $element.setSelectionRange(3,5);
+                }, 0);
+            }
+    },
+
+    highlightSecond: function() {
+      var $element = this.$element.get(0);
+
+      this.highlightedUnit = 'second';
+
+            if ($element.setSelectionRange) {
+                setTimeout(function() {
+                    $element.setSelectionRange(6,8);
+                }, 0);
+            }
+    },
+
+    highlightMeridian: function() {
+      var $element = this.$element.get(0);
+
+      this.highlightedUnit = 'meridian';
+
+            if ($element.setSelectionRange) {
+                if (this.showSeconds) {
+                    setTimeout(function() {
+                        $element.setSelectionRange(9,11);
+                    }, 0);
+                } else {
+                    setTimeout(function() {
+                        $element.setSelectionRange(6,8);
+                    }, 0);
                 }
-                meridian = 'PM';
-              } else {
-                meridian = 'AM';
-              }
             }
-  
-            this.hour = hours;
-            this.minute = minutes;
-            this.second = seconds;
-            this.meridian = meridian;
-  
-            this.update();
-  
-          } else if (defaultTime === false) {
-            this.hour = 0;
-            this.minute = 0;
-            this.second = 0;
-            this.meridian = 'AM';
-          } else {
-            this.setTime(defaultTime);
-          }
-        } else {
-          this.updateFromElementVal();
-        }
-      },
-  
-      setTime: function(time) {
-        var arr,
-          timeArray;
-  
-        if (this.showMeridian) {
-          arr = time.split(' ');
-          timeArray = arr[0].split(':');
-          this.meridian = arr[1];
-        } else {
-          timeArray = time.split(':');
-        }
-  
-        this.hour = parseInt(timeArray[0], 10);
-        this.minute = parseInt(timeArray[1], 10);
-        this.second = parseInt(timeArray[2], 10);
-  
-        if (isNaN(this.hour)) {
+    },
+
+    incrementHour: function() {
+      if (this.showMeridian) {
+        if (this.hour === 11) {
+          this.hour++;
+          return this.toggleMeridian();
+        } else if (this.hour === 12) {
           this.hour = 0;
         }
-        if (isNaN(this.minute)) {
-          this.minute = 0;
-        }
-  
-        if (this.showMeridian) {
-          if (this.hour > 12) {
-            this.hour = 12;
-          } else if (this.hour < 1) {
-            this.hour = 12;
-          }
-  
-          if (this.meridian === 'am' || this.meridian === 'a') {
-            this.meridian = 'AM';
-          } else if (this.meridian === 'pm' || this.meridian === 'p') {
-            this.meridian = 'PM';
-          }
-  
-          if (this.meridian !== 'AM' && this.meridian !== 'PM') {
-            this.meridian = 'AM';
-          }
-        } else {
-           if (this.hour >= 24) {
-            this.hour = 23;
-          } else if (this.hour < 0) {
-            this.hour = 0;
-          }
-        }
-  
-        if (this.minute < 0) {
-          this.minute = 0;
-        } else if (this.minute >= 60) {
-          this.minute = 59;
-        }
-  
-        if (this.showSeconds) {
-          if (isNaN(this.second)) {
-            this.second = 0;
-          } else if (this.second < 0) {
-            this.second = 0;
-          } else if (this.second >= 60) {
-            this.second = 59;
-          }
-        }
-  
-        this.update();
-      },
-  
-      showWidget: function() {
-        if (this.isOpen) {
-          return;
-        }
-  
-        var self = this;
-        $(document).on('mousedown.timepicker', function (e) {
-          // Clicked outside the timepicker, hide it
-          if ($(e.target).closest('.bootstrap-timepicker-widget').length === 0) {
-            self.hideWidget();
-          }
-        });
-  
-        this.$element.trigger({
-          'type': 'show.timepicker',
-          'time': {
-              'value': this.getTime(),
-              'hours': this.hour,
-              'minutes': this.minute,
-              'seconds': this.second,
-              'meridian': this.meridian
-           }
-        });
-  
-        if (this.disableFocus) {
-          this.$element.blur();
-        }
-  
-        this.updateFromElementVal();
-  
-        if (this.template === 'modal') {
-          this.$widget.modal('show').on('hidden', $.proxy(this.hideWidget, this));
-        } else {
-          if (this.isOpen === false) {
-            this.$widget.addClass('open');
-          }
-        }
-  
-        this.isOpen = true;
-      },
-  
-      toggleMeridian: function() {
-        this.meridian = this.meridian === 'AM' ? 'PM' : 'AM';
-        this.update();
-      },
-  
-      update: function() {
-        this.$element.trigger({
-          'type': 'changeTime.timepicker',
-          'time': {
-              'value': this.getTime(),
-              'hours': this.hour,
-              'minutes': this.minute,
-              'seconds': this.second,
-              'meridian': this.meridian
-           }
-        });
-  
-        this.updateElement();
-        this.updateWidget();
-      },
-  
-      updateElement: function() {
-        this.$element.val(this.getTime()).change();
-      },
-  
-      updateFromElementVal: function() {
-              var val = this.$element.val();
-  
-              if (val) {
-                  this.setTime(val);
+      }
+      if (this.hour === 23) {
+        return this.hour = 0;
+      }
+      this.hour++;
+      this.update();
+    },
+
+    incrementMinute: function(step) {
+      var newVal;
+
+      if (step) {
+        newVal = this.minute + step;
+      } else {
+        newVal = this.minute + this.minuteStep - (this.minute % this.minuteStep);
+      }
+
+      if (newVal > 59) {
+        this.incrementHour();
+        this.minute = newVal - 60;
+      } else {
+        this.minute = newVal;
+      }
+      this.update();
+    },
+
+    incrementSecond: function() {
+      var newVal = this.second + this.secondStep - (this.second % this.secondStep);
+
+      if (newVal > 59) {
+        this.incrementMinute(true);
+        this.second = newVal - 60;
+      } else {
+        this.second = newVal;
+      }
+      this.update();
+    },
+
+    remove: function() {
+      $('document').off('.timepicker');
+      if (this.$widget) {
+        this.$widget.remove();
+      }
+      delete this.$element.data().timepicker;
+    },
+
+    setDefaultTime: function(defaultTime){
+      if (!this.$element.val()) {
+        if (defaultTime === 'current') {
+          var dTime = new Date(),
+            hours = dTime.getHours(),
+            minutes = Math.floor(dTime.getMinutes() / this.minuteStep) * this.minuteStep,
+            seconds = Math.floor(dTime.getSeconds() / this.secondStep) * this.secondStep,
+            meridian = 'AM';
+
+          if (this.showMeridian) {
+            if (hours === 0) {
+              hours = 12;
+            } else if (hours >= 12) {
+              if (hours > 12) {
+                hours = hours - 12;
               }
-      },
-  
-      updateWidget: function() {
-        if (this.$widget === false) {
-          return;
-        }
-  
-        var hour = this.hour < 10 ? '0' + this.hour : this.hour,
-            minute = this.minute < 10 ? '0' + this.minute : this.minute,
-            second = this.second < 10 ? '0' + this.second : this.second;
-  
-        if (this.showInputs) {
-          this.$widget.find('input.bootstrap-timepicker-hour').val(hour);
-          this.$widget.find('input.bootstrap-timepicker-minute').val(minute);
-  
-          if (this.showSeconds) {
-            this.$widget.find('input.bootstrap-timepicker-second').val(second);
+              meridian = 'PM';
+            } else {
+              meridian = 'AM';
+            }
           }
-          if (this.showMeridian) {
-            this.$widget.find('input.bootstrap-timepicker-meridian').val(this.meridian);
-          }
+
+          this.hour = hours;
+          this.minute = minutes;
+          this.second = seconds;
+          this.meridian = meridian;
+
+          this.update();
+
+        } else if (defaultTime === false) {
+          this.hour = 0;
+          this.minute = 0;
+          this.second = 0;
+          this.meridian = 'AM';
         } else {
-          this.$widget.find('span.bootstrap-timepicker-hour').text(hour);
-          this.$widget.find('span.bootstrap-timepicker-minute').text(minute);
-  
-          if (this.showSeconds) {
-            this.$widget.find('span.bootstrap-timepicker-second').text(second);
-          }
+          this.setTime(defaultTime);
+        }
+      } else {
+        this.updateFromElementVal();
+      }
+    },
+
+    setTime: function(time) {
+      var arr,
+        timeArray;
+
+      if (this.showMeridian) {
+        arr = time.split(' ');
+        timeArray = arr[0].split(':');
+        this.meridian = arr[1];
+      } else {
+        timeArray = time.split(':');
+      }
+
+      this.hour = parseInt(timeArray[0], 10);
+      this.minute = parseInt(timeArray[1], 10);
+      this.second = parseInt(timeArray[2], 10);
+
+      if (isNaN(this.hour)) {
+        this.hour = 0;
+      }
+      if (isNaN(this.minute)) {
+        this.minute = 0;
+      }
+
+      if (this.showMeridian) {
+        if (this.hour > 12) {
+          this.hour = 12;
+        } else if (this.hour < 1) {
+          this.hour = 12;
+        }
+
+        if (this.meridian === 'am' || this.meridian === 'a') {
+          this.meridian = 'AM';
+        } else if (this.meridian === 'pm' || this.meridian === 'p') {
+          this.meridian = 'PM';
+        }
+
+        if (this.meridian !== 'AM' && this.meridian !== 'PM') {
+          this.meridian = 'AM';
+        }
+      } else {
+         if (this.hour >= 24) {
+          this.hour = 23;
+        } else if (this.hour < 0) {
+          this.hour = 0;
+        }
+      }
+
+      if (this.minute < 0) {
+        this.minute = 0;
+      } else if (this.minute >= 60) {
+        this.minute = 59;
+      }
+
+      if (this.showSeconds) {
+        if (isNaN(this.second)) {
+          this.second = 0;
+        } else if (this.second < 0) {
+          this.second = 0;
+        } else if (this.second >= 60) {
+          this.second = 59;
+        }
+      }
+
+      this.update();
+    },
+
+    showWidget: function() {
+      if (this.isOpen) {
+        return;
+      }
+
+      var self = this;
+      $(document).on('mousedown.timepicker', function (e) {
+        // Clicked outside the timepicker, hide it
+        if ($(e.target).closest('.bootstrap-timepicker-widget').length === 0) {
+          self.hideWidget();
+        }
+      });
+
+      this.$element.trigger({
+        'type': 'show.timepicker',
+        'time': {
+            'value': this.getTime(),
+            'hours': this.hour,
+            'minutes': this.minute,
+            'seconds': this.second,
+            'meridian': this.meridian
+         }
+      });
+
+      if (this.disableFocus) {
+        this.$element.blur();
+      }
+
+      this.updateFromElementVal();
+
+      if (this.template === 'modal') {
+        this.$widget.modal('show').on('hidden', $.proxy(this.hideWidget, this));
+      } else {
+        if (this.isOpen === false) {
+          this.$widget.addClass('open');
+        }
+      }
+
+      this.isOpen = true;
+    },
+
+    toggleMeridian: function() {
+      this.meridian = this.meridian === 'AM' ? 'PM' : 'AM';
+      this.update();
+    },
+
+    update: function() {
+      this.$element.trigger({
+        'type': 'changeTime.timepicker',
+        'time': {
+            'value': this.getTime(),
+            'hours': this.hour,
+            'minutes': this.minute,
+            'seconds': this.second,
+            'meridian': this.meridian
+         }
+      });
+
+      this.updateElement();
+      this.updateWidget();
+    },
+
+    updateElement: function() {
+      this.$element.val(this.getTime()).change();
+    },
+
+    updateFromElementVal: function() {
+            var val = this.$element.val();
+
+            if (val) {
+                this.setTime(val);
+            }
+    },
+
+    updateWidget: function() {
+      if (this.$widget === false) {
+        return;
+      }
+
+      var hour = this.hour < 10 ? '0' + this.hour : this.hour,
+          minute = this.minute < 10 ? '0' + this.minute : this.minute,
+          second = this.second < 10 ? '0' + this.second : this.second;
+
+      if (this.showInputs) {
+        this.$widget.find('input.bootstrap-timepicker-hour').val(hour);
+        this.$widget.find('input.bootstrap-timepicker-minute').val(minute);
+
+        if (this.showSeconds) {
+          this.$widget.find('input.bootstrap-timepicker-second').val(second);
+        }
+        if (this.showMeridian) {
+          this.$widget.find('input.bootstrap-timepicker-meridian').val(this.meridian);
+        }
+      } else {
+        this.$widget.find('span.bootstrap-timepicker-hour').text(hour);
+        this.$widget.find('span.bootstrap-timepicker-minute').text(minute);
+
+        if (this.showSeconds) {
+          this.$widget.find('span.bootstrap-timepicker-second').text(second);
+        }
+        if (this.showMeridian) {
+          this.$widget.find('span.bootstrap-timepicker-meridian').text(this.meridian);
+        }
+      }
+    },
+
+    updateFromWidgetInputs: function() {
+      if (this.$widget === false) {
+        return;
+      }
+      var time = $('input.bootstrap-timepicker-hour', this.$widget).val() + ':' +
+        $('input.bootstrap-timepicker-minute', this.$widget).val() +
+        (this.showSeconds ? ':' + $('input.bootstrap-timepicker-second', this.$widget).val() : '') +
+        (this.showMeridian ? ' ' + $('input.bootstrap-timepicker-meridian', this.$widget).val() : '');
+
+      this.setTime(time);
+    },
+
+    widgetClick: function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      var action = $(e.target).closest('a').data('action');
+      if (action) {
+        this[action]();
+      }
+    },
+
+    widgetKeydown: function(e) {
+      var $input = $(e.target).closest('input'),
+          name = $input.attr('name');
+
+      switch (e.keyCode) {
+        case 9: //tab
           if (this.showMeridian) {
-            this.$widget.find('span.bootstrap-timepicker-meridian').text(this.meridian);
-          }
-        }
-      },
-  
-      updateFromWidgetInputs: function() {
-        if (this.$widget === false) {
-          return;
-        }
-        var time = $('input.bootstrap-timepicker-hour', this.$widget).val() + ':' +
-          $('input.bootstrap-timepicker-minute', this.$widget).val() +
-          (this.showSeconds ? ':' + $('input.bootstrap-timepicker-second', this.$widget).val() : '') +
-          (this.showMeridian ? ' ' + $('input.bootstrap-timepicker-meridian', this.$widget).val() : '');
-  
-        this.setTime(time);
-      },
-  
-      widgetClick: function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-  
-        var action = $(e.target).closest('a').data('action');
-        if (action) {
-          this[action]();
-        }
-      },
-  
-      widgetKeydown: function(e) {
-        var $input = $(e.target).closest('input'),
-            name = $input.attr('name');
-  
-        switch (e.keyCode) {
-          case 9: //tab
-            if (this.showMeridian) {
-              if (name === 'meridian') {
+            if (name === 'meridian') {
+              return this.hideWidget();
+            }
+          } else {
+            if (this.showSeconds) {
+              if (name === 'second') {
                 return this.hideWidget();
               }
             } else {
-              if (this.showSeconds) {
-                if (name === 'second') {
-                  return this.hideWidget();
-                }
-              } else {
-                if (name === 'minute') {
-                  return this.hideWidget();
-                }
+              if (name === 'minute') {
+                return this.hideWidget();
               }
             }
-  
-            this.updateFromWidgetInputs();
-          break;
-          case 27: // escape
-            this.hideWidget();
-          break;
-          case 38: // up arrow
-            e.preventDefault();
-            switch (name) {
-              case 'hour':
-                this.incrementHour();
-              break;
-              case 'minute':
-                this.incrementMinute();
-              break;
-              case 'second':
-                this.incrementSecond();
-              break;
-              case 'meridian':
-                this.toggleMeridian();
-              break;
-            }
-          break;
-          case 40: // down arrow
-            e.preventDefault();
-            switch (name) {
-              case 'hour':
-                this.decrementHour();
-              break;
-              case 'minute':
-                this.decrementMinute();
-              break;
-              case 'second':
-                this.decrementSecond();
-              break;
-              case 'meridian':
-                this.toggleMeridian();
-              break;
-            }
-          break;
-        }
-      }
-    };
-  
-  
-    //TIMEPICKER PLUGIN DEFINITION
-    $.fn.timepicker = function(option) {
-      var args = Array.apply(null, arguments);
-      args.shift();
-      return this.each(function() {
-        var $this = $(this),
-          data = $this.data('timepicker'),
-          options = typeof option === 'object' && option;
-  
-        if (!data) {
-          $this.data('timepicker', (data = new Timepicker(this, $.extend({}, $.fn.timepicker.defaults, options, $(this).data()))));
-        }
-  
-        if (typeof option === 'string') {
-          data[option].apply(data, args);
-        }
-      });
-    };
-  
-    $.fn.timepicker.defaults = {
-      defaultTime: 'current',
-      disableFocus: false,
-      isOpen: false,
-      minuteStep: 15,
-      modalBackdrop: false,
-      secondStep: 15,
-      showSeconds: false,
-      showInputs: true,
-      showMeridian: true,
-      template: 'dropdown',
-      appendWidgetTo: '.bootstrap-timepicker'
-    };
-  
-    $.fn.timepicker.Constructor = Timepicker;
-  
-  })(jQuery, window, document);
-  
-});
-window.require.register("CNeditor/contactpopover", function(exports, require, module) {
-  var ContactPopover;
+          }
 
-  module.exports = ContactPopover = (function() {
-    function ContactPopover() {
-      this.el = document.createElement('DIV');
-      this.el.id = 'contactpopover';
-      this.el.contentEditable = false;
-      this.isOn = false;
+          this.updateFromWidgetInputs();
+        break;
+        case 27: // escape
+          this.hideWidget();
+        break;
+        case 38: // up arrow
+          e.preventDefault();
+          switch (name) {
+            case 'hour':
+              this.incrementHour();
+            break;
+            case 'minute':
+              this.incrementMinute();
+            break;
+            case 'second':
+              this.incrementSecond();
+            break;
+            case 'meridian':
+              this.toggleMeridian();
+            break;
+          }
+        break;
+        case 40: // down arrow
+          e.preventDefault();
+          switch (name) {
+            case 'hour':
+              this.decrementHour();
+            break;
+            case 'minute':
+              this.decrementMinute();
+            break;
+            case 'second':
+              this.decrementSecond();
+            break;
+            case 'meridian':
+              this.toggleMeridian();
+            break;
+          }
+        break;
+      }
     }
+  };
 
-    ContactPopover.prototype.hide = function() {
-      var oldcontactseg;
 
-      oldcontactseg = null;
-      if (this.isOn && (oldcontactseg = this.el.parentNode)) {
-        oldcontactseg.removeChild(this.el);
+  //TIMEPICKER PLUGIN DEFINITION
+  $.fn.timepicker = function(option) {
+    var args = Array.apply(null, arguments);
+    args.shift();
+    return this.each(function() {
+      var $this = $(this),
+        data = $this.data('timepicker'),
+        options = typeof option === 'object' && option;
+
+      if (!data) {
+        $this.data('timepicker', (data = new Timepicker(this, $.extend({}, $.fn.timepicker.defaults, options, $(this).data()))));
       }
-      this.isOn = false;
-      return oldcontactseg;
-    };
 
-    ContactPopover.prototype.show = function(segment, model) {
-      var cozy, dp, html, name, value, _i, _len, _ref;
-
-      cozy = null;
-      html = '<dl class="dl-horizontal">';
-      _ref = model.get('datapoints');
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        dp = _ref[_i];
-        value = dp.value.replace("\n", '<br />');
-        if (dp.name === 'other' || dp.name === 'about') {
-          name = dp.type;
-        } else {
-          name = dp.type + ' ' + dp.name.replace('smail', 'postal');
-        }
-        html += "<dt>" + name + "</dt><dd>" + value;
-        if (dp.name === 'about' && dp.type === 'cozy') {
-          cozy = dp.value;
-        }
-        html += "</dd>";
+      if (typeof option === 'string') {
+        data[option].apply(data, args);
       }
-      html += '</dl>';
-      if (cozy) {
-        html += "<a style=\"display: block; margin-left: 40px; margin-bottom: 10px;\" href=\"" + cozy + "/public/talk/\" target=\"_blank\">\n    <i class=\"icon-facetime-video\"></i> Call with video\n</a>";
-      }
-      this.el.innerHTML = html;
-      segment.appendChild(this.el);
-      return this.isOn = true;
-    };
+    });
+  };
 
-    return ContactPopover;
+  $.fn.timepicker.defaults = {
+    defaultTime: 'current',
+    disableFocus: false,
+    isOpen: false,
+    minuteStep: 15,
+    modalBackdrop: false,
+    secondStep: 15,
+    showSeconds: false,
+    showInputs: true,
+    showMeridian: true,
+    template: 'dropdown',
+    appendWidgetTo: '.bootstrap-timepicker'
+  };
 
-  })();
-  
+  $.fn.timepicker.Constructor = Timepicker;
+
+})(jQuery, window, document);
+
 });
-window.require.register("CNeditor/editor", function(exports, require, module) {
-  /* ------------------------------------------------------------------------
-  # CLASS FOR THE COZY NOTE EDITOR
-  #
-  # usage :
-  #
-  # newEditor = new CNEditor( iframeTarget,callBack )
-  #   iframeTarget = iframe where the editor will be nested
-  #   callBack     = launched when editor ready, the context
-  #                  is set to the editorCtrl (callBack.call(this))
-  # properties & methods :
-  #   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
-  #   _keyDownCb : (e) =>
-  #   _insertLineAfter  : (param) ->
-  #   _insertLineBefore : (param) ->
-  #
-  #   editorIframe      : the iframe element where is nested the editor
-  #   editorBody$       : the jquery pointer on the body of the iframe
-  #   _lines            : {} an objet, each property refers a line
-  #   _highestId        :
-  #   _firstLine        : points the first line : TODO : not taken into account
+
+;require.register("CNeditor/contactpopover", function(exports, require, module) {
+var ContactPopover;
+
+module.exports = ContactPopover = (function() {
+  function ContactPopover() {
+    this.el = document.createElement('DIV');
+    this.el.id = 'contactpopover';
+    this.isOn = false;
+  }
+
+  ContactPopover.prototype.hide = function() {
+    var oldcontactseg;
+
+    oldcontactseg = null;
+    if (this.isOn && (oldcontactseg = this.el.parentNode)) {
+      oldcontactseg.removeChild(this.el);
+    }
+    this.isOn = false;
+    return oldcontactseg;
+  };
+
+  ContactPopover.prototype.show = function(segment, model) {
+    var datapoints, dp, html, _i, _len;
+
+    datapoints = model.get('datapoints');
+    html = '<dl class="dl-horizontal">';
+    for (_i = 0, _len = datapoints.length; _i < _len; _i++) {
+      dp = datapoints[_i];
+      html += this.dp2html(dp);
+    }
+    html += '</dl>';
+    this.el.innerHTML = html;
+    segment.appendChild(this.el);
+    return this.isOn = true;
+  };
+
+  ContactPopover.prototype.dp2html = function(dp) {
+    var name, value, _ref;
+
+    value = dp.value.replace("\n", '<br />');
+    if ((_ref = dp.name) === 'other' || _ref === 'about') {
+      name = dp.type;
+    } else {
+      name = dp.type + ' ' + dp.name;
+    }
+    return "<dt>" + name + "</dt><dd>" + value + "</dd>";
+  };
+
+  return ContactPopover;
+
+})();
+
+});
+
+;require.register("CNeditor/editor", function(exports, require, module) {
+/* ------------------------------------------------------------------------
+# CLASS FOR THE COZY NOTE EDITOR
+#
+# usage :
+#
+# newEditor = new CNEditor( iframeTarget,callBack )
+#   iframeTarget = iframe where the editor will be nested
+#   callBack     = launched when editor ready, the context
+#                  is set to the editorCtrl (callBack.call(this))
+# properties & methods :
+#   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
+#   _keyDownCb : (e) =>
+#   _insertLineAfter  : (param) ->
+#   _insertLineBefore : (param) ->
+#
+#   editorIframe      : the iframe element where is nested the editor
+#   editorBody$       : the jquery pointer on the body of the iframe
+#   _lines            : {} an objet, each property refers a line
+#   _highestId        :
+#   _firstLine        : points the first line : TODO : not taken into account
+*/
+
+var Alarm, CNeditor, Contact, ExternalModels, History, HotString, Line, Tags, Task, UrlPopover, logging, md2cozy, realtimer, selection,
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  __slice = [].slice;
+
+logging = require('./logging');
+
+md2cozy = require('./md2cozy').md2cozy;
+
+selection = require('./selection');
+
+HotString = require('./hot-string');
+
+UrlPopover = require('./urlpopover');
+
+History = require('./history');
+
+Tags = require('./tags');
+
+Line = require('./line');
+
+realtimer = require('./realtimer');
+
+ExternalModels = require('./externalmodels');
+
+Alarm = ExternalModels.Alarm, Contact = ExternalModels.Contact, Task = ExternalModels.Task;
+
+module.exports = CNeditor = (function() {
+  /*
+  #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
+  #       iframeTarget = iframe where the editor will be nested
+  #       callBack     = launched when editor ready, the context
+  #                      is set to the editorCtrl (callBack.call(this))
+  */
+  function CNeditor(editorTarget, callBack) {
+    this._processPaste = __bind(this._processPaste, this);
+    this._waitForPasteData = __bind(this._waitForPasteData, this);
+    this._keyupCb = __bind(this._keyupCb, this);
+    this._keypressCb = __bind(this._keypressCb, this);
+    this._keyDownCb = __bind(this._keyDownCb, this);
+    this.registerKeyDownCbForTest = __bind(this.registerKeyDownCbForTest, this);
+    this._keyDownCbTry = __bind(this._keyDownCbTry, this);
+    this._toggleTaskCB = __bind(this._toggleTaskCB, this);
+    this._pasteCB = __bind(this._pasteCB, this);
+    this._clickCB = __bind(this._clickCB, this);
+    this._mouseupCb = __bind(this._mouseupCb, this);
+    this._mousedownCb = __bind(this._mousedownCb, this);
+    this.loadEditor = __bind(this.loadEditor, this);
+    var _this = this;
+
+    this.editorTarget = editorTarget;
+    this.editorTarget$ = $(this.editorTarget);
+    this._internalTaskCounter = 0;
+    this._taskList = [];
+    this._tasksToBeSaved = {};
+    this._tasksModifSinceLastHistory = {};
+    ExternalModels.initialize(function(err) {
+      if (err) {
+        console.log(err);
+      }
+      realtimer.watch(ExternalModels.contactCollection);
+      if (_this.editorTarget.nodeName === "IFRAME") {
+        _this.isInIframe = true;
+        _this.editorTarget$.on('load', function() {
+          return _this.loadEditor(callBack);
+        });
+        return _this.editorTarget.src = '';
+      } else if (_this.editorTarget.nodeName === "DIV") {
+        _this.isInIframe = false;
+        return _this.loadEditor(callBack);
+      }
+    });
+    return this;
+  }
+
+  CNeditor.prototype.loadEditor = function(callback) {
+    var cssLink, editor_head$, editor_html$;
+
+    if (this.isInIframe) {
+      editor_html$ = this.editorTarget$.contents().find("html");
+      this.editorBody$ = editor_html$.find("body");
+      editor_head$ = editor_html$.find("head");
+      cssLink = '<link id="editorCSS" ';
+      cssLink += 'href="stylesheets/CNeditor.css" rel="stylesheet">';
+      editor_head$.html(cssLink);
+    } else {
+      this.editorBody$ = this.editorTarget$;
+    }
+    this.editorBody = this.editorBody$[0];
+    this.document = this.editorBody.ownerDocument;
+    this.linesDiv = document.createElement('div');
+    this.linesDiv.setAttribute('id', 'editor-lines');
+    this.linesDiv.setAttribute('class', 'editor-frame');
+    this.linesDiv.contentEditable = true;
+    this.editorBody$.append(this.linesDiv);
+    if (this.isInIframe) {
+      this.linesDiv.style.overflowY = 'auto';
+      this.linesDiv.style.position = 'absolute';
+      this.linesDiv.style.top = 0;
+      this.linesDiv.style.bottom = 0;
+      this.linesDiv.style.right = 0;
+      this.linesDiv.style.left = 0;
+    }
+    this._initClipBoard();
+    this.urlPopover = new UrlPopover(this);
+    this._hotString = new HotString(this);
+    this._hotString.realtimeContacts(ExternalModels.contactCollection);
+    this.Tags = new Tags(this, ExternalModels);
+    this._lines = {};
+    this.newPosition = true;
+    this._highestId = 0;
+    this._deepest = 1;
+    this.isEnabled = true;
+    this._history = new History(this);
+    this._lastKey = null;
+    this.currentSel = {
+      sel: this.getEditorSelection()
+    };
+    this.isFirefox = 'MozBoxSizing' in document.documentElement.style;
+    this.isSafari = Object.prototype.toString.call(window.HTMLElement);
+    this.isSafari = this.isSafari.indexOf('Constructor') > 0;
+    this.isChrome = !this.isSafari && 'WebkitTransform' in document.documentElement.style;
+    this.isChromeOrSafari = this.isChrome || this.isSafari;
+    this.linesDiv.addEventListener('drop', function(e) {
+      return e.preventDefault();
+    });
+    this._registerEventListeners();
+    return callback.call(this);
+  };
+
+  CNeditor.prototype._mousedownCb = function(e) {
+    var startCont, startSeg;
+
+    if (!this.isEnabled) {
+      return true;
+    }
+    if (this._hotString.isPreparing) {
+      this._hotString.mouseDownCb(e);
+    }
+    startCont = this.getEditorSelection().getRangeAt(0).startContainer;
+    startSeg = selection.getSegment(e.target, 0);
+    if (!startSeg.dataset.type) {
+      return this.Tags.setTagUnEditable();
+    }
+  };
+
+  /**
+   * When the user click in the editor, mouseup event will set @newPosition to
+   * true and take actions depending on selection location and editor state.
   */
 
-  var Alarm, CNeditor, Contact, ExternalModels, History, HotString, Line, Tags, Task, UrlPopover, logging, md2cozy, realtimer, selection,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __slice = [].slice;
 
-  logging = require('./logging');
+  CNeditor.prototype._mouseupCb = function(e) {
+    var endSeg, rg, startSeg, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
 
-  md2cozy = require('./md2cozy').md2cozy;
-
-  selection = require('./selection');
-
-  HotString = require('./hot-string');
-
-  UrlPopover = require('./urlpopover');
-
-  History = require('./history');
-
-  Tags = require('./tags');
-
-  Line = require('./line');
-
-  realtimer = require('./realtimer');
-
-  ExternalModels = require('./externalmodels');
-
-  Alarm = ExternalModels.Alarm, Contact = ExternalModels.Contact, Task = ExternalModels.Task;
-
-  module.exports = CNeditor = (function() {
-    /*
-    #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
-    #       iframeTarget = iframe where the editor will be nested
-    #       callBack     = launched when editor ready, the context
-    #                      is set to the editorCtrl (callBack.call(this))
-    */
-    function CNeditor(editorTarget, callBack) {
-      this._processPaste = __bind(this._processPaste, this);
-      this._waitForPasteData = __bind(this._waitForPasteData, this);
-      this._keyupCb = __bind(this._keyupCb, this);
-      this._keypressCb = __bind(this._keypressCb, this);
-      this._keyDownCb = __bind(this._keyDownCb, this);
-      this.registerKeyDownCbForTest = __bind(this.registerKeyDownCbForTest, this);
-      this._keyDownCbTry = __bind(this._keyDownCbTry, this);
-      this._toggleTaskCB = __bind(this._toggleTaskCB, this);
-      this._pasteCB = __bind(this._pasteCB, this);
-      this._clickCB = __bind(this._clickCB, this);
-      this._mouseupCb = __bind(this._mouseupCb, this);
-      this._mousedownCb = __bind(this._mousedownCb, this);
-      this.loadEditor = __bind(this.loadEditor, this);
-      var _this = this;
-
-      this.editorTarget = editorTarget;
-      this.editorTarget$ = $(this.editorTarget);
-      this._internalTaskCounter = 0;
-      this._taskList = [];
-      this._tasksToBeSaved = {};
-      this._tasksModifSinceLastHistory = {};
-      ExternalModels.initialize(function(err) {
-        if (err) {
-          console.log(err);
-        }
-        realtimer.watch(ExternalModels.contactCollection);
-        if (_this.editorTarget.nodeName === "IFRAME") {
-          _this.isInIframe = true;
-          _this.editorTarget$.on('load', function() {
-            return _this.loadEditor(callBack);
-          });
-          return _this.editorTarget.src = '';
-        } else if (_this.editorTarget.nodeName === "DIV") {
-          _this.isInIframe = false;
-          return _this.loadEditor(callBack);
-        }
-      });
-      return this;
+    if (!this.isEnabled) {
+      return true;
     }
+    this.newPosition = true;
+    this.Tags.setTagEditable();
+    if (this._hotString.isPreparing) {
+      if (this._hotString.isInAuto(e.target)) {
+        this._hotString.mouseUpInAutoCb(e);
+        return true;
+      }
+    }
+    rg = this.getEditorSelection().getRangeAt(0);
+    startSeg = selection.getSegment(rg.startContainer);
+    endSeg = selection.getSegment(rg.endContainer);
+    if (((_ref = startSeg.dataset) != null ? _ref.type : void 0) === 'taskBtn') {
+      this._setCaret(startSeg.nextSibling, 0);
+    } else if (((_ref1 = endSeg.dataset) != null ? _ref1.type : void 0) === 'taskBtn') {
+      this._setCaret(endSeg.nextSibling, 0);
+    }
+    if (((_ref2 = startSeg.dataset) != null ? _ref2.type : void 0) && !((_ref3 = endSeg.dataset) != null ? _ref3.type : void 0)) {
+      this.setSelection(rg.startContainer, rg.startOffset, startSeg, startSeg.childNodes.length);
+      endSeg = startSeg;
+    } else if (!((_ref4 = startSeg.dataset) != null ? _ref4.type : void 0) && ((_ref5 = endSeg.dataset) != null ? _ref5.type : void 0)) {
+      this.setSelection(endSeg, 0, rg.endContainer, rg.endOffset);
+      startSeg = endSeg;
+    }
+    if (this._hotString.isPreparing && startSeg !== this._hotString._hsSegment) {
+      this._hotString.reset('current');
+    }
+    switch ((_ref6 = startSeg.dataset) != null ? _ref6.type : void 0) {
+      case 'reminder':
+      case 'htag':
+        if (!this._hotString.isPreparing) {
+          rg = this.getEditorSelection().getRangeAt(0);
+          this._hotString.edit(startSeg, rg);
+          while (false) {
+            d;
+          }
+        }
+    }
+    return true;
+  };
 
-    CNeditor.prototype.loadEditor = function(callback) {
-      var cssLink, editor_head$, editor_html$;
+  CNeditor.prototype._clickCB = function(e) {
+    var segments, url;
 
-      if (this.isInIframe) {
-        editor_html$ = this.editorTarget$.contents().find("html");
-        this.editorBody$ = editor_html$.find("body");
-        editor_head$ = editor_html$.find("head");
-        cssLink = '<link id="editorCSS" ';
-        cssLink += 'href="stylesheets/CNeditor.css" rel="stylesheet">';
-        editor_head$.html(cssLink);
+    if (!this.isEnabled) {
+      return true;
+    }
+    console.info("== editor._clickCB()");
+    this._lastKey = null;
+    this.updateCurrentSel();
+    segments = this._getLinkSegments();
+    if (segments) {
+      if (e.ctrlKey) {
+        url = segments[0].href;
+        window.open(url, '_blank');
       } else {
-        this.editorBody$ = this.editorTarget$;
+        this.urlPopover.show(segments, false);
       }
-      this.editorBody = this.editorBody$[0];
-      this.document = this.editorBody.ownerDocument;
-      this.linesDiv = document.createElement('div');
-      this.linesDiv.setAttribute('id', 'editor-lines');
-      this.linesDiv.setAttribute('class', 'editor-frame');
-      this.linesDiv.contentEditable = true;
-      this.editorBody$.append(this.linesDiv);
-      if (this.isInIframe) {
-        this.linesDiv.style.overflowY = 'auto';
-        this.linesDiv.style.position = 'absolute';
-        this.linesDiv.style.top = 0;
-        this.linesDiv.style.bottom = 0;
-        this.linesDiv.style.right = 0;
-        this.linesDiv.style.left = 0;
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    this.Tags.clickCb(e);
+    if (this.hotString.isPreparing) {
+      this.hotString.reInit();
+    }
+    return true;
+  };
+
+  CNeditor.prototype._pasteCB = function(event) {
+    if (!this.isEnabled) {
+      return true;
+    }
+    return this.paste(event);
+  };
+
+  CNeditor.prototype._registerEventListeners = function() {
+    this.linesDiv.addEventListener('keydown', this._keyDownCbTry, true);
+    this.linesDiv.addEventListener('keyup', this._keyupCb, false);
+    this.linesDiv.addEventListener('keypress', this._keypressCb);
+    this.linesDiv.addEventListener('mouseup', this._mouseupCb, true);
+    this.linesDiv.addEventListener('mousedown', this._mousedownCb, true);
+    this.editorBody$.on('click', this._clickCB);
+    return this.editorBody$.on('paste', this._pasteCB);
+  };
+
+  CNeditor.prototype.disable = function() {
+    return this.isEnabled = false;
+  };
+
+  CNeditor.prototype.enable = function() {
+    return this.isEnabled = true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Set focus on the editor
+  */
+
+
+  CNeditor.prototype.setFocus = function() {
+    return this.linesDiv.focus();
+  };
+
+  /** -----------------------------------------------------------------------
+   * Get the selection from the editor's document
+   * @return {selection} The selection on the editor.
+  */
+
+
+  CNeditor.prototype.getEditorSelection = function() {
+    return this.document.getSelection();
+  };
+
+  /** -----------------------------------------------------------------------
+   * this method is modified during construction if the editor target is not
+   * an iframe
+   * @return {String} Returns the serialized current selection within the
+   *                  editor. In case serialisation is impossible (for
+   *                  instance if there is no selectio within editor), then
+   *                  false is returned.
+  */
+
+
+  CNeditor.prototype.saveEditorSelection = function() {
+    return this.serializeSel();
+  };
+
+  CNeditor.prototype._initTaskContent = function(taskDiv) {
+    var segment, span, txt;
+
+    segment = taskDiv.firstChild.nextSibling;
+    while (segment.nodeName !== 'BR') {
+      segment = segment.nextSibling;
+      taskDiv.removeChild(segment.previousSibling);
+    }
+    span = this.document.createElement('SPAN');
+    span.className = 'CNE_task';
+    txt = this.document.createTextNode('A new task');
+    span.appendChild(txt);
+    taskDiv.insertBefore(span, segment);
+    this._setSelectionOnNode(txt);
+    return this._history.addStep();
+  };
+
+  /**
+   * Turns a lineDiv in a task, creates the model of the task and link it to
+   * the lineDiv
+   * @param  {Element} lineDiv The lineDiv
+  */
+
+
+  CNeditor.prototype._turnIntoTask = function(lineDiv) {
+    if (lineDiv == null) {
+      lineDiv = this.updateCurrentSel().startLineDiv;
+    }
+    return this._turneLineIntoTask(lineDiv);
+  };
+
+  CNeditor.prototype._turneLineIntoTask = function(lineDiv) {
+    var btn, text;
+
+    if (!ExternalModels.taskCanBeUsed) {
+      return false;
+    }
+    btn = this.document.createElement('SPAN');
+    btn.className = 'CNE_task_btn';
+    btn.dataset.type = 'taskBtn';
+    this.Tags.handle(btn);
+    if (this.isChromeOrSafari) {
+      text = this.document.createTextNode(' ');
+    } else {
+      text = this.document.createTextNode('\u00a0');
+    }
+    btn.appendChild(text);
+    btn.addEventListener('click', this._toggleTaskCB);
+    lineDiv.insertBefore(btn, lineDiv.firstChild);
+    lineDiv.dataset.type = 'task';
+    lineDiv.dataset.state = 'undone';
+    this._createTaskForLine(lineDiv);
+    return lineDiv;
+  };
+
+  CNeditor.prototype._turneTaskIntoLine = function(taskDiv) {
+    var btn;
+
+    btn = taskDiv.firstChild;
+    btn.removeEventListener('click', this._toggleTaskCB);
+    this.Tags.remove(btn);
+    taskDiv.removeChild(btn);
+    taskDiv.task = null;
+    taskDiv.dataset.type = '';
+    taskDiv.dataset.state = '';
+    return taskDiv.dataset.id = '';
+  };
+
+  CNeditor.prototype._toggleTaskCB = function(e) {
+    var btn, lineDiv;
+
+    this._history.addStep();
+    lineDiv = selection.getLineDiv(e.target);
+    btn = lineDiv.firstChild;
+    if (lineDiv.dataset.state === 'done') {
+      lineDiv.dataset.state = 'undone';
+      this._setCaret(btn.nextSibling, 0);
+      this._stackTaskChange(lineDiv.task, 'undone');
+    } else {
+      lineDiv.dataset.state = 'done';
+      this._setCaret(btn.nextSibling, 0);
+      this._stackTaskChange(lineDiv.task, 'done');
+    }
+    this.editorTarget$.trigger(jQuery.Event('onChange'));
+    return lineDiv;
+  };
+
+  CNeditor.prototype._detectTaskChange = function() {
+    var isTask, lineDiv, sel;
+
+    lineDiv = this.currentSel.startLineDiv;
+    if (lineDiv) {
+      isTask = this.currentSel.isStartInTask;
+    } else {
+      sel = this.updateCurrentSel();
+      lineDiv = sel.startLineDiv;
+      isTask = sel.isStartInTask;
+    }
+    if (isTask) {
+      this._stackTaskChange(lineDiv.task, 'modified');
+    }
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * When a line is a task (its div has dataset.type = task) and we don't have
+   * the corresponding model of task, we then create this Task.
+   * It for instance happens when we create a task within the editor.
+   * @param  {Element} lineDiv The line div we will attach the task to..
+   * @param {Boolean} isRedo True if the task is re-created by a reDo.
+  */
+
+
+  CNeditor.prototype._createTaskForLine = function(lineDiv, isRedo) {
+    var t;
+
+    t = new Task({
+      description: lineDiv.textContent.slice(1)
+    });
+    lineDiv.task = t;
+    t.lineDiv = lineDiv;
+    this._taskList.push(t);
+    if (isRedo) {
+      t.internalId = lineDiv.dataset.id;
+    } else {
+      this._internalTaskCounter += 1;
+      t.internalId = 'CNE_task_id_' + this._internalTaskCounter;
+      this._stackTaskChange(t, 'created');
+      lineDiv.dataset.id = t.internalId;
+    }
+    return t;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Called only by readHtml() (called by setEditorContent() and undo/redo)
+   * When an html is loaded by readHtml(), if a line corresponds to a task, we
+   * must find if the model of the task line already exists. If yes, link it
+   * to the lineDiv, otherwiser fetch if from server.
+   * @param {Element} lineDiv The lineDiv turned into a task.
+  */
+
+
+  CNeditor.prototype._setTaskToLine = function(lineDiv) {
+    var btn, id, t, _i, _len, _ref,
+      _this = this;
+
+    btn = lineDiv.firstChild;
+    btn.addEventListener('click', this._toggleTaskCB);
+    id = lineDiv.dataset.id;
+    _ref = this._taskList;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      t = _ref[_i];
+      if (t.internalId === id) {
+        lineDiv.task = t;
+        t.lineDiv = lineDiv;
+        return true;
       }
-      this._initClipBoard();
-      this.urlPopover = new UrlPopover(this);
-      this._hotString = new HotString(this);
-      this._hotString.realtimeContacts(ExternalModels.contactCollection);
-      this.Tags = new Tags(this, ExternalModels);
-      this._lines = {};
-      this.newPosition = true;
-      this._highestId = 0;
-      this._deepest = 1;
-      this.isEnabled = true;
-      this._history = new History(this);
-      this._lastKey = null;
-      this.currentSel = {
-        sel: this.getEditorSelection()
-      };
-      this.isFirefox = 'MozBoxSizing' in document.documentElement.style;
-      this.isSafari = Object.prototype.toString.call(window.HTMLElement);
-      this.isSafari = this.isSafari.indexOf('Constructor') > 0;
-      this.isChrome = !this.isSafari && 'WebkitTransform' in document.documentElement.style;
-      this.isChromeOrSafari = this.isChrome || this.isSafari;
-      this.linesDiv.addEventListener('drop', function(e) {
-        return e.preventDefault();
+    }
+    if (id.slice(0, 12) === 'CNE_task_id_') {
+      this._createTaskForLine(lineDiv);
+      this.editorTarget$.trigger(jQuery.Event('onChange'));
+    } else {
+      t = new Task({
+        id: id
       });
-      this._registerEventListeners();
-      return callback.call(this);
-    };
+      this._internalTaskCounter += 1;
+      t.internalId = 'CNE_task_id_' + this._internalTaskCounter;
+      lineDiv.task = t;
+      lineDiv.dataset.id = t.internalId;
+      t.lineDiv = lineDiv;
+      t.fetch({
+        silent: true
+      }).done(function() {
+        t.isFromServer = true;
+        realtimer.watchOne(t);
+        return _this._updateTaskLine(t);
+      }).fail(function(resp) {
+        if (resp.status === 404) {
+          return _this._turneTaskIntoLine(t.lineDiv);
+        } else {
+          t.set({
+            done: t.lineDiv.dataset.state === 'done',
+            description: t.lineDiv.firstChild.nextSibling.textContent
+          }, {
+            silent: true
+          });
+          return t.isFromServer = false;
+        }
+      });
+      t.on('change', function(t) {
+        t.isFromServer = true;
+        return _this._updateTaskLine(t);
+      });
+      t.on('destroy', function(t) {
+        return _this._turneTaskIntoLine(t.lineDiv);
+      });
+      this._taskList.push(t);
+    }
+    return true;
+  };
 
-    CNeditor.prototype._mousedownCb = function(e) {
-      var startCont, startSeg;
+  /** -----------------------------------------------------------------------
+   * update a line div of a task with the attributes values of a model.
+   * It uses the model previous attributes values if isRevert == true
+   * @param  {Model}  t        A task backbone model
+   * @param  {Boolean} isRevert If True, it will use previous attributes
+   *                            values instead of its current values.
+  */
 
-      if (!this.isEnabled) {
+
+  CNeditor.prototype._updateTaskLine = function(t, isRevert) {
+    var attrib, currentTaskState, newState;
+
+    if (isRevert) {
+      attrib = t.previousAttributes();
+    } else {
+      attrib = t.attributes;
+    }
+    console.info(attrib);
+    t.lineDiv.firstChild.nextSibling.textContent = attrib.description;
+    currentTaskState = t.lineDiv.dataset.state === 'done';
+    if (attrib.done) {
+      newState = 'done';
+    } else {
+      newState = 'undone';
+    }
+    if (currentTaskState !== newState) {
+      t.lineDiv.dataset.state = newState;
+    }
+    return true;
+  };
+
+  CNeditor.prototype._stackTaskChange = function(task, action) {
+    console.info('== editor._stackTaskChange() ' + action, task.internalId);
+    this._stackTaskForSave(task.internalId, task, action);
+    switch (action) {
+      case 'modified':
+      case 'done':
+      case 'undone':
+        this._tasksModifSinceLastHistory[task.internalId] = {
+          t: task,
+          a: 'modified'
+        };
+        break;
+      case 'created':
+        this._tasksModifSinceLastHistory[task.internalId] = {
+          t: task,
+          a: 'created'
+        };
+    }
+    logging.printTasksModifStacks('_stackTaskChange', this._tasksToBeSaved);
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * When a task is modified or a undo/redo has modified its state, this
+   * function stacks the information so that when a save is triggered, then we
+   * know which task to save.
+   * @param  {string} id     The internal id of the task
+   * @param  {Task} t      The task model concerned
+   * @param  {String} action 'modified', 'done', 'undone', 'created', 'deleted'
+   *                         or 'removed'
+  */
+
+
+  CNeditor.prototype._stackTaskForSave = function(id, t, action) {
+    var modif;
+
+    modif = this._tasksToBeSaved[id];
+    if (!this._tasksToBeSaved[id]) {
+      modif = {
+        t: t
+      };
+      this._tasksToBeSaved[id] = modif;
+    }
+    switch (action) {
+      case 'modified':
+      case 'done':
+      case 'undone':
+        modif.modified = true;
+        break;
+      case 'created':
+        if (modif.deleted) {
+          modif.deleted = false;
+          modif.created = false;
+          modif.modified = true;
+        } else {
+          modif.created = true;
+        }
+        break;
+      case 'deleted':
+        if (modif.created) {
+          modif.deleted = false;
+          modif.created = false;
+        } else {
+          modif.deleted = true;
+        }
+        break;
+      case 'removed':
+        modif.removed = true;
+    }
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Saves the creations/modification/deletion not yet saved.
+   * a modif can b
+   * modif.removed | 1 1 1 1 1 1 1 1 | 0 0 | 0 0 | 0 | 0 0 | 0
+   * modif.created | 1 1 1 1 0 0 0 0 | 1 1 | 0 0 | 0 | 1 1 | 0
+   * modif.modified| 1 1 0 0 1 1 0 0 | 1 0 | 1 0 | 1 | 1 0 | 0
+   * modif.deleted | 1 0 1 0 1 0 1 0 | 1 1 | 1 1 | 0 | 0 0 | 0
+   * modif.action  | N N N N N N N N | N N | D D | M | C C | N
+   * (N D C = Nothing, Create, Delete)
+   * @return {[type]} [description]
+  */
+
+
+  CNeditor.prototype.saveTasks = function() {
+    var i, id, l, lineDiv, modif, t, _i, _len, _ref, _ref1,
+      _this = this;
+
+    console.info('== saveTasks()');
+    _ref = this._tasksToBeSaved;
+    for (id in _ref) {
+      modif = _ref[id];
+      if (modif.deleted) {
+        modif.t.destroy({
+          silent: true
+        });
+      } else if (modif.created && modif.deleted) {
+        continue;
+      } else if (modif.removed) {
+        continue;
+      } else if (modif.modified && !modif.created) {
+        t = modif.t;
+        l = t.lineDiv;
+        t.save({
+          done: l.dataset.state === 'done',
+          description: l.textContent.slice(1)
+        }, {
+          ignoreMySocketNotification: true,
+          silent: true,
+          error: function(t) {
+            window.alert('Cozy Todo is not responding, save ' + 'of tasks is not possible so we cancel ' + 'modifications.');
+            return _this._updateTaskLine(t, true);
+          }
+        });
+        t.isFromServer = false;
+      } else if (modif.created && !modif.t.id) {
+        this._saveTaskCreation(modif.t);
+      } else if (modif.created && modif.t.id) {
+        i = this._taskList;
+        _ref1 = this._taskList;
+        for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
+          t = _ref1[i];
+          if (t.internalId === id) {
+            this._taskList.splice(i, 1);
+            break;
+          }
+        }
+        lineDiv = this.linesDiv.querySelectorAll("div[data-id='" + modif.t.internalId + "']")[0];
+        t = this._createTaskForLine(lineDiv, true);
+        modif.t = t;
+        this._replaceInTaskHistory(t);
+        this._saveTaskCreation(t);
+      }
+    }
+    return this._tasksToBeSaved = {};
+  };
+
+  CNeditor.prototype._saveTaskCreation = function(t) {
+    var l,
+      _this = this;
+
+    l = t.lineDiv;
+    t.save({
+      done: l.dataset.state === 'done',
+      description: l.textContent.slice(1)
+    }, {
+      ignoreMySocketNotification: true,
+      silent: true,
+      success: function(t) {
+        realtimer.watchOne(t);
+        _this.editorTarget$.trigger(jQuery.Event('onChange'));
+        t.lineDiv.dataset.id = t.id;
+        t.on('change', function() {
+          t.isFromServer = true;
+          return _this._updateTaskLine(t);
+        });
+        return t.on('destroy', function(t) {
+          return _this._turneTaskIntoLine(t.lineDiv);
+        });
+      },
+      error: function(t) {
+        window.alert('Cozy Todo is not responding, save ' + 'of tasks is not possible so we cancel ' + 'the task creation.');
+        return _this._turneTaskIntoLine(t.lineDiv);
+      }
+    });
+    return t.isFromServer = false;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Tests if there is a modification between the model and the lineDiv
+   * @param  {[type]}  task [description]
+   * @return {Boolean}      [description]
+  */
+
+
+  CNeditor.prototype._isTaskUnchanged = function(task) {
+    var line, res;
+
+    res = true;
+    line = task.lineDiv;
+    res = res && task.get('done') === (line.dataset.state === 'done');
+    res = res && task.get('description') === line.textContent.slice(1);
+    return res;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Returns true if the selection is at the start of a word. Ex :
+   *     . xxxx |yyyy   : true
+   *     . xxxx | yyyy  : true
+   *     . |yyyy        : true
+   *     . xxxx y|yyyy  : false
+   *     . xxxx| yyyy   : false
+   * @return {Boolean} True if the selection starts at the beginning of a word
+  */
+
+
+  CNeditor.prototype._isStartingWord = function() {
+    var char, rg, rg2, sel, txt;
+
+    sel = this.updateCurrentSelIsStartIsEnd();
+    rg = sel.theoricalRange;
+    if (sel.rangeIsStartLine) {
+      return true;
+    } else {
+      if (rg.startOffset === 0) {
+        rg2 = rg.cloneRange();
+        rg2.collapse();
+        rg2.setStart(selection._getLineDiv(rg2.startContainer), 0);
+        txt = rg2.toString();
+        if (txt.length === 0) {
+          return true;
+        } else {
+          char = text.slice(-1);
+        }
+      } else {
+        char = rg.startContainer.textContent.substr(rg.startOffset - 1, 1);
+      }
+      if (char.charCodeAt(0) === 32 || char.charCodeAt(0) === 160) {
         return true;
+      } else {
+        return false;
       }
+    }
+  };
+
+  CNeditor.prototype.getCurrentAllowedInsertions = function() {
+    var line, metaSelector, out;
+
+    line = this.updateCurrentSel().startLineDiv;
+    out = [];
+    if (line.dataset.type === 'task') {
+      return out;
+    }
+    metaSelector = '[data-type="contact"], [data-type="reminder"]';
+    if (ExternalModels.taskCanBeUsed && !line.querySelector(metaSelector)) {
+      out.push('todo');
+    }
+    if (ExternalModels.contactCanBeUsed) {
+      out.push('contact');
+    }
+    if (ExternalModels.alarmCanBeUsed) {
+      out.push('reminder');
+    }
+    return out;
+  };
+
+  /* ------------------------------------------------------------------------
+  # EXTENSION : _updateDeepest
+  #
+  # Find the maximal deep (thus the deepest line) of the text
+  # TODO: improve it so it only calculates the new depth from the modified
+  #       lines (not all of them)
+  # TODO: set a class system rather than multiple CSS files. Thus titles
+  #       classes look like "Th-n depth3" for instance if max depth is 3
+  # note: These todos arent our priority for now
+  */
+
+
+  CNeditor.prototype._updateDeepest = function() {
+    var c, lines, max, _results;
+
+    max = 1;
+    lines = this._lines;
+    _results = [];
+    for (c in lines) {
+      if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th" && lines[c].lineDepthAbs > max) {
+        _results.push(max = this._lines[c].lineDepthAbs);
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
+  /*-----------------------------------------------------------------------
+  # Set the editor description and related to be used when creating
+  # reminders
+  */
+
+
+  CNeditor.prototype.setReminderCf = function(description, related) {
+    return Alarm.setDefaultCf(description, related);
+  };
+
+  /** -----------------------------------------------------------------------
+   * Initialize the editor content from a html string
+   * The html string should not been pretified because of the spaces and
+   * charriage return.
+   * If unPretify = true then a regex tries to set up things
+  */
+
+
+  CNeditor.prototype.replaceContent = function(htmlString, unPretify) {
+    var _ref;
+
+    if (unPretify) {
+      htmlString = htmlString.replace(/>[\n ]*</g, "><");
+    }
+    if ((_ref = this.urlPopover) != null) {
+      _ref.cancel();
+    }
+    this.linesDiv.innerHTML = htmlString;
+    this._taskList = [];
+    this._readHtml(true);
+    this._setCaret(this.linesDiv.firstChild.firstChild, 0, true);
+    this.newPosition = true;
+    return this.hotString = '';
+  };
+
+  /* ------------------------------------------------------------------------
+  # Clear editor content
+  */
+
+
+  CNeditor.prototype.deleteContent = function() {
+    var emptyLine;
+
+    emptyLine = '<div id="CNID_1" class="Tu-1"><span></span><br></div>';
+    return this.replaceContent(emptyLine);
+  };
+
+  /* ------------------------------------------------------------------------
+  # Returns an html string representing the editor content
+  */
+
+
+  CNeditor.prototype.getEditorContent = function() {
+    var clone, lineDiv, seg, segment, segments, txt, _i, _j, _len, _len1;
+
+    this.Tags.contactPopover.hide();
+    if (this._hotString.isPreparing || this.urlPopover.isOn) {
+      clone = this.linesDiv.cloneNode(true);
       if (this._hotString.isPreparing) {
-        this._hotString.mouseDownCb(e);
+        segment = clone.querySelector('.CNE_hot_string');
+        segment.classList.remove('CNE_hot_string');
+        lineDiv = segment.parentElement;
+        segment.textContent = '';
+        this._fusionSimilarSegments(lineDiv, []);
+        segment = clone.querySelector('#CNE_autocomplete');
+        segment.parentElement.removeChild(segment);
       }
-      startCont = this.getEditorSelection().getRangeAt(0).startContainer;
-      startSeg = selection.getSegment(e.target, 0);
-      if (!startSeg.dataset.type) {
-        return this.Tags.setTagUnEditable();
+      if (this.urlPopover.isOn) {
+        segment = clone.querySelector('#CNE_urlPopover');
+        segment.parentElement.removeChild(segment);
+        segments = clone.querySelectorAll('.CNE_url_in_edition');
+        for (_i = 0, _len = segments.length; _i < _len; _i++) {
+          seg = segments[_i];
+          seg.classList.remove('CNE_url_in_edition');
+        }
+        if (this.urlPopover.isLinkCreation) {
+          lineDiv = selection._getLineDiv(segments[0]);
+          for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
+            seg = segments[_j];
+            this._applyAhrefToSegments(seg, seg, [], false, '');
+          }
+          this._fusionSimilarSegments(lineDiv, []);
+        }
       }
+      txt = clone.innerHTML;
+    } else {
+      txt = this.linesDiv.innerHTML;
+    }
+    return txt;
+  };
+
+  /* ------------------------------------------------------------------------
+  # Sets the editor content from a html string
+  */
+
+
+  CNeditor.prototype.setEditorContent = function(htmlContent) {
+    return this.replaceContent(htmlContent);
+  };
+
+  /* ------------------------------------------------------------------------
+  # DEPRECATED - USED ONLY FOR REVERSE COMPATIBILITY
+  # Sets the editor content from a markdown string
+  */
+
+
+  CNeditor.prototype.setEditorContentFromMD = function(mdContent) {
+    var cozyContent;
+
+    cozyContent = md2cozy.md2cozy(mdContent);
+    return this.replaceContent(cozyContent);
+  };
+
+  /** -----------------------------------------------------------------------
+   * Return [metaKeyCode,keyCode] corresponding to the key strike combinaison.
+   * the string structure = [meta key]-[key]
+   *   * [metaKeyCode] : (Alt)*(Ctrl)*(Shift)*
+   *   * [keyCode] : (return|end|...|A|S|V|Y|Z)|(other)
+   * ex :
+   *   * "AltShift" & "up"
+   *   * "AltCtrl" & "down"
+   *   * "Shift" & "A"
+   *   * "Ctrl" & "S"
+   *   * "" & "other"
+   * @param  {[type]} e [description]
+   * @return {[type]}   [description]
+  */
+
+
+  CNeditor.prototype.getShortCut = function(e) {
+    var isAction, key, keyCode, metaKey, shortcut;
+
+    metaKey = (e.altKey ? "Alt" : "") +
+                              (e.ctrlKey ? "Ctrl" : "") +
+                              (e.shiftKey ? "Shift" : "");
+    keyCode = e.keyCode;
+    switch (keyCode) {
+      case 13:
+        key = 'return';
+        isAction = true;
+        break;
+      case 16:
+        key = 'shift';
+        isAction = true;
+        break;
+      case 17:
+        key = 'ctrl';
+        isAction = true;
+        break;
+      case 18:
+        key = 'alt';
+        isAction = true;
+        break;
+      case 35:
+        key = 'end';
+        isAction = true;
+        break;
+      case 36:
+        key = 'home';
+        isAction = true;
+        break;
+      case 33:
+        key = 'pgUp';
+        isAction = true;
+        break;
+      case 34:
+        key = 'pgDwn';
+        isAction = true;
+        break;
+      case 37:
+        key = 'left';
+        isAction = true;
+        break;
+      case 38:
+        key = 'up';
+        isAction = true;
+        break;
+      case 39:
+        key = 'right';
+        isAction = true;
+        break;
+      case 40:
+        key = 'down';
+        isAction = true;
+        break;
+      case 9:
+        key = 'tab';
+        isAction = true;
+        break;
+      case 8:
+        key = 'backspace';
+        isAction = true;
+        break;
+      case 32:
+        key = 'space';
+        isAction = true;
+        break;
+      case 27:
+        key = 'esc';
+        isAction = true;
+        break;
+      case 46:
+        key = 'suppr';
+        isAction = true;
+        break;
+      default:
+        isAction = false;
+        keyCode = e.which;
+        switch (keyCode) {
+          case 32:
+            key = 'space';
+            break;
+          case 8:
+            key = 'backspace';
+            break;
+          case 65:
+            key = 'A';
+            break;
+          case 66:
+            key = 'B';
+            break;
+          case 67:
+            key = 'C';
+            break;
+          case 85:
+            key = 'U';
+            break;
+          case 75:
+            key = 'K';
+            break;
+          case 76:
+            key = 'L';
+            break;
+          case 83:
+            key = 'S';
+            break;
+          case 86:
+            key = 'V';
+            break;
+          case 88:
+            key = 'X';
+            break;
+          case 89:
+            key = 'Y';
+            break;
+          case 90:
+            key = 'Z';
+            break;
+          default:
+            key = 'other';
+        }
+    }
+    shortcut = metaKey + '-' + key;
+    if ((metaKey === '' || metaKey === 'Shift') && (key === 'A' || key === 'B' || key === 'C' || key === 'X' || key === 'U' || key === 'K' || key === 'L' || key === 'S' || key === 'V' || key === 'Y' || key === 'Z')) {
+      key = 'other';
+    }
+    return this._shortcut = {
+      meta: metaKey,
+      key: key,
+      isAction: isAction,
+      shortcut: shortcut,
+      keyCode: keyCode
     };
+  };
 
-    /**
-     * When the user click in the editor, mouseup event will set @newPosition to
-     * true and take actions depending on selection location and editor state.
-    */
+  /** -----------------------------------------------------------------------
+   * Callback to be used in production.
+   * In case of error thrown by the editor, we catch it and undo the content
+   * to avoid to loose data.
+   * @param  {event} e  The key event
+  */
 
 
-    CNeditor.prototype._mouseupCb = function(e) {
-      var endSeg, rg, startSeg, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+  CNeditor.prototype._keyDownCbTry = function(e) {
+    var error;
 
-      if (!this.isEnabled) {
-        return true;
+    if (!this.isEnabled) {
+      return;
+    }
+    try {
+      return this._keyDownCb(e);
+    } catch (_error) {
+      error = _error;
+      alert('A bug occured, we prefer to undo your last action to ' + 'be safe.\n\nMessage :\n' + error);
+      console.log(error.stack);
+      e.preventDefault();
+      return this.unDo();
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Change the callback called by keydown event for the "test" callback.
+   * The aim is that during test we don't want to intercept errors so that
+   * the test can detect the error.
+  */
+
+
+  CNeditor.prototype.registerKeyDownCbForTest = function() {
+    this.linesDiv.removeEventListener('keydown', this._keyDownCbTry, true);
+    return this.linesDiv.addEventListener('keydown', this._keyDownCb, true);
+  };
+
+  /**------------------------------------------------------------------------
+   *
+   * The listener of keyPress event on the editor's iframe... the king !
+   *
+   * Params :
+   * e : the event object. Interesting attributes :
+   *   .which
+   *   .altKey
+   *   .ctrlKey
+   *   .metaKey
+   *   .shiftKey
+   *   .keyCode
+   *
+   * SHORTCUT
+   *
+   * Definition of a shortcut :
+   *   a combination alt,ctrl,shift,meta
+   *   + one caracter(.which)
+   *   or
+   *     arrow (.keyCode=dghb:) or
+   *     return(keyCode:13) or
+   *     bckspace (which:8) or
+   *     tab(keyCode:9)
+   *   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
+   *                   'Ctrl-'
+  */
+
+
+  CNeditor.prototype._keyDownCb = function(e) {
+    var lastShortcut, rg, sel, shortcut, winAltGr;
+
+    if (!this.isEnabled) {
+      return true;
+    }
+    this.getShortCut(e);
+    shortcut = this._shortcut.shortcut;
+    lastShortcut = this._lastKey;
+    this._lastKey = shortcut;
+    this.currentSel = {
+      sel: null,
+      range: null,
+      startLine: null,
+      endLine: null,
+      rangeIsStartLine: null,
+      rangeIsEndLine: null,
+      startBP: null,
+      endBP: null
+    };
+    if (this._hotString.isPreparing) {
+      if (this._hotString.keyDownCb(shortcut)) {
+        e.preventDefault();
+        return false;
       }
-      this.newPosition = true;
-      this.Tags.setTagEditable();
-      if (this._hotString.isPreparing) {
-        if (this._hotString.isInAuto(e.target)) {
-          this._hotString.mouseUpInAutoCb(e);
+    }
+    if (e.keyCode === 16) {
+      rg = this.getEditorSelection().getRangeAt(0);
+      if (!selection.getSegment(rg.startContainer, 0).dataset.type) {
+        this.Tags.setTagUnEditable();
+      }
+    }
+    switch (this._shortcut.key) {
+      case 'up':
+      case 'down':
+      case 'left':
+      case 'right':
+      case 'pgUp':
+      case 'pgDwn':
+      case 'end':
+      case 'home':
+        if (!e.altKey && (e.shiftKey || (!e.shiftKey && !e.ctrlrlKey))) {
+          this.newPosition = true;
           return true;
         }
+        break;
+      case 'other':
+      case 'space':
+        winAltGr = e.ctrlKey && e.altKey;
+        if (winAltGr) {
+          return true;
+        }
+        if (!(e.ctrlKey || e.altKey)) {
+          if (this.newPosition) {
+            this._history.addStep();
+          } else if (lastShortcut === '-space' && shortcut !== '-space') {
+            this._history.addStep();
+          }
+          if (this.newPosition) {
+            sel = this.updateCurrentSel();
+            if (!sel.theoricalRange.collapsed) {
+              this._backspace();
+            }
+            this.newPosition = false;
+          }
+          this.editorTarget$.trigger(jQuery.Event('onChange'));
+          this._detectTaskChange();
+          return true;
+        }
+    }
+    switch (shortcut) {
+      case '-return':
+        this._chromeCorrection();
+        if (lastShortcut !== shortcut) {
+          this._history.addStep();
+        }
+        this.updateCurrentSelIsStartIsEnd();
+        if (this.currentSel.isStartInTask && lastShortcut === shortcut) {
+          this._history.addStep();
+        }
+        this._return();
+        this.newPosition = false;
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
+      case '-backspace':
+        if (lastShortcut !== shortcut) {
+          this._history.addStep();
+        }
+        this.updateCurrentSelIsStartIsEnd();
+        this._backspace();
+        this.newPosition = true;
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
+      case '-tab':
+        this._history.addStep();
+        this.tab();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
+      case 'Shift-tab':
+        this._history.addStep();
+        this.shiftTab();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
+      case '-suppr':
+        if (lastShortcut !== shortcut) {
+          this._history.addStep();
+        }
+        this.updateCurrentSelIsStartIsEnd();
+        this._suppr(e);
+        e.preventDefault();
+        this.newPosition = true;
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
+      case 'CtrlShift-down':
+        if (lastShortcut !== shortcut) {
+          this._history.addStep();
+        }
+        return e.preventDefault();
+      case 'CtrlShift-up':
+        if (lastShortcut !== shortcut) {
+          this._history.addStep();
+        }
+        return e.preventDefault();
+      case 'Ctrl-A':
+        selection.selectAll(this);
+        return e.preventDefault();
+      case 'Alt-L':
+        this._history.addStep();
+        this.markerList();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
+      case 'Alt-A':
+        this._history.addStep();
+        this.toggleType();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
+      case 'Ctrl-V':
+        this._history.addStep();
+        this.editorTarget$.trigger(jQuery.Event('onChange'));
+        return true;
+      case 'Ctrl-B':
+        this._history.addStep();
+        this.strong();
+        return e.preventDefault();
+      case 'Ctrl-K':
+        this.linkifySelection();
+        return e.preventDefault();
+      case 'Ctrl-S':
+        this.editorTarget$.trigger(jQuery.Event('saveRequest'));
+        e.preventDefault();
+        return e.stopPropagation();
+      case 'Ctrl-Z':
+        this.unDo();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
+      case 'Ctrl-Y':
+        this.reDo();
+        e.preventDefault();
+        return this.editorTarget$.trigger(jQuery.Event('onChange'));
+      case 'Ctrl-C':
+      case 'Ctrl-X':
+        break;
+      default:
+        return e.preventDefault();
+    }
+  };
+
+  CNeditor.prototype._keypressCb = function(e) {
+    if (!this.isEnabled) {
+      return true;
+    }
+    return this._hotString.keypressCb(e);
+  };
+
+  /** -----------------------------------------------------------------------
+   * Detects where the carret is after a keyup in order to launch required
+   * actions :
+   * A/ correct the 2 following problems :
+   *   a- in Chrome, the insertion of a caracter by the browser may be out of
+   *   a span.
+   *   This is du to a bug in Chrome : you can create a range with its start
+   *   break point in an empty span. But if you add this range to the
+   *   selection, then this latter will not respect your range and its start
+   *   break point will be outside the range. When a key is pressed to insert
+   *   a caracter, the browser inserts it at the start break point, ie outside
+   *   the span... this function detects after each keyup is there is a text
+   *   node outside a span and move its content and the carret.
+   *   b- in order to keep the navigation with arrows working, we have to
+   *   insert a text in the buttons of tasks. That's why we have to remove the
+   *   carret from the button when the browser put it in a button.
+   * B/ edit meta data
+   * C/ Deal case when the selection has been changed with keyboard
+   * D/ Deal hot string.
+   * E/ Fire the editor onKeyUp event
+   * @param  {Event} e The key event
+  */
+
+
+  CNeditor.prototype._keyupCb = function(e) {
+    var bp, endSeg, line, newCont, rg, startSeg, _ref;
+
+    if (!this.isEnabled) {
+      return true;
+    }
+    if (this.isChromeOrSafari) {
+      this._chromeCorrection();
+    }
+    rg = this.getEditorSelection().getRangeAt(0);
+    startSeg = selection.getSegment(rg.startContainer);
+    endSeg = selection.getSegment(rg.endContainer);
+    if (startSeg.dataset) {
+      switch (startSeg.dataset.type) {
+        case 'taskBtn':
+          if (e.keyCode === 37) {
+            line = selection.getLineDiv(startSeg, 0).previousSibling;
+            if (line) {
+              newCont = line.lastChild.previousSibling;
+              this._setCaret(newCont, newCont.childNodes.length);
+            } else {
+              this._setCaret(startSeg.nextSibling, 0);
+            }
+          } else {
+            this._setCaret(startSeg.nextSibling, 0);
+          }
+          break;
+        case 'contact':
+          if (e.keyCode === 37) {
+            this._setCaret(startSeg.previousSibling.childNodes[0], startSeg.previousSibling.childNodes[0].length - 1);
+          } else {
+            if (startSeg.nextSibling.childNodes[0]) {
+              this._setCaret(startSeg.nextSibling.childNodes[0], 1);
+            } else {
+              bp = this.insertSpaceAfterSeg(startSeg);
+              this._setCaret(bp.cont, bp.offset);
+            }
+          }
+          break;
+        case 'reminder':
+        case 'htag':
+          if (!this._hotString.isPreparing) {
+            this._hotString.edit(startSeg, rg);
+          }
       }
-      rg = this.getEditorSelection().getRangeAt(0);
-      startSeg = selection.getSegment(rg.startContainer);
-      endSeg = selection.getSegment(rg.endContainer);
-      if (((_ref = startSeg.dataset) != null ? _ref.type : void 0) === 'taskBtn') {
-        this._setCaret(startSeg.nextSibling, 0);
-      } else if (((_ref1 = endSeg.dataset) != null ? _ref1.type : void 0) === 'taskBtn') {
-        this._setCaret(endSeg.nextSibling, 0);
-      }
-      if (((_ref2 = startSeg.dataset) != null ? _ref2.type : void 0) && !((_ref3 = endSeg.dataset) != null ? _ref3.type : void 0)) {
+    }
+    if (e.keyCode === 16) {
+      this.Tags.setTagEditable();
+      if (startSeg.dataset.type && !endSeg.dataset.type) {
         this.setSelection(rg.startContainer, rg.startOffset, startSeg, startSeg.childNodes.length);
         endSeg = startSeg;
-      } else if (!((_ref4 = startSeg.dataset) != null ? _ref4.type : void 0) && ((_ref5 = endSeg.dataset) != null ? _ref5.type : void 0)) {
+      } else if (!startSeg.dataset.type && endSeg.dataset.type) {
         this.setSelection(endSeg, 0, rg.endContainer, rg.endOffset);
         startSeg = endSeg;
       }
       if (this._hotString.isPreparing && startSeg !== this._hotString._hsSegment) {
         this._hotString.reset('current');
       }
-      switch ((_ref6 = startSeg.dataset) != null ? _ref6.type : void 0) {
-        case 'reminder':
-        case 'htag':
-          if (!this._hotString.isPreparing) {
-            rg = this.getEditorSelection().getRangeAt(0);
-            this._hotString.edit(startSeg, rg);
-            while (false) {
-              d;
-            }
-          }
-      }
-      return true;
-    };
-
-    CNeditor.prototype._clickCB = function(e) {
-      var segments, url;
-
-      if (!this.isEnabled) {
-        return true;
-      }
-      console.info("== editor._clickCB()");
-      this._lastKey = null;
-      this.updateCurrentSel();
-      segments = this._getLinkSegments();
-      if (segments) {
-        if (e.ctrlKey) {
-          url = segments[0].href;
-          window.open(url, '_blank');
+    }
+    if (this._hotString.isPreparing) {
+      if (this._hotString._autoToBeShowed) {
+        this._hotString.showAutoAndHighLight();
+      } else if (!(e.shiftKey && ((_ref = e.keyCode) === 17 || _ref === 37 || _ref === 38 || _ref === 36 || _ref === 33 || _ref === 40 || _ref === 39 || _ref === 34 || _ref === 35))) {
+        if (startSeg === this._hotString._hsSegment) {
+          this._hotString.updateHs();
         } else {
-          this.urlPopover.show(segments, false);
-        }
-        e.stopPropagation();
-        e.preventDefault();
-      }
-      this.Tags.clickCb(e);
-      if (this.hotString.isPreparing) {
-        this.hotString.reInit();
-      }
-      return true;
-    };
-
-    CNeditor.prototype._pasteCB = function(event) {
-      if (!this.isEnabled) {
-        return true;
-      }
-      return this.paste(event);
-    };
-
-    CNeditor.prototype._registerEventListeners = function() {
-      this.linesDiv.addEventListener('keydown', this._keyDownCbTry, true);
-      this.linesDiv.addEventListener('keyup', this._keyupCb, false);
-      this.linesDiv.addEventListener('keypress', this._keypressCb);
-      this.linesDiv.addEventListener('mouseup', this._mouseupCb, true);
-      this.linesDiv.addEventListener('mousedown', this._mousedownCb, true);
-      this.editorBody$.on('click', this._clickCB);
-      return this.editorBody$.on('paste', this._pasteCB);
-    };
-
-    CNeditor.prototype.disable = function() {
-      return this.isEnabled = false;
-    };
-
-    CNeditor.prototype.enable = function() {
-      return this.isEnabled = true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Set focus on the editor
-    */
-
-
-    CNeditor.prototype.setFocus = function() {
-      return this.linesDiv.focus();
-    };
-
-    /** -----------------------------------------------------------------------
-     * Get the selection from the editor's document
-     * @return {selection} The selection on the editor.
-    */
-
-
-    CNeditor.prototype.getEditorSelection = function() {
-      return this.document.getSelection();
-    };
-
-    /** -----------------------------------------------------------------------
-     * this method is modified during construction if the editor target is not
-     * an iframe
-     * @return {String} Returns the serialized current selection within the
-     *                  editor. In case serialisation is impossible (for
-     *                  instance if there is no selectio within editor), then
-     *                  false is returned.
-    */
-
-
-    CNeditor.prototype.saveEditorSelection = function() {
-      return this.serializeSel();
-    };
-
-    CNeditor.prototype._initTaskContent = function(taskDiv) {
-      var segment, span, txt;
-
-      segment = taskDiv.firstChild.nextSibling;
-      while (segment.nodeName !== 'BR') {
-        segment = segment.nextSibling;
-        taskDiv.removeChild(segment.previousSibling);
-      }
-      span = this.document.createElement('SPAN');
-      span.className = 'CNE_task';
-      txt = this.document.createTextNode('A new task');
-      span.appendChild(txt);
-      taskDiv.insertBefore(span, segment);
-      this._setSelectionOnNode(txt);
-      return this._history.addStep();
-    };
-
-    /**
-     * Turns a lineDiv in a task, creates the model of the task and link it to
-     * the lineDiv
-     * @param  {Element} lineDiv The lineDiv
-    */
-
-
-    CNeditor.prototype._turnIntoTask = function(lineDiv) {
-      if (lineDiv == null) {
-        lineDiv = this.updateCurrentSel().startLineDiv;
-      }
-      return this._turneLineIntoTask(lineDiv);
-    };
-
-    CNeditor.prototype._turneLineIntoTask = function(lineDiv) {
-      var btn, text;
-
-      if (!ExternalModels.taskCanBeUsed) {
-        return false;
-      }
-      btn = this.document.createElement('SPAN');
-      btn.className = 'CNE_task_btn';
-      btn.dataset.type = 'taskBtn';
-      this.Tags.handle(btn);
-      if (this.isChromeOrSafari) {
-        text = this.document.createTextNode(' ');
-      } else {
-        text = this.document.createTextNode('\u00a0');
-      }
-      btn.appendChild(text);
-      btn.addEventListener('click', this._toggleTaskCB);
-      lineDiv.insertBefore(btn, lineDiv.firstChild);
-      lineDiv.dataset.type = 'task';
-      lineDiv.dataset.state = 'undone';
-      this._createTaskForLine(lineDiv);
-      return lineDiv;
-    };
-
-    CNeditor.prototype._turneTaskIntoLine = function(taskDiv) {
-      var btn;
-
-      btn = taskDiv.firstChild;
-      btn.removeEventListener('click', this._toggleTaskCB);
-      this.Tags.remove(btn);
-      taskDiv.removeChild(btn);
-      taskDiv.task = null;
-      taskDiv.dataset.type = '';
-      taskDiv.dataset.state = '';
-      return taskDiv.dataset.id = '';
-    };
-
-    CNeditor.prototype._toggleTaskCB = function(e) {
-      var btn, lineDiv;
-
-      this._history.addStep();
-      lineDiv = selection.getLineDiv(e.target);
-      btn = lineDiv.firstChild;
-      if (lineDiv.dataset.state === 'done') {
-        lineDiv.dataset.state = 'undone';
-        this._setCaret(btn.nextSibling, 0);
-        this._stackTaskChange(lineDiv.task, 'undone');
-      } else {
-        lineDiv.dataset.state = 'done';
-        this._setCaret(btn.nextSibling, 0);
-        this._stackTaskChange(lineDiv.task, 'done');
-      }
-      this.editorTarget$.trigger(jQuery.Event('onChange'));
-      return lineDiv;
-    };
-
-    CNeditor.prototype._detectTaskChange = function() {
-      var isTask, lineDiv, sel;
-
-      lineDiv = this.currentSel.startLineDiv;
-      if (lineDiv) {
-        isTask = this.currentSel.isStartInTask;
-      } else {
-        sel = this.updateCurrentSel();
-        lineDiv = sel.startLineDiv;
-        isTask = sel.isStartInTask;
-      }
-      if (isTask) {
-        this._stackTaskChange(lineDiv.task, 'modified');
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * When a line is a task (its div has dataset.type = task) and we don't have
-     * the corresponding model of task, we then create this Task.
-     * It for instance happens when we create a task within the editor.
-     * @param  {Element} lineDiv The line div we will attach the task to..
-     * @param {Boolean} isRedo True if the task is re-created by a reDo.
-    */
-
-
-    CNeditor.prototype._createTaskForLine = function(lineDiv, isRedo) {
-      var t;
-
-      t = new Task({
-        description: lineDiv.textContent.slice(1)
-      });
-      lineDiv.task = t;
-      t.lineDiv = lineDiv;
-      this._taskList.push(t);
-      if (isRedo) {
-        t.internalId = lineDiv.dataset.id;
-      } else {
-        this._internalTaskCounter += 1;
-        t.internalId = 'CNE_task_id_' + this._internalTaskCounter;
-        this._stackTaskChange(t, 'created');
-        lineDiv.dataset.id = t.internalId;
-      }
-      return t;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Called only by readHtml() (called by setEditorContent() and undo/redo)
-     * When an html is loaded by readHtml(), if a line corresponds to a task, we
-     * must find if the model of the task line already exists. If yes, link it
-     * to the lineDiv, otherwiser fetch if from server.
-     * @param {Element} lineDiv The lineDiv turned into a task.
-    */
-
-
-    CNeditor.prototype._setTaskToLine = function(lineDiv) {
-      var btn, id, t, _i, _len, _ref,
-        _this = this;
-
-      btn = lineDiv.firstChild;
-      btn.addEventListener('click', this._toggleTaskCB);
-      id = lineDiv.dataset.id;
-      _ref = this._taskList;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        t = _ref[_i];
-        if (t.internalId === id) {
-          lineDiv.task = t;
-          t.lineDiv = lineDiv;
-          return true;
-        }
-      }
-      if (id.slice(0, 12) === 'CNE_task_id_') {
-        this._createTaskForLine(lineDiv);
-        this.editorTarget$.trigger(jQuery.Event('onChange'));
-      } else {
-        t = new Task({
-          id: id
-        });
-        this._internalTaskCounter += 1;
-        t.internalId = 'CNE_task_id_' + this._internalTaskCounter;
-        lineDiv.task = t;
-        lineDiv.dataset.id = t.internalId;
-        t.lineDiv = lineDiv;
-        t.fetch({
-          silent: true
-        }).done(function() {
-          t.isFromServer = true;
-          realtimer.watchOne(t);
-          return _this._updateTaskLine(t);
-        }).fail(function(resp) {
-          if (resp.status === 404) {
-            return _this._turneTaskIntoLine(t.lineDiv);
-          } else {
-            t.set({
-              done: t.lineDiv.dataset.state === 'done',
-              description: t.lineDiv.firstChild.nextSibling.textContent
-            }, {
-              silent: true
-            });
-            return t.isFromServer = false;
-          }
-        });
-        t.on('change', function(t) {
-          t.isFromServer = true;
-          return _this._updateTaskLine(t);
-        });
-        t.on('destroy', function(t) {
-          return _this._turneTaskIntoLine(t.lineDiv);
-        });
-        this._taskList.push(t);
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * update a line div of a task with the attributes values of a model.
-     * It uses the model previous attributes values if isRevert == true
-     * @param  {Model}  t        A task backbone model
-     * @param  {Boolean} isRevert If True, it will use previous attributes
-     *                            values instead of its current values.
-    */
-
-
-    CNeditor.prototype._updateTaskLine = function(t, isRevert) {
-      var attrib, currentTaskState, newState;
-
-      if (isRevert) {
-        attrib = t.previousAttributes();
-      } else {
-        attrib = t.attributes;
-      }
-      console.info(attrib);
-      t.lineDiv.firstChild.nextSibling.textContent = attrib.description;
-      currentTaskState = t.lineDiv.dataset.state === 'done';
-      if (attrib.done) {
-        newState = 'done';
-      } else {
-        newState = 'undone';
-      }
-      if (currentTaskState !== newState) {
-        t.lineDiv.dataset.state = newState;
-      }
-      return true;
-    };
-
-    CNeditor.prototype._stackTaskChange = function(task, action) {
-      console.info('== editor._stackTaskChange() ' + action, task.internalId);
-      this._stackTaskForSave(task.internalId, task, action);
-      switch (action) {
-        case 'modified':
-        case 'done':
-        case 'undone':
-          this._tasksModifSinceLastHistory[task.internalId] = {
-            t: task,
-            a: 'modified'
-          };
-          break;
-        case 'created':
-          this._tasksModifSinceLastHistory[task.internalId] = {
-            t: task,
-            a: 'created'
-          };
-      }
-      logging.printTasksModifStacks('_stackTaskChange', this._tasksToBeSaved);
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * When a task is modified or a undo/redo has modified its state, this
-     * function stacks the information so that when a save is triggered, then we
-     * know which task to save.
-     * @param  {string} id     The internal id of the task
-     * @param  {Task} t      The task model concerned
-     * @param  {String} action 'modified', 'done', 'undone', 'created', 'deleted'
-     *                         or 'removed'
-    */
-
-
-    CNeditor.prototype._stackTaskForSave = function(id, t, action) {
-      var modif;
-
-      modif = this._tasksToBeSaved[id];
-      if (!this._tasksToBeSaved[id]) {
-        modif = {
-          t: t
-        };
-        this._tasksToBeSaved[id] = modif;
-      }
-      switch (action) {
-        case 'modified':
-        case 'done':
-        case 'undone':
-          modif.modified = true;
-          break;
-        case 'created':
-          if (modif.deleted) {
-            modif.deleted = false;
-            modif.created = false;
-            modif.modified = true;
-          } else {
-            modif.created = true;
-          }
-          break;
-        case 'deleted':
-          if (modif.created) {
-            modif.deleted = false;
-            modif.created = false;
-          } else {
-            modif.deleted = true;
-          }
-          break;
-        case 'removed':
-          modif.removed = true;
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Saves the creations/modification/deletion not yet saved.
-     * a modif can b
-     * modif.removed | 1 1 1 1 1 1 1 1 | 0 0 | 0 0 | 0 | 0 0 | 0
-     * modif.created | 1 1 1 1 0 0 0 0 | 1 1 | 0 0 | 0 | 1 1 | 0
-     * modif.modified| 1 1 0 0 1 1 0 0 | 1 0 | 1 0 | 1 | 1 0 | 0
-     * modif.deleted | 1 0 1 0 1 0 1 0 | 1 1 | 1 1 | 0 | 0 0 | 0
-     * modif.action  | N N N N N N N N | N N | D D | M | C C | N
-     * (N D C = Nothing, Create, Delete)
-     * @return {[type]} [description]
-    */
-
-
-    CNeditor.prototype.saveTasks = function() {
-      var i, id, l, lineDiv, modif, t, _i, _len, _ref, _ref1,
-        _this = this;
-
-      console.info('== saveTasks()');
-      _ref = this._tasksToBeSaved;
-      for (id in _ref) {
-        modif = _ref[id];
-        if (modif.deleted) {
-          modif.t.destroy({
-            silent: true
-          });
-        } else if (modif.created && modif.deleted) {
-          continue;
-        } else if (modif.removed) {
-          continue;
-        } else if (modif.modified && !modif.created) {
-          t = modif.t;
-          l = t.lineDiv;
-          t.save({
-            done: l.dataset.state === 'done',
-            description: l.textContent.slice(1)
-          }, {
-            ignoreMySocketNotification: true,
-            silent: true,
-            error: function(t) {
-              window.alert('Cozy Todo is not responding, save ' + 'of tasks is not possible so we cancel ' + 'modifications.');
-              return _this._updateTaskLine(t, true);
-            }
-          });
-          t.isFromServer = false;
-        } else if (modif.created && !modif.t.id) {
-          this._saveTaskCreation(modif.t);
-        } else if (modif.created && modif.t.id) {
-          i = this._taskList;
-          _ref1 = this._taskList;
-          for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
-            t = _ref1[i];
-            if (t.internalId === id) {
-              this._taskList.splice(i, 1);
-              break;
-            }
-          }
-          lineDiv = this.linesDiv.querySelectorAll("div[data-id='" + modif.t.internalId + "']")[0];
-          t = this._createTaskForLine(lineDiv, true);
-          modif.t = t;
-          this._replaceInTaskHistory(t);
-          this._saveTaskCreation(t);
-        }
-      }
-      return this._tasksToBeSaved = {};
-    };
-
-    CNeditor.prototype._saveTaskCreation = function(t) {
-      var l,
-        _this = this;
-
-      l = t.lineDiv;
-      t.save({
-        done: l.dataset.state === 'done',
-        description: l.textContent.slice(1)
-      }, {
-        ignoreMySocketNotification: true,
-        silent: true,
-        success: function(t) {
-          realtimer.watchOne(t);
-          _this.editorTarget$.trigger(jQuery.Event('onChange'));
-          t.lineDiv.dataset.id = t.id;
-          t.on('change', function() {
-            t.isFromServer = true;
-            return _this._updateTaskLine(t);
-          });
-          return t.on('destroy', function(t) {
-            return _this._turneTaskIntoLine(t.lineDiv);
-          });
-        },
-        error: function(t) {
-          window.alert('Cozy Todo is not responding, save ' + 'of tasks is not possible so we cancel ' + 'the task creation.');
-          return _this._turneTaskIntoLine(t.lineDiv);
-        }
-      });
-      return t.isFromServer = false;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Tests if there is a modification between the model and the lineDiv
-     * @param  {[type]}  task [description]
-     * @return {Boolean}      [description]
-    */
-
-
-    CNeditor.prototype._isTaskUnchanged = function(task) {
-      var line, res;
-
-      res = true;
-      line = task.lineDiv;
-      res = res && task.get('done') === (line.dataset.state === 'done');
-      res = res && task.get('description') === line.textContent.slice(1);
-      return res;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Returns true if the selection is at the start of a word. Ex :
-     *     . xxxx |yyyy   : true
-     *     . xxxx | yyyy  : true
-     *     . |yyyy        : true
-     *     . xxxx y|yyyy  : false
-     *     . xxxx| yyyy   : false
-     * @return {Boolean} True if the selection starts at the beginning of a word
-    */
-
-
-    CNeditor.prototype._isStartingWord = function() {
-      var char, rg, rg2, sel, txt;
-
-      sel = this.updateCurrentSelIsStartIsEnd();
-      rg = sel.theoricalRange;
-      if (sel.rangeIsStartLine) {
-        return true;
-      } else {
-        if (rg.startOffset === 0) {
-          rg2 = rg.cloneRange();
-          rg2.collapse();
-          rg2.setStart(selection._getLineDiv(rg2.startContainer), 0);
-          txt = rg2.toString();
-          if (txt.length === 0) {
-            return true;
-          } else {
-            char = text.slice(-1);
-          }
-        } else {
-          char = rg.startContainer.textContent.substr(rg.startOffset - 1, 1);
-        }
-        if (char.charCodeAt(0) === 32 || char.charCodeAt(0) === 160) {
-          return true;
-        } else {
-          return false;
-        }
-      }
-    };
-
-    CNeditor.prototype.getCurrentAllowedInsertions = function() {
-      var line, metaSelector, out;
-
-      line = this.updateCurrentSel().startLineDiv;
-      out = [];
-      if (line.dataset.type === 'task') {
-        return out;
-      }
-      metaSelector = '[data-type="contact"], [data-type="reminder"]';
-      if (ExternalModels.taskCanBeUsed && !line.querySelector(metaSelector)) {
-        out.push('todo');
-      }
-      if (ExternalModels.contactCanBeUsed) {
-        out.push('contact');
-      }
-      if (ExternalModels.alarmCanBeUsed) {
-        out.push('reminder');
-      }
-      return out;
-    };
-
-    /* ------------------------------------------------------------------------
-    # EXTENSION : _updateDeepest
-    #
-    # Find the maximal deep (thus the deepest line) of the text
-    # TODO: improve it so it only calculates the new depth from the modified
-    #       lines (not all of them)
-    # TODO: set a class system rather than multiple CSS files. Thus titles
-    #       classes look like "Th-n depth3" for instance if max depth is 3
-    # note: These todos arent our priority for now
-    */
-
-
-    CNeditor.prototype._updateDeepest = function() {
-      var c, lines, max, _results;
-
-      max = 1;
-      lines = this._lines;
-      _results = [];
-      for (c in lines) {
-        if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th" && lines[c].lineDepthAbs > max) {
-          _results.push(max = this._lines[c].lineDepthAbs);
-        } else {
-          _results.push(void 0);
-        }
-      }
-      return _results;
-    };
-
-    /*-----------------------------------------------------------------------
-    # Set the editor description and related to be used when creating
-    # reminders
-    */
-
-
-    CNeditor.prototype.setReminderCf = function(description, related) {
-      return Alarm.setDefaultCf(description, related);
-    };
-
-    /** -----------------------------------------------------------------------
-     * Initialize the editor content from a html string
-     * The html string should not been pretified because of the spaces and
-     * charriage return.
-     * If unPretify = true then a regex tries to set up things
-    */
-
-
-    CNeditor.prototype.replaceContent = function(htmlString, unPretify) {
-      var _ref;
-
-      if (unPretify) {
-        htmlString = htmlString.replace(/>[\n ]*</g, "><");
-      }
-      if ((_ref = this.urlPopover) != null) {
-        _ref.cancel();
-      }
-      this.linesDiv.innerHTML = htmlString;
-      this._taskList = [];
-      this._readHtml(true);
-      this._setCaret(this.linesDiv.firstChild.firstChild, 0, true);
-      this.newPosition = true;
-      return this.hotString = '';
-    };
-
-    /* ------------------------------------------------------------------------
-    # Clear editor content
-    */
-
-
-    CNeditor.prototype.deleteContent = function() {
-      var emptyLine;
-
-      emptyLine = '<div id="CNID_1" class="Tu-1"><span></span><br></div>';
-      return this.replaceContent(emptyLine);
-    };
-
-    /* ------------------------------------------------------------------------
-    # Returns an html string representing the editor content
-    */
-
-
-    CNeditor.prototype.getEditorContent = function() {
-      var clone, lineDiv, seg, segment, segments, txt, _i, _j, _len, _len1;
-
-      this.Tags.contactPopover.hide();
-      if (this._hotString.isPreparing || this.urlPopover.isOn) {
-        clone = this.linesDiv.cloneNode(true);
-        if (this._hotString.isPreparing) {
-          segment = clone.querySelector('.CNE_hot_string');
-          segment.classList.remove('CNE_hot_string');
-          lineDiv = segment.parentElement;
-          segment.textContent = '';
-          this._fusionSimilarSegments(lineDiv, []);
-          segment = clone.querySelector('#CNE_autocomplete');
-          segment.parentElement.removeChild(segment);
-        }
-        if (this.urlPopover.isOn) {
-          segment = clone.querySelector('#CNE_urlPopover');
-          segment.parentElement.removeChild(segment);
-          segments = clone.querySelectorAll('.CNE_url_in_edition');
-          for (_i = 0, _len = segments.length; _i < _len; _i++) {
-            seg = segments[_i];
-            seg.classList.remove('CNE_url_in_edition');
-          }
-          if (this.urlPopover.isLinkCreation) {
-            lineDiv = selection._getLineDiv(segments[0]);
-            for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
-              seg = segments[_j];
-              this._applyAhrefToSegments(seg, seg, [], false, '');
-            }
-            this._fusionSimilarSegments(lineDiv, []);
-          }
-        }
-        txt = clone.innerHTML;
-      } else {
-        txt = this.linesDiv.innerHTML;
-      }
-      return txt;
-    };
-
-    /* ------------------------------------------------------------------------
-    # Sets the editor content from a html string
-    */
-
-
-    CNeditor.prototype.setEditorContent = function(htmlContent) {
-      return this.replaceContent(htmlContent);
-    };
-
-    /* ------------------------------------------------------------------------
-    # DEPRECATED - USED ONLY FOR REVERSE COMPATIBILITY
-    # Sets the editor content from a markdown string
-    */
-
-
-    CNeditor.prototype.setEditorContentFromMD = function(mdContent) {
-      var cozyContent;
-
-      cozyContent = md2cozy.md2cozy(mdContent);
-      return this.replaceContent(cozyContent);
-    };
-
-    /** -----------------------------------------------------------------------
-     * Return [metaKeyCode,keyCode] corresponding to the key strike combinaison.
-     * the string structure = [meta key]-[key]
-     *   * [metaKeyCode] : (Alt)*(Ctrl)*(Shift)*
-     *   * [keyCode] : (return|end|...|A|S|V|Y|Z)|(other)
-     * ex :
-     *   * "AltShift" & "up"
-     *   * "AltCtrl" & "down"
-     *   * "Shift" & "A"
-     *   * "Ctrl" & "S"
-     *   * "" & "other"
-     * @param  {[type]} e [description]
-     * @return {[type]}   [description]
-    */
-
-
-    CNeditor.prototype.getShortCut = function(e) {
-      var isAction, key, keyCode, metaKey, shortcut;
-
-      metaKey = (e.altKey ? "Alt" : "") +
-                                (e.ctrlKey ? "Ctrl" : "") +
-                                (e.shiftKey ? "Shift" : "");
-      keyCode = e.keyCode;
-      switch (keyCode) {
-        case 13:
-          key = 'return';
-          isAction = true;
-          break;
-        case 16:
-          key = 'shift';
-          isAction = true;
-          break;
-        case 17:
-          key = 'ctrl';
-          isAction = true;
-          break;
-        case 18:
-          key = 'alt';
-          isAction = true;
-          break;
-        case 35:
-          key = 'end';
-          isAction = true;
-          break;
-        case 36:
-          key = 'home';
-          isAction = true;
-          break;
-        case 33:
-          key = 'pgUp';
-          isAction = true;
-          break;
-        case 34:
-          key = 'pgDwn';
-          isAction = true;
-          break;
-        case 37:
-          key = 'left';
-          isAction = true;
-          break;
-        case 38:
-          key = 'up';
-          isAction = true;
-          break;
-        case 39:
-          key = 'right';
-          isAction = true;
-          break;
-        case 40:
-          key = 'down';
-          isAction = true;
-          break;
-        case 9:
-          key = 'tab';
-          isAction = true;
-          break;
-        case 8:
-          key = 'backspace';
-          isAction = true;
-          break;
-        case 32:
-          key = 'space';
-          isAction = true;
-          break;
-        case 27:
-          key = 'esc';
-          isAction = true;
-          break;
-        case 46:
-          key = 'suppr';
-          isAction = true;
-          break;
-        default:
-          isAction = false;
-          keyCode = e.which;
-          switch (keyCode) {
-            case 32:
-              key = 'space';
-              break;
-            case 8:
-              key = 'backspace';
-              break;
-            case 65:
-              key = 'A';
-              break;
-            case 66:
-              key = 'B';
-              break;
-            case 67:
-              key = 'C';
-              break;
-            case 85:
-              key = 'U';
-              break;
-            case 75:
-              key = 'K';
-              break;
-            case 76:
-              key = 'L';
-              break;
-            case 83:
-              key = 'S';
-              break;
-            case 86:
-              key = 'V';
-              break;
-            case 88:
-              key = 'X';
-              break;
-            case 89:
-              key = 'Y';
-              break;
-            case 90:
-              key = 'Z';
-              break;
-            default:
-              key = 'other';
-          }
-      }
-      shortcut = metaKey + '-' + key;
-      if ((metaKey === '' || metaKey === 'Shift') && (key === 'A' || key === 'B' || key === 'C' || key === 'X' || key === 'U' || key === 'K' || key === 'L' || key === 'S' || key === 'V' || key === 'Y' || key === 'Z')) {
-        key = 'other';
-      }
-      return this._shortcut = {
-        meta: metaKey,
-        key: key,
-        isAction: isAction,
-        shortcut: shortcut,
-        keyCode: keyCode
-      };
-    };
-
-    /** -----------------------------------------------------------------------
-     * Callback to be used in production.
-     * In case of error thrown by the editor, we catch it and undo the content
-     * to avoid to loose data.
-     * @param  {event} e  The key event
-    */
-
-
-    CNeditor.prototype._keyDownCbTry = function(e) {
-      var error;
-
-      if (!this.isEnabled) {
-        return;
-      }
-      try {
-        return this._keyDownCb(e);
-      } catch (_error) {
-        error = _error;
-        alert('A bug occured, we prefer to undo your last action to ' + 'be safe.\n\nMessage :\n' + error);
-        console.log(error.stack);
-        e.preventDefault();
-        return this.unDo();
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Change the callback called by keydown event for the "test" callback.
-     * The aim is that during test we don't want to intercept errors so that
-     * the test can detect the error.
-    */
-
-
-    CNeditor.prototype.registerKeyDownCbForTest = function() {
-      this.linesDiv.removeEventListener('keydown', this._keyDownCbTry, true);
-      return this.linesDiv.addEventListener('keydown', this._keyDownCb, true);
-    };
-
-    /**------------------------------------------------------------------------
-     *
-     * The listener of keyPress event on the editor's iframe... the king !
-     *
-     * Params :
-     * e : the event object. Interesting attributes :
-     *   .which
-     *   .altKey
-     *   .ctrlKey
-     *   .metaKey
-     *   .shiftKey
-     *   .keyCode
-     *
-     * SHORTCUT
-     *
-     * Definition of a shortcut :
-     *   a combination alt,ctrl,shift,meta
-     *   + one caracter(.which)
-     *   or
-     *     arrow (.keyCode=dghb:) or
-     *     return(keyCode:13) or
-     *     bckspace (which:8) or
-     *     tab(keyCode:9)
-     *   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
-     *                   'Ctrl-'
-    */
-
-
-    CNeditor.prototype._keyDownCb = function(e) {
-      var lastShortcut, rg, sel, shortcut, winAltGr;
-
-      if (!this.isEnabled) {
-        return true;
-      }
-      this.getShortCut(e);
-      shortcut = this._shortcut.shortcut;
-      lastShortcut = this._lastKey;
-      this._lastKey = shortcut;
-      this.currentSel = {
-        sel: null,
-        range: null,
-        startLine: null,
-        endLine: null,
-        rangeIsStartLine: null,
-        rangeIsEndLine: null,
-        startBP: null,
-        endBP: null
-      };
-      if (this._hotString.isPreparing) {
-        if (this._hotString.keyDownCb(shortcut)) {
-          e.preventDefault();
-          return false;
-        }
-      }
-      if (e.keyCode === 16) {
-        rg = this.getEditorSelection().getRangeAt(0);
-        if (!selection.getSegment(rg.startContainer, 0).dataset.type) {
-          this.Tags.setTagUnEditable();
-        }
-      }
-      switch (this._shortcut.key) {
-        case 'up':
-        case 'down':
-        case 'left':
-        case 'right':
-        case 'pgUp':
-        case 'pgDwn':
-        case 'end':
-        case 'home':
-          if (!e.altKey && (e.shiftKey || (!e.shiftKey && !e.ctrlrlKey))) {
-            this.newPosition = true;
-            return true;
-          }
-          break;
-        case 'other':
-        case 'space':
-          winAltGr = e.ctrlKey && e.altKey;
-          if (winAltGr) {
-            return true;
-          }
-          if (!(e.ctrlKey || e.altKey)) {
-            if (this.newPosition) {
-              this._history.addStep();
-            } else if (lastShortcut === '-space' && shortcut !== '-space') {
-              this._history.addStep();
-            }
-            if (this.newPosition) {
-              sel = this.updateCurrentSel();
-              if (!sel.theoricalRange.collapsed) {
-                this._backspace();
-              }
-              this.newPosition = false;
-            }
-            this.editorTarget$.trigger(jQuery.Event('onChange'));
-            this._detectTaskChange();
-            return true;
-          }
-      }
-      switch (shortcut) {
-        case '-return':
-          if (lastShortcut !== shortcut) {
-            this._history.addStep();
-          }
-          this.updateCurrentSelIsStartIsEnd();
-          if (this.currentSel.isStartInTask && lastShortcut === shortcut) {
-            this._history.addStep();
-          }
-          this._return();
-          this.newPosition = false;
-          e.preventDefault();
-          return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case '-backspace':
-          if (lastShortcut !== shortcut) {
-            this._history.addStep();
-          }
-          this.updateCurrentSelIsStartIsEnd();
-          this._backspace();
-          this.newPosition = true;
-          e.preventDefault();
-          return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case '-tab':
-          this._history.addStep();
-          this.tab();
-          e.preventDefault();
-          return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case 'Shift-tab':
-          this._history.addStep();
-          this.shiftTab();
-          e.preventDefault();
-          return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case '-suppr':
-          if (lastShortcut !== shortcut) {
-            this._history.addStep();
-          }
-          this.updateCurrentSelIsStartIsEnd();
-          this._suppr(e);
-          e.preventDefault();
-          this.newPosition = true;
-          return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case 'CtrlShift-down':
-          if (lastShortcut !== shortcut) {
-            this._history.addStep();
-          }
-          return e.preventDefault();
-        case 'CtrlShift-up':
-          if (lastShortcut !== shortcut) {
-            this._history.addStep();
-          }
-          return e.preventDefault();
-        case 'Ctrl-A':
-          selection.selectAll(this);
-          return e.preventDefault();
-        case 'Alt-L':
-          this._history.addStep();
-          this.markerList();
-          e.preventDefault();
-          return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case 'Alt-A':
-          this._history.addStep();
-          this.toggleType();
-          e.preventDefault();
-          return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case 'Ctrl-V':
-          this._history.addStep();
-          this.editorTarget$.trigger(jQuery.Event('onChange'));
-          return true;
-        case 'Ctrl-B':
-          this._history.addStep();
-          this.strong();
-          return e.preventDefault();
-        case 'Ctrl-K':
-          this.linkifySelection();
-          return e.preventDefault();
-        case 'Ctrl-S':
-          this.editorTarget$.trigger(jQuery.Event('saveRequest'));
-          e.preventDefault();
-          return e.stopPropagation();
-        case 'Ctrl-Z':
-          this.unDo();
-          e.preventDefault();
-          return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case 'Ctrl-Y':
-          this.reDo();
-          e.preventDefault();
-          return this.editorTarget$.trigger(jQuery.Event('onChange'));
-        case 'Ctrl-C':
-        case 'Ctrl-X':
-          break;
-        default:
-          return e.preventDefault();
-      }
-    };
-
-    CNeditor.prototype._keypressCb = function(e) {
-      if (!this.isEnabled) {
-        return true;
-      }
-      return this._hotString.keypressCb(e);
-    };
-
-    /** -----------------------------------------------------------------------
-     * Detects where the carret is after a keyup in order to launch required
-     * actions :
-     * A/ correct the 2 following problems :
-     *   a- in Chrome, the insertion of a caracter by the browser may be out of
-     *   a span.
-     *   This is du to a bug in Chrome : you can create a range with its start
-     *   break point in an empty span. But if you add this range to the
-     *   selection, then this latter will not respect your range and its start
-     *   break point will be outside the range. When a key is pressed to insert
-     *   a caracter, the browser inserts it at the start break point, ie outside
-     *   the span... this function detects after each keyup is there is a text
-     *   node outside a span and move its content and the carret.
-     *   b- in order to keep the navigation with arrows working, we have to
-     *   insert a text in the buttons of tasks. That's why we have to remove the
-     *   carret from the button when the browser put it in a button.
-     * B/ edit meta data
-     * C/ Deal case when the selection has been changed with keyboard
-     * D/ Deal hot string.
-     * E/ Fire the editor onKeyUp event
-     * @param  {Event} e The key event
-    */
-
-
-    CNeditor.prototype._keyupCb = function(e) {
-      var bp, endSeg, line, newCont, rg, startSeg, _ref;
-
-      if (!this.isEnabled) {
-        return true;
-      }
-      if (this.isChromeOrSafari) {
-        this._chromeCorrection();
-      }
-      rg = this.getEditorSelection().getRangeAt(0);
-      startSeg = selection.getSegment(rg.startContainer);
-      endSeg = selection.getSegment(rg.endContainer);
-      if (startSeg.dataset) {
-        switch (startSeg.dataset.type) {
-          case 'taskBtn':
-            if (e.keyCode === 37) {
-              line = selection.getLineDiv(startSeg, 0).previousSibling;
-              if (line) {
-                newCont = line.lastChild.previousSibling;
-                this._setCaret(newCont, newCont.childNodes.length);
-              } else {
-                this._setCaret(startSeg.nextSibling, 0);
-              }
-            } else {
-              this._setCaret(startSeg.nextSibling, 0);
-            }
-            break;
-          case 'contact':
-            if (e.keyCode === 37) {
-              this._setCaret(startSeg.previousSibling.childNodes[0], startSeg.previousSibling.childNodes[0].length - 1);
-            } else {
-              if (startSeg.nextSibling.childNodes[0]) {
-                this._setCaret(startSeg.nextSibling.childNodes[0], 1);
-              } else {
-                bp = this.insertSpaceAfterSeg(startSeg);
-                this._setCaret(bp.cont, bp.offset);
-              }
-            }
-            break;
-          case 'reminder':
-          case 'htag':
-            if (!this._hotString.isPreparing) {
-              this._hotString.edit(startSeg, rg);
-            }
-        }
-      }
-      if (e.keyCode === 16) {
-        this.Tags.setTagEditable();
-        if (startSeg.dataset.type && !endSeg.dataset.type) {
-          this.setSelection(rg.startContainer, rg.startOffset, startSeg, startSeg.childNodes.length);
-          endSeg = startSeg;
-        } else if (!startSeg.dataset.type && endSeg.dataset.type) {
-          this.setSelection(endSeg, 0, rg.endContainer, rg.endOffset);
-          startSeg = endSeg;
-        }
-        if (this._hotString.isPreparing && startSeg !== this._hotString._hsSegment) {
+          this._hotString.updateHs();
           this._hotString.reset('current');
         }
       }
-      if (this._hotString.isPreparing) {
-        if (this._hotString._autoToBeShowed) {
-          this._hotString.showAutoAndHighLight();
-        } else if (!(e.shiftKey && ((_ref = e.keyCode) === 17 || _ref === 37 || _ref === 38 || _ref === 36 || _ref === 33 || _ref === 40 || _ref === 39 || _ref === 34 || _ref === 35))) {
-          if (startSeg === this._hotString._hsSegment) {
-            this._hotString.updateHs();
+    }
+    switch (this._shortcut.shortcut) {
+      case 'Ctrl-S':
+      case 'Ctrl-other':
+        return;
+    }
+    this.editorTarget$.trigger(jQuery.Event("onKeyUp"));
+    return true;
+  };
+
+  /**
+   *   In Chrome, the insertion of a caracter by the browser may be out of
+   *   a span.
+   *   This is du to a bug in Chrome : you can create a range with its start
+   *   break point in an empty span. But if you add this range to the
+   *   selection, then this latter will not respect your range and its start
+   *   break point will be outside the range. When a key is pressed to insert
+   *   a caracter, the browser inserts it at the start break point, ie outside
+   *   the span... this function detects after each keyup is there is a text
+   *   node outside a span and move its content and the carret.
+  */
+
+
+  CNeditor.prototype._chromeCorrection = function() {
+    var curSel, line;
+
+    curSel = this.updateCurrentSel();
+    line = curSel.startLine.line$[0];
+    return this._fixLine(line);
+  };
+
+  CNeditor.prototype._fixLine = function(line) {
+    var brNode, i, l, newSpan, nextSeg, node, nodes, prevSeg, spanNode, t, _ref, _ref1, _ref2;
+
+    nodes = line.childNodes;
+    l = nodes.length;
+    i = 0;
+    while (i < l) {
+      node = nodes[i];
+      if (node.nodeName === '#text') {
+        t = node.textContent;
+        prevSeg = selection.getPrevSegment(node);
+        if (prevSeg) {
+          if ((_ref = prevSeg.nodeName) === 'SPAN' || _ref === 'A') {
+            prevSeg.textContent += t;
+            this._setCaret(prevSeg, prevSeg.childNodes.length);
+            line.removeChild(node);
+            l -= 1;
           } else {
-            this._hotString.updateHs();
-            this._hotString.reset('current');
+            throw new Error('A line should be constituted of\
+                            only <span> and <a>');
           }
-        }
-      }
-      switch (this._shortcut.shortcut) {
-        case 'Ctrl-S':
-        case 'Ctrl-other':
-          return;
-      }
-      this.editorTarget$.trigger(jQuery.Event("onKeyUp"));
-      return true;
-    };
-
-    /**
-     *   In Chrome, the insertion of a caracter by the browser may be out of
-     *   a span.
-     *   This is du to a bug in Chrome : you can create a range with its start
-     *   break point in an empty span. But if you add this range to the
-     *   selection, then this latter will not respect your range and its start
-     *   break point will be outside the range. When a key is pressed to insert
-     *   a caracter, the browser inserts it at the start break point, ie outside
-     *   the span... this function detects after each keyup is there is a text
-     *   node outside a span and move its content and the carret.
-    */
-
-
-    CNeditor.prototype._chromeCorrection = function() {
-      var brNode, curSel, i, l, line, newSpan, nextSeg, node, nodes, prevSeg, t, _ref, _ref1, _ref2;
-
-      curSel = this.updateCurrentSel();
-      line = curSel.startLine.line$[0];
-      nodes = line.childNodes;
-      l = nodes.length;
-      i = 0;
-      if (nodes[l - 1].nodeName !== 'BR') {
-        brNode = document.createElement('br');
-        line.appendChild(brNode);
-      }
-      while (i < l) {
-        node = nodes[i];
-        if (node.nodeName === '#text') {
-          t = node.textContent;
-          prevSeg = selection.getPrevSegment(node);
-          if (prevSeg) {
-            if ((_ref = prevSeg.nodeName) === 'SPAN' || _ref === 'A') {
-              prevSeg.textContent += t;
-              this._setCaret(prevSeg, prevSeg.childNodes.length);
+        } else {
+          nextSeg = selection.getNextSegment(node);
+          if (nextSeg) {
+            if ((_ref1 = nextSeg.nodeName) === 'SPAN' || _ref1 === 'A' || _ref1 === '#text') {
+              nextSeg.textContent = t + nextSeg.textContent;
+              this._setCaret(nextSeg.firstChild, t.length);
+              line.removeChild(node);
+              l -= 1;
+            } else if ((_ref2 = nextSeg.nodeName) === '#text') {
+              nextSeg.textContent = t + nextSeg.textContent;
+              this._setCaret(nextSeg, t.length);
               line.removeChild(node);
               l -= 1;
             } else {
               throw new Error('A line should be constituted of\
-                            only <span> and <a>');
-            }
-          } else {
-            nextSeg = selection.getNextSegment(node);
-            if (nextSeg) {
-              if ((_ref1 = nextSeg.nodeName) === 'SPAN' || _ref1 === 'A' || _ref1 === '#text') {
-                nextSeg.textContent = t + nextSeg.textContent;
-                this._setCaret(nextSeg.firstChild, t.length);
-                line.removeChild(node);
-                l -= 1;
-              } else if ((_ref2 = nextSeg.nodeName) === '#text') {
-                nextSeg.textContent = t + nextSeg.textContent;
-                this._setCaret(nextSeg, t.length);
-                line.removeChild(node);
-                l -= 1;
-              } else {
-                throw new Error('A line should be constituted of\
                                 only <span> and <a>');
-              }
-            } else {
-              newSpan = document.createElement('span');
-              newSpan.textContent = t;
-              line.replaceChild(newSpan, node);
-              this._setCaret(newSpan.firstChild, t.length);
-              i += 1;
             }
-          }
-        } else {
-          i += 1;
-        }
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * updates @currentSel =
-            sel              : {Selection} of the editor's document
-            range            : sel.getRangeAt(0)
-            startLine        : the 1st line of the current selection
-            endLine          : the last line of the current selection
-            startLineDiv     : the element corresponding to startLine
-            endLineDiv       : the element corresponding to endLine
-            isStartInTask    : {Boolean} True if the startLine is a task
-            rangeIsStartLine : {boolean} true if the selection ends at
-                               the end of its line : NOT UPDATE HERE - see
-                               updateCurrentSelIsStartIsEnd
-            rangeIsEndLine   : {boolean} true if the selection starts at
-                               the start of its line : NOT UPDATE HERE - see
-                               updateCurrentSelIsStartIsEnd
-            theoricalRange   : theoricalRange : normalization of the selection
-                               should put each break points in a node text. It
-                               doesn't work in chrome due to a bug. We therefore
-                               store here the "theorical range" that the
-                               selection should match. It means that if you are
-                               not in chrome this is equal to range.
-       If the caret position has just changed (@newPosition == true) then we
-       normalise the selection (put its break points in text nodes)
-       We also normalize if in Chrome because in order to have a range wit
-       break points in text nodes.
-     * @return {object} @currentSel
-    */
-
-
-    CNeditor.prototype.updateCurrentSel = function() {
-      var endLine, endLineDiv, isStartInTask, newEndBP, newStartBP, range, sel, startLine, startLineDiv, theoricalRange, _ref;
-
-      sel = this.getEditorSelection();
-      range = sel.getRangeAt(0);
-      if (this.newPosition || this.isChromeOrSafari) {
-        _ref = selection.normalize(range), newStartBP = _ref[0], newEndBP = _ref[1];
-        theoricalRange = document.createRange();
-        theoricalRange.setStart(newStartBP.cont, newStartBP.offset);
-        theoricalRange.setEnd(newEndBP.cont, newEndBP.offset);
-      } else {
-        theoricalRange = range;
-      }
-      startLineDiv = selection.getLineDiv(range.startContainer);
-      endLineDiv = selection.getLineDiv(range.endContainer);
-      startLine = this._lines[startLineDiv.id];
-      endLine = this._lines[endLineDiv.id];
-      isStartInTask = startLineDiv.dataset.type === 'task';
-      this.currentSel = {
-        sel: sel,
-        range: range,
-        startLineDiv: startLineDiv,
-        endLineDiv: endLineDiv,
-        isStartInTask: isStartInTask,
-        startLine: startLine,
-        endLine: endLine,
-        rangeIsStartLine: null,
-        rangeIsEndLine: null,
-        theoricalRange: theoricalRange
-      };
-      return this.currentSel;
-    };
-
-    /** -----------------------------------------------------------------------
-     * updates @currentSel and check if range is at the start of begin of the
-     * corresponding line.
-     * @currentSel =
-            sel              : {Selection} of the editor's document
-            range            : sel.getRangeAt(0)
-            startLine        : the 1st line of the current selection
-            endLine          : the last line of the current selection
-            startLineDiv     : the element corresponding to startLine
-            endLineDiv       : the element corresponding to endLine
-            isStartInTask    : {Boolean} True if the startLine is a task
-            rangeIsStartLine : {boolean} true if the selection ends at
-                               the end of its line.
-            rangeIsEndLine   : {boolean} true if the selection starts at
-                               the start of its line.
-            theoricalRange   : theoricalRange : normalization of the selection
-                               should put each break points in a node text. It
-                               doesn't work in chrome due to a bug. We therefore
-                               store here the "theorical range" that the
-                               selection should match. It means that if you are
-                               not in chrome this is equal to range.
-       If the caret position has just changed (@newPosition == true) then we
-       normalise the selection (put its break points in text nodes)
-       We also normalize if in Chrome because in order to have a range wit
-       break points in text nodes.
-     * @return {object} @currentSel
-    */
-
-
-    CNeditor.prototype.updateCurrentSelIsStartIsEnd = function() {
-      var div, endContainer, endDiv, endLine, firstLineIsEnd, initialEndOffset, initialStartOffset, isEnd, isStart, isStartInTask, lastLineIsStart, newEndBP, newStartBP, range, rangeIsEndLine, rangeIsStartLine, sel, startContainer, startDiv, startLine, theoricalRange, _ref, _ref1, _ref2;
-
-      sel = this.getEditorSelection();
-      range = sel.getRangeAt(0);
-      if (this.newPosition || this.isChromeOrSafari) {
-        _ref = selection.normalize(range), newStartBP = _ref[0], newEndBP = _ref[1];
-        theoricalRange = document.createRange();
-        theoricalRange.setStart(newStartBP.cont, newStartBP.offset);
-        theoricalRange.setEnd(newEndBP.cont, newEndBP.offset);
-      } else {
-        theoricalRange = range;
-      }
-      startContainer = range.startContainer;
-      endContainer = range.endContainer;
-      initialStartOffset = range.startOffset;
-      initialEndOffset = range.endOffset;
-      _ref1 = selection.getLineDivIsStartIsEnd(startContainer, initialStartOffset), div = _ref1.div, isStart = _ref1.isStart, isEnd = _ref1.isEnd;
-      startDiv = div;
-      startLine = this._lines[startDiv.id];
-      rangeIsStartLine = isStart;
-      firstLineIsEnd = isEnd;
-      isStartInTask = startDiv.dataset.type === 'task';
-      _ref2 = selection.getLineDivIsStartIsEnd(endContainer, initialEndOffset), div = _ref2.div, isStart = _ref2.isStart, isEnd = _ref2.isEnd;
-      endDiv = div;
-      endLine = this._lines[endDiv.id];
-      rangeIsEndLine = isEnd;
-      lastLineIsStart = isStart;
-      this.currentSel = {
-        sel: sel,
-        range: range,
-        startLineDiv: startDiv,
-        endLineDiv: endDiv,
-        isStartInTask: isStartInTask,
-        startLine: startLine,
-        endLine: endLine,
-        rangeIsStartLine: rangeIsStartLine,
-        rangeIsEndLine: rangeIsEndLine,
-        firstLineIsEnd: firstLineIsEnd,
-        lastLineIsStart: lastLineIsStart,
-        theoricalRange: theoricalRange
-      };
-      return this.currentSel;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Check if the first range of the selection is NOT in the editor
-     * @param  {Boolean}  expectWide [optional] If true, tests if the first
-     *                               range of the selection is collapsed. If it
-     *                               is the case, then return false
-     * @return {Boolean} True if there is a selection, false otherwise.
-    */
-
-
-    CNeditor.prototype.hasNoSelection = function(expectWide) {
-      var cont, rg, sel;
-
-      sel = this.getEditorSelection();
-      if (sel.rangeCount > 0) {
-        rg = sel.getRangeAt(0);
-        if (expectWide && rg.collapsed) {
-          return true;
-        }
-        cont = rg.startContainer;
-        while (cont !== null) {
-          if (cont === this.linesDiv) {
-            break;
-          }
-          cont = cont.parentNode;
-        }
-        if (cont === null) {
-          return true;
-        }
-        cont = rg.endContainer;
-        while (cont === null) {
-          if (cont === this.linesDiv) {
-            return false;
-          }
-          cont = cont.parentNode;
-        }
-        if (cont === null) {
-          return true;
-        }
-      } else {
-        return true;
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Put a strong (bold) css class on the selection of the editor.
-     * History is incremented before action and focus is set on the editor.
-     * @return {[type]} [description]
-    */
-
-
-    CNeditor.prototype.strong = function() {
-      var rg;
-
-      if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
-        return true;
-      }
-      this._history.addStep();
-      rg = this._applyMetaDataOnSelection('CNE_strong');
-      if (!rg) {
-        return this._history.removeLastStep();
-      } else {
-        return this.editorTarget$.trigger(jQuery.Event('onChange'));
-      }
-    };
-
-    CNeditor.prototype.underline = function() {
-      var rg;
-
-      if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
-        return true;
-      }
-      this._history.addStep();
-      rg = this._applyMetaDataOnSelection('CNE_underline');
-      if (!rg) {
-        return this._history.removeLastStep();
-      } else {
-        return this.editorTarget$.trigger(jQuery.Event('onChange'));
-      }
-    };
-
-    CNeditor.prototype.linkifySelection = function() {
-      var currentSel, range, rg, segments;
-
-      if (!this.isEnabled || this.hasNoSelection() || this._hotString.isPreparing) {
-        return true;
-      }
-      currentSel = this.updateCurrentSelIsStartIsEnd();
-      if (currentSel.isStartInTask) {
-        return true;
-      }
-      range = currentSel.theoricalRange;
-      if (range.collapsed) {
-        segments = this._getLinkSegments();
-        if (segments) {
-          this.urlPopover.show(segments, false);
-        }
-      } else {
-        segments = this._getLinkSegments();
-        if (segments) {
-          this.urlPopover.show(segments, false);
-        } else {
-          this._history.addStep();
-          this.urlPopover.isOn = true;
-          rg = this._applyMetaDataOnSelection('A', 'http://');
-          if (rg) {
-            segments = this._getLinkSegments(rg);
-            this.urlPopover.show(segments, true);
           } else {
-            this.urlPopover.isOn = true;
+            newSpan = document.createElement('span');
+            newSpan.textContent = t;
+            line.replaceChild(newSpan, node);
+            this._setCaret(newSpan.firstChild, t.length);
+            i += 1;
           }
         }
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Tests if a the start break point of the selection or of a range is in a
-     * segment being a link. If yes returns the array of the segments
-     * corresponding to the link starting in this bp, false otherwise.
-     * The link can be composed of several segments, but they are on a single
-     * line. Only the start break point is taken into account, not the end bp.
-     * Prerequisite : thit.currentSel must havec been updated before calling
-     * this function.
-     * @param {Range} rg [optionnal] The range to use instead of selection.
-     * @return {Boolean} The segment if in a link, false otherwise
-    */
-
-
-    CNeditor.prototype._getLinkSegments = function(rg) {
-      var segment1, segments, sibling;
-
-      if (!rg) {
-        rg = this.currentSel.theoricalRange;
-      }
-      segment1 = selection.getSegment(rg.startContainer, rg.startOffset);
-      segments = [segment1];
-      if (segment1.nodeName === 'A') {
-        sibling = segment1.nextSibling;
-        while (sibling !== null && sibling.nodeName === 'A' && sibling.href === segment1.href) {
-          segments.push(sibling);
-          sibling = sibling.nextSibling;
-        }
-        segments.reverse();
-        sibling = segment1.previousSibling;
-        while (sibling !== null && sibling.nodeName === 'A' && sibling.href === segment1.href) {
-          segments.push(sibling);
-          sibling = sibling.previousSibling;
-        }
-        segments.reverse();
-        return segments;
+      } else if (node.nodeName === 'BR') {
+        line.removeChild(node);
+        l -= 1;
       } else {
-        return false;
+        i += 1;
       }
+    }
+    if (l === 0) {
+      spanNode = document.createElement('span');
+      spanNode.textContent = '';
+      line.appendChild(spanNode);
+    }
+    brNode = document.createElement('br');
+    line.appendChild(brNode);
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * updates @currentSel =
+          sel              : {Selection} of the editor's document
+          range            : sel.getRangeAt(0)
+          startLine        : the 1st line of the current selection
+          endLine          : the last line of the current selection
+          startLineDiv     : the element corresponding to startLine
+          endLineDiv       : the element corresponding to endLine
+          isStartInTask    : {Boolean} True if the startLine is a task
+          rangeIsStartLine : {boolean} true if the selection ends at
+                             the end of its line : NOT UPDATE HERE - see
+                             updateCurrentSelIsStartIsEnd
+          rangeIsEndLine   : {boolean} true if the selection starts at
+                             the start of its line : NOT UPDATE HERE - see
+                             updateCurrentSelIsStartIsEnd
+          theoricalRange   : theoricalRange : normalization of the selection
+                             should put each break points in a node text. It
+                             doesn't work in chrome due to a bug. We therefore
+                             store here the "theorical range" that the
+                             selection should match. It means that if you are
+                             not in chrome this is equal to range.
+     If the caret position has just changed (@newPosition == true) then we
+     normalise the selection (put its break points in text nodes)
+     We also normalize if in Chrome because in order to have a range wit
+     break points in text nodes.
+   * @return {object} @currentSel
+  */
+
+
+  CNeditor.prototype.updateCurrentSel = function() {
+    var endLine, endLineDiv, isStartInTask, newEndBP, newStartBP, range, sel, startLine, startLineDiv, theoricalRange, _ref;
+
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    if (this.newPosition || this.isChromeOrSafari) {
+      _ref = selection.normalize(range), newStartBP = _ref[0], newEndBP = _ref[1];
+      theoricalRange = document.createRange();
+      theoricalRange.setStart(newStartBP.cont, newStartBP.offset);
+      theoricalRange.setEnd(newEndBP.cont, newEndBP.offset);
+    } else {
+      theoricalRange = range;
+    }
+    startLineDiv = selection.getLineDiv(range.startContainer);
+    endLineDiv = selection.getLineDiv(range.endContainer);
+    startLine = this._lines[startLineDiv.id];
+    endLine = this._lines[endLineDiv.id];
+    isStartInTask = startLineDiv.dataset.type === 'task';
+    this.currentSel = {
+      sel: sel,
+      range: range,
+      startLineDiv: startLineDiv,
+      endLineDiv: endLineDiv,
+      isStartInTask: isStartInTask,
+      startLine: startLine,
+      endLine: endLine,
+      rangeIsStartLine: null,
+      rangeIsEndLine: null,
+      theoricalRange: theoricalRange
     };
+    return this.currentSel;
+  };
 
-    /** -----------------------------------------------------------------------
-     * Go to end of line and emulate @ pressed
-    */
+  /** -----------------------------------------------------------------------
+   * updates @currentSel and check if range is at the start of begin of the
+   * corresponding line.
+   * @currentSel =
+          sel              : {Selection} of the editor's document
+          range            : sel.getRangeAt(0)
+          startLine        : the 1st line of the current selection
+          endLine          : the last line of the current selection
+          startLineDiv     : the element corresponding to startLine
+          endLineDiv       : the element corresponding to endLine
+          isStartInTask    : {Boolean} True if the startLine is a task
+          rangeIsStartLine : {boolean} true if the selection ends at
+                             the end of its line.
+          rangeIsEndLine   : {boolean} true if the selection starts at
+                             the start of its line.
+          theoricalRange   : theoricalRange : normalization of the selection
+                             should put each break points in a node text. It
+                             doesn't work in chrome due to a bug. We therefore
+                             store here the "theorical range" that the
+                             selection should match. It means that if you are
+                             not in chrome this is equal to range.
+     If the caret position has just changed (@newPosition == true) then we
+     normalise the selection (put its break points in text nodes)
+     We also normalize if in Chrome because in order to have a range wit
+     break points in text nodes.
+   * @return {object} @currentSel
+  */
 
 
-    CNeditor.prototype.emulateAt = function() {
-      var currentSel, newCont;
+  CNeditor.prototype.updateCurrentSelIsStartIsEnd = function() {
+    var div, endContainer, endDiv, endLine, firstLineIsEnd, initialEndOffset, initialStartOffset, isEnd, isStart, isStartInTask, lastLineIsStart, newEndBP, newStartBP, range, rangeIsEndLine, rangeIsStartLine, sel, startContainer, startDiv, startLine, theoricalRange, _ref, _ref1, _ref2;
 
-      currentSel = this.updateCurrentSelIsStartIsEnd();
-      newCont = currentSel.endLine.line$[0].lastChild.previousSibling;
-      newCont.innerHTML += '@';
-      this._keypressCb({
-        which: 64
-      });
-      this._setCaret(newCont, newCont.childNodes.length);
-      return this._hotString.showAutoAndHighLight();
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    if (this.newPosition || this.isChromeOrSafari) {
+      _ref = selection.normalize(range), newStartBP = _ref[0], newEndBP = _ref[1];
+      theoricalRange = document.createRange();
+      theoricalRange.setStart(newStartBP.cont, newStartBP.offset);
+      theoricalRange.setEnd(newEndBP.cont, newEndBP.offset);
+    } else {
+      theoricalRange = range;
+    }
+    startContainer = range.startContainer;
+    endContainer = range.endContainer;
+    initialStartOffset = range.startOffset;
+    initialEndOffset = range.endOffset;
+    _ref1 = selection.getLineDivIsStartIsEnd(startContainer, initialStartOffset), div = _ref1.div, isStart = _ref1.isStart, isEnd = _ref1.isEnd;
+    startDiv = div;
+    startLine = this._lines[startDiv.id];
+    rangeIsStartLine = isStart;
+    firstLineIsEnd = isEnd;
+    isStartInTask = startDiv.dataset.type === 'task';
+    _ref2 = selection.getLineDivIsStartIsEnd(endContainer, initialEndOffset), div = _ref2.div, isStart = _ref2.isStart, isEnd = _ref2.isEnd;
+    endDiv = div;
+    endLine = this._lines[endDiv.id];
+    rangeIsEndLine = isEnd;
+    lastLineIsStart = isStart;
+    this.currentSel = {
+      sel: sel,
+      range: range,
+      startLineDiv: startDiv,
+      endLineDiv: endDiv,
+      isStartInTask: isStartInTask,
+      startLine: startLine,
+      endLine: endLine,
+      rangeIsStartLine: rangeIsStartLine,
+      rangeIsEndLine: rangeIsEndLine,
+      firstLineIsEnd: firstLineIsEnd,
+      lastLineIsStart: lastLineIsStart,
+      theoricalRange: theoricalRange
     };
+    return this.currentSel;
+  };
 
-    /** -----------------------------------------------------------------------
-     * Applies a metadata such as STRONG, UNDERLINED, A/href etc... on the
-     * selected text. The selection must not be collapsed.
-     * @param  {string} metaData  The css class of the meta data or 'A' if link
-     * @param  {string} others... Other params if metadata requires
-     *                            some (href for instance)
-    */
+  /** -----------------------------------------------------------------------
+   * Check if the first range of the selection is NOT in the editor
+   * @param  {Boolean}  expectWide [optional] If true, tests if the first
+   *                               range of the selection is collapsed. If it
+   *                               is the case, then return false
+   * @return {Boolean} True if there is a selection, false otherwise.
+  */
 
 
-    CNeditor.prototype._applyMetaDataOnSelection = function() {
-      var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, nextSegment, others, prevSegment, range, rangeIsToNormalize, rg, rgEnd, rgStart, seg, sel, _i, _j, _len, _len1;
+  CNeditor.prototype.hasNoSelection = function(expectWide) {
+    var cont, rg, sel;
 
-      metaData = arguments[0], others = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
-      currentSel = this.updateCurrentSelIsStartIsEnd();
-      range = currentSel.theoricalRange;
+    sel = this.getEditorSelection();
+    if (sel.rangeCount > 0) {
+      rg = sel.getRangeAt(0);
+      if (expectWide && rg.collapsed) {
+        return true;
+      }
+      cont = rg.startContainer;
+      while (cont !== null) {
+        if (cont === this.linesDiv) {
+          break;
+        }
+        cont = cont.parentNode;
+      }
+      if (cont === null) {
+        return true;
+      }
+      cont = rg.endContainer;
+      while (cont === null) {
+        if (cont === this.linesDiv) {
+          return false;
+        }
+        cont = cont.parentNode;
+      }
+      if (cont === null) {
+        return true;
+      }
+    } else {
+      return true;
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Put a strong (bold) css class on the selection of the editor.
+   * History is incremented before action and focus is set on the editor.
+   * @return {[type]} [description]
+  */
+
+
+  CNeditor.prototype.strong = function() {
+    var rg;
+
+    if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
+      return true;
+    }
+    this._history.addStep();
+    rg = this._applyMetaDataOnSelection('CNE_strong');
+    if (!rg) {
+      return this._history.removeLastStep();
+    } else {
+      return this.editorTarget$.trigger(jQuery.Event('onChange'));
+    }
+  };
+
+  CNeditor.prototype.underline = function() {
+    var rg;
+
+    if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
+      return true;
+    }
+    this._history.addStep();
+    rg = this._applyMetaDataOnSelection('CNE_underline');
+    if (!rg) {
+      return this._history.removeLastStep();
+    } else {
+      return this.editorTarget$.trigger(jQuery.Event('onChange'));
+    }
+  };
+
+  CNeditor.prototype.linkifySelection = function() {
+    var currentSel, range, rg, segments;
+
+    if (!this.isEnabled || this.hasNoSelection() || this._hotString.isPreparing) {
+      return true;
+    }
+    currentSel = this.updateCurrentSelIsStartIsEnd();
+    if (currentSel.isStartInTask) {
+      return true;
+    }
+    range = currentSel.theoricalRange;
+    if (range.collapsed) {
+      segments = this._getLinkSegments();
+      if (segments) {
+        this.urlPopover.show(segments, false);
+      }
+    } else {
+      segments = this._getLinkSegments();
+      if (segments) {
+        this.urlPopover.show(segments, false);
+      } else {
+        this._history.addStep();
+        this.urlPopover.isOn = true;
+        rg = this._applyMetaDataOnSelection('A', 'http://');
+        if (rg) {
+          segments = this._getLinkSegments(rg);
+          this.urlPopover.show(segments, true);
+        } else {
+          this.urlPopover.isOn = true;
+        }
+      }
+    }
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Tests if a the start break point of the selection or of a range is in a
+   * segment being a link. If yes returns the array of the segments
+   * corresponding to the link starting in this bp, false otherwise.
+   * The link can be composed of several segments, but they are on a single
+   * line. Only the start break point is taken into account, not the end bp.
+   * Prerequisite : thit.currentSel must havec been updated before calling
+   * this function.
+   * @param {Range} rg [optionnal] The range to use instead of selection.
+   * @return {Boolean} The segment if in a link, false otherwise
+  */
+
+
+  CNeditor.prototype._getLinkSegments = function(rg) {
+    var segment1, segments, sibling;
+
+    if (!rg) {
+      rg = this.currentSel.theoricalRange;
+    }
+    segment1 = selection.getSegment(rg.startContainer, rg.startOffset);
+    segments = [segment1];
+    if (segment1.nodeName === 'A') {
+      sibling = segment1.nextSibling;
+      while (sibling !== null && sibling.nodeName === 'A' && sibling.href === segment1.href) {
+        segments.push(sibling);
+        sibling = sibling.nextSibling;
+      }
+      segments.reverse();
+      sibling = segment1.previousSibling;
+      while (sibling !== null && sibling.nodeName === 'A' && sibling.href === segment1.href) {
+        segments.push(sibling);
+        sibling = sibling.previousSibling;
+      }
+      segments.reverse();
+      return segments;
+    } else {
+      return false;
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Go to end of line and emulate @ pressed
+  */
+
+
+  CNeditor.prototype.emulateAt = function() {
+    var currentSel, newCont;
+
+    currentSel = this.updateCurrentSelIsStartIsEnd();
+    newCont = currentSel.endLine.line$[0].lastChild.previousSibling;
+    newCont.innerHTML += '@';
+    this._keypressCb({
+      which: 64
+    });
+    this._setCaret(newCont, newCont.childNodes.length);
+    return this._hotString.showAutoAndHighLight();
+  };
+
+  /** -----------------------------------------------------------------------
+   * Applies a metadata such as STRONG, UNDERLINED, A/href etc... on the
+   * selected text. The selection must not be collapsed.
+   * @param  {string} metaData  The css class of the meta data or 'A' if link
+   * @param  {string} others... Other params if metadata requires
+   *                            some (href for instance)
+  */
+
+
+  CNeditor.prototype._applyMetaDataOnSelection = function() {
+    var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, nextSegment, others, prevSegment, range, rangeIsToNormalize, rg, rgEnd, rgStart, seg, sel, _i, _j, _len, _len1;
+
+    metaData = arguments[0], others = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+    currentSel = this.updateCurrentSelIsStartIsEnd();
+    range = currentSel.theoricalRange;
+    if (range.collapsed) {
+      return;
+    }
+    line = currentSel.startLine;
+    endLine = currentSel.endLine;
+    if (range.startContainer.length !== 0 && range.startContainer.length === range.startOffset) {
+      seg = selection.getNestedSegment(range.startContainer);
+      nextSegment = selection.getNextSegment(seg);
+      if (nextSegment) {
+        range.setStartBefore(nextSegment.firstChild);
+        rangeIsToNormalize = true;
+      } else {
+        line = line.lineNext;
+        if (line === null) {
+          return;
+        }
+        range.setStartBefore(line.line$[0].firstChild);
+        rangeIsToNormalize = true;
+      }
+    }
+    if (range.endContainer.length !== 0 && range.endOffset === 0) {
+      seg = selection.getNestedSegment(range.endContainer);
+      prevSegment = selection.getPrevSegment(seg);
+      if (prevSegment) {
+        range.setEndAfter(prevSegment.lastChild);
+        rangeIsToNormalize = true;
+      } else {
+        endLine = endLine.linePrev;
+        if (endLine === null) {
+          return;
+        }
+        range.setEndAfter(endLine.line$[0].lastChild);
+        rangeIsToNormalize = true;
+        if (range.collapsed) {
+          return;
+        }
+      }
+    }
+    if (rangeIsToNormalize) {
+      selection.normalize(range);
       if (range.collapsed) {
         return;
       }
-      line = currentSel.startLine;
-      endLine = currentSel.endLine;
-      if (range.startContainer.length !== 0 && range.startContainer.length === range.startOffset) {
-        seg = selection.getNestedSegment(range.startContainer);
-        nextSegment = selection.getNextSegment(seg);
-        if (nextSegment) {
-          range.setStartBefore(nextSegment.firstChild);
-          rangeIsToNormalize = true;
-        } else {
-          line = line.lineNext;
-          if (line === null) {
-            return;
-          }
-          range.setStartBefore(line.line$[0].firstChild);
-          rangeIsToNormalize = true;
-        }
+    }
+    if (metaData === 'A' && line !== endLine) {
+      range.setEndBefore(line.line$[0].lastChild);
+      selection.normalize(range);
+      endLine = line;
+      if (range.collapsed) {
+        return;
       }
-      if (range.endContainer.length !== 0 && range.endOffset === 0) {
-        seg = selection.getNestedSegment(range.endContainer);
-        prevSegment = selection.getPrevSegment(seg);
-        if (prevSegment) {
-          range.setEndAfter(prevSegment.lastChild);
-          rangeIsToNormalize = true;
-        } else {
-          endLine = endLine.linePrev;
-          if (endLine === null) {
-            return;
-          }
-          range.setEndAfter(endLine.line$[0].lastChild);
-          rangeIsToNormalize = true;
-          if (range.collapsed) {
-            return;
-          }
-        }
-      }
-      if (rangeIsToNormalize) {
-        selection.normalize(range);
-        if (range.collapsed) {
-          return;
-        }
-      }
-      if (metaData === 'A' && line !== endLine) {
-        range.setEndBefore(line.line$[0].lastChild);
-        selection.normalize(range);
-        endLine = line;
-        if (range.collapsed) {
-          return;
-        }
-      }
-      if (line === endLine) {
-        linesRanges = [range];
-      } else {
-        rgStart = range.cloneRange();
-        rgStart.setEndBefore(line.line$[0].lastChild);
-        selection.normalize(rgStart);
-        linesRanges = [rgStart];
+    }
+    if (line === endLine) {
+      linesRanges = [range];
+    } else {
+      rgStart = range.cloneRange();
+      rgStart.setEndBefore(line.line$[0].lastChild);
+      selection.normalize(rgStart);
+      linesRanges = [rgStart];
+      line = line.lineNext;
+      while (line !== endLine) {
+        rg = this.document.createRange();
+        rg.selectNodeContents(line.line$[0]);
+        selection.normalize(rg);
+        linesRanges.push(rg);
         line = line.lineNext;
-        while (line !== endLine) {
-          rg = this.document.createRange();
-          rg.selectNodeContents(line.line$[0]);
-          selection.normalize(rg);
-          linesRanges.push(rg);
-          line = line.lineNext;
-        }
-        rgEnd = range.cloneRange();
-        rgEnd.setStartBefore(endLine.line$[0].firstChild);
-        selection.normalize(rgEnd);
-        linesRanges.push(rgEnd);
       }
-      isAlreadyMeta = true;
-      for (_i = 0, _len = linesRanges.length; _i < _len; _i++) {
-        range = linesRanges[_i];
-        isAlreadyMeta = isAlreadyMeta && this._checkIfMetaIsEverywhere(range, metaData, others);
-      }
-      addMeta = !isAlreadyMeta;
-      bps = [];
-      for (_j = 0, _len1 = linesRanges.length; _j < _len1; _j++) {
-        range = linesRanges[_j];
-        bps.push(this._applyMetaOnLineRange(range, addMeta, metaData, others));
-      }
-      rg = this.document.createRange();
-      bp1 = bps[0][0];
-      bp2 = bps[bps.length - 1][1];
-      rg.setStart(bp1.cont, bp1.offset);
-      rg.setEnd(bp2.cont, bp2.offset);
-      sel = this.currentSel.sel;
-      sel.removeAllRanges();
-      sel.addRange(rg);
-      return rg;
-    };
+      rgEnd = range.cloneRange();
+      rgEnd.setStartBefore(endLine.line$[0].firstChild);
+      selection.normalize(rgEnd);
+      linesRanges.push(rgEnd);
+    }
+    isAlreadyMeta = true;
+    for (_i = 0, _len = linesRanges.length; _i < _len; _i++) {
+      range = linesRanges[_i];
+      isAlreadyMeta = isAlreadyMeta && this._checkIfMetaIsEverywhere(range, metaData, others);
+    }
+    addMeta = !isAlreadyMeta;
+    bps = [];
+    for (_j = 0, _len1 = linesRanges.length; _j < _len1; _j++) {
+      range = linesRanges[_j];
+      bps.push(this._applyMetaOnLineRange(range, addMeta, metaData, others));
+    }
+    rg = this.document.createRange();
+    bp1 = bps[0][0];
+    bp2 = bps[bps.length - 1][1];
+    rg.setStart(bp1.cont, bp1.offset);
+    rg.setEnd(bp2.cont, bp2.offset);
+    sel = this.currentSel.sel;
+    sel.removeAllRanges();
+    sel.addRange(rg);
+    return rg;
+  };
 
-    /** -----------------------------------------------------------------------
-     * Walk though the segments delimited by the range (which must be in a
-     * single line) to check if the meta si on all of them.
-     * @param  {range} range a range contained within a line. The range must be
-     *                 normalized, ie its breakpoints must be in text nodes.
-     * @param  {string} meta  The name of the meta data to look for. It can be
-     *                        a css class ('CNE_strong' for instance), or a
-     *                        metadata type ('A' for instance)
-     * @param  {string} href  Others parameters of the meta data type if
-     *                        required (href value for a 'A' meta)
-     * @return {boolean}       true if the meta data is already on all the
-     *                         segments delimited by the range.
-    */
+  /** -----------------------------------------------------------------------
+   * Walk though the segments delimited by the range (which must be in a
+   * single line) to check if the meta si on all of them.
+   * @param  {range} range a range contained within a line. The range must be
+   *                 normalized, ie its breakpoints must be in text nodes.
+   * @param  {string} meta  The name of the meta data to look for. It can be
+   *                        a css class ('CNE_strong' for instance), or a
+   *                        metadata type ('A' for instance)
+   * @param  {string} href  Others parameters of the meta data type if
+   *                        required (href value for a 'A' meta)
+   * @return {boolean}       true if the meta data is already on all the
+   *                         segments delimited by the range.
+  */
 
 
-    CNeditor.prototype._checkIfMetaIsEverywhere = function(range, meta, others) {
-      if (meta === 'A') {
-        return this._checkIfAhrefIsEverywhere(range, others[0]);
+  CNeditor.prototype._checkIfMetaIsEverywhere = function(range, meta, others) {
+    if (meta === 'A') {
+      return this._checkIfAhrefIsEverywhere(range, others[0]);
+    } else {
+      return this._checkIfCSSIsEverywhere(range, meta);
+    }
+  };
+
+  CNeditor.prototype._checkIfCSSIsEverywhere = function(range, CssClass) {
+    var endSegment, segment, stopNext;
+
+    segment = range.startContainer.parentNode;
+    endSegment = range.endContainer.parentNode;
+    stopNext = segment === endSegment;
+    while (true) {
+      if (!segment.classList.contains(CssClass)) {
+        return false;
       } else {
-        return this._checkIfCSSIsEverywhere(range, meta);
-      }
-    };
-
-    CNeditor.prototype._checkIfCSSIsEverywhere = function(range, CssClass) {
-      var endSegment, segment, stopNext;
-
-      segment = range.startContainer.parentNode;
-      endSegment = range.endContainer.parentNode;
-      stopNext = segment === endSegment;
-      while (true) {
-        if (!segment.classList.contains(CssClass)) {
-          return false;
-        } else {
-          if (stopNext) {
-            return true;
-          }
-          segment = segment.nextSibling;
-          stopNext = segment === endSegment;
+        if (stopNext) {
+          return true;
         }
+        segment = segment.nextSibling;
+        stopNext = segment === endSegment;
       }
-    };
+    }
+  };
 
-    CNeditor.prototype._checkIfAhrefIsEverywhere = function(range, href) {
-      var endSegment, segment, stopNext;
+  CNeditor.prototype._checkIfAhrefIsEverywhere = function(range, href) {
+    var endSegment, segment, stopNext;
 
-      segment = range.startContainer.parentNode;
-      endSegment = range.endContainer.parentNode;
-      stopNext = segment === endSegment;
-      while (true) {
-        if (segment.nodeName !== 'A' || segment.href !== href) {
-          return false;
-        } else {
-          if (stopNext) {
-            return true;
-          }
-          segment = segment.nextSibling;
-          stopNext = segment === endSegment;
-        }
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Add or remove a meta data to the segments delimited by the range. The
-     * range must be within a single line and normalized (its breakpoints must
-     * be in text nodes).
-     * @param  {range} range    The range on which we want to apply the
-     *                          metadata. The range must be within a single line
-     *                          and normalized (its breakpoints must be in text
-     *                          nodes). The start breakpoint can not be at the
-     *                          end of the line, except in the case of an empty
-     *                          line fully selected. Same for end breakpoint :
-     *                          it can not be at the beginning of the line,
-     *                          except in the case of an empty line fully
-     *                          selected.
-     * @param  {boolean} addMeta  True if the action is to add the metaData,
-     *                            False if the action is to remove it.
-     * @param  {string} metaData The name of the meta data to look for. It can
-     *                           be a css class ('CNE_strong' for instance),
-     *                           or a metadata type ('A' for instance)
-     * @param {array} others Array of others params fot meta, can be [] but not
-     *                       null (not optionnal)
-     * @return {array}          [bp1,bp2] : the breakpoints corresponding to the
-     *                          initial range after the line transformation.
-    */
-
-
-    CNeditor.prototype._applyMetaOnLineRange = function(range, addMeta, metaData, others) {
-      var bp1, bp2, bps, breakPoints, endSeg, frag1, frag2, isAlreadyMeta, lineDiv, rg, span, startSeg;
-
-      lineDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-      startSeg = range.startContainer.parentNode;
-      endSeg = range.endContainer.parentNode;
-      bp1 = {
-        cont: range.startContainer,
-        offset: range.startOffset
-      };
-      bp2 = {
-        cont: range.endContainer,
-        offset: range.endOffset
-      };
-      breakPoints = [bp1, bp2];
-      if (bp1.offset === 0) {
-
-      } else if (bp1.offset === bp1.cont.length) {
-        startSeg = startSeg.nextSibling;
-        if (startSeg === null || startSeg.nodeName === 'BR') {
-          return;
-        }
+    segment = range.startContainer.parentNode;
+    endSegment = range.endContainer.parentNode;
+    stopNext = segment === endSegment;
+    while (true) {
+      if (segment.nodeName !== 'A' || segment.href !== href) {
+        return false;
       } else {
-        isAlreadyMeta = this._isAlreadyMeta(startSeg, metaData, others);
-        if (isAlreadyMeta && !addMeta || !isAlreadyMeta && addMeta) {
-          rg = range.cloneRange();
-          if (endSeg === startSeg) {
-            frag1 = rg.extractContents();
-            span = document.createElement(startSeg.nodeName);
-            if (startSeg.className !== '') {
-              span.className = startSeg.className;
-            }
-            if (startSeg.nodeName === 'A') {
-              span.href = startSeg.href;
-            }
-            span = frag1.appendChild(span);
-            span.appendChild(frag1.firstChild);
-            rg.setEndAfter(startSeg);
-            frag2 = rg.extractContents();
-            if (frag2.textContent !== '') {
-              rg.insertNode(frag2);
-            }
-            rg.insertNode(frag1);
-            startSeg = span;
-            endSeg = startSeg;
-            bp1.cont = startSeg.firstChild;
-            bp1.offset = 0;
-            bp2.cont = endSeg.lastChild;
-            bp2.offset = endSeg.lastChild.length;
-          } else {
-            rg.setEndAfter(startSeg);
-            frag1 = rg.extractContents();
-            startSeg = frag1.firstChild;
-            bp1.cont = startSeg.firstChild;
-            bp1.offset = 0;
-            rg.insertNode(frag1);
-          }
+        if (stopNext) {
+          return true;
         }
+        segment = segment.nextSibling;
+        stopNext = segment === endSegment;
       }
-      if (bp2.offset === bp2.cont.length) {
+    }
+  };
 
-      } else if (bp2.offset === 0) {
-        endSeg = endSeg.previousSibling;
-        if (endSeg === null) {
-          return;
-        }
-      } else {
-        isAlreadyMeta = this._isAlreadyMeta(endSeg, metaData, others);
-        if (isAlreadyMeta && !addMeta || !isAlreadyMeta && addMeta) {
-          rg = range.cloneRange();
-          rg.setStartBefore(endSeg);
+  /** -----------------------------------------------------------------------
+   * Add or remove a meta data to the segments delimited by the range. The
+   * range must be within a single line and normalized (its breakpoints must
+   * be in text nodes).
+   * @param  {range} range    The range on which we want to apply the
+   *                          metadata. The range must be within a single line
+   *                          and normalized (its breakpoints must be in text
+   *                          nodes). The start breakpoint can not be at the
+   *                          end of the line, except in the case of an empty
+   *                          line fully selected. Same for end breakpoint :
+   *                          it can not be at the beginning of the line,
+   *                          except in the case of an empty line fully
+   *                          selected.
+   * @param  {boolean} addMeta  True if the action is to add the metaData,
+   *                            False if the action is to remove it.
+   * @param  {string} metaData The name of the meta data to look for. It can
+   *                           be a css class ('CNE_strong' for instance),
+   *                           or a metadata type ('A' for instance)
+   * @param {array} others Array of others params fot meta, can be [] but not
+   *                       null (not optionnal)
+   * @return {array}          [bp1,bp2] : the breakpoints corresponding to the
+   *                          initial range after the line transformation.
+  */
+
+
+  CNeditor.prototype._applyMetaOnLineRange = function(range, addMeta, metaData, others) {
+    var bp1, bp2, bps, breakPoints, endSeg, frag1, frag2, isAlreadyMeta, lineDiv, rg, span, startSeg;
+
+    lineDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    startSeg = range.startContainer.parentNode;
+    endSeg = range.endContainer.parentNode;
+    bp1 = {
+      cont: range.startContainer,
+      offset: range.startOffset
+    };
+    bp2 = {
+      cont: range.endContainer,
+      offset: range.endOffset
+    };
+    breakPoints = [bp1, bp2];
+    if (bp1.offset === 0) {
+
+    } else if (bp1.offset === bp1.cont.length) {
+      startSeg = startSeg.nextSibling;
+      if (startSeg === null || startSeg.nodeName === 'BR') {
+        return;
+      }
+    } else {
+      isAlreadyMeta = this._isAlreadyMeta(startSeg, metaData, others);
+      if (isAlreadyMeta && !addMeta || !isAlreadyMeta && addMeta) {
+        rg = range.cloneRange();
+        if (endSeg === startSeg) {
           frag1 = rg.extractContents();
-          if (endSeg === startSeg) {
-            startSeg = frag1.firstChild;
-            bp1.cont = startSeg.firstChild;
-            bp1.offset = 0;
+          span = document.createElement(startSeg.nodeName);
+          if (startSeg.className !== '') {
+            span.className = startSeg.className;
           }
-          endSeg = frag1.firstChild;
+          if (startSeg.nodeName === 'A') {
+            span.href = startSeg.href;
+          }
+          span = frag1.appendChild(span);
+          span.appendChild(frag1.firstChild);
+          rg.setEndAfter(startSeg);
+          frag2 = rg.extractContents();
+          if (frag2.textContent !== '') {
+            rg.insertNode(frag2);
+          }
+          rg.insertNode(frag1);
+          startSeg = span;
+          endSeg = startSeg;
+          bp1.cont = startSeg.firstChild;
+          bp1.offset = 0;
           bp2.cont = endSeg.lastChild;
           bp2.offset = endSeg.lastChild.length;
+        } else {
+          rg.setEndAfter(startSeg);
+          frag1 = rg.extractContents();
+          startSeg = frag1.firstChild;
+          bp1.cont = startSeg.firstChild;
+          bp1.offset = 0;
           rg.insertNode(frag1);
         }
       }
-      if (metaData === 'A') {
-        bps = [bp1, bp2];
-        this._applyAhrefToSegments(startSeg, endSeg, bps, addMeta, others[0]);
-      } else {
-        this._applyCssToSegments(startSeg, endSeg, addMeta, metaData);
+    }
+    if (bp2.offset === bp2.cont.length) {
+
+    } else if (bp2.offset === 0) {
+      endSeg = endSeg.previousSibling;
+      if (endSeg === null) {
+        return;
       }
-      this._fusionSimilarSegments(lineDiv, breakPoints);
-      if (lineDiv.dataset.type === 'task') {
-        if (!this.urlPopover.isOn) {
-          this._stackTaskChange(lineDiv.task, 'modified');
+    } else {
+      isAlreadyMeta = this._isAlreadyMeta(endSeg, metaData, others);
+      if (isAlreadyMeta && !addMeta || !isAlreadyMeta && addMeta) {
+        rg = range.cloneRange();
+        rg.setStartBefore(endSeg);
+        frag1 = rg.extractContents();
+        if (endSeg === startSeg) {
+          startSeg = frag1.firstChild;
+          bp1.cont = startSeg.firstChild;
+          bp1.offset = 0;
         }
+        endSeg = frag1.firstChild;
+        bp2.cont = endSeg.lastChild;
+        bp2.offset = endSeg.lastChild.length;
+        rg.insertNode(frag1);
       }
-      return [bp1, bp2];
-    };
-
-    /** -----------------------------------------------------------------------
-     * Test if a segment already has the meta : same type, same class and other
-     * for complex meta (for instance href for <a>)
-     * @param  {element}  segment  The segment to test
-     * @param  {string}  metaData the type of meta data : A or a CSS class
-     * @param  {array}  others   An array of the other parameter of the meta,
-     *                           for instance si metaData == 'A',
-     *                           others[0] == href
-     * @return {Boolean}          True if the segment already have the meta data
-    */
-
-
-    CNeditor.prototype._isAlreadyMeta = function(segment, metaData, others) {
-      if (metaData === 'A') {
-        return segment.nodeName === 'A' && segment.href === others[0];
-      } else {
-        return segment.classList.contains(metaData);
+    }
+    if (metaData === 'A') {
+      bps = [bp1, bp2];
+      this._applyAhrefToSegments(startSeg, endSeg, bps, addMeta, others[0]);
+    } else {
+      this._applyCssToSegments(startSeg, endSeg, addMeta, metaData);
+    }
+    this._fusionSimilarSegments(lineDiv, breakPoints);
+    if (lineDiv.dataset.type === 'task') {
+      if (!this.urlPopover.isOn) {
+        this._stackTaskChange(lineDiv.task, 'modified');
       }
-    };
+    }
+    return [bp1, bp2];
+  };
 
-    /** -----------------------------------------------------------------------
-     * Applies or remove a meta data of type "A" (link) on a succession of
-     * segments (from startSegment to endSegment which must be on the same line)
-     * This fuction may let similar segments contiguous, the decision to fusion
-     * is to be taken by the caller.
-     * @param  {element} startSegment The first segment to modify
-     * @param  {element} endSegment   The last segment to modify (must be in the
-     *                                same line as startSegment)
-     * @param  {Array} bps          [{cont,offset}...] An array of breakpoints
-     *                              to update if their container is modified
-     *                              while applying the meta data.
-     * @param  {Boolean} addMeta      True to apply the meta, False to remove
-     * @param  {string} href         the href to use if addMeta is true.
-    */
+  /** -----------------------------------------------------------------------
+   * Test if a segment already has the meta : same type, same class and other
+   * for complex meta (for instance href for <a>)
+   * @param  {element}  segment  The segment to test
+   * @param  {string}  metaData the type of meta data : A or a CSS class
+   * @param  {array}  others   An array of the other parameter of the meta,
+   *                           for instance si metaData == 'A',
+   *                           others[0] == href
+   * @return {Boolean}          True if the segment already have the meta data
+  */
 
 
-    CNeditor.prototype._applyAhrefToSegments = function(startSegment, endSegment, bps, addMeta, href) {
-      var a, bp, segment, span, stopNext, _i, _j, _len, _len1;
+  CNeditor.prototype._isAlreadyMeta = function(segment, metaData, others) {
+    if (metaData === 'A') {
+      return segment.nodeName === 'A' && segment.href === others[0];
+    } else {
+      return segment.classList.contains(metaData);
+    }
+  };
 
-      segment = startSegment;
-      stopNext = segment === endSegment;
-      while (true) {
-        if (addMeta) {
-          if (segment.nodeName === 'A') {
-            segment.href = href;
-          } else {
-            a = document.createElement('A');
-            a.href = href;
-            a.textContent = segment.textContent;
-            a.className = segment.className;
-            for (_i = 0, _len = bps.length; _i < _len; _i++) {
-              bp = bps[_i];
-              if (bp.cont.parentNode === segment) {
-                bp.cont = a.firstChild;
-              }
-            }
-            segment.parentNode.replaceChild(a, segment);
-            segment = a;
-          }
+  /** -----------------------------------------------------------------------
+   * Applies or remove a meta data of type "A" (link) on a succession of
+   * segments (from startSegment to endSegment which must be on the same line)
+   * This fuction may let similar segments contiguous, the decision to fusion
+   * is to be taken by the caller.
+   * @param  {element} startSegment The first segment to modify
+   * @param  {element} endSegment   The last segment to modify (must be in the
+   *                                same line as startSegment)
+   * @param  {Array} bps          [{cont,offset}...] An array of breakpoints
+   *                              to update if their container is modified
+   *                              while applying the meta data.
+   * @param  {Boolean} addMeta      True to apply the meta, False to remove
+   * @param  {string} href         the href to use if addMeta is true.
+  */
+
+
+  CNeditor.prototype._applyAhrefToSegments = function(startSegment, endSegment, bps, addMeta, href) {
+    var a, bp, segment, span, stopNext, _i, _j, _len, _len1;
+
+    segment = startSegment;
+    stopNext = segment === endSegment;
+    while (true) {
+      if (addMeta) {
+        if (segment.nodeName === 'A') {
+          segment.href = href;
         } else {
-          span = document.createElement('SPAN');
-          span.textContent = segment.textContent;
-          span.className = segment.className;
-          for (_j = 0, _len1 = bps.length; _j < _len1; _j++) {
-            bp = bps[_j];
+          a = document.createElement('A');
+          a.href = href;
+          a.textContent = segment.textContent;
+          a.className = segment.className;
+          for (_i = 0, _len = bps.length; _i < _len; _i++) {
+            bp = bps[_i];
             if (bp.cont.parentNode === segment) {
-              bp.cont = span.firstChild;
+              bp.cont = a.firstChild;
             }
           }
-          segment.parentNode.replaceChild(span, segment);
-          segment = span;
+          segment.parentNode.replaceChild(a, segment);
+          segment = a;
         }
-        if (stopNext) {
-          break;
+      } else {
+        span = document.createElement('SPAN');
+        span.textContent = segment.textContent;
+        span.className = segment.className;
+        for (_j = 0, _len1 = bps.length; _j < _len1; _j++) {
+          bp = bps[_j];
+          if (bp.cont.parentNode === segment) {
+            bp.cont = span.firstChild;
+          }
         }
-        segment = segment.nextSibling;
-        stopNext = segment === endSegment;
+        segment.parentNode.replaceChild(span, segment);
+        segment = span;
       }
-      return null;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Applies or remove a CSS class to a succession of segments (from
-     * startsegment to endSegment which must be on the same line)
-     * @param  {element} startSegment The first segment to modify
-     * @param  {element} endSegment   The last segment to modify (must be in the
-     *                                same line as startSegment)
-     * @param  {Boolean} addMeta      True to apply the meta, False to remove
-     * @param  {String} cssClass     The name of the CSS class to add or remove
-    */
-
-
-    CNeditor.prototype._applyCssToSegments = function(startSegment, endSegment, addMeta, cssClass) {
-      var segment, stopNext;
-
-      segment = startSegment;
+      if (stopNext) {
+        break;
+      }
+      segment = segment.nextSibling;
       stopNext = segment === endSegment;
-      while (true) {
-        if (addMeta) {
-          segment.classList.add(cssClass);
-        } else {
-          segment.classList.remove(cssClass);
-        }
-        if (stopNext) {
-          break;
-        }
-        segment = segment.nextSibling;
-        stopNext = segment === endSegment;
+    }
+    return null;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Applies or remove a CSS class to a succession of segments (from
+   * startsegment to endSegment which must be on the same line)
+   * @param  {element} startSegment The first segment to modify
+   * @param  {element} endSegment   The last segment to modify (must be in the
+   *                                same line as startSegment)
+   * @param  {Boolean} addMeta      True to apply the meta, False to remove
+   * @param  {String} cssClass     The name of the CSS class to add or remove
+  */
+
+
+  CNeditor.prototype._applyCssToSegments = function(startSegment, endSegment, addMeta, cssClass) {
+    var segment, stopNext;
+
+    segment = startSegment;
+    stopNext = segment === endSegment;
+    while (true) {
+      if (addMeta) {
+        segment.classList.add(cssClass);
+      } else {
+        segment.classList.remove(cssClass);
       }
-      return null;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Walk through a line div in order to :
-     *   * Concatenate successive similar segments. Similar == same nodeName,
-     *     class and if required href.
-     *   * Remove empty segments.
-     * @param  {element} lineDiv     the DIV containing the line
-     * @param  {Array} breakPoints [{cont,offset}...] array of respectively the
-     *                              container and offset of the breakpoint to
-     *                              update if cont is in a segment modified by
-     *                              the fusion.
-     *                              /!\ The breakpoint must be normalized, ie
-     *                              containers must be in textnodes.
-     *                              If the contener of a bp is deleted, then it
-     *                              is put before the deleted segment. At the
-     *                              bp might be between segments, ie NOT
-     *                              normalized since not in a textNode.
-     * @return {Array}             A reference to the updated breakpoint.
-    */
-
-
-    CNeditor.prototype._fusionSimilarSegments = function(lineDiv, breakPoints) {
-      var nextSegment, segment;
-
-      segment = lineDiv.firstChild;
-      nextSegment = segment.nextSibling;
-      if (nextSegment.nodeName === 'BR') {
-        return breakPoints;
+      if (stopNext) {
+        break;
       }
-      while (nextSegment.nodeName !== 'BR') {
-        if (!selection.isSegment(segment)) {
-          segment = nextSegment;
-          nextSegment = nextSegment.nextSibling;
-        } else if (segment.textContent === '') {
-          segment = this._removeSegment(segment, breakPoints);
-          selection.normalizeBPs(breakPoints);
-          nextSegment = segment.nextSibling;
-        } else if (this._haveSameMeta(segment, nextSegment)) {
-          this._fusionSegments(segment, nextSegment, breakPoints);
-          nextSegment = segment.nextSibling;
-        } else {
-          segment = nextSegment;
-          nextSegment = nextSegment.nextSibling;
-        }
-      }
-      if (segment.textContent === '' && selection.getSegmentIndex(segment)[0] !== 0) {
+      segment = segment.nextSibling;
+      stopNext = segment === endSegment;
+    }
+    return null;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Walk through a line div in order to :
+   *   * Concatenate successive similar segments. Similar == same nodeName,
+   *     class and if required href.
+   *   * Remove empty segments.
+   * @param  {element} lineDiv     the DIV containing the line
+   * @param  {Array} breakPoints [{cont,offset}...] array of respectively the
+   *                              container and offset of the breakpoint to
+   *                              update if cont is in a segment modified by
+   *                              the fusion.
+   *                              /!\ The breakpoint must be normalized, ie
+   *                              containers must be in textnodes.
+   *                              If the contener of a bp is deleted, then it
+   *                              is put before the deleted segment. At the
+   *                              bp might be between segments, ie NOT
+   *                              normalized since not in a textNode.
+   * @return {Array}             A reference to the updated breakpoint.
+  */
+
+
+  CNeditor.prototype._fusionSimilarSegments = function(lineDiv, breakPoints) {
+    var nextSegment, segment;
+
+    segment = lineDiv.firstChild;
+    nextSegment = segment.nextSibling;
+    if (nextSegment.nodeName === 'BR') {
+      return breakPoints;
+    }
+    while (nextSegment.nodeName !== 'BR') {
+      if (!selection.isSegment(segment)) {
+        segment = nextSegment;
+        nextSegment = nextSegment.nextSibling;
+      } else if (segment.textContent === '') {
         segment = this._removeSegment(segment, breakPoints);
         selection.normalizeBPs(breakPoints);
-      }
-      return breakPoints;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Removes a segment and returns a reference to previous sibling or,
-     * if doesn't exist, to the next sibling.
-     * @param  {element} segment     The segment to remove. Must be in a line.
-     * @param  {Array} breakPoints An Array of breakpoint to preserve : if its
-     *                             is deleted, the bp is put before the deleted
-     *                             segment (it is NOT normalized, since not in a
-     *                             textNode)
-     * @return {element}       A reference to the previous sibling or,
-     *                         if doesn't exist, to the next sibling.
-    */
-
-
-    CNeditor.prototype._removeSegment = function(segment, breakPoints) {
-      var bp, newRef, offset, _i, _j, _len, _len1;
-
-      if (breakPoints.length > 0) {
-        for (_i = 0, _len = breakPoints.length; _i < _len; _i++) {
-          bp = breakPoints[_i];
-          bp.seg = selection.getNestedSegment(bp.cont);
-        }
-      }
-      for (_j = 0, _len1 = breakPoints.length; _j < _len1; _j++) {
-        bp = breakPoints[_j];
-        if (bp.seg === segment) {
-          offset = selection.getNodeIndex(segment);
-          bp.cont = segment.parentNode;
-          bp.offset = offset;
-        }
-      }
-      newRef = segment.previousSibling;
-      if (!newRef) {
-        newRef = segment.nextSibling;
-      }
-      segment.parentNode.removeChild(segment);
-      return newRef;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Imports the content of segment2 in segment1 and updates the breakpoint if
-     * this on is  inside segment2
-     * @param  {element} segment1    the segment in which the fusion operates
-     * @param  {element} segment2    the segement that will be imported in
-     *                               segment1
-     * @param  {Array} breakPoints [{con,offset}...] array of respectively the
-     *                              container and offset of the breakpoint to
-     *                              update if cont is in segment2. /!\ The
-     *                              breakpoint must be normalized, ie containers
-     *                              must be in textnodes.
-    */
-
-
-    CNeditor.prototype._fusionSegments = function(segment1, segment2, breakPoints) {
-      var bp, child, children, txtNode1, txtNode2, _i, _j, _len, _len1, _ref;
-
-      children = Array.prototype.slice.call(segment2.childNodes);
-      _ref = segment2.childNodes;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        child = _ref[_i];
-        segment1.appendChild(child);
-      }
-      txtNode1 = segment1.firstChild;
-      txtNode2 = txtNode1.nextSibling;
-      while (txtNode2 !== null) {
-        if ((txtNode1.nodeName === '#text' && '#text' === txtNode2.nodeName)) {
-          for (_j = 0, _len1 = breakPoints.length; _j < _len1; _j++) {
-            bp = breakPoints[_j];
-            if (bp.cont === txtNode2) {
-              bp.cont = txtNode1;
-              bp.offset = txtNode1.length + bp.offset;
-            }
-          }
-          txtNode1.textContent += txtNode2.textContent;
-          segment1.removeChild(txtNode2);
-          txtNode2 = txtNode1.nextSibling;
-        } else {
-          txtNode1 = segment1.firstChild;
-          txtNode2 = txtNode1.nextSibling;
-        }
-      }
-      segment2.parentNode.removeChild(segment2);
-      return true;
-    };
-
-    CNeditor.prototype._haveSameMeta = function(segment1, segment2) {
-      var clas, list1, list2, _i, _len;
-
-      if (segment1.nodeName !== segment2.nodeName) {
-        return false;
-      } else if (segment1.nodeName === 'A') {
-        if (segment1.href !== segment2.href) {
-          return false;
-        }
-      }
-      list1 = segment1.classList;
-      list2 = segment2.classList;
-      if (list1.length !== list2.length) {
-        return false;
-      }
-      if (list1.length === 0) {
-        return true;
-      }
-      for (_i = 0, _len = list2.length; _i < _len; _i++) {
-        clas = list2[_i];
-        if (!list1.contains(clas)) {
-          return false;
-        }
-      }
-      return true;
-    };
-
-    /* ------------------------------------------------------------------------
-    #  _suppr :
-    #
-    # Manage deletions when suppr key is pressed
-    */
-
-
-    CNeditor.prototype._suppr = function() {
-      var bp, result, sel, startLine, startOffset, textNode, txt;
-
-      sel = this.currentSel;
-      startLine = sel.startLine;
-      if (sel.range.collapsed) {
-        if (sel.rangeIsEndLine) {
-          if (startLine.lineNext !== null) {
-            if (sel.startLineDiv.nextSibling.dataset.type === 'task') {
-              result = window.confirm('Do you want to remove\
-                            the task from todos ?');
-              if (result) {
-                this._history.addStep();
-                this._stackTaskChange(sel.startLineDiv.nextSibling.task, 'deleted');
-              } else {
-                this._history.addStep();
-                this._stackTaskChange(sel.startLineDiv.nextSibling.task, 'removed');
-              }
-              this._turneTaskIntoLine(sel.startLineDiv.nextSibling);
-            }
-            sel.range.setEndBefore(startLine.lineNext.line$[0].firstChild);
-            selection.normalize(sel.range);
-            sel.theoricalRange = sel.range.cloneRange();
-            sel.endLine = startLine.lineNext;
-            this._deleteMultiLinesSelections();
-          } else {
-
-          }
-        } else {
-          textNode = sel.range.startContainer;
-          startOffset = sel.range.startOffset;
-          if (startOffset === textNode.length) {
-            bp = selection.setBpNextSegEnd(textNode);
-            textNode = bp.cont;
-            startOffset = bp.offset;
-          }
-          txt = textNode.textContent;
-          textNode.textContent = txt.substr(0, startOffset) + txt.substr(startOffset + 1);
-          bp = {
-            cont: textNode,
-            offset: startOffset
-          };
-          if (textNode.textContent.length === 0) {
-            this._fusionSimilarSegments(startLine.line$[0], [bp]);
-          }
-          this._setCaret(bp.cont, bp.offset);
-          if (sel.isStartInTask) {
-            this._stackTaskChange(sel.startLineDiv.task, 'modified');
-          }
-        }
-      } else if (sel.endLine === startLine) {
-        this.Tags.removeFromRange(sel.theoricalRange);
-        sel.range.deleteContents();
-        bp = {
-          cont: sel.range.startContainer,
-          offset: sel.range.startOffset
-        };
-        this._fusionSimilarSegments(sel.startLine.line$[0], [bp]);
-        this._setCaret(bp.cont, bp.offset);
-        if (sel.isStartInTask) {
-          this._stackTaskChange(sel.startLineDiv.task, 'modified');
-        }
+        nextSegment = segment.nextSibling;
+      } else if (this._haveSameMeta(segment, nextSegment)) {
+        this._fusionSegments(segment, nextSegment, breakPoints);
+        nextSegment = segment.nextSibling;
       } else {
-        this._deleteMultiLinesSelections();
+        segment = nextSegment;
+        nextSegment = nextSegment.nextSibling;
       }
+    }
+    if (segment.textContent === '' && selection.getSegmentIndex(segment)[0] !== 0) {
+      segment = this._removeSegment(segment, breakPoints);
+      selection.normalizeBPs(breakPoints);
+    }
+    return breakPoints;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Removes a segment and returns a reference to previous sibling or,
+   * if doesn't exist, to the next sibling.
+   * @param  {element} segment     The segment to remove. Must be in a line.
+   * @param  {Array} breakPoints An Array of breakpoint to preserve : if its
+   *                             is deleted, the bp is put before the deleted
+   *                             segment (it is NOT normalized, since not in a
+   *                             textNode)
+   * @return {element}       A reference to the previous sibling or,
+   *                         if doesn't exist, to the next sibling.
+  */
+
+
+  CNeditor.prototype._removeSegment = function(segment, breakPoints) {
+    var bp, newRef, offset, _i, _j, _len, _len1;
+
+    if (breakPoints.length > 0) {
+      for (_i = 0, _len = breakPoints.length; _i < _len; _i++) {
+        bp = breakPoints[_i];
+        bp.seg = selection.getNestedSegment(bp.cont);
+      }
+    }
+    for (_j = 0, _len1 = breakPoints.length; _j < _len1; _j++) {
+      bp = breakPoints[_j];
+      if (bp.seg === segment) {
+        offset = selection.getNodeIndex(segment);
+        bp.cont = segment.parentNode;
+        bp.offset = offset;
+      }
+    }
+    newRef = segment.previousSibling;
+    if (!newRef) {
+      newRef = segment.nextSibling;
+    }
+    segment.parentNode.removeChild(segment);
+    return newRef;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Imports the content of segment2 in segment1 and updates the breakpoint if
+   * this on is  inside segment2
+   * @param  {element} segment1    the segment in which the fusion operates
+   * @param  {element} segment2    the segement that will be imported in
+   *                               segment1
+   * @param  {Array} breakPoints [{con,offset}...] array of respectively the
+   *                              container and offset of the breakpoint to
+   *                              update if cont is in segment2. /!\ The
+   *                              breakpoint must be normalized, ie containers
+   *                              must be in textnodes.
+  */
+
+
+  CNeditor.prototype._fusionSegments = function(segment1, segment2, breakPoints) {
+    var bp, child, children, txtNode1, txtNode2, _i, _j, _len, _len1, _ref;
+
+    children = Array.prototype.slice.call(segment2.childNodes);
+    _ref = segment2.childNodes;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      child = _ref[_i];
+      segment1.appendChild(child);
+    }
+    txtNode1 = segment1.firstChild;
+    txtNode2 = txtNode1.nextSibling;
+    while (txtNode2 !== null) {
+      if ((txtNode1.nodeName === '#text' && '#text' === txtNode2.nodeName)) {
+        for (_j = 0, _len1 = breakPoints.length; _j < _len1; _j++) {
+          bp = breakPoints[_j];
+          if (bp.cont === txtNode2) {
+            bp.cont = txtNode1;
+            bp.offset = txtNode1.length + bp.offset;
+          }
+        }
+        txtNode1.textContent += txtNode2.textContent;
+        segment1.removeChild(txtNode2);
+        txtNode2 = txtNode1.nextSibling;
+      } else {
+        txtNode1 = segment1.firstChild;
+        txtNode2 = txtNode1.nextSibling;
+      }
+    }
+    segment2.parentNode.removeChild(segment2);
+    return true;
+  };
+
+  CNeditor.prototype._haveSameMeta = function(segment1, segment2) {
+    var clas, list1, list2, _i, _len;
+
+    if (segment1.nodeName !== segment2.nodeName) {
       return false;
-    };
+    } else if (segment1.nodeName === 'A') {
+      if (segment1.href !== segment2.href) {
+        return false;
+      }
+    }
+    list1 = segment1.classList;
+    list2 = segment2.classList;
+    if (list1.length !== list2.length) {
+      return false;
+    }
+    if (list1.length === 0) {
+      return true;
+    }
+    for (_i = 0, _len = list2.length; _i < _len; _i++) {
+      clas = list2[_i];
+      if (!list1.contains(clas)) {
+        return false;
+      }
+    }
+    return true;
+  };
 
-    /* ------------------------------------------------------------------------
-    #  _backspace
-    #
-    # Manage deletions when backspace key is pressed
-    */
+  /* ------------------------------------------------------------------------
+  #  _suppr :
+  #
+  # Manage deletions when suppr key is pressed
+  */
 
 
-    CNeditor.prototype._backspace = function() {
-      var bp, cloneRg, result, sel, startLine, startOffset, textNode, txt;
+  CNeditor.prototype._suppr = function() {
+    var bp, result, sel, startLine, startOffset, textNode, txt;
 
-      sel = this.currentSel;
-      startLine = sel.startLine;
-      if (sel.range.collapsed) {
-        if (sel.rangeIsStartLine) {
-          if (startLine.linePrev !== null) {
-            if (sel.isStartInTask) {
-              result = window.confirm('Do you want to remove the\
-                                                 task from todos?');
-              if (result) {
-                this._history.addStep();
-                this._stackTaskChange(sel.startLineDiv.task, 'deleted');
-              } else {
-                this._history.addStep();
-                this._stackTaskChange(sel.startLineDiv.task, 'removed');
-                this._turneTaskIntoLine(sel.startLineDiv);
-                this._setCaret(sel.startLineDiv, 0);
-              }
+    sel = this.currentSel;
+    startLine = sel.startLine;
+    if (sel.range.collapsed) {
+      if (sel.rangeIsEndLine) {
+        if (startLine.lineNext !== null) {
+          if (sel.startLineDiv.nextSibling.dataset.type === 'task') {
+            result = window.confirm('Do you want to remove\
+                            the task from todos ?');
+            if (result) {
+              this._history.addStep();
+              this._stackTaskChange(sel.startLineDiv.nextSibling.task, 'deleted');
+            } else {
+              this._history.addStep();
+              this._stackTaskChange(sel.startLineDiv.nextSibling.task, 'removed');
             }
-            cloneRg = sel.range.cloneRange();
-            cloneRg.setStartBefore(startLine.linePrev.line$[0].lastChild);
-            selection.normalize(cloneRg);
-            sel.theoricalRange = cloneRg;
-            sel.startLine = startLine.linePrev;
-            this._deleteMultiLinesSelections();
+            this._turneTaskIntoLine(sel.startLineDiv.nextSibling);
           }
+          sel.range.setEndBefore(startLine.lineNext.line$[0].firstChild);
+          selection.normalize(sel.range);
+          sel.theoricalRange = sel.range.cloneRange();
+          sel.endLine = startLine.lineNext;
+          this._deleteMultiLinesSelections();
         } else {
-          textNode = sel.range.startContainer;
-          startOffset = sel.range.startOffset;
-          if (startOffset === 0 || startOffset === 1 && textNode.textContent.charCodeAt(0) === 160) {
-            bp = selection.setBpPreviousSegEnd(textNode);
-            textNode = bp.cont;
-            startOffset = bp.offset;
-          }
-          if (textNode.parentNode.dataset.type === 'contact') {
-            textNode.parentNode.parentNode.removeChild(textNode.parentNode);
-            return;
-          }
-          txt = textNode.textContent;
-          textNode.textContent = txt.substr(0, startOffset - 1) + txt.substr(startOffset);
-          bp = {
-            cont: textNode,
-            offset: startOffset - 1
-          };
-          if (textNode.textContent.length === 0) {
-            this._fusionSimilarSegments(sel.startLine.line$[0], [bp]);
-          }
-          this._setCaret(bp.cont, bp.offset);
-          if (sel.isStartInTask) {
-            this._stackTaskChange(sel.startLineDiv.task, 'modified');
-          }
+
         }
-      } else if (sel.endLine === startLine) {
-        this.Tags.removeFromRange(sel.theoricalRange);
-        sel.range.deleteContents();
+      } else {
+        textNode = sel.range.startContainer;
+        startOffset = sel.range.startOffset;
+        if (startOffset === textNode.length) {
+          bp = selection.setBpNextSegEnd(textNode);
+          textNode = bp.cont;
+          startOffset = bp.offset;
+        }
+        txt = textNode.textContent;
+        textNode.textContent = txt.substr(0, startOffset) + txt.substr(startOffset + 1);
         bp = {
-          cont: sel.range.startContainer,
-          offset: sel.range.startOffset
+          cont: textNode,
+          offset: startOffset
         };
-        this._fusionSimilarSegments(sel.startLine.line$[0], [bp]);
+        if (textNode.textContent.length === 0) {
+          this._fusionSimilarSegments(startLine.line$[0], [bp]);
+        }
         this._setCaret(bp.cont, bp.offset);
         if (sel.isStartInTask) {
           this._stackTaskChange(sel.startLineDiv.task, 'modified');
         }
-      } else {
-        this._deleteMultiLinesSelections();
       }
+    } else if (sel.endLine === startLine) {
+      this.Tags.removeFromRange(sel.theoricalRange);
+      sel.range.deleteContents();
+      bp = {
+        cont: sel.range.startContainer,
+        offset: sel.range.startOffset
+      };
+      this._fusionSimilarSegments(sel.startLine.line$[0], [bp]);
+      this._setCaret(bp.cont, bp.offset);
+      if (sel.isStartInTask) {
+        this._stackTaskChange(sel.startLineDiv.task, 'modified');
+      }
+    } else {
+      this._deleteMultiLinesSelections();
+    }
+    return false;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _backspace
+  #
+  # Manage deletions when backspace key is pressed
+  */
+
+
+  CNeditor.prototype._backspace = function() {
+    var bp, cloneRg, result, sel, startLine, startOffset, textNode, txt;
+
+    sel = this.currentSel;
+    startLine = sel.startLine;
+    if (sel.range.collapsed) {
+      if (sel.rangeIsStartLine) {
+        if (startLine.linePrev !== null) {
+          if (sel.isStartInTask) {
+            result = window.confirm('Do you want to remove the\
+                                                 task from todos?');
+            if (result) {
+              this._history.addStep();
+              this._stackTaskChange(sel.startLineDiv.task, 'deleted');
+            } else {
+              this._history.addStep();
+              this._stackTaskChange(sel.startLineDiv.task, 'removed');
+              this._turneTaskIntoLine(sel.startLineDiv);
+              this._setCaret(sel.startLineDiv, 0);
+            }
+          }
+          cloneRg = sel.range.cloneRange();
+          cloneRg.setStartBefore(startLine.linePrev.line$[0].lastChild);
+          selection.normalize(cloneRg);
+          sel.theoricalRange = cloneRg;
+          sel.startLine = startLine.linePrev;
+          this._deleteMultiLinesSelections();
+        }
+      } else {
+        textNode = sel.range.startContainer;
+        startOffset = sel.range.startOffset;
+        if (startOffset === 0 || startOffset === 1 && textNode.textContent.charCodeAt(0) === 160) {
+          bp = selection.setBpPreviousSegEnd(textNode);
+          textNode = bp.cont;
+          startOffset = bp.offset;
+        }
+        if (textNode.parentNode.dataset.type === 'contact') {
+          textNode.parentNode.parentNode.removeChild(textNode.parentNode);
+          return;
+        }
+        txt = textNode.textContent;
+        textNode.textContent = txt.substr(0, startOffset - 1) + txt.substr(startOffset);
+        bp = {
+          cont: textNode,
+          offset: startOffset - 1
+        };
+        if (textNode.textContent.length === 0) {
+          this._fusionSimilarSegments(sel.startLine.line$[0], [bp]);
+        }
+        this._setCaret(bp.cont, bp.offset);
+        if (sel.isStartInTask) {
+          this._stackTaskChange(sel.startLineDiv.task, 'modified');
+        }
+      }
+    } else if (sel.endLine === startLine) {
+      this.Tags.removeFromRange(sel.theoricalRange);
+      sel.range.deleteContents();
+      bp = {
+        cont: sel.range.startContainer,
+        offset: sel.range.startOffset
+      };
+      this._fusionSimilarSegments(sel.startLine.line$[0], [bp]);
+      this._setCaret(bp.cont, bp.offset);
+      if (sel.isStartInTask) {
+        this._stackTaskChange(sel.startLineDiv.task, 'modified');
+      }
+    } else {
+      this._deleteMultiLinesSelections();
+    }
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Turn selected lines in a title List (Th). History is incremented.
+   * @param  {Line} l [optionnal] The line to convert in Th
+  */
+
+
+  CNeditor.prototype.titleList = function(l) {
+    var endDiv, endLineID, line, range, startDiv, startDivID, _results;
+
+    if (!this.isEnabled || this.hasNoSelection()) {
       return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Turn selected lines in a title List (Th). History is incremented.
-     * @param  {Line} l [optionnal] The line to convert in Th
-    */
-
-
-    CNeditor.prototype.titleList = function(l) {
-      var endDiv, endLineID, line, range, startDiv, startDivID, _results;
-
-      if (!this.isEnabled || this.hasNoSelection()) {
-        return true;
-      }
-      this._history.addStep();
-      if (l != null) {
-        startDivID = l.lineID;
-        endLineID = startDivID;
-      } else {
-        range = this.getEditorSelection().getRangeAt(0);
-        startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-        endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
-        startDivID = startDiv.id;
-        endLineID = endDiv.id;
-      }
-      line = this._lines[startDivID];
-      _results = [];
-      while (true) {
-        switch (line.lineType) {
-          case 'Tu':
-          case 'To':
-            this._toggleLineType(line);
-            break;
-          case 'Lh':
-            line.setType('Th');
-            break;
-          case 'Lu':
-            line.setType('Tu');
-            this._toggleLineType(line);
-        }
-        if (line.lineID === endLineID) {
+    }
+    this._history.addStep();
+    if (l != null) {
+      startDivID = l.lineID;
+      endLineID = startDivID;
+    } else {
+      range = this.getEditorSelection().getRangeAt(0);
+      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+      startDivID = startDiv.id;
+      endLineID = endDiv.id;
+    }
+    line = this._lines[startDivID];
+    _results = [];
+    while (true) {
+      switch (line.lineType) {
+        case 'Tu':
+        case 'To':
+          this._toggleLineType(line);
           break;
-        }
-        _results.push(line = line.lineNext);
-      }
-      return _results;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Turn selected lines or the one given in parameter in a
-     * Marker List line (Tu)
-     * @param  {Line} l [optional] The line to turn in to a Tu
-    */
-
-
-    CNeditor.prototype.markerList = function(l) {
-      var endDiv, endLineID, line, range, startDiv, startDivID, _results;
-
-      if (!this.isEnabled || this.hasNoSelection()) {
-        return true;
-      }
-      this._history.addStep();
-      if (l != null) {
-        startDivID = l.lineID;
-        endLineID = startDivID;
-      } else {
-        range = this.getEditorSelection().getRangeAt(0);
-        startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-        endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
-        startDivID = startDiv.id;
-        endLineID = endDiv.id;
-      }
-      line = this._lines[startDivID];
-      _results = [];
-      while (true) {
-        switch (line.lineType) {
-          case 'Th':
-          case 'To':
-            this._toggleLineType(line);
-            break;
-          case 'Lh':
-          case 'Lo':
-            line.setTypeDepth('Tu', line.lineDepthAbs + 1);
-            break;
-          case 'Lu':
-            line.setType('Tu');
-        }
-        if (line.lineID === endLineID) {
+        case 'Lh':
+          line.setType('Th');
           break;
-        }
-        _results.push(line = line.lineNext);
+        case 'Lu':
+          line.setType('Tu');
+          this._toggleLineType(line);
       }
-      return _results;
-    };
+      if (line.lineID === endLineID) {
+        break;
+      }
+      _results.push(line = line.lineNext);
+    }
+    return _results;
+  };
 
-    /* ------------------------------------------------------------------------
-    #  _findDepthRel
-    #
-    # Calculates the relative depth of the line
-    #   usage   : cycle : Tu => To => Lx => Th
-    #   param   : line : the line we want to find the relative depth
-    #   returns : a number
-    #
-    */
+  /** -----------------------------------------------------------------------
+   * Turn selected lines or the one given in parameter in a
+   * Marker List line (Tu)
+   * @param  {Line} l [optional] The line to turn in to a Tu
+  */
 
 
-    CNeditor.prototype._findDepthRel = function(line) {
-      var linePrev;
+  CNeditor.prototype.markerList = function(l) {
+    var endDiv, endLineID, line, range, startDiv, startDivID, _results;
 
-      if (line.lineDepthAbs === 1) {
-        if (line.lineType[1] === "h") {
-          return 0;
-        } else {
-          return 1;
-        }
+    if (!this.isEnabled || this.hasNoSelection()) {
+      return true;
+    }
+    this._history.addStep();
+    if (l != null) {
+      startDivID = l.lineID;
+      endLineID = startDivID;
+    } else {
+      range = this.getEditorSelection().getRangeAt(0);
+      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+      startDivID = startDiv.id;
+      endLineID = endDiv.id;
+    }
+    line = this._lines[startDivID];
+    _results = [];
+    while (true) {
+      switch (line.lineType) {
+        case 'Th':
+        case 'To':
+          this._toggleLineType(line);
+          break;
+        case 'Lh':
+        case 'Lo':
+          line.setTypeDepth('Tu', line.lineDepthAbs + 1);
+          break;
+        case 'Lu':
+          line.setType('Tu');
+      }
+      if (line.lineID === endLineID) {
+        break;
+      }
+      _results.push(line = line.lineNext);
+    }
+    return _results;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _findDepthRel
+  #
+  # Calculates the relative depth of the line
+  #   usage   : cycle : Tu => To => Lx => Th
+  #   param   : line : the line we want to find the relative depth
+  #   returns : a number
+  #
+  */
+
+
+  CNeditor.prototype._findDepthRel = function(line) {
+    var linePrev;
+
+    if (line.lineDepthAbs === 1) {
+      if (line.lineType[1] === "h") {
+        return 0;
       } else {
-        linePrev = line.linePrev;
-        while (linePrev !== null && linePrev.lineDepthAbs >= line.lineDepthAbs) {
-          linePrev = linePrev.linePrev;
-        }
-        if (linePrev !== null) {
-          return linePrev.lineDepthRel + 1;
-        } else {
-          return 0;
-        }
+        return 1;
       }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Toggle the type of the selected lines.
-     * Lx => Tx and Tu <=> Th
-     * Increments history.
-     * @return {[type]} [description]
-    */
-
-
-    CNeditor.prototype.toggleType = function() {
-      var currentDepth, depthIsTreated, done, endDiv, endLineID, line, range, sel, startDiv;
-
-      if (!this.isEnabled || this.hasNoSelection()) {
-        return true;
+    } else {
+      linePrev = line.linePrev;
+      while (linePrev !== null && linePrev.lineDepthAbs >= line.lineDepthAbs) {
+        linePrev = linePrev.linePrev;
       }
-      this._history.addStep();
+      if (linePrev !== null) {
+        return linePrev.lineDepthRel + 1;
+      } else {
+        return 0;
+      }
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Toggle the type of the selected lines.
+   * Lx => Tx and Tu <=> Th
+   * Increments history.
+   * @return {[type]} [description]
+  */
+
+
+  CNeditor.prototype.toggleType = function() {
+    var currentDepth, depthIsTreated, done, endDiv, endLineID, line, range, sel, startDiv;
+
+    if (!this.isEnabled || this.hasNoSelection()) {
+      return true;
+    }
+    this._history.addStep();
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+    endLineID = endDiv.id;
+    line = this._lines[startDiv.id];
+    depthIsTreated = {};
+    currentDepth = line.lineDepthAbs;
+    depthIsTreated[currentDepth] = false;
+    while (true) {
+      if (!depthIsTreated[currentDepth]) {
+        done = this._toggleLineType(line);
+        depthIsTreated[line.lineDepthAbs] = done;
+      }
+      if (line.lineID === endDiv.id) {
+        return;
+      }
+      line = line.lineNext;
+      if (line.lineDepthAbs < currentDepth) {
+        depthIsTreated[currentDepth] = false;
+        currentDepth = line.lineDepthAbs;
+      } else {
+        currentDepth = line.lineDepthAbs;
+      }
+    }
+  };
+
+  CNeditor.prototype._toggleLineType = function(line) {
+    var l, lineTypeTarget;
+
+    switch (line.lineType) {
+      case 'Tu':
+        lineTypeTarget = 'Th';
+        l = line.lineNext;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Tu') {
+              l.setType('Th');
+            } else if (l.lineType === 'Lu') {
+              l.setType('Lh');
+            } else {
+              break;
+            }
+          }
+          l = l.lineNext;
+        }
+        l = line.linePrev;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Tu') {
+              l.setType('Th');
+            } else if (l.lineType === 'Lu') {
+              l.setType('Lh');
+            } else {
+              break;
+            }
+          }
+          l = l.linePrev;
+        }
+        break;
+      case 'Th':
+        lineTypeTarget = 'Tu';
+        l = line.lineNext;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Th') {
+              l.setType('Tu');
+            } else if (l.lineType === 'Lh') {
+              l.setType('Lu');
+            } else {
+              break;
+            }
+          }
+          l = l.lineNext;
+        }
+        l = line.linePrev;
+        while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
+          if (l.lineDepthAbs === line.lineDepthAbs) {
+            if (l.lineType === 'Th') {
+              l.setType('Tu');
+            } else if (l.lineType === 'Lh') {
+              l.setType('Lu');
+            } else {
+              break;
+            }
+          }
+          l = l.linePrev;
+        }
+        break;
+      case 'Lu':
+        lineTypeTarget = 'Tu';
+        break;
+      case 'Lh':
+        lineTypeTarget = 'Th';
+        break;
+      default:
+        return false;
+    }
+    line.setType(lineTypeTarget);
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Indent selection. History is incremented.
+   * @param  {[type]} l [description]
+   * @return {[type]}   [description]
+  */
+
+
+  CNeditor.prototype.tab = function(l) {
+    var endDiv, endLineID, line, range, sel, startDiv, _results;
+
+    if (!this.isEnabled || this.hasNoSelection()) {
+      return true;
+    }
+    this._history.addStep();
+    if (l != null) {
+      startDiv = l.line$[0];
+      endDiv = startDiv;
+    } else {
       sel = this.getEditorSelection();
       range = sel.getRangeAt(0);
       startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
       endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
-      endLineID = endDiv.id;
-      line = this._lines[startDiv.id];
-      depthIsTreated = {};
-      currentDepth = line.lineDepthAbs;
-      depthIsTreated[currentDepth] = false;
-      while (true) {
-        if (!depthIsTreated[currentDepth]) {
-          done = this._toggleLineType(line);
-          depthIsTreated[line.lineDepthAbs] = done;
-        }
-        if (line.lineID === endDiv.id) {
+    }
+    endLineID = endDiv.id;
+    line = this._lines[startDiv.id];
+    _results = [];
+    while (true) {
+      this._tabLine(line);
+      if (line.lineID === endLineID) {
+        break;
+      } else {
+        _results.push(line = line.lineNext);
+      }
+    }
+    return _results;
+  };
+
+  CNeditor.prototype._tabLine = function(line) {
+    var depthAbsTarget, nextSib, nextSibType, prevSib, prevSibType, prevSibling, typeTarget;
+
+    switch (line.lineType) {
+      case 'Tu':
+      case 'Th':
+      case 'To':
+        prevSibling = this._findPrevSiblingT(line);
+        if (prevSibling === null) {
           return;
         }
+        if (prevSibling.lineType === 'Th') {
+          typeTarget = 'Lh';
+        } else if (prevSibling.lineType === 'Tu') {
+          typeTarget = 'Lu';
+        } else {
+          typeTarget = 'Lo';
+        }
+        break;
+      case 'Lh':
+      case 'Lu':
+      case 'Lo':
+        depthAbsTarget = line.lineDepthAbs + 1;
+        nextSib = this._findNextSibling(line, depthAbsTarget);
+        nextSibType = nextSib === null ? null : nextSib.lineType;
+        prevSib = this._findPrevSiblingT(line, depthAbsTarget);
+        prevSibType = prevSib === null ? null : prevSib.lineType;
+        typeTarget = this._chooseTypeTarget(prevSibType, nextSibType);
+        if (typeTarget === 'Th') {
+          line.lineDepthAbs += 1;
+          line.lineDepthRel = 0;
+        } else {
+          line.lineDepthAbs += 1;
+          line.lineDepthRel += 1;
+        }
+    }
+    line.setType(typeTarget);
+    return this.adjustSiblingsToType(line);
+  };
+
+  CNeditor.prototype._chooseTypeTarget = function(prevSibType, nextSibType) {
+    var typeTarget;
+
+    if ((prevSibType === nextSibType && nextSibType === null)) {
+      typeTarget = 'Tu';
+    } else if (prevSibType === nextSibType) {
+      typeTarget = nextSibType;
+    } else if (prevSibType === null) {
+      typeTarget = nextSibType;
+    } else if (nextSibType === null) {
+      typeTarget = prevSibType;
+    } else {
+      typeTarget = 'Tu';
+    }
+    return typeTarget;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Un-indent the selection. History is incremented.
+   * @param  {Range} range [optional] A range containing the lines to un-indent
+  */
+
+
+  CNeditor.prototype.shiftTab = function(range) {
+    var endDiv, endLineID, line, sel, startDiv;
+
+    if (!this.isEnabled || this.hasNoSelection()) {
+      return true;
+    }
+    this._history.addStep();
+    if (range == null) {
+      sel = this.getEditorSelection();
+      range = sel.getRangeAt(0);
+    }
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+    endLineID = endDiv.id;
+    line = this._lines[startDiv.id];
+    while (true) {
+      this._shiftTabLine(line);
+      if (line.lineID === endDiv.id) {
+        break;
+      } else {
         line = line.lineNext;
-        if (line.lineDepthAbs < currentDepth) {
-          depthIsTreated[currentDepth] = false;
-          currentDepth = line.lineDepthAbs;
-        } else {
-          currentDepth = line.lineDepthAbs;
+      }
+    }
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * un-tab a single line
+   * @param  {line} line the line to un-tab
+  */
+
+
+  CNeditor.prototype._shiftTabLine = function(line) {
+    var depthAbsTarget, nextL, nextSib, nextSibType, parnt, prevSib, prevSibType, typeTarget;
+
+    switch (line.lineType) {
+      case 'Tu':
+      case 'Th':
+      case 'To':
+        parnt = line.linePrev;
+        while (parnt !== null && parnt.lineDepthAbs >= line.lineDepthAbs) {
+          parnt = parnt.linePrev;
         }
-      }
-    };
-
-    CNeditor.prototype._toggleLineType = function(line) {
-      var l, lineTypeTarget;
-
-      switch (line.lineType) {
-        case 'Tu':
-          lineTypeTarget = 'Th';
-          l = line.lineNext;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            if (l.lineDepthAbs === line.lineDepthAbs) {
-              if (l.lineType === 'Tu') {
-                l.setType('Th');
-              } else if (l.lineType === 'Lu') {
-                l.setType('Lh');
-              } else {
-                break;
-              }
-            }
-            l = l.lineNext;
-          }
-          l = line.linePrev;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            if (l.lineDepthAbs === line.lineDepthAbs) {
-              if (l.lineType === 'Tu') {
-                l.setType('Th');
-              } else if (l.lineType === 'Lu') {
-                l.setType('Lh');
-              } else {
-                break;
-              }
-            }
-            l = l.linePrev;
-          }
-          break;
-        case 'Th':
-          lineTypeTarget = 'Tu';
-          l = line.lineNext;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            if (l.lineDepthAbs === line.lineDepthAbs) {
-              if (l.lineType === 'Th') {
-                l.setType('Tu');
-              } else if (l.lineType === 'Lh') {
-                l.setType('Lu');
-              } else {
-                break;
-              }
-            }
-            l = l.lineNext;
-          }
-          l = line.linePrev;
-          while (l !== null && l.lineDepthAbs >= line.lineDepthAbs) {
-            if (l.lineDepthAbs === line.lineDepthAbs) {
-              if (l.lineType === 'Th') {
-                l.setType('Tu');
-              } else if (l.lineType === 'Lh') {
-                l.setType('Lu');
-              } else {
-                break;
-              }
-            }
-            l = l.linePrev;
-          }
-          break;
-        case 'Lu':
-          lineTypeTarget = 'Tu';
-          break;
-        case 'Lh':
-          lineTypeTarget = 'Th';
-          break;
-        default:
-          return false;
-      }
-      line.setType(lineTypeTarget);
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Indent selection. History is incremented.
-     * @param  {[type]} l [description]
-     * @return {[type]}   [description]
-    */
-
-
-    CNeditor.prototype.tab = function(l) {
-      var endDiv, endLineID, line, range, sel, startDiv, _results;
-
-      if (!this.isEnabled || this.hasNoSelection()) {
-        return true;
-      }
-      this._history.addStep();
-      if (l != null) {
-        startDiv = l.line$[0];
-        endDiv = startDiv;
-      } else {
-        sel = this.getEditorSelection();
-        range = sel.getRangeAt(0);
-        startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-        endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
-      }
-      endLineID = endDiv.id;
-      line = this._lines[startDiv.id];
-      _results = [];
-      while (true) {
-        this._tabLine(line);
-        if (line.lineID === endLineID) {
-          break;
-        } else {
-          _results.push(line = line.lineNext);
+        if (parnt === null) {
+          return;
         }
-      }
-      return _results;
-    };
-
-    CNeditor.prototype._tabLine = function(line) {
-      var depthAbsTarget, nextSib, nextSibType, prevSib, prevSibType, prevSibling, typeTarget;
-
-      switch (line.lineType) {
-        case 'Tu':
-        case 'Th':
-        case 'To':
-          prevSibling = this._findPrevSiblingT(line);
-          if (prevSibling === null) {
-            return;
-          }
-          if (prevSibling.lineType === 'Th') {
-            typeTarget = 'Lh';
-          } else if (prevSibling.lineType === 'Tu') {
-            typeTarget = 'Lu';
-          } else {
-            typeTarget = 'Lo';
-          }
-          break;
-        case 'Lh':
-        case 'Lu':
-        case 'Lo':
-          depthAbsTarget = line.lineDepthAbs + 1;
-          nextSib = this._findNextSibling(line, depthAbsTarget);
-          nextSibType = nextSib === null ? null : nextSib.lineType;
-          prevSib = this._findPrevSiblingT(line, depthAbsTarget);
-          prevSibType = prevSib === null ? null : prevSib.lineType;
-          typeTarget = this._chooseTypeTarget(prevSibType, nextSibType);
-          if (typeTarget === 'Th') {
-            line.lineDepthAbs += 1;
-            line.lineDepthRel = 0;
-          } else {
-            line.lineDepthAbs += 1;
-            line.lineDepthRel += 1;
-          }
-      }
-      line.setType(typeTarget);
-      return this.adjustSiblingsToType(line);
-    };
-
-    CNeditor.prototype._chooseTypeTarget = function(prevSibType, nextSibType) {
-      var typeTarget;
-
-      if ((prevSibType === nextSibType && nextSibType === null)) {
-        typeTarget = 'Tu';
-      } else if (prevSibType === nextSibType) {
-        typeTarget = nextSibType;
-      } else if (prevSibType === null) {
-        typeTarget = nextSibType;
-      } else if (nextSibType === null) {
-        typeTarget = prevSibType;
-      } else {
-        typeTarget = 'Tu';
-      }
-      return typeTarget;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Un-indent the selection. History is incremented.
-     * @param  {Range} range [optional] A range containing the lines to un-indent
-    */
-
-
-    CNeditor.prototype.shiftTab = function(range) {
-      var endDiv, endLineID, line, sel, startDiv;
-
-      if (!this.isEnabled || this.hasNoSelection()) {
-        return true;
-      }
-      this._history.addStep();
-      if (range == null) {
-        sel = this.getEditorSelection();
-        range = sel.getRangeAt(0);
-      }
-      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
-      endLineID = endDiv.id;
-      line = this._lines[startDiv.id];
-      while (true) {
-        this._shiftTabLine(line);
-        if (line.lineID === endDiv.id) {
-          break;
-        } else {
-          line = line.lineNext;
+        if ((line.lineNext != null) && line.lineNext.lineType[0] === 'L' && line.lineNext.lineDepthAbs === line.lineDepthAbs) {
+          nextL = line.lineNext;
+          nextL.setType('T' + nextL.lineType[1]);
         }
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * un-tab a single line
-     * @param  {line} line the line to un-tab
-    */
-
-
-    CNeditor.prototype._shiftTabLine = function(line) {
-      var depthAbsTarget, nextL, nextSib, nextSibType, parnt, prevSib, prevSibType, typeTarget;
-
-      switch (line.lineType) {
-        case 'Tu':
-        case 'Th':
-        case 'To':
-          parnt = line.linePrev;
-          while (parnt !== null && parnt.lineDepthAbs >= line.lineDepthAbs) {
-            parnt = parnt.linePrev;
+        nextL = line.lineNext;
+        if (nextL && nextL.lineDepthAbs > line.lineDepthAbs) {
+          while (nextL && nextL.lineDepthAbs > line.lineDepthAbs) {
+            nextL.setDepthAbs(nextL.lineDepthAbs - 1);
+            nextL = nextL.lineNext;
           }
-          if (parnt === null) {
-            return;
-          }
-          if ((line.lineNext != null) && line.lineNext.lineType[0] === 'L' && line.lineNext.lineDepthAbs === line.lineDepthAbs) {
-            nextL = line.lineNext;
+          if ((nextL != null) && nextL.lineType[0] === 'L') {
             nextL.setType('T' + nextL.lineType[1]);
           }
-          nextL = line.lineNext;
-          if (nextL && nextL.lineDepthAbs > line.lineDepthAbs) {
-            while (nextL && nextL.lineDepthAbs > line.lineDepthAbs) {
-              nextL.setDepthAbs(nextL.lineDepthAbs - 1);
-              nextL = nextL.lineNext;
-            }
-            if ((nextL != null) && nextL.lineType[0] === 'L') {
-              nextL.setType('T' + nextL.lineType[1]);
-            }
-          }
-          typeTarget = parnt.lineType;
-          typeTarget = "L" + typeTarget.charAt(1);
-          line.lineDepthAbs -= 1;
-          line.lineDepthRel -= parnt.lineDepthRel;
-          break;
-        case 'Lh':
-        case 'Lu':
-        case 'Lo':
-          depthAbsTarget = line.lineDepthAbs;
-          nextSib = this._findNextSibling(line, depthAbsTarget);
-          nextSibType = nextSib === null ? null : nextSib.lineType;
-          prevSib = this._findPrevSiblingT(line, depthAbsTarget);
-          prevSibType = prevSib === null ? null : prevSib.lineType;
-          typeTarget = this._chooseTypeTarget(prevSibType, nextSibType);
-      }
-      line.setType(typeTarget);
-      return this.adjustSiblingsToType(line);
-    };
-
-    CNeditor.prototype.adjustSiblingsToType = function(line) {
-      var lineIt, _results;
-
-      lineIt = line;
-      _results = [];
-      while (true) {
-        if (lineIt.lineDepthAbs === line.lineDepthAbs) {
-          if (lineIt.lineType[1] !== line.lineType[1]) {
-            lineIt.setType(lineIt.lineType[0] + line.lineType[1]);
-          }
         }
-        lineIt = lineIt.lineNext;
-        if (lineIt === null || lineIt.lineDepthAbs < line.lineDepthAbs) {
-          break;
-        } else {
-          _results.push(void 0);
+        typeTarget = parnt.lineType;
+        typeTarget = "L" + typeTarget.charAt(1);
+        line.lineDepthAbs -= 1;
+        line.lineDepthRel -= parnt.lineDepthRel;
+        break;
+      case 'Lh':
+      case 'Lu':
+      case 'Lo':
+        depthAbsTarget = line.lineDepthAbs;
+        nextSib = this._findNextSibling(line, depthAbsTarget);
+        nextSibType = nextSib === null ? null : nextSib.lineType;
+        prevSib = this._findPrevSiblingT(line, depthAbsTarget);
+        prevSibType = prevSib === null ? null : prevSib.lineType;
+        typeTarget = this._chooseTypeTarget(prevSibType, nextSibType);
+    }
+    line.setType(typeTarget);
+    return this.adjustSiblingsToType(line);
+  };
+
+  CNeditor.prototype.adjustSiblingsToType = function(line) {
+    var lineIt, _results;
+
+    lineIt = line;
+    _results = [];
+    while (true) {
+      if (lineIt.lineDepthAbs === line.lineDepthAbs) {
+        if (lineIt.lineType[1] !== line.lineType[1]) {
+          lineIt.setType(lineIt.lineType[0] + line.lineType[1]);
         }
       }
-      return _results;
-    };
+      lineIt = lineIt.lineNext;
+      if (lineIt === null || lineIt.lineDepthAbs < line.lineDepthAbs) {
+        break;
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
 
-    /** -----------------------------------------------------------------------
-     * Return on the carret position. Selection must be normalized but not
-     * necessarily collapsed.
-    */
+  /** -----------------------------------------------------------------------
+   * Return on the carret position. Selection must be normalized but not
+   * necessarily collapsed.
+  */
 
 
-    CNeditor.prototype._return = function() {
-      var bp1, currSel, dh, endLine, endOfLineFragment, isInTask, l, newLine, p, rg, startLine, _ref;
+  CNeditor.prototype._return = function() {
+    var bp1, currSel, dh, endLine, endOfLineFragment, isInTask, l, newLine, p, rg, startLine, _ref;
 
-      currSel = this.currentSel;
+    currSel = this.currentSel;
+    startLine = currSel.startLine;
+    endLine = currSel.endLine;
+    rg = currSel.range;
+    isInTask = currSel.isStartInTask;
+    if (currSel.range.collapsed) {
+
+    } else if (endLine === startLine) {
+      rg.deleteContents();
+      bp1 = selection.normalizeBP(rg.startContainer, rg.startOffset);
+      this._fusionSimilarSegments(startLine.line$[0], [bp1]);
+      rg.setStart(bp1.cont, bp1.offset);
+      rg.collapse(true);
+    } else {
+      this._deleteMultiLinesSelections();
+      currSel = this.updateCurrentSelIsStartIsEnd();
       startLine = currSel.startLine;
-      endLine = currSel.endLine;
-      rg = currSel.range;
-      isInTask = currSel.isStartInTask;
-      if (currSel.range.collapsed) {
-
-      } else if (endLine === startLine) {
-        rg.deleteContents();
-        bp1 = selection.normalizeBP(rg.startContainer, rg.startOffset);
-        this._fusionSimilarSegments(startLine.line$[0], [bp1]);
-        rg.setStart(bp1.cont, bp1.offset);
-        rg.collapse(true);
+    }
+    if (currSel.rangeIsEndLine) {
+      newLine = this._insertLineAfter({
+        sourceLine: startLine,
+        targetLineType: startLine.lineType,
+        targetLineDepthAbs: startLine.lineDepthAbs,
+        targetLineDepthRel: startLine.lineDepthRel
+      });
+      this._setCaret(newLine.line$[0].firstChild.firstChild, 0);
+      if (isInTask) {
+        this._turneLineIntoTask(newLine.line$[0]);
+      }
+    } else if (currSel.rangeIsStartLine) {
+      newLine = this._insertLineBefore({
+        sourceLine: startLine,
+        targetLineType: startLine.lineType,
+        targetLineDepthAbs: startLine.lineDepthAbs,
+        targetLineDepthRel: startLine.lineDepthRel
+      });
+      if (isInTask) {
+        this._turneLineIntoTask(newLine.line$[0]);
       } else {
-        this._deleteMultiLinesSelections();
-        currSel = this.updateCurrentSelIsStartIsEnd();
-        startLine = currSel.startLine;
+        this._setCaret(startLine.line$[0].firstChild.firstChild, 0);
       }
-      if (currSel.rangeIsEndLine) {
-        newLine = this._insertLineAfter({
-          sourceLine: startLine,
-          targetLineType: startLine.lineType,
-          targetLineDepthAbs: startLine.lineDepthAbs,
-          targetLineDepthRel: startLine.lineDepthRel
-        });
-        this._setCaret(newLine.line$[0].firstChild.firstChild, 0);
-        if (isInTask) {
-          this._turneLineIntoTask(newLine.line$[0]);
-        }
-      } else if (currSel.rangeIsStartLine) {
-        newLine = this._insertLineBefore({
-          sourceLine: startLine,
-          targetLineType: startLine.lineType,
-          targetLineDepthAbs: startLine.lineDepthAbs,
-          targetLineDepthRel: startLine.lineDepthRel
-        });
-        if (isInTask) {
-          this._turneLineIntoTask(newLine.line$[0]);
-        } else {
-          this._setCaret(startLine.line$[0].firstChild.firstChild, 0);
-        }
-      } else {
-        currSel.range.setEndBefore(startLine.line$[0].lastChild);
-        if (currSel.isStartInTask) {
-          this._stackTaskChange(startLine.line$[0].task, 'modified');
-        }
-        endOfLineFragment = currSel.range.extractContents();
-        newLine = this._insertLineAfter({
-          sourceLine: startLine,
-          targetLineType: startLine.lineType,
-          targetLineDepthAbs: startLine.lineDepthAbs,
-          targetLineDepthRel: startLine.lineDepthRel,
-          fragment: endOfLineFragment
-        });
-        this._fusionSimilarSegments(newLine.line$[0], []);
-        this._setCaret(newLine.line$[0].firstChild.firstChild, 0);
-        if (isInTask) {
-          this._turneLineIntoTask(newLine.line$[0]);
-        }
-      }
-      l = newLine.line$[0];
-      p = l.parentNode;
-      dh = p.getBoundingClientRect().height;
-      if (!(((l.offsetTop + 20 - dh) < (_ref = p.scrollTop) && _ref < l.offsetTop))) {
-        return l.scrollIntoView(false);
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Returns the first line of the editor.
-     * @return {Line} First line of the editor.
-    */
-
-
-    CNeditor.prototype.getFirstline = function() {
-      return this._lines[this.linesDiv.childNodes[0].id];
-    };
-
-    CNeditor.prototype._getSelectedLineDiv = function() {
-      var cont;
-
-      cont = this.getEditorSelection().getRangeAt(0).startContainer;
-      return selection.getLineDiv(cont);
-    };
-
-    /* ------------------------------------------------------------------------
-    #  _findParent1stSibling
-    #
-    # find the sibling line of the parent of line that is the first of the list
-    # ex :
-    #   . Sibling1 <= _findParent1stSibling(line)
-    #   . Sibling2
-    #   . Parent
-    #      . child1
-    #      . line     : the line in argument
-    # returns null if no previous sibling, the line otherwise
-    # the sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
-    */
-
-
-    CNeditor.prototype._findParent1stSibling = function(line) {
-      var lineDepthAbs, linePrev;
-
-      lineDepthAbs = line.lineDepthAbs;
-      linePrev = line.linePrev;
-      if (linePrev === null) {
-        return line;
-      }
-      if (lineDepthAbs <= 2) {
-        while (linePrev.linePrev !== null) {
-          linePrev = linePrev.linePrev;
-        }
-        return linePrev;
-      } else {
-        while (linePrev !== null && linePrev.lineDepthAbs > (lineDepthAbs - 2)) {
-          linePrev = linePrev.linePrev;
-        }
-        return linePrev.lineNext;
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Find the next sibling line.
-     * Returns null if no next sibling, the line otherwise.
-     * The sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
-     * @param  {line} line     The starting line for which we search a sibling
-     * @param  {number} depthAbs [optional] If the siblings we search is not
-     *                           of the same absolute depth
-     * @return {line}          The next sibling if one, null otherwise
-    */
-
-
-    CNeditor.prototype._findNextSibling = function(line, depth) {
-      var nextSib;
-
-      if (depth == null) {
-        depth = line.lineDepthAbs;
-      }
-      nextSib = line.lineNext;
-      while (true) {
-        if (nextSib === null || nextSib.lineDepthAbs < depth) {
-          nextSib = null;
-          break;
-        } else if (nextSib.lineDepthAbs === depth && nextSib.lineType[0] === 'T') {
-          break;
-        }
-        nextSib = nextSib.lineNext;
-      }
-      return nextSib;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Find the previous sibling line being a Title.
-     * Returns null if no previous sibling, the line otherwise.
-     * The sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
-     * @param  {line} line     Rhe starting line for which we search a sibling
-     * @param  {number} depthAbs [optional] If the siblings we search is not
-     *                           of the same absolute depth
-     * @return {line}          The previous sibling if one, null otherwise
-    */
-
-
-    CNeditor.prototype._findPrevSiblingT = function(line, depth) {
-      var prevSib;
-
-      if (!depth) {
-        depth = line.lineDepthAbs;
-      }
-      prevSib = line.linePrev;
-      while (true) {
-        if (prevSib === null || prevSib.lineDepthAbs < depth) {
-          prevSib = null;
-          break;
-        } else if (prevSib.lineDepthAbs === depth && prevSib.lineType[0] === 'T') {
-          break;
-        }
-        prevSib = prevSib.linePrev;
-      }
-      return prevSib;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Find the previous sibling line (can be a line 'Lx' or a title 'Tx').
-     * Returns null if no previous sibling, the line otherwise.
-     * @param  {line} line     The starting line for which we search a sibling
-     * @param  {number} depthAbs [optional] If the siblings we search is not
-     *                           of the same absolute depth
-     * @return {line}          The previous sibling if one, null otherwise
-    */
-
-
-    CNeditor.prototype._findPrevSibling = function(line, depth) {
-      var prevSib;
-
-      if (!depth) {
-        depth = line.lineDepthAbs;
-      }
-      prevSib = line.linePrev;
-      while (true) {
-        if (prevSib === null || prevSib.lineDepthAbs < depth) {
-          prevSib = null;
-          break;
-        } else if (prevSib.lineDepthAbs === depth) {
-          break;
-        }
-        prevSib = prevSib.linePrev;
-      }
-      return prevSib;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Delete the user multi line selection :
-     *   * The 2 lines (selected or given in param) must be distinct
-     *   * If no params :
-     *       - @currentSel.theoricalRange will the range used to find the
-     *         lines to delete.
-     *       - Only the range is deleted, not the beginning of startline nor the
-     *         end of endLine
-     *       - the caret is positionned at the firts break point of range.
-     *   * if startLine and endLine is given
-     *      - the whole lines from start and endLine are deleted, both included.
-     *      - the caret position is not updated by this function.
-     * @param  {[line]} startLine [optional] if exists, the whole line will be
-     *                                       deleted
-     * @param  {[line]} endLine   [optional] if exists, the whole line will be
-     *                                       deleted
-     * @return {[none]}           [nothing]
-    */
-
-
-    CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
-      var bp, currentDelta, deltaInserted, endLineDepth, endOfLineFragment, firstNextLine, firstNextLineDepth, line, range, replaceCaret, startContainer, startLineDepth, startOffset;
-
-      if (startLine === null || endLine === null) {
-        throw new Error('CEeditor._deleteMultiLinesSelections called with a null param');
-      }
-      if (startLine != null) {
-        range = this.document.createRange();
-        selection.cleanSelection(startLine, endLine, range);
-        replaceCaret = false;
-      } else {
-        range = this.currentSel.theoricalRange;
-        startContainer = range.startContainer;
-        startOffset = range.startOffset;
-        startLine = this.currentSel.startLine;
-        endLine = this.currentSel.endLine;
-        replaceCaret = true;
-      }
-      this.Tags.removeFromRange(range);
-      endLineDepth = endLine.lineDepthAbs;
-      endOfLineFragment = selection.cloneEndFragment(range, endLine);
-      if (startLine.line$[0].dataset.type === 'task') {
+    } else {
+      currSel.range.setEndBefore(startLine.line$[0].lastChild);
+      if (currSel.isStartInTask) {
         this._stackTaskChange(startLine.line$[0].task, 'modified');
       }
-      line = startLine.lineNext;
-      while (line !== endLine) {
-        if (line.line$[0].dataset.type === 'task') {
-          this._stackTaskChange(line.line$[0].task, 'removed');
-        }
-        line = line.lineNext;
+      endOfLineFragment = currSel.range.extractContents();
+      newLine = this._insertLineAfter({
+        sourceLine: startLine,
+        targetLineType: startLine.lineType,
+        targetLineDepthAbs: startLine.lineDepthAbs,
+        targetLineDepthRel: startLine.lineDepthRel,
+        fragment: endOfLineFragment
+      });
+      this._fusionSimilarSegments(newLine.line$[0], []);
+      this._setCaret(newLine.line$[0].firstChild.firstChild, 0);
+      if (isInTask) {
+        this._turneLineIntoTask(newLine.line$[0]);
       }
+    }
+    l = newLine.line$[0];
+    p = l.parentNode;
+    dh = p.getBoundingClientRect().height;
+    if (!(((l.offsetTop + 20 - dh) < (_ref = p.scrollTop) && _ref < l.offsetTop))) {
+      return l.scrollIntoView(false);
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Returns the first line of the editor.
+   * @return {Line} First line of the editor.
+  */
+
+
+  CNeditor.prototype.getFirstline = function() {
+    return this._lines[this.linesDiv.childNodes[0].id];
+  };
+
+  CNeditor.prototype._getSelectedLineDiv = function() {
+    var cont;
+
+    cont = this.getEditorSelection().getRangeAt(0).startContainer;
+    return selection.getLineDiv(cont);
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _findParent1stSibling
+  #
+  # find the sibling line of the parent of line that is the first of the list
+  # ex :
+  #   . Sibling1 <= _findParent1stSibling(line)
+  #   . Sibling2
+  #   . Parent
+  #      . child1
+  #      . line     : the line in argument
+  # returns null if no previous sibling, the line otherwise
+  # the sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+  */
+
+
+  CNeditor.prototype._findParent1stSibling = function(line) {
+    var lineDepthAbs, linePrev;
+
+    lineDepthAbs = line.lineDepthAbs;
+    linePrev = line.linePrev;
+    if (linePrev === null) {
+      return line;
+    }
+    if (lineDepthAbs <= 2) {
+      while (linePrev.linePrev !== null) {
+        linePrev = linePrev.linePrev;
+      }
+      return linePrev;
+    } else {
+      while (linePrev !== null && linePrev.lineDepthAbs > (lineDepthAbs - 2)) {
+        linePrev = linePrev.linePrev;
+      }
+      return linePrev.lineNext;
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Find the next sibling line.
+   * Returns null if no next sibling, the line otherwise.
+   * The sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+   * @param  {line} line     The starting line for which we search a sibling
+   * @param  {number} depthAbs [optional] If the siblings we search is not
+   *                           of the same absolute depth
+   * @return {line}          The next sibling if one, null otherwise
+  */
+
+
+  CNeditor.prototype._findNextSibling = function(line, depth) {
+    var nextSib;
+
+    if (depth == null) {
+      depth = line.lineDepthAbs;
+    }
+    nextSib = line.lineNext;
+    while (true) {
+      if (nextSib === null || nextSib.lineDepthAbs < depth) {
+        nextSib = null;
+        break;
+      } else if (nextSib.lineDepthAbs === depth && nextSib.lineType[0] === 'T') {
+        break;
+      }
+      nextSib = nextSib.lineNext;
+    }
+    return nextSib;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Find the previous sibling line being a Title.
+   * Returns null if no previous sibling, the line otherwise.
+   * The sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+   * @param  {line} line     Rhe starting line for which we search a sibling
+   * @param  {number} depthAbs [optional] If the siblings we search is not
+   *                           of the same absolute depth
+   * @return {line}          The previous sibling if one, null otherwise
+  */
+
+
+  CNeditor.prototype._findPrevSiblingT = function(line, depth) {
+    var prevSib;
+
+    if (!depth) {
+      depth = line.lineDepthAbs;
+    }
+    prevSib = line.linePrev;
+    while (true) {
+      if (prevSib === null || prevSib.lineDepthAbs < depth) {
+        prevSib = null;
+        break;
+      } else if (prevSib.lineDepthAbs === depth && prevSib.lineType[0] === 'T') {
+        break;
+      }
+      prevSib = prevSib.linePrev;
+    }
+    return prevSib;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Find the previous sibling line (can be a line 'Lx' or a title 'Tx').
+   * Returns null if no previous sibling, the line otherwise.
+   * @param  {line} line     The starting line for which we search a sibling
+   * @param  {number} depthAbs [optional] If the siblings we search is not
+   *                           of the same absolute depth
+   * @return {line}          The previous sibling if one, null otherwise
+  */
+
+
+  CNeditor.prototype._findPrevSibling = function(line, depth) {
+    var prevSib;
+
+    if (!depth) {
+      depth = line.lineDepthAbs;
+    }
+    prevSib = line.linePrev;
+    while (true) {
+      if (prevSib === null || prevSib.lineDepthAbs < depth) {
+        prevSib = null;
+        break;
+      } else if (prevSib.lineDepthAbs === depth) {
+        break;
+      }
+      prevSib = prevSib.linePrev;
+    }
+    return prevSib;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Delete the user multi line selection :
+   *   * The 2 lines (selected or given in param) must be distinct
+   *   * If no params :
+   *       - @currentSel.theoricalRange will the range used to find the
+   *         lines to delete.
+   *       - Only the range is deleted, not the beginning of startline nor the
+   *         end of endLine
+   *       - the caret is positionned at the firts break point of range.
+   *   * if startLine and endLine is given
+   *      - the whole lines from start and endLine are deleted, both included.
+   *      - the caret position is not updated by this function.
+   * @param  {[line]} startLine [optional] if exists, the whole line will be
+   *                                       deleted
+   * @param  {[line]} endLine   [optional] if exists, the whole line will be
+   *                                       deleted
+   * @return {[none]}           [nothing]
+  */
+
+
+  CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
+    var bp, currentDelta, deltaInserted, endLineDepth, endOfLineFragment, firstNextLine, firstNextLineDepth, line, range, replaceCaret, startContainer, startLineDepth, startOffset;
+
+    if (startLine === null || endLine === null) {
+      throw new Error('CEeditor._deleteMultiLinesSelections called with a null param');
+    }
+    if (startLine != null) {
+      range = this.document.createRange();
+      selection.cleanSelection(startLine, endLine, range);
+      replaceCaret = false;
+    } else {
+      range = this.currentSel.theoricalRange;
+      startContainer = range.startContainer;
+      startOffset = range.startOffset;
+      startLine = this.currentSel.startLine;
+      endLine = this.currentSel.endLine;
+      replaceCaret = true;
+    }
+    this.Tags.removeFromRange(range);
+    endLineDepth = endLine.lineDepthAbs;
+    endOfLineFragment = selection.cloneEndFragment(range, endLine);
+    if (startLine.line$[0].dataset.type === 'task') {
+      this._stackTaskChange(startLine.line$[0].task, 'modified');
+    }
+    line = startLine.lineNext;
+    while (line !== endLine) {
       if (line.line$[0].dataset.type === 'task') {
         this._stackTaskChange(line.line$[0].task, 'removed');
       }
-      range.deleteContents();
-      this._addMissingFragment(startLine, endOfLineFragment);
-      this._removeEndLine(startLine, endLine);
-      startLineDepth = startLine.lineDepthAbs;
-      firstNextLine = startLine.lineNext;
-      if (firstNextLine) {
-        firstNextLineDepth = firstNextLine.lineDepthAbs;
-        currentDelta = firstNextLine.lineDepthAbs - startLineDepth;
-        deltaInserted = endLineDepth - startLineDepth;
-        this._adaptDepth(startLine, deltaInserted, currentDelta, startLineDepth);
-        this._adaptType(startLine);
-      }
-      if (replaceCaret) {
-        bp = {
-          cont: startContainer,
-          offset: startOffset
-        };
-        this._fusionSimilarSegments(startLine.line$[0], [bp]);
-        return this._setCaret(bp.cont, bp.offset);
-      } else {
-        return this._fusionSimilarSegments(startLine.line$[0], []);
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * After an insertion or deletion of a bloc of lines, the lines following
-     * the bloc might be incoherent (depth and type of the lines)
-     * This function goes throught these lines to correct their depth.
-     * @param  {Line} startLine     The first line after the bloc of inserted or
-     *                              deleted lines
-     * @param  {Number} deltaInserted Delta of depth between the first line of
-     *                                the block and its last one.
-     * @param  {number} currentDelta  Delta of depth between the last line of
-     *                                the block (startLine) and the following.
-     * @param  {Number} minDepth      The depth under wich (this one included)
-     *                                we are sure the structure is valid and
-     *                                there is no need to check.
-    */
-
-
-    CNeditor.prototype._adaptDepth = function(startLine, deltaInserted, currentDelta, minDepth) {
-      var firstNextLine, lineIt;
-
-      if (startLine.lineNext === null) {
-        return;
-      }
-      firstNextLine = startLine.lineNext;
-      if (currentDelta > 1) {
-        lineIt = firstNextLine;
-        lineIt = this._unIndentBlock(lineIt, deltaInserted);
-        while (lineIt !== null && lineIt.lineDepthAbs > minDepth) {
-          lineIt = this._unIndentBlock(lineIt, deltaInserted);
-        }
-      }
-      return true;
-    };
-
-    CNeditor.prototype._adaptType = function(startLine) {
-      var lineIt, prev;
-
-      lineIt = startLine.lineNext;
-      while (lineIt !== null) {
-        prev = this._findPrevSibling(lineIt);
-        if (prev === null) {
-          if (lineIt.lineType[0] !== 'T') {
-            lineIt.setType('T' + lineIt.lineType[1]);
-          }
-        } else if (prev.lineType[1] !== lineIt.lineType[1]) {
-          lineIt.setType(lineIt.lineType[0] + prev.lineType[1]);
-        }
-        lineIt = lineIt.lineNext;
-      }
-      return true;
-    };
-
-    CNeditor.prototype._unIndentBlock = function(firstLine, delta) {
-      var firstLineDepth, line, newDepth;
-
-      line = firstLine;
-      firstLineDepth = firstLine.lineDepthAbs;
-      newDepth = Math.max(1, line.lineDepthAbs - delta);
-      delta = line.lineDepthAbs - newDepth;
-      while (line !== null && line.lineDepthAbs >= firstLineDepth) {
-        newDepth = line.lineDepthAbs - delta;
-        line.setDepthAbs(newDepth);
-        line = line.lineNext;
-      }
-      return line;
-    };
-
-    CNeditor.prototype._addMissingFragment = function(line, fragment) {
-      var lastNode, lineEl, newText, node, startFrag, startOffset, _ref;
-
-      startFrag = fragment.childNodes[0];
-      lineEl = line.line$[0];
-      if (lineEl.lastChild === null) {
-        node = document.createElement('span');
-        lineEl.insertBefore(node, lineEl.firstChild);
-      }
-      if (lineEl.lastChild.nodeName === 'BR') {
-        lineEl.removeChild(lineEl.lastChild);
-      }
-      lastNode = lineEl.lastChild;
-      if ((startFrag.tagName === (_ref = lastNode.tagName) && _ref === 'SPAN') && startFrag.className === lastNode.className) {
-        startOffset = lastNode.textContent.length;
-        newText = lastNode.textContent + startFrag.textContent;
-        lastNode.firstChild.textContent = newText;
-        fragment.removeChild(fragment.firstChild);
-        return lineEl.appendChild(fragment);
-      } else {
-        lineEl.appendChild(fragment);
-        return null;
-      }
-    };
-
-    CNeditor.prototype._removeEndLine = function(startLine, endLine) {
-      startLine.lineNext = endLine.lineNext;
-      if (endLine.lineNext !== null) {
-        endLine.lineNext.linePrev = startLine;
-      }
-      endLine.line$.remove();
-      return delete this._lines[endLine.lineID];
-    };
-
-    CNeditor.prototype._adaptEndLineType = function(startLine, endLine, endLineDepthAbs) {
-      var deltaDepth, endType, line, newDepth, startType, _results, _results1, _results2;
-
-      endType = endLine.lineType;
-      startType = startLine.lineType;
-      deltaDepth = endLineDepthAbs - startLine.lineDepthAbs;
-      if (endType === 'Tu' && startType === 'Th') {
-        this._toggleLineType(endLine);
-        line = endLine;
-        if (deltaDepth > 0) {
-          _results = [];
-          while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
-            newDepth = line.lineDepthAbs - deltaDepth;
-            line.setDepthAbs(newDepth);
-            _results.push(line = line.lineNext);
-          }
-          return _results;
-        }
-      } else if (endType === 'Th' && startType === 'Tu') {
-        this._toggleLineType(endLine);
-        line = endLine;
-        if (deltaDepth > 0) {
-          _results1 = [];
-          while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
-            newDepth = line.lineDepthAbs - deltaDepth;
-            line.setDepthAbs(newDepth);
-            _results1.push(line = line.lineNext);
-          }
-          return _results1;
-        }
-      } else if (endType === 'Th' && startType === 'Th') {
-        line = endLine;
-        if (deltaDepth > 0) {
-          _results2 = [];
-          while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
-            newDepth = line.lineDepthAbs - deltaDepth;
-            line.setDepthAbs(newDepth);
-            _results2.push(line = line.lineNext);
-          }
-          return _results2;
-        }
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Put caret at given position. The break point will be normalized (ie put
-     * in the closest text node).
-     * @param {element} startContainer Container of the break point
-     * @param {number} startOffset    Offset of the break point
-     * @param  {boolean} preferNext [optional] if true, in case BP8, we will
-     *                              choose to go in next sibling - if exists -
-     *                              rather than in the previous one.
-     * @return {Object} {cont,offset} the normalized break point
-    */
-
-
-    CNeditor.prototype._setCaret = function(startContainer, startOffset, preferNext) {
-      var bp, range, sel;
-
-      bp = selection.normalizeBP(startContainer, startOffset, preferNext);
-      range = this.document.createRange();
-      range.setStart(bp.cont, bp.offset);
-      range.collapse(true);
-      sel = this.getEditorSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      return bp;
-    };
-
-    CNeditor.prototype._setCaretAfter = function(elemt) {
-      var index, nextEl, parent;
-
-      nextEl = elemt;
-      while (nextEl.nextSibling === null) {
-        nextEl = nextEl.parentElement;
-      }
-      nextEl = nextEl.nextSibling;
-      if (nextEl.nodeName === 'BR') {
-        index = 0;
-        parent = elemt.parentNode;
-        while (parent.childNodes[index] !== elemt) {
-          index += 1;
-        }
-        return this._setCaret(parent, index + 1);
-      } else {
-        return this._setCaret(nextEl, 0);
-      }
-    };
-
-    CNeditor.prototype._setSelectionOnNode = function(node) {
-      var range, sel;
-
-      range = this.document.createRange();
-      range.selectNodeContents(node);
-      selection.normalize(range);
-      sel = this.getEditorSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      return true;
-    };
-
-    CNeditor.prototype.setSelection = function(startContainer, startOffset, endContainer, endOffset) {
-      var range, sel;
-
-      range = this.document.createRange();
-      range.setStart(startContainer, startOffset);
-      range.setEnd(endContainer, endOffset);
-      selection.normalize(range);
-      sel = this.getEditorSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      return true;
-    };
-
-    CNeditor.prototype.setSelectionFromRg = function(range, preferNext) {
-      var sel;
-
-      selection.normalize(range, preferNext);
-      sel = this.getEditorSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      return true;
-    };
-
-    CNeditor.prototype.setSelectionBp = function(bp1, bp2) {
-      var range, sel;
-
-      range = this.document.createRange();
-      range.setStart(bp1.cont, bp1.offset);
-      range.setEnd(bp2.cont, bp2.offset);
-      selection.normalize(range);
-      sel = this.getEditorSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      return true;
-    };
-
-    /* ------------------------------------------------------------------------
-    #  _insertLineAfter
-    #
-    # Insert a line after a source line
-    # The line will be inserted in the parent of the source line (which can be
-    # the editor or a fragment in the case of the paste for instance)
-    # p =
-    #     sourceLine         : line after which the line will be added
-    #     fragment           : [optionnal] - an html fragment that will be added
-    #                          in the div of the line.
-    #     innerHTML          : [optionnal] - if no fragment is given, an html
-    #                          string that will be added to the new line.
-    #     targetLineType     : type of the line to add
-    #     targetLineDepthAbs : absolute depth of the line to add
-    #     targetLineDepthRel : relative depth of the line to add
-    */
-
-
-    CNeditor.prototype._insertLineAfter = function(p) {
-      var newLine;
-
-      newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, p.sourceLine, null, p.fragment);
-      return newLine;
-    };
-
-    /* ------------------------------------------------------------------------
-    #  _insertLineBefore
-    #
-    # Insert a line before a source line
-    # p =
-    #     sourceLine         : Line before which a line will be added
-    #     fragment           : [optionnal] - an html fragment that will be added
-    #                          the fragment is not supposed to end with a <br>
-    #     targetLineType     : type of the line to add
-    #     targetLineDepthAbs : absolute depth of the line to add
-    #     targetLineDepthRel : relative depth of the line to add
-    */
-
-
-    CNeditor.prototype._insertLineBefore = function(p) {
-      var newLine;
-
-      newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, null, p.sourceLine, p.fragment);
-      return newLine;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Parse a raw html inserted in the iframe in order to update the controller
-    */
-
-
-    CNeditor.prototype._readHtml = function(isFullReplaceContent) {
-      var deltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, seg, txt, _i, _len, _ref;
-
-      linesDiv$ = $(this.linesDiv).children();
-      lineDepthAbs = 0;
-      lineDepthRel = 0;
-      lineID = 0;
-      this._lines = {};
-      linePrev = null;
-      lineNext = null;
-      this.Tags.empty(isFullReplaceContent);
-      for (_i = 0, _len = linesDiv$.length; _i < _len; _i++) {
-        htmlLine = linesDiv$[_i];
-        htmlLine$ = $(htmlLine);
-        lineClass = (_ref = htmlLine$.attr('class')) != null ? _ref : "";
-        lineClass = lineClass.split('-');
-        lineType = lineClass[0];
-        if (lineType !== "") {
-          lineDepthAbs_old = lineDepthAbs;
-          lineDepthAbs = +lineClass[1];
-          deltaDepthAbs = lineDepthAbs - lineDepthAbs_old;
-          lineDepthRel_old = lineDepthRel;
-          if (lineType === "Th") {
-            lineDepthRel = 0;
-          } else {
-            lineDepthRel = lineDepthRel_old + deltaDepthAbs;
-          }
-          lineID = parseInt(lineID, 10) + 1;
-          lineID_st = "CNID_" + lineID;
-          htmlLine$.prop("id", lineID_st);
-          lineNew = new Line();
-          lineNew.line$ = htmlLine$;
-          lineNew.lineID = lineID_st;
-          lineNew.lineType = lineType;
-          lineNew.lineDepthAbs = lineDepthAbs;
-          lineNew.lineDepthRel = lineDepthRel;
-          lineNew.lineNext = null;
-          lineNew.linePrev = linePrev;
-          if (linePrev !== null) {
-            linePrev.lineNext = lineNew;
-          }
-          linePrev = lineNew;
-          this._lines[lineID_st] = lineNew;
-          if (htmlLine.textContent === '') {
-            if (htmlLine.firstChild.childNodes.length === 0) {
-              txt = document.createTextNode('');
-              htmlLine.firstChild.appendChild(txt);
-            }
-          }
-        }
-        if (htmlLine.dataset.type === 'task') {
-          if (this.isChromeOrSafari) {
-            htmlLine.firstChild.textContent = ' ';
-          } else {
-            htmlLine.firstChild.textContent = '\u00a0';
-          }
-          this._setTaskToLine(htmlLine);
-        }
-        seg = htmlLine.firstChild;
-        while (seg && seg.nodeName !== 'BR') {
-          if (seg.dataset.type) {
-            this.Tags.handle(seg);
-          }
-          seg = seg.nextSibling;
-        }
-        if (!seg) {
-          htmlLine.appendChild(document.createElement('br'));
-        }
-      }
-      this.Tags.refreshAll();
-      return this._highestId = lineID;
-    };
-
-    /* ------------------------------------------------------------------------
-    # LINES MOTION MANAGEMENT
-    #
-    # Functions to perform the motion of an entire block of lines
-    # BUG : when doubleclicking on an end of line then moving this line
-    #       down, selection does not behave as expected :-)
-    # TODO: correct behavior when moving the second line up
-    # TODO: correct behavior when moving the first line down
-    # TODO: improve re-insertion of the line swapped with the block
-    */
-
-
-    /* ------------------------------------------------------------------------
-    # _moveLinesDown:
-    #
-    # -variables:
-    #    linePrev                                       linePrev
-    #    lineStart__________                            lineNext
-    #    |.                 | The block                 lineStart_______
-    #    |.                 | to move down      ==>     |.              |
-    #    lineEnd____________|                           |.              |
-    #    lineNext                                       lineEnd_________|
-    #
-    # -algorithm:
-    #    1.delete lineNext with _deleteMultilinesSelections()
-    #    2.insert lineNext between linePrev and lineStart
-    #    3.if lineNext is more indented than linePrev, untab lineNext
-    #      until it is ok
-    #    4.else (lineNext less indented than linePrev), select the block
-    #      (lineStart and some lines below) that is more indented than lineNext
-    #      and untab it until it is ok
-    */
-
-
-    CNeditor.prototype._moveLinesDown = function() {
-      var cloneLine, endDiv, endLineID, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
-
-      sel = this.getEditorSelection();
-      range = sel.getRangeAt(0);
-      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
-      startLineID = startDiv.id;
-      endLineID = endDiv.id;
-      lineStart = this._lines[startLineID];
-      lineEnd = this._lines[endLineID];
-      linePrev = lineStart.linePrev;
-      lineNext = lineEnd.lineNext;
-      if (lineNext !== null) {
-        cloneLine = Line.clone(lineNext);
-        this._deleteMultiLinesSelections(lineEnd, lineNext);
-        lineNext = cloneLine;
-        this._lines[lineNext.lineID] = lineNext;
-        lineNext.linePrev = linePrev;
-        lineStart.linePrev = lineNext;
-        if (lineNext.lineNext !== null) {
-          lineNext.lineNext.linePrev = lineEnd;
-        }
-        lineEnd.lineNext = lineNext.lineNext;
-        lineNext.lineNext = lineStart;
-        if (linePrev !== null) {
-          linePrev.lineNext = lineNext;
-        }
-        lineStart.line$.before(lineNext.line$);
-        if (linePrev === null) {
-          return;
-        }
-        if (lineNext.lineDepthAbs <= linePrev.lineDepthAbs) {
-          line = lineNext;
-          while (line.lineNext !== null && line.lineNext.lineDepthAbs > lineNext.lineDepthAbs) {
-            line = line.lineNext;
-          }
-          if (line.lineNext !== null) {
-            line = line.lineNext;
-          }
-          myRange = this.document.createRange();
-          myRange.setStart(lineStart.line$[0], 0);
-          myRange.setEnd(line.line$[0], 0);
-          numOfUntab = lineStart.lineDepthAbs - lineNext.lineDepthAbs;
-          if (lineNext.lineNext.lineType[0] === 'T') {
-            if (lineStart.lineType[0] === 'T') {
-              numOfUntab -= 1;
-            } else {
-              numOfUntab += 1;
-            }
-          }
-          _results = [];
-          while (numOfUntab >= 0) {
-            this.shiftTab(myRange);
-            _results.push(numOfUntab -= 1);
-          }
-          return _results;
-        } else {
-          myRange = this.document.createRange();
-          myRange.setStart(lineNext.line$[0], 0);
-          myRange.setEnd(lineNext.line$[0], 0);
-          numOfUntab = lineNext.lineDepthAbs - linePrev.lineDepthAbs;
-          if (lineStart.lineType[0] === 'T') {
-            if (linePrev.lineType[0] === 'T') {
-              numOfUntab -= 1;
-            } else {
-              numOfUntab += 1;
-            }
-          }
-          _results1 = [];
-          while (numOfUntab >= 0) {
-            this.shiftTab(myRange);
-            _results1.push(numOfUntab -= 1);
-          }
-          return _results1;
-        }
-      }
-    };
-
-    /* ------------------------------------------------------------------------
-    # _moveLinesUp:
-    #
-    # -variables:
-    #    linePrev                                   lineStart_________
-    #    lineStart__________                        |.                |
-    #    |.                 | The block             |.                |
-    #    |.                 | to move up     ==>    lineEnd___________|
-    #    lineEnd____________|                       linePrev
-    #    lineNext                                   lineNext
-    #
-    # -algorithm:
-    #    1.delete linePrev with _deleteMultilinesSelections()
-    #    2.insert linePrev between lineEnd and lineNext
-    #    3.if linePrev is more indented than lineNext, untab linePrev
-    #      until it is ok
-    #    4.else (linePrev less indented than lineNext), select the block
-    #      (lineNext and some lines below) that is more indented than linePrev
-    #      and untab it until it is ok
-    */
-
-
-    CNeditor.prototype._moveLinesUp = function() {
-      var cloneLine, endDiv, endLineID, isSecondLine, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
-
-      sel = this.getEditorSelection();
-      range = sel.getRangeAt(0);
-      startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
-      endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
-      startLineID = startDiv.id;
-      endLineID = endDiv.id;
-      lineStart = this._lines[startLineID];
-      lineEnd = this._lines[endLineID];
-      linePrev = lineStart.linePrev;
-      lineNext = lineEnd.lineNext;
-      if (linePrev !== null) {
-        isSecondLine = linePrev.linePrev === null;
-        cloneLine = Line.clone(linePrev);
-        this._deleteMultiLinesSelections(linePrev.linePrev, linePrev);
-        if (isSecondLine) {
-          $(linePrev.line$[0].firstElementChild).remove();
-          linePrev.line$.append('<br>');
-          lineStart.line$ = linePrev.line$;
-          lineStart.line$.attr('id', lineStart.lineID);
-          this._lines[lineStart.lineID] = lineStart;
-        }
-        linePrev = cloneLine;
-        this._lines[linePrev.lineID] = linePrev;
-        linePrev.lineNext = lineNext;
-        lineEnd.lineNext = linePrev;
-        if (linePrev.linePrev !== null) {
-          linePrev.linePrev.lineNext = lineStart;
-        }
-        lineStart.linePrev = linePrev.linePrev;
-        linePrev.linePrev = lineEnd;
-        if (lineNext !== null) {
-          lineNext.linePrev = linePrev;
-        }
-        lineEnd.line$.after(linePrev.line$);
-        if (linePrev.lineDepthAbs <= lineEnd.lineDepthAbs && lineNext !== null) {
-          line = linePrev;
-          while (line.lineNext !== null && line.lineNext.lineDepthAbs > linePrev.lineDepthAbs) {
-            line = line.lineNext;
-          }
-          if (line.lineNext !== null) {
-            line = line.lineNext;
-          }
-          myRange = this.document.createRange();
-          myRange.setStart(lineNext.line$[0], 0);
-          myRange.setEnd(line.line$[0], 0);
-          numOfUntab = lineNext.lineDepthAbs - linePrev.lineDepthAbs;
-          if (linePrev.lineNext.lineType[0] === 'T') {
-            if (linePrev.lineType[0] === 'T') {
-              numOfUntab -= 1;
-            } else {
-              numOfUntab += 1;
-            }
-          }
-          _results = [];
-          while (numOfUntab >= 0) {
-            this.shiftTab(myRange);
-            _results.push(numOfUntab -= 1);
-          }
-          return _results;
-        } else {
-          myRange = this.document.createRange();
-          myRange.setStart(linePrev.line$[0], 0);
-          myRange.setEnd(linePrev.line$[0], 0);
-          numOfUntab = linePrev.lineDepthAbs - lineEnd.lineDepthAbs;
-          if (linePrev.lineType[0] === 'T') {
-            if (lineEnd.lineType[0] === 'T') {
-              numOfUntab -= 1;
-            } else {
-              numOfUntab += 1;
-            }
-          }
-          _results1 = [];
-          while (numOfUntab >= 0) {
-            this.shiftTab(myRange);
-            _results1.push(numOfUntab -= 1);
-          }
-          return _results1;
-        }
-      }
-    };
-
-    /**------------------------------------------------------------------------
-     * Undo the previous action
-    */
-
-
-    CNeditor.prototype.unDo = function() {
-      var h, id, modif, newPosition, savedScroll, savedSel, stepIndex, t, _i, _len, _ref, _ref1;
-
-      console.info("\n== UNDO :");
-      h = this._history;
-      if (!(h.undoPossible() && this.isEnabled)) {
-        return false;
-      }
-      if (this._hotString.isPreparing) {
-        this._hotString.reset();
-      }
-      if (h.index === h.history.length - 1) {
-        this._history.addStep();
-        h.index -= 1;
-      }
-      stepIndex = h.index;
-      this.newPosition = h.historyPos[stepIndex];
-      this.urlPopover.cancel();
-      this.linesDiv.innerHTML = h.history[stepIndex];
-      savedSel = h.historySelect[stepIndex];
-      if (savedSel) {
-        this.deSerializeSelection(savedSel);
-      }
-      savedScroll = h.historyScroll[stepIndex];
-      this.linesDiv.scrollTop = savedScroll.xcoord;
-      this.linesDiv.scrollLeft = savedScroll.ycoord;
-      this._readHtml();
-      _ref = h.modifiedTask[stepIndex + 1];
-      for (id in _ref) {
-        modif = _ref[id];
-        console.info(modif.a);
-        switch (modif.a) {
-          case 'modified':
-            this._stackTaskForSave(id, modif.t, 'modified');
-            break;
-          case 'deleted':
-            this._stackTaskForSave(id, modif.t, 'created');
-            break;
-          default:
-            console.info('marking as deleted in undo');
-            this._stackTaskForSave(id, modif.t, 'deleted');
-        }
-      }
-      _ref1 = this._taskList;
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        t = _ref1[_i];
-        if (t.isFromServer) {
-          this._updateTaskLine(t);
-        }
-      }
-      logging.printTasksModifStacks('unDo', this._tasksToBeSaved);
-      h.index -= 1;
-      logging.printHistory('unDo', this._history);
-      return newPosition = true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Redo a undo-ed action
-    */
-
-
-    CNeditor.prototype.reDo = function() {
-      var h, i, id, index, modif, savedSel, t, xcoord, ycoord, _i, _len, _ref, _ref1;
-
-      console.info("\n== REDO :");
-      h = this._history;
-      if (!(h.redoPossible() && this.isEnabled)) {
-        return false;
-      }
-      index = (h.index += 1);
-      i = index + 1;
-      this.newPosition = h.historyPos[i];
-      this.urlPopover.cancel();
-      this.linesDiv.innerHTML = h.history[i];
-      savedSel = h.historySelect[i];
-      if (savedSel) {
-        this.deSerializeSelection(savedSel);
-      }
-      xcoord = h.historyScroll[i].xcoord;
-      ycoord = h.historyScroll[i].ycoord;
-      this.linesDiv.scrollTop = xcoord;
-      this.linesDiv.scrollLeft = ycoord;
-      this._readHtml();
-      _ref = h.modifiedTask[index + 1];
-      for (id in _ref) {
-        modif = _ref[id];
-        this._stackTaskForSave(id, modif.t, modif.a);
-      }
-      _ref1 = this._taskList;
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        t = _ref1[_i];
-        if (t.isFromServer) {
-          this._updateTaskLine(t);
-        }
-      }
-      this.newPosition = true;
-      return logging.printTasksModifStacks('redo', this._tasksToBeSaved);
-    };
-
-    CNeditor.prototype._replaceInTaskHistory = function(task) {
-      var i, modif;
-
-      i = this.HISTORY_SIZE;
-      while (i--) {
-        modif = this._history.modifiedTask[i];
-        if (!modif) {
-          return;
-        }
-        if (modif[task.internalId]) {
-          modif[task.internalId].t = task;
-        }
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Deserialize a range and return it.
-     * @param  {String} serial   A string corresponding to a serialized range.
-     * @param  {element} rootNode The root node used for the serialization
-     * @return {range}          The expected range
-    */
-
-
-    CNeditor.prototype.deSerializeRange = function(serial, rootNode) {
-      var endCont, endPath, i, offset, parentCont, range, serials, startCont, startPath;
-
-      if (!rootNode) {
-        rootNode = this.linesDiv;
-      }
-      range = rootNode.ownerDocument.createRange();
-      serials = serial.split(',');
-      startPath = serials[0].split('/');
-      endPath = serials[1].split('/');
-      startCont = rootNode;
-      i = startPath.length;
-      while (--i) {
-        parentCont = startCont;
-        startCont = startCont.childNodes[startPath[i]];
-      }
-      offset = parseInt(startPath[i], 10);
-      if (!startCont && offset === 0) {
-        startCont = document.createTextNode('');
-        parentCont.appendChild(startCont);
-      }
-      range.setStart(startCont, offset);
-      endCont = rootNode;
-      i = endPath.length;
-      while (--i) {
-        parentCont = endCont;
-        endCont = endCont.childNodes[endPath[i]];
-      }
-      offset = parseInt(endPath[i], 10);
-      if (!endCont && offset === 0) {
-        endCont = document.createTextNode('');
-        parentCont.appendChild(endCont);
-      }
-      range.setEnd(endCont, offset);
-      return range;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Serialize a range.
-     * The breakpoint are 2 strings separated by a comma.
-     * Structure of a serialized bp : {offset}{/index}*
-     * Global struct : {startOffset}{/index}*,{endOffset}{/index}*
-     * @param  {Range} range    The range to serialize
-     * @param  {element} rootNode [optional] the root used for serialization.
-     *                            If none, we use the body of the ownerDocument
-     *                            of range.startContainer
-     * @return {String}          The string, exemple : "10/0/2/1,3/1", or false
-     *                           if the rootNode is not a parent of one of the
-     *                           range's break point.
-    */
-
-
-    CNeditor.prototype.serializeRange = function(range, rootNode) {
-      var i, node, res, sib;
-
-      if (!rootNode) {
-        rootNode = this.linesDiv;
-      }
-      res = range.startOffset;
-      node = range.startContainer;
-      while (node !== null && node !== rootNode) {
-        i = 0;
-        sib = node.previousSibling;
-        while (sib !== null) {
-          i++;
-          sib = sib.previousSibling;
-        }
-        res += '/' + i;
-        node = node.parentNode;
-      }
-      if (node === null) {
-        return false;
-      }
-      res += ',' + range.endOffset;
-      node = range.endContainer;
-      while (node !== null && node !== rootNode) {
-        i = 0;
-        sib = node.previousSibling;
-        while (sib !== null) {
-          i++;
-          sib = sib.previousSibling;
-        }
-        res += '/' + i;
-        node = node.parentNode;
-      }
-      if (node === null) {
-        return false;
-      }
-      return res;
-    };
-
-    CNeditor.prototype.serializeSel = function() {
-      var s;
-
-      s = this.getEditorSelection();
-      if (s.rangeCount) {
-        return this.serializeRange(s.getRangeAt(0));
-      }
-      return false;
-    };
-
-    CNeditor.prototype.deSerializeSelection = function(serial) {
-      var sel;
-
-      sel = this.getEditorSelection();
-      sel.removeAllRanges();
-      return sel.addRange(this.deSerializeRange(serial));
-    };
-
-    /* ------------------------------------------------------------------------
-    # EXTENSION  :  auto-summary management and upkeep
-    #
-    # initialization
-    # TODO: avoid updating the summary too often
-    #       it would be best to make the update faster (rather than reading
-    #       every line)
-    */
-
-
-    CNeditor.prototype._initSummary = function() {
-      var summary;
-
-      summary = this.editorBody$.children("#navi");
-      if (summary.length === 0) {
-        summary = $(document.createElement('div'));
-        summary.attr('id', 'navi');
-        summary.prependTo(this.editorBody$);
-      }
-      return summary;
-    };
-
-    CNeditor.prototype._buildSummary = function() {
-      var c, lines, summary, _results;
-
-      summary = this.initSummary();
-      this.editorBody$.children("#navi").children().remove();
-      lines = this._lines;
-      _results = [];
-      for (c in lines) {
-        if (this.editorBody$.children('#' + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th") {
-          _results.push(lines[c].line$.clone().appendTo(summary));
-        } else {
-          _results.push(void 0);
-        }
-      }
-      return _results;
-    };
-
-    /* ------------------------------------------------------------------------
-    #  EXTENSION  :  DECORATION FUNCTIONS (bold/italic/underlined/quote)
-    #  TODO
-    */
-
-
-    /* ------------------------------------------------------------------------
-    #  PASTE MANAGEMENT
-    # 0 - save selection
-    # 1 - move the cursor into an invisible sandbox
-    # 2 - redirect pasted content in this sandox
-    # 3 - sanitize and adapt pasted content to the editor's format
-    # 4 - restore selection
-    # 5 - insert cleaned content is behind the cursor position
-    */
-
-
-    CNeditor.prototype.paste = function(event) {
-      var mySandBox, range, sel;
-
-      mySandBox = this.clipboard;
-      this.updateCurrentSelIsStartIsEnd();
-      range = this.document.createRange();
-      range.selectNodeContents(mySandBox);
-      sel = this.getEditorSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      range.detach();
-      if (event && event.clipboardData && event.clipboardData.getData) {
-        if (event.clipboardData.types === "text/html") {
-          mySandBox.innerHTML = event.clipboardData.getData('text/html');
-        } else if (event.clipboardData.types === "text/plain") {
-          mySandBox.innerHTML = event.clipboardData.getData('text/plain');
-        } else {
-          mySandBox.innerHTML = "";
-        }
-        this._waitForPasteData(mySandBox);
-        if (event.preventDefault) {
-          event.stopPropagation();
-          event.preventDefault();
-        }
-        return false;
-      } else {
-        this._waitForPasteData(mySandBox);
-        return true;
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-    # * init the div where the browser will actualy paste.
-    # * this method is called after each refresh of the content of the editor (
-    # * replaceContent, deleteContent, setEditorContent)
-    # * TODO : should be called just once at editor init : for this the editable
-    # * content shouldn't be directly in the body of the iframe but in a div.
-    # * @return {obj} a ref to the clipboard div
-    */
-
-
-    CNeditor.prototype._initClipBoard = function() {
-      var clipboardEl, getOffTheScreen;
-
-      clipboardEl = document.createElement('div');
-      clipboardEl.contentEditable = true;
-      clipboardEl.id = 'editor-clipboard';
-      this.clipboard$ = $(clipboardEl);
-      getOffTheScreen = {
-        left: -300
-      };
-      this.clipboard$.offset(getOffTheScreen);
-      this.clipboard$.prependTo(this.editorBody$);
-      this.clipboard = this.clipboard$[0];
-      clipboardEl.style.setProperty('width', '10px');
-      clipboardEl.style.setProperty('height', '10px');
-      clipboardEl.style.setProperty('position', 'fixed');
-      clipboardEl.style.setProperty('overflow', 'hidden');
-      return clipboardEl;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Function that will call itself until the browser has pasted data in the
-     * clipboar div
-     * @param  {element} sandbox      the div where the browser will paste data
-     * @param  {function} processpaste the function to call back whan paste
-     * is ok
-    */
-
-
-    CNeditor.prototype._waitForPasteData = function() {
-      if (this.clipboard.childNodes && this.clipboard.childNodes.length > 0) {
-        return this._processPaste();
-      } else {
-        return setTimeout(this._waitForPasteData, 100);
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Called when the browser has pasted data in the clipboard div.
-     * Its role is to insert the content of the clipboard into the editor.
-    */
-
-
-    CNeditor.prototype._processPaste = function() {
-      var absDepth, bp, br, childNodes, currSel, currentDelta, currentLineFrag, deltaInserted, domWalkContext, dummyLine, endLine, endTargetLineFrag, firstAddedLine, frag, htmlStr, l, lastAdded, lastAddedDepth, lastFragLine, lineElements, lineNextStartLine, n, parendDiv, range, sandbox, secondAddedLine, segToInsert, startLine, startLineDepth, startOffset, targetNode, _i, _j, _len;
-
-      sandbox = this.clipboard;
-      currSel = this.currentSel;
-      sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
-      frag = document.createDocumentFragment();
-      dummyLine = {
-        lineNext: null,
-        linePrev: null,
-        line$: $("<div id='dummy' class='Tu-1'></div>")
-      };
-      frag.appendChild(dummyLine.line$[0]);
-      currentLineFrag = document.createDocumentFragment();
-      absDepth = currSel.startLine.lineDepthAbs;
-      if (currSel.startLine.lineType === 'Th') {
-        absDepth += 1;
-      }
-      domWalkContext = {
-        frag: frag,
-        lastAddedLine: dummyLine,
-        currentLineFrag: currentLineFrag,
-        currentLineEl: currentLineFrag,
-        absDepth: absDepth,
-        prevHxLevel: null,
-        prevCNLineAbsDepth: null,
-        isCurrentLineBeingPopulated: false
-      };
-      htmlStr = this._domWalk(sandbox, domWalkContext);
-      sandbox.innerHTML = "";
-      frag.removeChild(frag.firstChild);
-      /*
-      # TODO : the following steps removes all the styles of the lines in frag
-      # Later this will be removed in order to take into account styles.
-      */
-
-      /*
-      # END TODO
-      */
-
-      startLine = currSel.startLine;
-      endLine = currSel.endLine;
-      if (currSel.range.collapsed) {
-
-      } else if (endLine === startLine) {
-        currSel.range.deleteContents();
-        selection.normalize(currSel.range);
-      } else {
-        this._deleteMultiLinesSelections();
-        selection.normalize(currSel.range);
-        this.newPosition = true;
-        currSel = this.updateCurrentSelIsStartIsEnd();
-        this.newPosition = false;
-        startLine = currSel.startLine;
-      }
-      /* 5- Insert first line of the frag in the target line
-      # We assume that the structure of lines in frag and in the editor are :
-      #   <div><span>(TextNode)</span><br></div>
-      # what will be incorrect when styles will be taken into account.
-      #
-      */
-
-      targetNode = currSel.theoricalRange.startContainer;
-      startOffset = currSel.theoricalRange.startOffset;
+      line = line.lineNext;
+    }
+    if (line.line$[0].dataset.type === 'task') {
+      this._stackTaskChange(line.line$[0].task, 'removed');
+    }
+    range.deleteContents();
+    this._addMissingFragment(startLine, endOfLineFragment);
+    this._removeEndLine(startLine, endLine);
+    startLineDepth = startLine.lineDepthAbs;
+    firstNextLine = startLine.lineNext;
+    if (firstNextLine) {
+      firstNextLineDepth = firstNextLine.lineDepthAbs;
+      currentDelta = firstNextLine.lineDepthAbs - startLineDepth;
+      deltaInserted = endLineDepth - startLineDepth;
+      this._adaptDepth(startLine, deltaInserted, currentDelta, startLineDepth);
+      this._adaptType(startLine);
+    }
+    if (replaceCaret) {
       bp = {
-        cont: targetNode,
+        cont: startContainer,
         offset: startOffset
       };
-      if (frag.childNodes.length > 0) {
-        lineElements = Array.prototype.slice.call(frag.firstChild.childNodes);
-        lineElements.pop();
-      } else {
-        lineElements = [frag];
-      }
-      for (_i = 0, _len = lineElements.length; _i < _len; _i++) {
-        segToInsert = lineElements[_i];
-        this._insertSegment(segToInsert, bp);
-      }
-      if (bp.cont.nodeName !== '#text') {
-        bp = selection.normalizeBP(bp.cont, bp.offset, true);
-      }
       this._fusionSimilarSegments(startLine.line$[0], [bp]);
-      targetNode = bp.cont;
-      startOffset = bp.offset;
-      /*
-      # 6- If the clipboard has more than one line, insert the end of target
-      #    line in the last line of frag and delete it
-      */
+      return this._setCaret(bp.cont, bp.offset);
+    } else {
+      return this._fusionSimilarSegments(startLine.line$[0], []);
+    }
+  };
 
-      if (frag.childNodes.length > 1) {
-        range = document.createRange();
-        range.setStart(targetNode, startOffset);
-        parendDiv = targetNode;
-        while (parendDiv.tagName !== 'DIV') {
-          parendDiv = parendDiv.parentElement;
-        }
-        range.setEnd(parendDiv, parendDiv.children.length - 1);
-        endTargetLineFrag = range.extractContents();
-        range.detach();
-        lastFragLine = frag.lastChild;
-        br = lastFragLine.lastChild;
-        n = lastFragLine.childNodes.length - 1;
-        bp = selection.normalizeBP(lastFragLine, n);
-        childNodes = endTargetLineFrag.childNodes;
-        l = childNodes.length;
-        for (n = _j = 1; _j <= l; n = _j += 1) {
-          lastFragLine.insertBefore(childNodes[0], br);
-        }
-        this._fusionSimilarSegments(lastFragLine, [bp]);
-        parendDiv = targetNode;
-        while (parendDiv.tagName !== 'DIV') {
-          parendDiv = parendDiv.parentElement;
-        }
-      }
-      /*
-       * remove the firstAddedLine from the fragment
-      */
+  /** -----------------------------------------------------------------------
+   * After an insertion or deletion of a bloc of lines, the lines following
+   * the bloc might be incoherent (depth and type of the lines)
+   * This function goes throught these lines to correct their depth.
+   * @param  {Line} startLine     The first line after the bloc of inserted or
+   *                              deleted lines
+   * @param  {Number} deltaInserted Delta of depth between the first line of
+   *                                the block and its last one.
+   * @param  {number} currentDelta  Delta of depth between the last line of
+   *                                the block (startLine) and the following.
+   * @param  {Number} minDepth      The depth under wich (this one included)
+   *                                we are sure the structure is valid and
+   *                                there is no need to check.
+  */
 
-      firstAddedLine = dummyLine.lineNext;
-      secondAddedLine = firstAddedLine != null ? firstAddedLine.lineNext : void 0;
-      if (frag.firstChild != null) {
-        frag.removeChild(frag.firstChild);
-      }
-      if (firstAddedLine != null) {
-        delete this._lines[firstAddedLine.lineID];
-      }
-      /*
-       * 7- updates nextLine and prevLines, insert frag in the editor
-      */
 
-      if (secondAddedLine != null) {
-        lineNextStartLine = currSel.startLine.lineNext;
-        currSel.startLine.lineNext = secondAddedLine;
-        secondAddedLine.linePrev = currSel.startLine;
-        if (lineNextStartLine === null) {
-          this.linesDiv.appendChild(frag);
+  CNeditor.prototype._adaptDepth = function(startLine, deltaInserted, currentDelta, minDepth) {
+    var firstNextLine, lineIt;
+
+    if (startLine.lineNext === null) {
+      return;
+    }
+    firstNextLine = startLine.lineNext;
+    if (currentDelta > 1) {
+      lineIt = firstNextLine;
+      lineIt = this._unIndentBlock(lineIt, deltaInserted);
+      while (lineIt !== null && lineIt.lineDepthAbs > minDepth) {
+        lineIt = this._unIndentBlock(lineIt, deltaInserted);
+      }
+    }
+    return true;
+  };
+
+  CNeditor.prototype._adaptType = function(startLine) {
+    var lineIt, prev;
+
+    lineIt = startLine.lineNext;
+    while (lineIt !== null) {
+      prev = this._findPrevSibling(lineIt);
+      if (prev === null) {
+        if (lineIt.lineType[0] !== 'T') {
+          lineIt.setType('T' + lineIt.lineType[1]);
+        }
+      } else if (prev.lineType[1] !== lineIt.lineType[1]) {
+        lineIt.setType(lineIt.lineType[0] + prev.lineType[1]);
+      }
+      lineIt = lineIt.lineNext;
+    }
+    return true;
+  };
+
+  CNeditor.prototype._unIndentBlock = function(firstLine, delta) {
+    var firstLineDepth, line, newDepth;
+
+    line = firstLine;
+    firstLineDepth = firstLine.lineDepthAbs;
+    newDepth = Math.max(1, line.lineDepthAbs - delta);
+    delta = line.lineDepthAbs - newDepth;
+    while (line !== null && line.lineDepthAbs >= firstLineDepth) {
+      newDepth = line.lineDepthAbs - delta;
+      line.setDepthAbs(newDepth);
+      line = line.lineNext;
+    }
+    return line;
+  };
+
+  CNeditor.prototype._addMissingFragment = function(line, fragment) {
+    var lastNode, lineEl, newText, node, startFrag, startOffset, _ref;
+
+    startFrag = fragment.childNodes[0];
+    lineEl = line.line$[0];
+    if (lineEl.lastChild === null) {
+      node = document.createElement('span');
+      lineEl.insertBefore(node, lineEl.firstChild);
+    }
+    if (lineEl.lastChild.nodeName === 'BR') {
+      lineEl.removeChild(lineEl.lastChild);
+    }
+    lastNode = lineEl.lastChild;
+    if ((startFrag.tagName === (_ref = lastNode.tagName) && _ref === 'SPAN') && startFrag.className === lastNode.className) {
+      startOffset = lastNode.textContent.length;
+      newText = lastNode.textContent + startFrag.textContent;
+      lastNode.firstChild.textContent = newText;
+      fragment.removeChild(fragment.firstChild);
+      return lineEl.appendChild(fragment);
+    } else {
+      lineEl.appendChild(fragment);
+      return null;
+    }
+  };
+
+  CNeditor.prototype._removeEndLine = function(startLine, endLine) {
+    startLine.lineNext = endLine.lineNext;
+    if (endLine.lineNext !== null) {
+      endLine.lineNext.linePrev = startLine;
+    }
+    endLine.line$.remove();
+    return delete this._lines[endLine.lineID];
+  };
+
+  CNeditor.prototype._adaptEndLineType = function(startLine, endLine, endLineDepthAbs) {
+    var deltaDepth, endType, line, newDepth, startType, _results, _results1, _results2;
+
+    endType = endLine.lineType;
+    startType = startLine.lineType;
+    deltaDepth = endLineDepthAbs - startLine.lineDepthAbs;
+    if (endType === 'Tu' && startType === 'Th') {
+      this._toggleLineType(endLine);
+      line = endLine;
+      if (deltaDepth > 0) {
+        _results = [];
+        while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
+          newDepth = line.lineDepthAbs - deltaDepth;
+          line.setDepthAbs(newDepth);
+          _results.push(line = line.lineNext);
+        }
+        return _results;
+      }
+    } else if (endType === 'Th' && startType === 'Tu') {
+      this._toggleLineType(endLine);
+      line = endLine;
+      if (deltaDepth > 0) {
+        _results1 = [];
+        while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
+          newDepth = line.lineDepthAbs - deltaDepth;
+          line.setDepthAbs(newDepth);
+          _results1.push(line = line.lineNext);
+        }
+        return _results1;
+      }
+    } else if (endType === 'Th' && startType === 'Th') {
+      line = endLine;
+      if (deltaDepth > 0) {
+        _results2 = [];
+        while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
+          newDepth = line.lineDepthAbs - deltaDepth;
+          line.setDepthAbs(newDepth);
+          _results2.push(line = line.lineNext);
+        }
+        return _results2;
+      }
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Put caret at given position. The break point will be normalized (ie put
+   * in the closest text node).
+   * @param {element} startContainer Container of the break point
+   * @param {number} startOffset    Offset of the break point
+   * @param  {boolean} preferNext [optional] if true, in case BP8, we will
+   *                              choose to go in next sibling - if exists -
+   *                              rather than in the previous one.
+   * @return {Object} {cont,offset} the normalized break point
+  */
+
+
+  CNeditor.prototype._setCaret = function(startContainer, startOffset, preferNext) {
+    var bp, range, sel;
+
+    bp = selection.normalizeBP(startContainer, startOffset, preferNext);
+    range = this.document.createRange();
+    range.setStart(bp.cont, bp.offset);
+    range.collapse(true);
+    sel = this.getEditorSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return bp;
+  };
+
+  CNeditor.prototype._setCaretAfter = function(elemt) {
+    var index, nextEl, parent;
+
+    nextEl = elemt;
+    while (nextEl.nextSibling === null) {
+      nextEl = nextEl.parentElement;
+    }
+    nextEl = nextEl.nextSibling;
+    if (nextEl.nodeName === 'BR') {
+      index = 0;
+      parent = elemt.parentNode;
+      while (parent.childNodes[index] !== elemt) {
+        index += 1;
+      }
+      return this._setCaret(parent, index + 1);
+    } else {
+      return this._setCaret(nextEl, 0);
+    }
+  };
+
+  CNeditor.prototype._setSelectionOnNode = function(node) {
+    var range, sel;
+
+    range = this.document.createRange();
+    range.selectNodeContents(node);
+    selection.normalize(range);
+    sel = this.getEditorSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return true;
+  };
+
+  CNeditor.prototype.setSelection = function(startContainer, startOffset, endContainer, endOffset) {
+    var range, sel;
+
+    range = this.document.createRange();
+    range.setStart(startContainer, startOffset);
+    range.setEnd(endContainer, endOffset);
+    selection.normalize(range);
+    sel = this.getEditorSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return true;
+  };
+
+  CNeditor.prototype.setSelectionFromRg = function(range, preferNext) {
+    var sel;
+
+    selection.normalize(range, preferNext);
+    sel = this.getEditorSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return true;
+  };
+
+  CNeditor.prototype.setSelectionBp = function(bp1, bp2) {
+    var range, sel;
+
+    range = this.document.createRange();
+    range.setStart(bp1.cont, bp1.offset);
+    range.setEnd(bp2.cont, bp2.offset);
+    selection.normalize(range);
+    sel = this.getEditorSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return true;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _insertLineAfter
+  #
+  # Insert a line after a source line
+  # The line will be inserted in the parent of the source line (which can be
+  # the editor or a fragment in the case of the paste for instance)
+  # p =
+  #     sourceLine         : line after which the line will be added
+  #     fragment           : [optionnal] - an html fragment that will be added
+  #                          in the div of the line.
+  #     innerHTML          : [optionnal] - if no fragment is given, an html
+  #                          string that will be added to the new line.
+  #     targetLineType     : type of the line to add
+  #     targetLineDepthAbs : absolute depth of the line to add
+  #     targetLineDepthRel : relative depth of the line to add
+  */
+
+
+  CNeditor.prototype._insertLineAfter = function(p) {
+    var newLine;
+
+    newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, p.sourceLine, null, p.fragment);
+    return newLine;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  _insertLineBefore
+  #
+  # Insert a line before a source line
+  # p =
+  #     sourceLine         : Line before which a line will be added
+  #     fragment           : [optionnal] - an html fragment that will be added
+  #                          the fragment is not supposed to end with a <br>
+  #     targetLineType     : type of the line to add
+  #     targetLineDepthAbs : absolute depth of the line to add
+  #     targetLineDepthRel : relative depth of the line to add
+  */
+
+
+  CNeditor.prototype._insertLineBefore = function(p) {
+    var newLine;
+
+    newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, null, p.sourceLine, p.fragment);
+    return newLine;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Parse a raw html inserted in the iframe in order to update the controller
+  */
+
+
+  CNeditor.prototype._readHtml = function(isFullReplaceContent) {
+    var deltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, seg, txt, _i, _len, _ref;
+
+    linesDiv$ = $(this.linesDiv).children();
+    lineDepthAbs = 0;
+    lineDepthRel = 0;
+    lineID = 0;
+    this._lines = {};
+    linePrev = null;
+    lineNext = null;
+    this.Tags.empty(isFullReplaceContent);
+    for (_i = 0, _len = linesDiv$.length; _i < _len; _i++) {
+      htmlLine = linesDiv$[_i];
+      htmlLine$ = $(htmlLine);
+      lineClass = (_ref = htmlLine$.attr('class')) != null ? _ref : "";
+      lineClass = lineClass.split('-');
+      lineType = lineClass[0];
+      if (lineType !== "") {
+        lineDepthAbs_old = lineDepthAbs;
+        lineDepthAbs = +lineClass[1];
+        deltaDepthAbs = lineDepthAbs - lineDepthAbs_old;
+        lineDepthRel_old = lineDepthRel;
+        if (lineType === "Th") {
+          lineDepthRel = 0;
         } else {
-          domWalkContext.lastAddedLine.lineNext = lineNextStartLine;
-          lineNextStartLine.linePrev = domWalkContext.lastAddedLine;
-          this.linesDiv.insertBefore(frag, lineNextStartLine.line$[0]);
+          lineDepthRel = lineDepthRel_old + deltaDepthAbs;
+        }
+        lineID = parseInt(lineID, 10) + 1;
+        lineID_st = "CNID_" + lineID;
+        htmlLine$.prop("id", lineID_st);
+        lineNew = new Line();
+        lineNew.line$ = htmlLine$;
+        lineNew.lineID = lineID_st;
+        lineNew.lineType = lineType;
+        lineNew.lineDepthAbs = lineDepthAbs;
+        lineNew.lineDepthRel = lineDepthRel;
+        lineNew.lineNext = null;
+        lineNew.linePrev = linePrev;
+        if (linePrev !== null) {
+          linePrev.lineNext = lineNew;
+        }
+        linePrev = lineNew;
+        this._lines[lineID_st] = lineNew;
+        if (htmlLine.textContent === '') {
+          if (htmlLine.firstChild.childNodes.length === 0) {
+            txt = document.createTextNode('');
+            htmlLine.firstChild.appendChild(txt);
+          }
         }
       }
-      /*
-       * 8- Adapt lines depth and type.
-      */
-
-      lastAdded = domWalkContext.lastAddedLine;
-      if (lastAdded.lineNext) {
-        lastAddedDepth = lastAdded.lineDepthAbs;
-        startLineDepth = startLine.lineDepthAbs;
-        deltaInserted = startLineDepth - lastAddedDepth;
-        currentDelta = lastAdded.lineNext.lineDepthAbs - lastAddedDepth;
-        this._adaptDepth(domWalkContext.lastAddedLine, deltaInserted, currentDelta, lastAddedDepth);
-        this._adaptType(currSel.startLine);
+      if (htmlLine.dataset.type === 'task') {
+        if (this.isChromeOrSafari) {
+          htmlLine.firstChild.textContent = ' ';
+        } else {
+          htmlLine.firstChild.textContent = '\u00a0';
+        }
+        this._setTaskToLine(htmlLine);
       }
-      /*
-       * 9- position caret
-      */
+      this._fixLine(htmlLine);
+      seg = htmlLine.firstChild;
+      while (seg && seg.nodeName !== 'BR') {
+        if (seg.dataset.type) {
+          this.Tags.handle(seg);
+        }
+        seg = seg.nextSibling;
+      }
+    }
+    this.Tags.refreshAll();
+    return this._highestId = lineID;
+  };
 
-      return bp = this._setCaret(bp.cont, bp.offset);
+  /* ------------------------------------------------------------------------
+  # LINES MOTION MANAGEMENT
+  #
+  # Functions to perform the motion of an entire block of lines
+  # BUG : when doubleclicking on an end of line then moving this line
+  #       down, selection does not behave as expected :-)
+  # TODO: correct behavior when moving the second line up
+  # TODO: correct behavior when moving the first line down
+  # TODO: improve re-insertion of the line swapped with the block
+  */
+
+
+  /* ------------------------------------------------------------------------
+  # _moveLinesDown:
+  #
+  # -variables:
+  #    linePrev                                       linePrev
+  #    lineStart__________                            lineNext
+  #    |.                 | The block                 lineStart_______
+  #    |.                 | to move down      ==>     |.              |
+  #    lineEnd____________|                           |.              |
+  #    lineNext                                       lineEnd_________|
+  #
+  # -algorithm:
+  #    1.delete lineNext with _deleteMultilinesSelections()
+  #    2.insert lineNext between linePrev and lineStart
+  #    3.if lineNext is more indented than linePrev, untab lineNext
+  #      until it is ok
+  #    4.else (lineNext less indented than linePrev), select the block
+  #      (lineStart and some lines below) that is more indented than lineNext
+  #      and untab it until it is ok
+  */
+
+
+  CNeditor.prototype._moveLinesDown = function() {
+    var cloneLine, endDiv, endLineID, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
+
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+    startLineID = startDiv.id;
+    endLineID = endDiv.id;
+    lineStart = this._lines[startLineID];
+    lineEnd = this._lines[endLineID];
+    linePrev = lineStart.linePrev;
+    lineNext = lineEnd.lineNext;
+    if (lineNext !== null) {
+      cloneLine = Line.clone(lineNext);
+      this._deleteMultiLinesSelections(lineEnd, lineNext);
+      lineNext = cloneLine;
+      this._lines[lineNext.lineID] = lineNext;
+      lineNext.linePrev = linePrev;
+      lineStart.linePrev = lineNext;
+      if (lineNext.lineNext !== null) {
+        lineNext.lineNext.linePrev = lineEnd;
+      }
+      lineEnd.lineNext = lineNext.lineNext;
+      lineNext.lineNext = lineStart;
+      if (linePrev !== null) {
+        linePrev.lineNext = lineNext;
+      }
+      lineStart.line$.before(lineNext.line$);
+      if (linePrev === null) {
+        return;
+      }
+      if (lineNext.lineDepthAbs <= linePrev.lineDepthAbs) {
+        line = lineNext;
+        while (line.lineNext !== null && line.lineNext.lineDepthAbs > lineNext.lineDepthAbs) {
+          line = line.lineNext;
+        }
+        if (line.lineNext !== null) {
+          line = line.lineNext;
+        }
+        myRange = this.document.createRange();
+        myRange.setStart(lineStart.line$[0], 0);
+        myRange.setEnd(line.line$[0], 0);
+        numOfUntab = lineStart.lineDepthAbs - lineNext.lineDepthAbs;
+        if (lineNext.lineNext.lineType[0] === 'T') {
+          if (lineStart.lineType[0] === 'T') {
+            numOfUntab -= 1;
+          } else {
+            numOfUntab += 1;
+          }
+        }
+        _results = [];
+        while (numOfUntab >= 0) {
+          this.shiftTab(myRange);
+          _results.push(numOfUntab -= 1);
+        }
+        return _results;
+      } else {
+        myRange = this.document.createRange();
+        myRange.setStart(lineNext.line$[0], 0);
+        myRange.setEnd(lineNext.line$[0], 0);
+        numOfUntab = lineNext.lineDepthAbs - linePrev.lineDepthAbs;
+        if (lineStart.lineType[0] === 'T') {
+          if (linePrev.lineType[0] === 'T') {
+            numOfUntab -= 1;
+          } else {
+            numOfUntab += 1;
+          }
+        }
+        _results1 = [];
+        while (numOfUntab >= 0) {
+          this.shiftTab(myRange);
+          _results1.push(numOfUntab -= 1);
+        }
+        return _results1;
+      }
+    }
+  };
+
+  /* ------------------------------------------------------------------------
+  # _moveLinesUp:
+  #
+  # -variables:
+  #    linePrev                                   lineStart_________
+  #    lineStart__________                        |.                |
+  #    |.                 | The block             |.                |
+  #    |.                 | to move up     ==>    lineEnd___________|
+  #    lineEnd____________|                       linePrev
+  #    lineNext                                   lineNext
+  #
+  # -algorithm:
+  #    1.delete linePrev with _deleteMultilinesSelections()
+  #    2.insert linePrev between lineEnd and lineNext
+  #    3.if linePrev is more indented than lineNext, untab linePrev
+  #      until it is ok
+  #    4.else (linePrev less indented than lineNext), select the block
+  #      (lineNext and some lines below) that is more indented than linePrev
+  #      and untab it until it is ok
+  */
+
+
+  CNeditor.prototype._moveLinesUp = function() {
+    var cloneLine, endDiv, endLineID, isSecondLine, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
+
+    sel = this.getEditorSelection();
+    range = sel.getRangeAt(0);
+    startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
+    endDiv = selection.getLineDiv(range.endContainer, range.endOffset);
+    startLineID = startDiv.id;
+    endLineID = endDiv.id;
+    lineStart = this._lines[startLineID];
+    lineEnd = this._lines[endLineID];
+    linePrev = lineStart.linePrev;
+    lineNext = lineEnd.lineNext;
+    if (linePrev !== null) {
+      isSecondLine = linePrev.linePrev === null;
+      cloneLine = Line.clone(linePrev);
+      this._deleteMultiLinesSelections(linePrev.linePrev, linePrev);
+      if (isSecondLine) {
+        $(linePrev.line$[0].firstElementChild).remove();
+        linePrev.line$.append('<br>');
+        lineStart.line$ = linePrev.line$;
+        lineStart.line$.attr('id', lineStart.lineID);
+        this._lines[lineStart.lineID] = lineStart;
+      }
+      linePrev = cloneLine;
+      this._lines[linePrev.lineID] = linePrev;
+      linePrev.lineNext = lineNext;
+      lineEnd.lineNext = linePrev;
+      if (linePrev.linePrev !== null) {
+        linePrev.linePrev.lineNext = lineStart;
+      }
+      lineStart.linePrev = linePrev.linePrev;
+      linePrev.linePrev = lineEnd;
+      if (lineNext !== null) {
+        lineNext.linePrev = linePrev;
+      }
+      lineEnd.line$.after(linePrev.line$);
+      if (linePrev.lineDepthAbs <= lineEnd.lineDepthAbs && lineNext !== null) {
+        line = linePrev;
+        while (line.lineNext !== null && line.lineNext.lineDepthAbs > linePrev.lineDepthAbs) {
+          line = line.lineNext;
+        }
+        if (line.lineNext !== null) {
+          line = line.lineNext;
+        }
+        myRange = this.document.createRange();
+        myRange.setStart(lineNext.line$[0], 0);
+        myRange.setEnd(line.line$[0], 0);
+        numOfUntab = lineNext.lineDepthAbs - linePrev.lineDepthAbs;
+        if (linePrev.lineNext.lineType[0] === 'T') {
+          if (linePrev.lineType[0] === 'T') {
+            numOfUntab -= 1;
+          } else {
+            numOfUntab += 1;
+          }
+        }
+        _results = [];
+        while (numOfUntab >= 0) {
+          this.shiftTab(myRange);
+          _results.push(numOfUntab -= 1);
+        }
+        return _results;
+      } else {
+        myRange = this.document.createRange();
+        myRange.setStart(linePrev.line$[0], 0);
+        myRange.setEnd(linePrev.line$[0], 0);
+        numOfUntab = linePrev.lineDepthAbs - lineEnd.lineDepthAbs;
+        if (linePrev.lineType[0] === 'T') {
+          if (lineEnd.lineType[0] === 'T') {
+            numOfUntab -= 1;
+          } else {
+            numOfUntab += 1;
+          }
+        }
+        _results1 = [];
+        while (numOfUntab >= 0) {
+          this.shiftTab(myRange);
+          _results1.push(numOfUntab -= 1);
+        }
+        return _results1;
+      }
+    }
+  };
+
+  /**------------------------------------------------------------------------
+   * Undo the previous action
+  */
+
+
+  CNeditor.prototype.unDo = function() {
+    var h, id, modif, newPosition, savedScroll, savedSel, stepIndex, t, _i, _len, _ref, _ref1;
+
+    console.info("\n== UNDO :");
+    h = this._history;
+    if (!(h.undoPossible() && this.isEnabled)) {
+      return false;
+    }
+    if (this._hotString.isPreparing) {
+      this._hotString.reset();
+    }
+    if (h.index === h.history.length - 1) {
+      this._history.addStep();
+      h.index -= 1;
+    }
+    stepIndex = h.index;
+    this.newPosition = h.historyPos[stepIndex];
+    this.urlPopover.cancel();
+    this.linesDiv.innerHTML = h.history[stepIndex];
+    savedSel = h.historySelect[stepIndex];
+    if (savedSel) {
+      this.deSerializeSelection(savedSel);
+    }
+    savedScroll = h.historyScroll[stepIndex];
+    this.linesDiv.scrollTop = savedScroll.xcoord;
+    this.linesDiv.scrollLeft = savedScroll.ycoord;
+    this._readHtml();
+    _ref = h.modifiedTask[stepIndex + 1];
+    for (id in _ref) {
+      modif = _ref[id];
+      console.info(modif.a);
+      switch (modif.a) {
+        case 'modified':
+          this._stackTaskForSave(id, modif.t, 'modified');
+          break;
+        case 'deleted':
+          this._stackTaskForSave(id, modif.t, 'created');
+          break;
+        default:
+          console.info('marking as deleted in undo');
+          this._stackTaskForSave(id, modif.t, 'deleted');
+      }
+    }
+    _ref1 = this._taskList;
+    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+      t = _ref1[_i];
+      if (t.isFromServer) {
+        this._updateTaskLine(t);
+      }
+    }
+    logging.printTasksModifStacks('unDo', this._tasksToBeSaved);
+    h.index -= 1;
+    logging.printHistory('unDo', this._history);
+    return newPosition = true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Redo a undo-ed action
+  */
+
+
+  CNeditor.prototype.reDo = function() {
+    var h, i, id, index, modif, savedSel, t, xcoord, ycoord, _i, _len, _ref, _ref1;
+
+    console.info("\n== REDO :");
+    h = this._history;
+    if (!(h.redoPossible() && this.isEnabled)) {
+      return false;
+    }
+    index = (h.index += 1);
+    i = index + 1;
+    this.newPosition = h.historyPos[i];
+    this.urlPopover.cancel();
+    this.linesDiv.innerHTML = h.history[i];
+    savedSel = h.historySelect[i];
+    if (savedSel) {
+      this.deSerializeSelection(savedSel);
+    }
+    xcoord = h.historyScroll[i].xcoord;
+    ycoord = h.historyScroll[i].ycoord;
+    this.linesDiv.scrollTop = xcoord;
+    this.linesDiv.scrollLeft = ycoord;
+    this._readHtml();
+    _ref = h.modifiedTask[index + 1];
+    for (id in _ref) {
+      modif = _ref[id];
+      this._stackTaskForSave(id, modif.t, modif.a);
+    }
+    _ref1 = this._taskList;
+    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+      t = _ref1[_i];
+      if (t.isFromServer) {
+        this._updateTaskLine(t);
+      }
+    }
+    this.newPosition = true;
+    return logging.printTasksModifStacks('redo', this._tasksToBeSaved);
+  };
+
+  CNeditor.prototype._replaceInTaskHistory = function(task) {
+    var i, modif;
+
+    i = this.HISTORY_SIZE;
+    while (i--) {
+      modif = this._history.modifiedTask[i];
+      if (!modif) {
+        return;
+      }
+      if (modif[task.internalId]) {
+        modif[task.internalId].t = task;
+      }
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Deserialize a range and return it.
+   * @param  {String} serial   A string corresponding to a serialized range.
+   * @param  {element} rootNode The root node used for the serialization
+   * @return {range}          The expected range
+  */
+
+
+  CNeditor.prototype.deSerializeRange = function(serial, rootNode) {
+    var endCont, endPath, i, offset, parentCont, range, serials, startCont, startPath;
+
+    if (!rootNode) {
+      rootNode = this.linesDiv;
+    }
+    range = rootNode.ownerDocument.createRange();
+    serials = serial.split(',');
+    startPath = serials[0].split('/');
+    endPath = serials[1].split('/');
+    startCont = rootNode;
+    i = startPath.length;
+    while (--i) {
+      parentCont = startCont;
+      startCont = startCont.childNodes[startPath[i]];
+    }
+    offset = parseInt(startPath[i], 10);
+    if (!startCont && offset === 0) {
+      startCont = document.createTextNode('');
+      parentCont.appendChild(startCont);
+    }
+    range.setStart(startCont, offset);
+    endCont = rootNode;
+    i = endPath.length;
+    while (--i) {
+      parentCont = endCont;
+      endCont = endCont.childNodes[endPath[i]];
+    }
+    offset = parseInt(endPath[i], 10);
+    if (!endCont && offset === 0) {
+      endCont = document.createTextNode('');
+      parentCont.appendChild(endCont);
+    }
+    range.setEnd(endCont, offset);
+    return range;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Serialize a range.
+   * The breakpoint are 2 strings separated by a comma.
+   * Structure of a serialized bp : {offset}{/index}*
+   * Global struct : {startOffset}{/index}*,{endOffset}{/index}*
+   * @param  {Range} range    The range to serialize
+   * @param  {element} rootNode [optional] the root used for serialization.
+   *                            If none, we use the body of the ownerDocument
+   *                            of range.startContainer
+   * @return {String}          The string, exemple : "10/0/2/1,3/1", or false
+   *                           if the rootNode is not a parent of one of the
+   *                           range's break point.
+  */
+
+
+  CNeditor.prototype.serializeRange = function(range, rootNode) {
+    var i, node, res, sib;
+
+    if (!rootNode) {
+      rootNode = this.linesDiv;
+    }
+    res = range.startOffset;
+    node = range.startContainer;
+    while (node !== null && node !== rootNode) {
+      i = 0;
+      sib = node.previousSibling;
+      while (sib !== null) {
+        i++;
+        sib = sib.previousSibling;
+      }
+      res += '/' + i;
+      node = node.parentNode;
+    }
+    if (node === null) {
+      return false;
+    }
+    res += ',' + range.endOffset;
+    node = range.endContainer;
+    while (node !== null && node !== rootNode) {
+      i = 0;
+      sib = node.previousSibling;
+      while (sib !== null) {
+        i++;
+        sib = sib.previousSibling;
+      }
+      res += '/' + i;
+      node = node.parentNode;
+    }
+    if (node === null) {
+      return false;
+    }
+    return res;
+  };
+
+  CNeditor.prototype.serializeSel = function() {
+    var s;
+
+    s = this.getEditorSelection();
+    if (s.rangeCount) {
+      return this.serializeRange(s.getRangeAt(0));
+    }
+    return false;
+  };
+
+  CNeditor.prototype.deSerializeSelection = function(serial) {
+    var sel;
+
+    sel = this.getEditorSelection();
+    sel.removeAllRanges();
+    return sel.addRange(this.deSerializeRange(serial));
+  };
+
+  /* ------------------------------------------------------------------------
+  # EXTENSION  :  auto-summary management and upkeep
+  #
+  # initialization
+  # TODO: avoid updating the summary too often
+  #       it would be best to make the update faster (rather than reading
+  #       every line)
+  */
+
+
+  CNeditor.prototype._initSummary = function() {
+    var summary;
+
+    summary = this.editorBody$.children("#navi");
+    if (summary.length === 0) {
+      summary = $(document.createElement('div'));
+      summary.attr('id', 'navi');
+      summary.prependTo(this.editorBody$);
+    }
+    return summary;
+  };
+
+  CNeditor.prototype._buildSummary = function() {
+    var c, lines, summary, _results;
+
+    summary = this.initSummary();
+    this.editorBody$.children("#navi").children().remove();
+    lines = this._lines;
+    _results = [];
+    for (c in lines) {
+      if (this.editorBody$.children('#' + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th") {
+        _results.push(lines[c].line$.clone().appendTo(summary));
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
+  /* ------------------------------------------------------------------------
+  #  EXTENSION  :  DECORATION FUNCTIONS (bold/italic/underlined/quote)
+  #  TODO
+  */
+
+
+  /* ------------------------------------------------------------------------
+  #  PASTE MANAGEMENT
+  # 0 - save selection
+  # 1 - move the cursor into an invisible sandbox
+  # 2 - redirect pasted content in this sandox
+  # 3 - sanitize and adapt pasted content to the editor's format
+  # 4 - restore selection
+  # 5 - insert cleaned content is behind the cursor position
+  */
+
+
+  CNeditor.prototype.paste = function(event) {
+    var mySandBox, range, sel;
+
+    mySandBox = this.clipboard;
+    this.updateCurrentSelIsStartIsEnd();
+    range = this.document.createRange();
+    range.selectNodeContents(mySandBox);
+    sel = this.getEditorSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    range.detach();
+    if (event && event.clipboardData && event.clipboardData.getData) {
+      if (event.clipboardData.types === "text/html") {
+        mySandBox.innerHTML = event.clipboardData.getData('text/html');
+      } else if (event.clipboardData.types === "text/plain") {
+        mySandBox.innerHTML = event.clipboardData.getData('text/plain');
+      } else {
+        mySandBox.innerHTML = "";
+      }
+      this._waitForPasteData(mySandBox);
+      if (event.preventDefault) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      return false;
+    } else {
+      this._waitForPasteData(mySandBox);
+      return true;
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+  # * init the div where the browser will actualy paste.
+  # * this method is called after each refresh of the content of the editor (
+  # * replaceContent, deleteContent, setEditorContent)
+  # * TODO : should be called just once at editor init : for this the editable
+  # * content shouldn't be directly in the body of the iframe but in a div.
+  # * @return {obj} a ref to the clipboard div
+  */
+
+
+  CNeditor.prototype._initClipBoard = function() {
+    var clipboardEl, getOffTheScreen;
+
+    clipboardEl = document.createElement('div');
+    clipboardEl.contentEditable = true;
+    clipboardEl.id = 'editor-clipboard';
+    this.clipboard$ = $(clipboardEl);
+    getOffTheScreen = {
+      left: -300
     };
+    this.clipboard$.offset(getOffTheScreen);
+    this.clipboard$.prependTo(this.editorBody$);
+    this.clipboard = this.clipboard$[0];
+    clipboardEl.style.setProperty('width', '10px');
+    clipboardEl.style.setProperty('height', '10px');
+    clipboardEl.style.setProperty('position', 'fixed');
+    clipboardEl.style.setProperty('overflow', 'hidden');
+    return clipboardEl;
+  };
 
-    /** -----------------------------------------------------------------------
-     * Insert segment at the position of the breakpoint.
-     * /!\ The bp is updated but not normalized. The break point will between 2
-     * segments if the insertion splits a segment in two. This is normal. If you
-     * want to have a break point normalized (ie in a text node), then you have
-     * to do it afterwards.
-     * /!\ If the inserted segment should be fusionned with its similar sibling,
-     * you have to run _fusionSimilarSegments() over the whole line after the
-     * insertion.
-     * @param  {element} segment The segment to insert
-     * @param  {Object} bp      {cont, offset} resp. the container and offset of
-     *                          the breakpoint where to insert segment. The
-     *                          breakpoint must be in a segment, ie cont or one
-     *                          of its parent must be a segment.
+  /** -----------------------------------------------------------------------
+   * Function that will call itself until the browser has pasted data in the
+   * clipboar div
+   * @param  {element} sandbox      the div where the browser will paste data
+   * @param  {function} processpaste the function to call back whan paste
+   * is ok
+  */
+
+
+  CNeditor.prototype._waitForPasteData = function() {
+    if (this.clipboard.childNodes && this.clipboard.childNodes.length > 0) {
+      return this._processPaste();
+    } else {
+      return setTimeout(this._waitForPasteData, 100);
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Called when the browser has pasted data in the clipboard div.
+   * Its role is to insert the content of the clipboard into the editor.
+  */
+
+
+  CNeditor.prototype._processPaste = function() {
+    var absDepth, bp, br, childNodes, currSel, currentDelta, currentLineFrag, deltaInserted, domWalkContext, dummyLine, endLine, endTargetLineFrag, firstAddedLine, frag, htmlStr, l, lastAdded, lastAddedDepth, lastFragLine, lineElements, lineNextStartLine, n, parendDiv, range, sandbox, secondAddedLine, segToInsert, startLine, startLineDepth, startOffset, targetNode, _i, _j, _len;
+
+    sandbox = this.clipboard;
+    currSel = this.currentSel;
+    sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
+    frag = document.createDocumentFragment();
+    dummyLine = {
+      lineNext: null,
+      linePrev: null,
+      line$: $("<div id='dummy' class='Tu-1'></div>")
+    };
+    frag.appendChild(dummyLine.line$[0]);
+    currentLineFrag = document.createDocumentFragment();
+    absDepth = currSel.startLine.lineDepthAbs;
+    if (currSel.startLine.lineType === 'Th') {
+      absDepth += 1;
+    }
+    domWalkContext = {
+      frag: frag,
+      lastAddedLine: dummyLine,
+      currentLineFrag: currentLineFrag,
+      currentLineEl: currentLineFrag,
+      absDepth: absDepth,
+      prevHxLevel: null,
+      prevCNLineAbsDepth: null,
+      isCurrentLineBeingPopulated: false
+    };
+    htmlStr = this._domWalk(sandbox, domWalkContext);
+    sandbox.innerHTML = "";
+    frag.removeChild(frag.firstChild);
+    /*
+    # TODO : the following steps removes all the styles of the lines in frag
+    # Later this will be removed in order to take into account styles.
     */
 
+    /*
+    # END TODO
+    */
 
-    CNeditor.prototype._insertSegment = function(newSeg, bp) {
-      var targetNode, targetSeg;
+    startLine = currSel.startLine;
+    endLine = currSel.endLine;
+    if (currSel.range.collapsed) {
 
-      targetNode = bp.cont;
-      targetSeg = selection.getSegment(targetNode);
-      if (targetSeg.nodeName === 'DIV') {
-        targetSeg.insertBefore(newSeg, targetSeg.children[bp.offset]);
-        bp.offset++;
-      } else if (newSeg.nodeName === 'SPAN') {
-        if (targetSeg.nodeName === 'A' || this._haveSameMeta(targetSeg, newSeg)) {
-          this._insertTextInSegment(newSeg.textContent, bp, targetSeg);
-        } else {
-          this._splitAndInsertSegment(newSeg, bp, targetSeg);
-        }
-      } else if (this._haveSameMeta(targetSeg, newSeg)) {
+    } else if (endLine === startLine) {
+      currSel.range.deleteContents();
+      selection.normalize(currSel.range);
+    } else {
+      this._deleteMultiLinesSelections();
+      selection.normalize(currSel.range);
+      this.newPosition = true;
+      currSel = this.updateCurrentSelIsStartIsEnd();
+      this.newPosition = false;
+      startLine = currSel.startLine;
+    }
+    /* 5- Insert first line of the frag in the target line
+    # We assume that the structure of lines in frag and in the editor are :
+    #   <div><span>(TextNode)</span><br></div>
+    # what will be incorrect when styles will be taken into account.
+    #
+    */
+
+    targetNode = currSel.theoricalRange.startContainer;
+    startOffset = currSel.theoricalRange.startOffset;
+    bp = {
+      cont: targetNode,
+      offset: startOffset
+    };
+    if (frag.childNodes.length > 0) {
+      lineElements = Array.prototype.slice.call(frag.firstChild.childNodes);
+      lineElements.pop();
+    } else {
+      lineElements = [frag];
+    }
+    for (_i = 0, _len = lineElements.length; _i < _len; _i++) {
+      segToInsert = lineElements[_i];
+      this._insertSegment(segToInsert, bp);
+    }
+    if (bp.cont.nodeName !== '#text') {
+      bp = selection.normalizeBP(bp.cont, bp.offset, true);
+    }
+    this._fusionSimilarSegments(startLine.line$[0], [bp]);
+    targetNode = bp.cont;
+    startOffset = bp.offset;
+    /*
+    # 6- If the clipboard has more than one line, insert the end of target
+    #    line in the last line of frag and delete it
+    */
+
+    if (frag.childNodes.length > 1) {
+      range = document.createRange();
+      range.setStart(targetNode, startOffset);
+      parendDiv = targetNode;
+      while (parendDiv.tagName !== 'DIV') {
+        parendDiv = parendDiv.parentElement;
+      }
+      range.setEnd(parendDiv, parendDiv.children.length - 1);
+      endTargetLineFrag = range.extractContents();
+      range.detach();
+      lastFragLine = frag.lastChild;
+      br = lastFragLine.lastChild;
+      n = lastFragLine.childNodes.length - 1;
+      bp = selection.normalizeBP(lastFragLine, n);
+      childNodes = endTargetLineFrag.childNodes;
+      l = childNodes.length;
+      for (n = _j = 1; _j <= l; n = _j += 1) {
+        lastFragLine.insertBefore(childNodes[0], br);
+      }
+      this._fusionSimilarSegments(lastFragLine, [bp]);
+      parendDiv = targetNode;
+      while (parendDiv.tagName !== 'DIV') {
+        parendDiv = parendDiv.parentElement;
+      }
+    }
+    /*
+     * remove the firstAddedLine from the fragment
+    */
+
+    firstAddedLine = dummyLine.lineNext;
+    secondAddedLine = firstAddedLine != null ? firstAddedLine.lineNext : void 0;
+    if (frag.firstChild != null) {
+      frag.removeChild(frag.firstChild);
+    }
+    if (firstAddedLine != null) {
+      delete this._lines[firstAddedLine.lineID];
+    }
+    /*
+     * 7- updates nextLine and prevLines, insert frag in the editor
+    */
+
+    if (secondAddedLine != null) {
+      lineNextStartLine = currSel.startLine.lineNext;
+      currSel.startLine.lineNext = secondAddedLine;
+      secondAddedLine.linePrev = currSel.startLine;
+      if (lineNextStartLine === null) {
+        this.linesDiv.appendChild(frag);
+      } else {
+        domWalkContext.lastAddedLine.lineNext = lineNextStartLine;
+        lineNextStartLine.linePrev = domWalkContext.lastAddedLine;
+        this.linesDiv.insertBefore(frag, lineNextStartLine.line$[0]);
+      }
+    }
+    /*
+     * 8- Adapt lines depth and type.
+    */
+
+    lastAdded = domWalkContext.lastAddedLine;
+    if (lastAdded.lineNext) {
+      lastAddedDepth = lastAdded.lineDepthAbs;
+      startLineDepth = startLine.lineDepthAbs;
+      deltaInserted = startLineDepth - lastAddedDepth;
+      currentDelta = lastAdded.lineNext.lineDepthAbs - lastAddedDepth;
+      this._adaptDepth(domWalkContext.lastAddedLine, deltaInserted, currentDelta, lastAddedDepth);
+      this._adaptType(currSel.startLine);
+    }
+    /*
+     * 9- position caret
+    */
+
+    return bp = this._setCaret(bp.cont, bp.offset);
+  };
+
+  /** -----------------------------------------------------------------------
+   * Insert segment at the position of the breakpoint.
+   * /!\ The bp is updated but not normalized. The break point will between 2
+   * segments if the insertion splits a segment in two. This is normal. If you
+   * want to have a break point normalized (ie in a text node), then you have
+   * to do it afterwards.
+   * /!\ If the inserted segment should be fusionned with its similar sibling,
+   * you have to run _fusionSimilarSegments() over the whole line after the
+   * insertion.
+   * @param  {element} segment The segment to insert
+   * @param  {Object} bp      {cont, offset} resp. the container and offset of
+   *                          the breakpoint where to insert segment. The
+   *                          breakpoint must be in a segment, ie cont or one
+   *                          of its parent must be a segment.
+  */
+
+
+  CNeditor.prototype._insertSegment = function(newSeg, bp) {
+    var targetNode, targetSeg;
+
+    targetNode = bp.cont;
+    targetSeg = selection.getSegment(targetNode);
+    if (targetSeg.nodeName === 'DIV') {
+      targetSeg.insertBefore(newSeg, targetSeg.children[bp.offset]);
+      bp.offset++;
+    } else if (newSeg.nodeName === 'SPAN') {
+      if (targetSeg.nodeName === 'A' || this._haveSameMeta(targetSeg, newSeg)) {
         this._insertTextInSegment(newSeg.textContent, bp, targetSeg);
       } else {
         this._splitAndInsertSegment(newSeg, bp, targetSeg);
       }
+    } else if (this._haveSameMeta(targetSeg, newSeg)) {
+      this._insertTextInSegment(newSeg.textContent, bp, targetSeg);
+    } else {
+      this._splitAndInsertSegment(newSeg, bp, targetSeg);
+    }
+    return true;
+  };
+
+  CNeditor.prototype._insertTextInSegment = function(txt, bp, targetSeg) {
+    var newText, offset, targetText;
+
+    if (txt === '') {
       return true;
-    };
+    }
+    if (!targetSeg) {
+      targetSeg = selection.getSegment(bp.cont);
+    }
+    targetText = targetSeg.textContent;
+    offset = bp.offset;
+    newText = targetText.substr(0, offset);
+    newText += txt;
+    newText += targetText.substr(offset);
+    targetSeg.textContent = newText;
+    offset += txt.length;
+    bp.cont = targetSeg.firstChild;
+    bp.offset = offset;
+    return true;
+  };
 
-    CNeditor.prototype._insertTextInSegment = function(txt, bp, targetSeg) {
-      var newText, offset, targetText;
+  CNeditor.prototype._splitAndInsertSegment = function(newSegment, bp, targetSeg) {
+    var children, frag, i, rg;
 
-      if (txt === '') {
-        return true;
+    if (!targetSeg) {
+      targetSeg = selection.getSegment(bp.cont);
+    }
+    rg = document.createRange();
+    rg.setStart(bp.cont, bp.offset);
+    rg.setEndAfter(targetSeg);
+    frag = rg.extractContents();
+    frag.insertBefore(newSegment, frag.firstChild);
+    targetSeg.parentNode.insertBefore(frag, targetSeg.nextSibling);
+    bp.cont = targetSeg.parentNode;
+    i = 0;
+    children = bp.cont.childNodes;
+    while (children[i] !== targetSeg) {
+      i++;
+    }
+    return bp.offset = i + 2;
+  };
+
+  /**
+   * insert an segment with one space caractère after a given segment.
+   * @param  {Element} seg The segment after whiche we will insert
+   * @return {Element}     The created segment
+  */
+
+
+  CNeditor.prototype._insertSegmentAfterSeg = function(seg) {
+    var span, txt;
+
+    span = document.createElement('SPAN');
+    txt = document.createTextNode('\u00a0');
+    span.appendChild(txt);
+    seg.parentElement.insertBefore(span, seg.nextSibling);
+    return span;
+  };
+
+  /**
+   * returns a break point, collapsed after a space caracter immediately
+   * following a given segment. A segment will we inserted if required.
+   * @param  {[type]} seg [description]
+   * @return {[type]}     [description]
+  */
+
+
+  CNeditor.prototype.insertSpaceAfterSeg = function(seg) {
+    var bp, c1, index, nextSeg, span, txtNode;
+
+    nextSeg = seg.nextSibling;
+    if (nextSeg.nodeName === 'BR') {
+      span = this._insertSegmentAfterSeg(seg);
+      bp = {
+        cont: span.firstChild,
+        offset: 1
+      };
+    } else {
+      index = selection.getSegmentIndex(seg)[1] + 1;
+      bp = selection.normalizeBP(seg.parentElement, index, true);
+      txtNode = bp.cont;
+      c1 = txtNode.textContent[0];
+      if (!(c1 === ' ' || c1 === '\u00a0')) {
+        txtNode.textContent = '\u00a0' + txtNode.textContent;
       }
-      if (!targetSeg) {
-        targetSeg = selection.getSegment(bp.cont);
-      }
-      targetText = targetSeg.textContent;
-      offset = bp.offset;
-      newText = targetText.substr(0, offset);
-      newText += txt;
-      newText += targetText.substr(offset);
-      targetSeg.textContent = newText;
-      offset += txt.length;
-      bp.cont = targetSeg.firstChild;
-      bp.offset = offset;
-      return true;
-    };
+      bp.offset = 1;
+    }
+    return bp;
+  };
 
-    CNeditor.prototype._splitAndInsertSegment = function(newSegment, bp, targetSeg) {
-      var children, frag, i, rg;
-
-      if (!targetSeg) {
-        targetSeg = selection.getSegment(bp.cont);
-      }
-      rg = document.createRange();
-      rg.setStart(bp.cont, bp.offset);
-      rg.setEndAfter(targetSeg);
-      frag = rg.extractContents();
-      frag.insertBefore(newSegment, frag.firstChild);
-      targetSeg.parentNode.insertBefore(frag, targetSeg.nextSibling);
-      bp.cont = targetSeg.parentNode;
-      i = 0;
-      children = bp.cont.childNodes;
-      while (children[i] !== targetSeg) {
-        i++;
-      }
-      return bp.offset = i + 2;
-    };
-
-    /**
-     * insert an segment with one space caractère after a given segment.
-     * @param  {Element} seg The segment after whiche we will insert
-     * @return {Element}     The created segment
-    */
+  /** -----------------------------------------------------------------------
+   * Walks thoug an html tree in order to convert it in a strutured content
+   * that fit to a note structure.
+   * @param  {html element} elemt   Reference to an html element to be parsed
+   * @param  {object} context context of execution of _domWalk (recursive).
+  */
 
 
-    CNeditor.prototype._insertSegmentAfterSeg = function(seg) {
-      var span, txt;
+  CNeditor.prototype._domWalk = function(elemt, context) {
+    var p;
 
-      span = document.createElement('SPAN');
-      txt = document.createTextNode('\u00a0');
-      span.appendChild(txt);
-      seg.parentElement.insertBefore(span, seg.nextSibling);
-      return span;
-    };
-
-    /**
-     * returns a break point, collapsed after a space caracter immediately
-     * following a given segment. A segment will we inserted if required.
-     * @param  {[type]} seg [description]
-     * @return {[type]}     [description]
-    */
-
-
-    CNeditor.prototype.insertSpaceAfterSeg = function(seg) {
-      var bp, c1, index, nextSeg, span, txtNode;
-
-      nextSeg = seg.nextSibling;
-      if (nextSeg.nodeName === 'BR') {
-        span = this._insertSegmentAfterSeg(seg);
-        bp = {
-          cont: span.firstChild,
-          offset: 1
-        };
-      } else {
-        index = selection.getSegmentIndex(seg)[1] + 1;
-        bp = selection.normalizeBP(seg.parentElement, index, true);
-        txtNode = bp.cont;
-        c1 = txtNode.textContent[0];
-        if (!(c1 === ' ' || c1 === '\u00a0')) {
-          txtNode.textContent = '\u00a0' + txtNode.textContent;
-        }
-        bp.offset = 1;
-      }
-      return bp;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Walks thoug an html tree in order to convert it in a strutured content
-     * that fit to a note structure.
-     * @param  {html element} elemt   Reference to an html element to be parsed
-     * @param  {object} context context of execution of _domWalk (recursive).
-    */
-
-
-    CNeditor.prototype._domWalk = function(elemt, context) {
-      var p;
-
-      this.__domWalk(elemt, context);
-      if (context.currentLineFrag.childNodes.length > 0) {
-        p = {
-          sourceLine: context.lastAddedLine,
-          fragment: context.currentLineFrag,
-          targetLineType: "Tu",
-          targetLineDepthAbs: context.absDepth,
-          targetLineDepthRel: context.absDepth
-        };
-        return context.lastAddedLine = this._insertLineAfter(p);
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Walks thoug an html tree in order to convert it in a strutured content
-     * that fit to a note structure.
-     * @param  {html element} nodeToParse   Reference to an html element to
-     *                        be parsed
-     * @param  {object} context __domWalk is recursive and its context of
-     *                          execution is kept in this param instead of
-     *                          using the editor context (faster and better
-     *                          isolation)
-    */
-
-
-    CNeditor.prototype.__domWalk = function(nodeToParse, context) {
-      var aNode, absDepth, child, clas, classes, deltaHxLevel, lastInsertedEl, newClass, prevHxLevel, spanEl, spanNode, txtNode, _i, _j, _len, _len1, _ref, _ref1;
-
-      absDepth = context.absDepth;
-      prevHxLevel = context.prevHxLevel;
-      _ref = nodeToParse.childNodes;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        child = _ref[_i];
-        switch (child.nodeName) {
-          case '#text':
-            if ((_ref1 = context.currentLineEl.nodeName) === 'SPAN' || _ref1 === 'A') {
-              context.currentLineEl.textContent += child.textContent;
-            } else {
-              txtNode = document.createTextNode(child.textContent);
-              spanEl = document.createElement('span');
-              spanEl.appendChild(txtNode);
-              context.currentLineEl.appendChild(spanEl);
-            }
-            context.isCurrentLineBeingPopulated = true;
-            break;
-          case 'P':
-          case 'UL':
-          case 'OL':
-            context.absDepth = absDepth;
-            this.__domWalk(child, context);
-            if (context.isCurrentLineBeingPopulated) {
-              this._appendCurrentLineFrag(context, absDepth, absDepth);
-            }
-            break;
-          case 'H1':
-          case 'H2':
-          case 'H3':
-          case 'H4':
-          case 'H5':
-          case 'H6':
-            deltaHxLevel = 0;
-            this.__domWalk(child, context);
-            if (context.isCurrentLineBeingPopulated) {
-              this._appendCurrentLineFrag(context, Math.min(0, deltaHxLevel) + absDepth, Math.min(0, deltaHxLevel) + absDepth);
-            }
-            break;
-          case 'LI':
-          case 'TR':
-            if (context.isCurrentLineBeingPopulated) {
-              this._appendCurrentLineFrag(context, absDepth, absDepth);
-            }
-            this.__domWalk(child, context);
-            if (context.isCurrentLineBeingPopulated) {
-              this._appendCurrentLineFrag(context, absDepth, absDepth);
-            }
-            break;
-          case 'BR':
-            this._appendCurrentLineFrag(context, absDepth, absDepth);
-            break;
-          case 'A':
-            aNode = document.createElement('a');
-            aNode.textContent = child.textContent;
-            aNode.href = child.href;
-            context.currentLineEl.appendChild(aNode);
-            break;
-          case 'DIV':
-          case 'TABLE':
-          case 'TBODY':
-            if (child.id.substr(0, 5) === 'CNID_') {
-              this._clipBoard_Insert_InternalLine(child, context);
-            } else {
-              this.__domWalk(child, context);
-            }
-            break;
-          default:
-            lastInsertedEl = context.currentLineEl.lastChild;
-            if (lastInsertedEl !== null && lastInsertedEl.nodeName === 'SPAN') {
-              lastInsertedEl.textContent += child.textContent;
-            } else {
-              spanNode = document.createElement('span');
-              spanNode.textContent = child.textContent;
-              classes = child.classList;
-              newClass = '';
-              for (_j = 0, _len1 = classes.length; _j < _len1; _j++) {
-                clas = classes[_j];
-                if (clas.slice(0, 3) === 'CNE') {
-                  newClass += ' ' + clas;
-                }
-              }
-              spanNode.className = newClass;
-              context.currentLineEl.appendChild(spanNode);
-            }
-            context.isCurrentLineBeingPopulated = true;
-        }
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Append to frag the currentLineFrag and prepare a new empty one.
-     * @param  {Object} context  [description]
-     * @param  {Number} absDepth absolute depth of the line to insert
-     * @param  {Number} relDepth relative depth of the line to insert
-    */
-
-
-    CNeditor.prototype._appendCurrentLineFrag = function(context, absDepth, relDepth) {
-      var p, spanNode;
-
-      if (context.currentLineFrag.childNodes.length === 0) {
-        spanNode = document.createElement('span');
-        spanNode.appendChild(document.createTextNode(''));
-        context.currentLineFrag.appendChild(spanNode);
-      }
+    this.__domWalk(elemt, context);
+    if (context.currentLineFrag.childNodes.length > 0) {
       p = {
         sourceLine: context.lastAddedLine,
         fragment: context.currentLineFrag,
         targetLineType: "Tu",
-        targetLineDepthAbs: absDepth,
-        targetLineDepthRel: relDepth
-      };
-      context.lastAddedLine = this._insertLineAfter(p);
-      context.currentLineFrag = document.createDocumentFragment();
-      context.currentLineEl = context.currentLineFrag;
-      return context.isCurrentLineBeingPopulated = false;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Insert in the editor a line that was copied in a cozy note editor
-     * @param  {Element} elemt A div
-     *                         ex : <div id="CNID_7" class="Lu-3"> ... </div>
-     * @return {Line}          A ref to the line object
-    */
-
-
-    CNeditor.prototype._clipBoard_Insert_InternalLine = function(elemt, context) {
-      var deltaDepth, elemtFrag, i, lineClass, lineDepthAbs, n, p, seg, span;
-
-      lineClass = elemt.className.split('-');
-      lineDepthAbs = +lineClass[1];
-      lineClass = lineClass[0];
-      if (!context.prevCNLineAbsDepth) {
-        context.prevCNLineAbsDepth = lineDepthAbs;
-      }
-      deltaDepth = lineDepthAbs - context.prevCNLineAbsDepth;
-      if (deltaDepth > 0) {
-        context.absDepth += 1;
-      } else {
-        context.absDepth += deltaDepth;
-        context.absDepth = Math.max(1, context.absDepth);
-      }
-      context.prevCNLineAbsDepth = lineDepthAbs;
-      elemtFrag = document.createDocumentFragment();
-      n = elemt.childNodes.length;
-      i = 0;
-      while (i < n) {
-        seg = elemt.childNodes[0];
-        if (seg.nodeName === '#text') {
-          span = document.createElement('SPAN');
-          span.appendChild(seg);
-          elemtFrag.appendChild(span);
-        } else {
-          elemtFrag.appendChild(seg);
-        }
-        i++;
-      }
-      p = {
-        sourceLine: context.lastAddedLine,
-        fragment: elemtFrag,
-        targetLineType: lineClass,
         targetLineDepthAbs: context.absDepth,
         targetLineDepthRel: context.absDepth
       };
       return context.lastAddedLine = this._insertLineAfter(p);
-    };
+    }
+  };
 
-    /**
-     * Called by the hotString controler when return is hit or when an item of
-     * the auto complete is clicked.
-     * @param  {Object} autoItem
-     *                  {text:'value', type:'reminder'|'contact'|..., value:{}}
-    */
+  /** -----------------------------------------------------------------------
+   * Walks thoug an html tree in order to convert it in a strutured content
+   * that fit to a note structure.
+   * @param  {html element} nodeToParse   Reference to an html element to
+   *                        be parsed
+   * @param  {object} context __domWalk is recursive and its context of
+   *                          execution is kept in this param instead of
+   *                          using the editor context (faster and better
+   *                          isolation)
+  */
 
 
-    CNeditor.prototype.doHotStringAction = function(autoItem) {
-      var bp, hs, reg, taskDiv, txt;
+  CNeditor.prototype.__domWalk = function(nodeToParse, context) {
+    var aNode, absDepth, child, clas, classes, deltaHxLevel, lastInsertedEl, newClass, prevHxLevel, spanEl, spanNode, txtNode, _i, _j, _len, _len1, _ref, _ref1;
 
-      hs = this._hotString;
-      if (!(autoItem != null ? autoItem.type : void 0)) {
-        hs.reset('end', true);
-        return true;
-      }
-      switch (autoItem.type) {
-        case 'ttag':
-          switch (autoItem.value) {
-            case 'todo':
-              return this.doHotStringAction({
-                type: 'todo'
-              });
-            case 'htag':
-              hs._forceUserHotString('#', []);
-              hs.updateHs();
-              bp = selection.normalizeBP(hs._hsSegment, 1);
-              this._setCaret(bp.cont, bp.offset);
-              return true;
-            case 'reminder':
-              hs._forceUserHotString('@@', []);
-              hs.updateHs();
-              bp = selection.normalizeBP(hs._hsSegment, 1);
-              this._setCaret(bp.cont, bp.offset);
-              return true;
+    absDepth = context.absDepth;
+    prevHxLevel = context.prevHxLevel;
+    _ref = nodeToParse.childNodes;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      child = _ref[_i];
+      switch (child.nodeName) {
+        case '#text':
+          if ((_ref1 = context.currentLineEl.nodeName) === 'SPAN' || _ref1 === 'A') {
+            context.currentLineEl.textContent += child.textContent;
+          } else {
+            txtNode = document.createTextNode(child.textContent);
+            spanEl = document.createElement('span');
+            spanEl.appendChild(txtNode);
+            context.currentLineEl.appendChild(spanEl);
+          }
+          context.isCurrentLineBeingPopulated = true;
+          break;
+        case 'P':
+        case 'UL':
+        case 'OL':
+          context.absDepth = absDepth;
+          this.__domWalk(child, context);
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
           }
           break;
-        case 'todo':
-          taskDiv = this._turnIntoTask();
-          if (taskDiv) {
-            txt = taskDiv.textContent.trim();
-            reg = new RegExp('^ *@?t?o?d?o? *$', 'i');
-            if (txt.match(reg)) {
-              this._initTaskContent(taskDiv);
-              hs.reset(false);
-            } else {
-              hs._forceUserHotString('', []);
-              hs.reset('end');
+        case 'H1':
+        case 'H2':
+        case 'H3':
+        case 'H4':
+        case 'H5':
+        case 'H6':
+          deltaHxLevel = 0;
+          this.__domWalk(child, context);
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, Math.min(0, deltaHxLevel) + absDepth, Math.min(0, deltaHxLevel) + absDepth);
+          }
+          break;
+        case 'LI':
+        case 'TR':
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
+          }
+          this.__domWalk(child, context);
+          if (context.isCurrentLineBeingPopulated) {
+            this._appendCurrentLineFrag(context, absDepth, absDepth);
+          }
+          break;
+        case 'BR':
+          this._appendCurrentLineFrag(context, absDepth, absDepth);
+          break;
+        case 'A':
+          aNode = document.createElement('a');
+          aNode.textContent = child.textContent;
+          aNode.href = child.href;
+          context.currentLineEl.appendChild(aNode);
+          break;
+        case 'DIV':
+        case 'TABLE':
+        case 'TBODY':
+          if (child.id.substr(0, 5) === 'CNID_') {
+            this._clipBoard_Insert_InternalLine(child, context);
+          } else {
+            this.__domWalk(child, context);
+          }
+          break;
+        default:
+          lastInsertedEl = context.currentLineEl.lastChild;
+          if (lastInsertedEl !== null && lastInsertedEl.nodeName === 'SPAN') {
+            lastInsertedEl.textContent += child.textContent;
+          } else {
+            spanNode = document.createElement('span');
+            spanNode.textContent = child.textContent;
+            classes = child.classList;
+            newClass = '';
+            for (_j = 0, _len1 = classes.length; _j < _len1; _j++) {
+              clas = classes[_j];
+              if (clas.slice(0, 3) === 'CNE') {
+                newClass += ' ' + clas;
+              }
             }
-            this.editorTarget$.trigger(jQuery.Event('onChange'));
-            this.newPosition = true;
-            return true;
+            spanNode.className = newClass;
+            context.currentLineEl.appendChild(spanNode);
           }
-          break;
-        case 'contact':
-          hs._forceUserHotString(autoItem.text, []);
-          hs._hsSegment.dataset.id = autoItem.model.id;
-          this.Tags.create('contact', hs._hsSegment);
-          bp = this.insertSpaceAfterSeg(hs._hsSegment);
-          this._setCaret(bp.cont, 1);
-          hs._auto.hide();
-          hs._reInit();
-          this.editorTarget$.trigger(jQuery.Event('onChange'));
-          this.newPosition = true;
-          return true;
-        case 'htag':
-          hs._forceUserHotString(autoItem.text, []);
-          hs._hsSegment.classList.add('CNE_htag');
-          hs._hsSegment.dataset.type = 'htag';
-          this.Tags.handle(hs._hsSegment, true);
-          hs._hsSegment.classList.remove('CNE_hot_string');
-          bp = this.insertSpaceAfterSeg(hs._hsSegment);
-          this._setCaret(bp.cont, 1);
-          hs._auto.hide();
-          this.editorTarget$.trigger(jQuery.Event('onChange'));
-          this.newPosition = true;
-          return true;
-        case 'reminder':
-          txt = typeof autoItem.value === 'string' ? autoItem.value : autoItem.value.format();
-          hs._forceUserHotString(txt, []);
-          hs._hsSegment.dataset.value = txt;
-          this.Tags.create('reminder', hs._hsSegment);
-          bp = this.insertSpaceAfterSeg(hs._hsSegment);
-          this._setCaret(bp.cont, 1);
-          hs._auto.hide();
-          hs._reInit();
-          this.editorTarget$.trigger(jQuery.Event('onChange'));
-          this.newPosition = true;
-          return true;
+          context.isCurrentLineBeingPopulated = true;
       }
-      hs.reset('end');
-      this.editorTarget$.trigger(jQuery.Event('onChange'));
-      return false;
+    }
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Append to frag the currentLineFrag and prepare a new empty one.
+   * @param  {Object} context  [description]
+   * @param  {Number} absDepth absolute depth of the line to insert
+   * @param  {Number} relDepth relative depth of the line to insert
+  */
+
+
+  CNeditor.prototype._appendCurrentLineFrag = function(context, absDepth, relDepth) {
+    var p, spanNode;
+
+    if (context.currentLineFrag.childNodes.length === 0) {
+      spanNode = document.createElement('span');
+      spanNode.appendChild(document.createTextNode(''));
+      context.currentLineFrag.appendChild(spanNode);
+    }
+    p = {
+      sourceLine: context.lastAddedLine,
+      fragment: context.currentLineFrag,
+      targetLineType: "Tu",
+      targetLineDepthAbs: absDepth,
+      targetLineDepthRel: relDepth
     };
+    context.lastAddedLine = this._insertLineAfter(p);
+    context.currentLineFrag = document.createDocumentFragment();
+    context.currentLineEl = context.currentLineFrag;
+    return context.isCurrentLineBeingPopulated = false;
+  };
 
-    return CNeditor;
+  /** -----------------------------------------------------------------------
+   * Insert in the editor a line that was copied in a cozy note editor
+   * @param  {Element} elemt A div
+   *                         ex : <div id="CNID_7" class="Lu-3"> ... </div>
+   * @return {Line}          A ref to the line object
+  */
 
-  })();
 
-  CNeditor = exports.CNeditor;
-  
+  CNeditor.prototype._clipBoard_Insert_InternalLine = function(elemt, context) {
+    var deltaDepth, elemtFrag, i, lineClass, lineDepthAbs, n, p, seg, span;
+
+    lineClass = elemt.className.split('-');
+    lineDepthAbs = +lineClass[1];
+    lineClass = lineClass[0];
+    if (!context.prevCNLineAbsDepth) {
+      context.prevCNLineAbsDepth = lineDepthAbs;
+    }
+    deltaDepth = lineDepthAbs - context.prevCNLineAbsDepth;
+    if (deltaDepth > 0) {
+      context.absDepth += 1;
+    } else {
+      context.absDepth += deltaDepth;
+      context.absDepth = Math.max(1, context.absDepth);
+    }
+    context.prevCNLineAbsDepth = lineDepthAbs;
+    elemtFrag = document.createDocumentFragment();
+    n = elemt.childNodes.length;
+    i = 0;
+    while (i < n) {
+      seg = elemt.childNodes[0];
+      if (seg.nodeName === '#text') {
+        span = document.createElement('SPAN');
+        span.appendChild(seg);
+        elemtFrag.appendChild(span);
+      } else {
+        elemtFrag.appendChild(seg);
+      }
+      i++;
+    }
+    p = {
+      sourceLine: context.lastAddedLine,
+      fragment: elemtFrag,
+      targetLineType: lineClass,
+      targetLineDepthAbs: context.absDepth,
+      targetLineDepthRel: context.absDepth
+    };
+    return context.lastAddedLine = this._insertLineAfter(p);
+  };
+
+  /**
+   * Called by the hotString controler when return is hit or when an item of
+   * the auto complete is clicked.
+   * @param  {Object} autoItem
+   *                  {text:'value', type:'reminder'|'contact'|..., value:{}}
+  */
+
+
+  CNeditor.prototype.doHotStringAction = function(autoItem) {
+    var bp, hs, line, reg, taskDiv, txt;
+
+    hs = this._hotString;
+    if (!(autoItem != null ? autoItem.type : void 0)) {
+      hs.reset('end', true);
+      return true;
+    }
+    switch (autoItem.type) {
+      case 'ttag':
+        switch (autoItem.value) {
+          case 'todo':
+            return this.doHotStringAction({
+              type: 'todo'
+            });
+          case 'htag':
+            hs._forceUserHotString('#', []);
+            hs.updateHs();
+            bp = selection.normalizeBP(hs._hsSegment, 1);
+            this._setCaret(bp.cont, bp.offset);
+            return true;
+          case 'reminder':
+            hs._forceUserHotString('@@', []);
+            hs.updateHs();
+            bp = selection.normalizeBP(hs._hsSegment, 1);
+            this._setCaret(bp.cont, bp.offset);
+            return true;
+        }
+        break;
+      case 'todo':
+        taskDiv = this._turnIntoTask();
+        if (taskDiv) {
+          txt = taskDiv.textContent.trim();
+          reg = new RegExp('^ *@?t?o?d?o? *$', 'i');
+          if (txt.match(reg)) {
+            this._initTaskContent(taskDiv);
+            hs.reset(false);
+          } else {
+            hs._forceUserHotString('', []);
+            hs.reset('end');
+          }
+          this.editorTarget$.trigger(jQuery.Event('onChange'));
+          this.newPosition = true;
+          line = this._lines[taskDiv.id];
+          if (!line.lineNext) {
+            this._insertLineAfter({
+              sourceLine: line,
+              targetLineType: 'Tu',
+              targetLineDepthAbs: line.lineDepthAbs,
+              targetLineDepthRel: line.lineDepthRel
+            });
+          }
+          return true;
+        }
+        break;
+      case 'contact':
+        hs._forceUserHotString(autoItem.text, []);
+        hs._hsSegment.dataset.id = autoItem.model.id;
+        this.Tags.create('contact', hs._hsSegment);
+        bp = this.insertSpaceAfterSeg(hs._hsSegment);
+        this._setCaret(bp.cont, 1);
+        hs._auto.hide();
+        hs._reInit();
+        this.editorTarget$.trigger(jQuery.Event('onChange'));
+        this.newPosition = true;
+        return true;
+      case 'htag':
+        hs._forceUserHotString(autoItem.text, []);
+        hs._hsSegment.classList.add('CNE_htag');
+        hs._hsSegment.dataset.type = 'htag';
+        this.Tags.handle(hs._hsSegment, true);
+        hs._hsSegment.classList.remove('CNE_hot_string');
+        bp = this.insertSpaceAfterSeg(hs._hsSegment);
+        this._setCaret(bp.cont, 1);
+        hs._auto.hide();
+        this.editorTarget$.trigger(jQuery.Event('onChange'));
+        this.newPosition = true;
+        return true;
+      case 'reminder':
+        txt = typeof autoItem.value === 'string' ? autoItem.value : autoItem.value.format();
+        hs._forceUserHotString(txt, []);
+        hs._hsSegment.dataset.value = txt;
+        this.Tags.create('reminder', hs._hsSegment);
+        bp = this.insertSpaceAfterSeg(hs._hsSegment);
+        this._setCaret(bp.cont, 1);
+        hs._auto.hide();
+        hs._reInit();
+        this.editorTarget$.trigger(jQuery.Event('onChange'));
+        this.newPosition = true;
+        return true;
+    }
+    hs.reset('end');
+    this.editorTarget$.trigger(jQuery.Event('onChange'));
+    return false;
+  };
+
+  return CNeditor;
+
+})();
+
+CNeditor = exports.CNeditor;
+
 });
-window.require.register("CNeditor/externalmodels", function(exports, require, module) {
-  var Alarm, Contact, Task, request, _ref, _ref1, _ref2,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  request = require('./request');
+;require.register("CNeditor/externalmodels", function(exports, require, module) {
+var Alarm, Contact, Task, request, _ref, _ref1, _ref2,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  module.exports.taskCanBeUsed = false;
+request = require('./request');
 
-  module.exports.contactCanBeUsed = false;
+module.exports.taskCanBeUsed = false;
 
-  module.exports.alarmCanBeUsed = false;
+module.exports.contactCanBeUsed = false;
 
-  /*
-  # Alarm model and collection
-  */
+module.exports.alarmCanBeUsed = false;
+
+/*
+# Alarm model and collection
+*/
 
 
-  module.exports.Alarm = Alarm = (function(_super) {
-    __extends(Alarm, _super);
+module.exports.Alarm = Alarm = (function(_super) {
+  __extends(Alarm, _super);
 
-    function Alarm() {
-      _ref = Alarm.__super__.constructor.apply(this, arguments);
-      return _ref;
+  function Alarm() {
+    _ref = Alarm.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  Alarm.prototype.urlRoot = "alarms";
+
+  Alarm.dateFormat = "{Dow} {Mon} {dd} {yyyy} {HH}:{mm}:00";
+
+  Alarm.reminderCf = {};
+
+  Alarm.setDefaultCf = function(description, related) {
+    var _this = this;
+
+    if (description) {
+      Alarm.reminderCf.description = description;
     }
-
-    Alarm.prototype.urlRoot = "/apps/agenda/alarms";
-
-    Alarm.dateFormat = "{Dow} {Mon} {dd} {yyyy} {HH}:{mm}:00";
-
-    Alarm.reminderCf = {};
-
-    Alarm.setDefaultCf = function(description, related) {
-      var _this = this;
-
-      if (description) {
-        Alarm.reminderCf.description = description;
-      }
-      if (related) {
-        Alarm.reminderCf.related = related;
-      }
-      return module.exports.alarmCollection.each(function(model) {
-        return model.save(Alarm.reminderCf);
-      });
-    };
-
-    Alarm.prototype.defaults = function() {
-      return {
-        description: Alarm.reminderCf.description,
-        related: Alarm.reminderCf.related,
-        action: 'DISPLAY'
-      };
-    };
-
-    return Alarm;
-
-  })(Backbone.Model);
-
-  module.exports.alarmCollection = new Backbone.Collection([], {
-    model: Alarm
-  });
-
-  /*
-  # Contact model and collection
-  */
-
-
-  module.exports.Contact = Contact = (function(_super) {
-    __extends(Contact, _super);
-
-    function Contact() {
-      _ref1 = Contact.__super__.constructor.apply(this, arguments);
-      return _ref1;
+    if (related) {
+      Alarm.reminderCf.related = related;
     }
+    return module.exports.alarmCollection.each(function(model) {
+      return model.save(Alarm.reminderCf);
+    });
+  };
 
-    Contact.prototype.urlRoot = '/apps/contacts/contacts';
+  Alarm.prototype.defaults = function() {
+    return {
+      description: Alarm.reminderCf.description,
+      related: Alarm.reminderCf.related,
+      action: 'DISPLAY'
+    };
+  };
 
-    return Contact;
+  return Alarm;
 
-  })(Backbone.Model);
+})(Backbone.Model);
 
-  module.exports.contactCollection = new Backbone.Collection([], {
-    url: Contact.prototype.urlRoot,
-    model: Contact
-  });
+module.exports.alarmCollection = new Backbone.Collection([], {
+  model: Alarm
+});
+
+/*
+# Contact model and collection
+*/
+
+
+module.exports.Contact = Contact = (function(_super) {
+  __extends(Contact, _super);
+
+  function Contact() {
+    _ref1 = Contact.__super__.constructor.apply(this, arguments);
+    return _ref1;
+  }
+
+  Contact.prototype.urlRoot = 'contacts';
 
   Contact.load = function(cb) {
     return module.exports.contactCollection.fetch({
@@ -31839,1602 +31866,1537 @@ window.require.register("CNeditor/externalmodels", function(exports, require, mo
     });
   };
 
+  return Contact;
+
+})(Backbone.Model);
+
+module.exports.contactCollection = new Backbone.Collection([], {
+  url: Contact.prototype.urlRoot,
+  model: Contact
+});
+
+/*
+# Tasks model
+# TODO : use a collection
+*/
+
+
+module.exports.Task = Task = (function(_super) {
+  __extends(Task, _super);
+
+  function Task() {
+    _ref2 = Task.__super__.constructor.apply(this, arguments);
+    return _ref2;
+  }
+
+  Task.prototype.urlRoot = "tasks";
+
+  Task.prototype.defaults = function() {
+    return {
+      done: false
+    };
+  };
+
+  return Task;
+
+})(Backbone.Model);
+
+/*
+# Initializer : ask home to see what is installed
+# -> fetch contacts
+# -> get or create Inbox todolist
+*/
+
+
+module.exports.initialize = function(callback) {
+  module.exports.contactCanBeUsed = true;
+  module.exports.alarmCanBeUsed = true;
+  module.exports.taskCanBeUsed = true;
+  return Contact.load(callback);
+};
+
+});
+
+;require.register("CNeditor/history", function(exports, require, module) {
+var History, logging;
+
+logging = require('./logging');
+
+module.exports = History = (function() {
+  var HISTORY_SIZE;
+
+  HISTORY_SIZE = 100;
+
+  function History(editor) {
+    this.editor = editor;
+    this.index = HISTORY_SIZE - 1;
+    this.history = new Array(HISTORY_SIZE);
+    this.historySelect = new Array(HISTORY_SIZE);
+    this.historyScroll = new Array(HISTORY_SIZE);
+    this.historyPos = new Array(HISTORY_SIZE);
+    this.modifiedTask = new Array(HISTORY_SIZE);
+  }
+
   /*
-  # Tasks model
-  # TODO : use a collection
+  #  HISTORY MANAGEMENT:
+  # 1. _addHistory (Save html code, selection markers, positions...)
+  # 2. undoPossible (Return true only if unDo can be called)
+  # 3. redoPossible (Return true only if reDo can be called)
+  # 4. unDo (Undo the previous action)
+  # 5. reDo ( Redo a undo-ed action)
+  #
+  # What is saved in the history:
+  #  - current html content
+  #  - current selection
+  #  - current scrollbar position
+  #  - the boolean newPosition
   */
 
 
-  module.exports.Task = Task = (function(_super) {
-    __extends(Task, _super);
-
-    function Task() {
-      _ref2 = Task.__super__.constructor.apply(this, arguments);
-      return _ref2;
-    }
-
-    Task.prototype.url = function() {
-      if (this.isNew()) {
-        return "/apps/todos/todolists/" + Task.todolistId + "/tasks";
-      } else {
-        return "/apps/todos/tasks/" + this.id;
-      }
-    };
-
-    Task.prototype.defaults = function() {
-      return {
-        done: false
-      };
-    };
-
-    Task.prototype.parse = function(data) {
-      if (data.rows) {
-        return data.rows[0];
-      } else {
-        return data;
-      }
-    };
-
-    return Task;
-
-  })(Backbone.Model);
-
-  Task.getOrCreateInbox = function(callback) {
-    return request.get('/apps/todos/todolists', function(err, lists) {
-      var inbox, todolist;
-
-      if (err) {
-        module.exports.taskCanBeUsed = false;
-        return callback(err);
-      }
-      if (inbox = _.findWhere(lists.rows, {
-        title: 'Inbox'
-      })) {
-        Task.todolistId = inbox.id;
-        return callback(null);
-      }
-      todolist = {
-        title: 'Inbox',
-        parent_id: 'tree-node-all'
-      };
-      return request.post('/apps/todos/todolists', todolist, function(err, inbox) {
-        if (err) {
-          module.exports.taskCanBeUsed = false;
-          return callback(err);
-        }
-        Task.todolistId = inbox.id;
-        return callback(null);
-      });
-    });
-  };
-
-  /*
-  # Initializer : ask home to see what is installed
-  # -> fetch contacts
-  # -> get or create Inbox todolist
-  */
-
-
-  module.exports.initialize = function(callback) {
-    if (callback == null) {
-      callback = function() {};
-    }
-    return request.get('/api/applications', function(err, apps) {
-      var action, actions, app, cnt, _i, _j, _len, _len1, _ref3, _results;
-
-      if (err) {
-        return callback(err);
-      }
-      actions = [];
-      _ref3 = (apps != null ? apps.rows : void 0) || [];
-      for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
-        app = _ref3[_i];
-        if (app.state !== 'installed') {
-          continue;
-        }
-        switch (app.slug) {
-          case 'contacts':
-            module.exports.contactCanBeUsed = true;
-            actions.push(Contact.load);
-            break;
-          case 'agenda':
-            module.exports.alarmCanBeUsed = true;
-            break;
-          case 'todos':
-            module.exports.taskCanBeUsed = true;
-            actions.push(Task.getOrCreateInbox);
-        }
-      }
-      cnt = actions.length;
-      err = null;
-      _results = [];
-      for (_j = 0, _len1 = actions.length; _j < _len1; _j++) {
-        action = actions[_j];
-        _results.push(action(function(err) {
-          if (err) {
-            if (err == null) {
-              err = err;
-            }
-          }
-          cnt--;
-          if (cnt === 0) {
-            return callback(err);
-          }
-        }));
-      }
-      return _results;
-    });
-  };
-  
-});
-window.require.register("CNeditor/history", function(exports, require, module) {
-  var History, logging;
-
-  logging = require('./logging');
-
-  module.exports = History = (function() {
-    var HISTORY_SIZE;
-
-    HISTORY_SIZE = 100;
-
-    function History(editor) {
-      this.editor = editor;
-      this.index = HISTORY_SIZE - 1;
-      this.history = new Array(HISTORY_SIZE);
-      this.historySelect = new Array(HISTORY_SIZE);
-      this.historyScroll = new Array(HISTORY_SIZE);
-      this.historyPos = new Array(HISTORY_SIZE);
-      this.modifiedTask = new Array(HISTORY_SIZE);
-    }
-
-    /*
-    #  HISTORY MANAGEMENT:
-    # 1. _addHistory (Save html code, selection markers, positions...)
-    # 2. undoPossible (Return true only if unDo can be called)
-    # 3. redoPossible (Return true only if reDo can be called)
-    # 4. unDo (Undo the previous action)
-    # 5. reDo ( Redo a undo-ed action)
-    #
-    # What is saved in the history:
-    #  - current html content
-    #  - current selection
-    #  - current scrollbar position
-    #  - the boolean newPosition
-    */
-
-
-    /** -----------------------------------------------------------------------
-     *  Task history management
-    
-        time ------------------+------+---------------+-----------+-------->
-        Tasks modified or      | T0c  | T0m T1c T2c   |  T1m T2m  |
-        created                |      |               |           |
-                               |      |               |           |
-        History steps          H1     H2              H3          H4(*)
-        history.modifiedTask        {T0c}       {T0m T1c T2c}   {T1m T2m}
-    
-        Ctrl-z                 H1     H2              H3(*)       H4
-        _tasksToBeSaved                              {T1m,T2m}
-    
-        Ctrl-z                 H1     H2(*)           H3          H4
-        _tasksToBeSaved              {T0m, T1d,T2d}
-    
-        Ctrl-z                 H1(*)  H2              H3          H4
-        _tasksToBeSaved        {T0d, T1d,T2d}
-    
-        Ctrl-y                 H1     H2(*)           H3          H4
-        _tasksToBeSaved              {T0m, T1d,T2d}
-    
-        Ctrl-y                 H1     H2              H3(*)       H4
-        _tasksToBeSaved                              {T1m,T2m}
-    
-        Ctrl-y                 H1     H2              H3          H4(*)
-        _tasksToBeSaved                                           {}
-    */
-
-
-    /** -----------------------------------------------------------------------
-     * Add html, selection markers and scrollbar positions to the history.
-     * No effect if the url popover is displayed
-    */
-
-
-    History.prototype.addStep = function() {
-      var i;
-
-      console.info('== _addHistory()');
-      if (this.editor.urlPopover.isOn || this.editor._hotString.isPreparing) {
-        return;
-      }
-      if (this.index < HISTORY_SIZE - 1) {
-        i = HISTORY_SIZE - 1 - this.index;
-        while (i--) {
-          this.historySelect.pop();
-          this.historyScroll.pop();
-          this.historyPos.pop();
-          this.history.pop();
-          this.modifiedTask.pop();
-          this.historySelect.unshift(void 0);
-          this.historyScroll.unshift(void 0);
-          this.historyPos.unshift(void 0);
-          this.history.unshift(void 0);
-          this.modifiedTask.unshift(void 0);
-        }
-      }
-      this.historySelect.push(this.editor.saveEditorSelection());
-      this.historyScroll.push({
-        xcoord: this.editor.linesDiv.scrollTop,
-        ycoord: this.editor.linesDiv.scrollLeft
-      });
-      this.historyPos.push(this.editor.newPosition);
-      this.history.push(this.editor.linesDiv.innerHTML);
-      this.modifiedTask.push(this.editor._tasksModifSinceLastHistory);
-      this.editor._tasksModifSinceLastHistory = {};
-      this.index = HISTORY_SIZE - 1;
-      this.historySelect.shift();
-      this.historyScroll.shift();
-      this.historyPos.shift();
-      this.history.shift();
-      this.modifiedTask.shift();
-      return logging.printHistory('_addHistory', this);
-    };
-
-    History.prototype.removeLastStep = function() {
-      this.historySelect.pop();
-      this.historyScroll.pop();
-      this.historyPos.pop();
-      this.history.pop();
-      this.modifiedTask.pop();
-      this.historySelect.unshift(void 0);
-      this.historyScroll.unshift(void 0);
-      this.historyPos.unshift(void 0);
-      this.history.unshift(void 0);
-      this.modifiedTask.unshift(void 0);
-      return this.index = HISTORY_SIZE - 1;
-    };
-
-    /* ------------------------------------------------------------------------
-    #  undoPossible
-    # Return true only if unDo can be called
-    */
-
-
-    History.prototype.undoPossible = function() {
-      var result;
-
-      result = this.index >= 0 && this.historyPos[this.index] !== void 0;
-      console.log('undoPossible', result);
-      return result;
-    };
-
-    /* ------------------------------------------------------------------------
-    #  redoPossible
-    # Return true only if reDo can be called
-    */
-
-
-    History.prototype.redoPossible = function() {
-      return this.index < this.history.length - 2;
-    };
-
-    return History;
-
-  })();
-  
-});
-window.require.register("CNeditor/hot-string", function(exports, require, module) {
-  var AutoComplete, HotString, selection,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
-
-  AutoComplete = require('./autocomplete');
-
-  selection = require('./selection');
-
-  module.exports = HotString = (function() {
-    function HotString(editor) {
-      this.realtimeContacts = __bind(this.realtimeContacts, this);
-      this.showAutoAndHighLight = __bind(this.showAutoAndHighLight, this);    this.editor = editor;
-      this._isEdit = false;
-      this.container = editor.linesDiv;
-      this._auto = new AutoComplete(editor.linesDiv, editor, this);
-      this._hsTypes = ['@', '@@', '#'];
-      this._modes = {
-        '@': 'contact',
-        '@@': 'reminder'
-      };
-      this.isPreparing = false;
-      this._hsType = '';
-      this._hsRight = '';
-      this._hsLeft = '';
-      this._hsString = '';
-      this._currentMode = '';
-      this._getShortCut = editor.getShortCut;
-      this._autoToBeShowed = false;
-    }
-
-    /** -----------------------------------------------------------------------
-     * Called by the editor keydown call back, in charge of taking into account
-     * "special" keys suche as return, arrows, space etc...
-     * The detection of the start of a hotstring is done by keypresseCb()
-     * @param  {Object} shortcut cf editor.getShortcut(e)
-     * @return {Boolean}          True if keydown should be preventDefaulted
-    */
-
-
-    HotString.prototype.keyDownCb = function(shortcut) {
-      var preventDefault;
-
-      preventDefault = false;
-      switch (shortcut) {
-        case '-return':
-          this.validate();
-          preventDefault = true;
-          break;
-        case '-up':
-          this._auto.up();
-          preventDefault = true;
-          break;
-        case '-down':
-          this._auto.down();
-          preventDefault = true;
-          break;
-        case '-pgUp':
-        case '-pgDwn':
-        case '-end':
-        case '-home':
-          this.reset(false);
-          break;
-        case '-esc':
-          this.reset('end');
-      }
-      return preventDefault;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Detection on keypress if the user is starting a new hotstring.
-     * A hotstring is a "#" or "@" inserted as a word start (no characters
-     * before).
-     * Actions - Arrows, return, baskspace etc - are managed in newShortCut()
-     * If a hotString is already preparing, the editor must call updateHs() when
-     * the content of the segment containing the hotstring is changed.
-     * @param  {Event} e The keyboard event
-    */
-
-
-    HotString.prototype.keypressCb = function(e) {
-      var charCode, modes;
-
-      console.info('== hotstring.keypressCb()');
-      charCode = e.which;
-      if (this.isPreparing) {
-
-      } else if (charCode === 64) {
-        if (this.editor._isStartingWord()) {
-          modes = this.editor.getCurrentAllowedInsertions();
-          this._auto.setAllowedModes(modes);
-          if (__indexOf.call(modes, 'contact') >= 0) {
-            this._hsType = '@';
-            this.isPreparing = true;
-            this._auto.setMode('contact');
-            this._currentMode = 'contact';
-            this._autoToBeShowed = {
-              mode: 'insertion'
-            };
-          } else if (modes.length > 0) {
-            this._hsType = '@';
-            this.isPreparing = true;
-            this._auto.setMode('ttag');
-            this._currentMode = 'ttag';
-            this._autoToBeShowed = {
-              mode: 'insertion'
-            };
-          }
-        }
-      }
-      return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Called by editor._keyupCb() if a hotstring is preparing.
-     * It will check if the content of _hsSegment has change and then take the
-     * appropriate actions (update autocomplete, change mode, reset)
-    */
-
-
-    HotString.prototype.updateHs = function(seg) {
-      var autoItem, hsType, mode, newHotStrg;
-
-      if (!seg) {
-        seg = this._hsSegment;
-      }
-      newHotStrg = this._hsSegment.textContent;
-      if (this._hsType + this._hsString === newHotStrg) {
-        return true;
-      }
-      hsType = newHotStrg.slice(0, 2);
-      if (hsType === '@@') {
-        this._hsString = newHotStrg.slice(2);
-      } else {
-        hsType = hsType[0];
-        if (hsType === '@' || hsType === '#') {
-          this._hsString = newHotStrg.slice(1);
-        } else {
-          this.reset('current', true);
-          return true;
-        }
-      }
-      if (hsType !== this._hsType) {
-        this._hsType = hsType;
-        mode = this._modes[hsType];
-        this._currentMode = mode;
-        this._auto.setMode(mode);
-        return true;
-      } else {
-        autoItem = this._isAHotString(this._hsString);
-        if (autoItem) {
-          this.editor.doHotStringAction(autoItem);
-          return false;
-        }
-        return this._auto.update(this._hsString);
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Called by editor._keyupCb() and editor._mouseupCb() which detect if the
-     * carret enters a meta segment. If yes, then we edit it.
-     * @param  {Element} seg   The segment with meta data (reminder, contact...)
-     * @param  {Range} range The range of the selection
-    */
-
-
-    HotString.prototype.edit = function(seg, range) {
-      var endOffset, modes, segClass, startOffset, type;
-
-      console.info('hotstring.edit()');
-      this._isEdit = true;
-      this.isPreparing = true;
-      type = seg.dataset.type;
-      switch (type) {
-        case 'reminder':
-          this._hsType = '@@';
-          segClass = 'CNE_reminder';
-          break;
-        case 'contact':
-          this._hsType = '@';
-          segClass = 'CNE_contact';
-          break;
-        case 'htag':
-          this._hsType = '#';
-          segClass = 'CNE_htag';
-      }
-      this._editedItem = {
-        text: seg.textContent,
-        type: seg.dataset.type,
-        id: seg.dataset.id,
-        value: seg.dataset.value
-      };
-      startOffset = range.startOffset + this._hsType.length;
-      endOffset = range.endOffset + this._hsType.length;
-      this._hsTextNode = seg.firstChild;
-      this._hsString = seg.textContent;
-      this._hsTextNode.textContent = this._hsType + this._hsString;
-      seg.classList.remove('CNE_reminder');
-      seg.classList.remove('CNE_contact');
-      seg.classList.remove('CNE_htag');
-      seg.dataset.type = '';
-      this.editor.setSelection(seg.firstChild, startOffset, seg.firstChild, endOffset);
-      modes = this.editor.getCurrentAllowedInsertions();
-      this._auto.setAllowedModes(modes);
-      this._currentMode = type;
-      this._auto.setMode(type);
-      this._autoToBeShowed = {
-        mode: 'edit',
-        segment: seg
-      };
-      this.showAutoAndHighLight();
-      return true;
-    };
-
-    HotString.prototype._isNormalChar = function(charCode) {
-      var res;
-
-      res = (96 < charCode && charCode < 123) || (63 < charCode && charCode < 91) || (47 < charCode && charCode < 58) || (charCode === 43);
-      return res;
-    };
-
-    /**
-     * In charge of diplaying the hotString segment and the auto completion div
-     * when a creation or edition begins.
-     * This must be called only when the hsSegment is not empty, that's why the
-     * key event that calls it must be editor._keyupCb() and not keyPress (would
-     * have been too easy :-).
-     * edit() also calls this method (edit is called by editor._mouseupCb() and
-     * again editor._keyupCb() )
-    */
-
-
-    HotString.prototype.showAutoAndHighLight = function() {
-      var rg;
-
-      switch (this._autoToBeShowed.mode) {
-        case 'edit':
-          this._hsSegment = this._autoToBeShowed.segment;
-          this._hsTextNode = this._hsSegment.firstChild;
-          this._hsSegment.classList.add('CNE_hot_string');
-          this._hsSegment.dataset.type = 'hotString';
-          this._autoToBeShowed = false;
-          this._auto.show(this._hsSegment, this._hsString);
-          break;
-        case 'insertion':
-          rg = this.editor.getEditorSelection().getRangeAt(0);
-          this.editor.setSelection(rg.startContainer, rg.startOffset - this._hsType.length, rg.endContainer, rg.endOffset);
-          rg = this.editor._applyMetaDataOnSelection('CNE_hot_string');
-          this._hsTextNode = rg.startContainer;
-          this._hsSegment = rg.startContainer.parentElement;
-          this._hsSegment.dataset.type = 'hotString';
-          this.editor._setCaret(this._hsSegment, this._hsSegment.childNodes.length);
-          this._autoToBeShowed = false;
-          this._auto.show(this._hsSegment, '');
-      }
-      return true;
-    };
-
-    HotString.prototype._unhighLight = function(bps) {
-      var seg;
-
-      seg = this._hsSegment;
-      if (seg.parentElement) {
-        seg.classList.remove('CNE_hot_string');
-        seg.dataset.type = '';
-        this.editor._fusionSimilarSegments(seg.parentElement, bps);
-        this._hsTextNode = null;
-        this._hsSegment = null;
-      }
-      return true;
-    };
-
-    HotString.prototype._forceUserHotString = function(newHotString, bps) {
-      var bp, textNode, _i, _len;
-
-      textNode = this._hsTextNode;
-      textNode.textContent = newHotString;
-      for (_i = 0, _len = bps.length; _i < _len; _i++) {
-        bp = bps[_i];
-        if (bp.cont === textNode) {
-          bp.offset = newHotString.length;
-        }
-      }
-      return bps;
-    };
-
-    HotString.prototype.validate = function() {
-      var item;
-
-      item = this._auto.getSelectedItem();
-      return this.editor.doHotStringAction(item);
-    };
-
-    /** -----------------------------------------------------------------------
-     * Reset hot string : the segment is removed and autocomplete hidden. In
-     * case where it was not a creation of a meta but a modification, then :
-     *   - the initial value of the meta is restored,
-     *   - except if hardReset is true .
-     * If the hsType ('@', '#' or '@@') has been deleted then the meta data
-     * segment is also removed if editing.
-     * @param  {String} dealCaret  3 values : 1/ 'current'the current caret
-     *                  position is saved and restored after. 2/ 'end' : the
-     *                  caret will be set at the end of the segment. 3/ false :
-     *                  the carret is not managed here.
-     * @param {Boolean} hardReset In the case of a meta edition, if false the
-     *                            initial value of the meta is restored, content
-     *                            of hotString segment is not modified
-     *                            otherwise.
-    */
-
-
-    HotString.prototype.reset = function(dealCaret, hardReset) {
-      var bp, endContainer, endOffset, rg, startContainer, startOffset;
-
-      if (!this.isPreparing) {
-        return true;
-      }
-      if (this._isEdit && !hardReset) {
-        if (dealCaret === 'current') {
-          rg = this.editor.getEditorSelection().getRangeAt(0);
-          startContainer = rg.startContainer;
-          startOffset = rg.startOffset;
-          endContainer = rg.endContainer;
-          endOffset = rg.endOffset;
-          this.editor.doHotStringAction(this._editedItem);
-          this.editor.setSelection(startContainer, startOffset, endContainer, endOffset);
-        } else {
-          this.editor.doHotStringAction(this._editedItem);
-        }
-        return true;
-      }
-      if (dealCaret === 'current') {
-        rg = this.editor.getEditorSelection().getRangeAt(0);
-        bp = {
-          cont: rg.startContainer,
-          offset: rg.startOffset
-        };
-        this._unhighLight([bp]);
-      } else if (dealCaret === 'end') {
-        bp = {
-          cont: this._hsTextNode,
-          offset: this._hsTextNode.length
-        };
-        this._unhighLight([bp]);
-      } else {
-        this._unhighLight([]);
-      }
-      this._reInit();
-      this._auto.hide();
-      if (dealCaret) {
-        this.editor._setCaret(bp.cont, bp.offset);
-      }
-      return true;
-    };
-
-    HotString.prototype._reInit = function() {
-      this._hsType = '';
-      this._hsString = '';
-      this._hsRight = '';
-      this._hsLeft = '';
-      this.isPreparing = false;
-      return this._isEdit = false;
-    };
-
-    HotString.prototype._isAHotString = function(txt) {
-      switch (txt) {
-        case 'reminder':
-          return {
-            text: 'reminder',
-            type: 'ttag',
-            value: 'reminder'
-          };
-        case 'todo':
-          return {
-            text: 'todo',
-            type: 'ttag',
-            value: 'todo'
-          };
-        case 'tag':
-          return {
-            text: 'tag',
-            type: 'ttag',
-            value: 'htag'
-          };
-      }
-    };
-
-    HotString.prototype.mouseDownCb = function(e) {
-      if (this.isInAuto(e.target)) {
-        return e.preventDefault();
-      }
-    };
-
-    HotString.prototype.mouseUpInAutoCb = function(e) {
-      var selectedLine;
-
-      if (this._currentMode === 'reminder') {
-        return true;
-      }
-      selectedLine = e.target;
-      while (selectedLine && selectedLine.tagName !== 'LI') {
-        selectedLine = selectedLine.parentElement;
-      }
-      if (selectedLine) {
-        return this.editor.doHotStringAction(selectedLine.item);
-      } else {
-        return this.reset('end');
-      }
-    };
-
-    HotString.prototype.isInAuto = function(elt) {
-      return elt === this.el || $(elt).parents('#CNE_autocomplete').length !== 0;
-    };
-
-    HotString.prototype.realtimeContacts = function(contactCollection) {
-      var updateItems,
-        _this = this;
-
-      if (contactCollection.length === 0) {
-        contactCollection.once('sync', function() {
-          return _this.realtimeContacts(contactCollection);
-        });
-      }
-      updateItems = function() {
-        return _this._auto.setItems('contact', contactCollection.map(function(contact) {
-          return {
-            text: contact.get('fn'),
-            type: 'contact',
-            model: contact
-          };
-        }));
-      };
-      updateItems();
-      return contactCollection.on({
-        'add': updateItems,
-        'remove': updateItems,
-        'change:name': updateItems
-      });
-    };
-
-    /**
-     * Helper for debug purpose, prints the current hotstring.
-    */
-
-
-    HotString.prototype.printHotString = function() {
-      return console.info('_hsType = "' + this._hsType + '"', '_hsLeft = "' + this._hsLeft + '"', '_hsRight = "' + this._hsRight + '"');
-    };
-
-    return HotString;
-
-  })();
-  
-});
-window.require.register("CNeditor/line", function(exports, require, module) {
   /** -----------------------------------------------------------------------
-   * line$        : 
-   * lineID       : 
-   * lineType     : 
-   * lineDepthAbs : 
-   * lineDepthRel : 
-   * lineNext     : 
-   * linePrev     :
+   *  Task history management
+  
+      time ------------------+------+---------------+-----------+-------->
+      Tasks modified or      | T0c  | T0m T1c T2c   |  T1m T2m  |
+      created                |      |               |           |
+                             |      |               |           |
+      History steps          H1     H2              H3          H4(*)
+      history.modifiedTask        {T0c}       {T0m T1c T2c}   {T1m T2m}
+  
+      Ctrl-z                 H1     H2              H3(*)       H4
+      _tasksToBeSaved                              {T1m,T2m}
+  
+      Ctrl-z                 H1     H2(*)           H3          H4
+      _tasksToBeSaved              {T0m, T1d,T2d}
+  
+      Ctrl-z                 H1(*)  H2              H3          H4
+      _tasksToBeSaved        {T0d, T1d,T2d}
+  
+      Ctrl-y                 H1     H2(*)           H3          H4
+      _tasksToBeSaved              {T0m, T1d,T2d}
+  
+      Ctrl-y                 H1     H2              H3(*)       H4
+      _tasksToBeSaved                              {T1m,T2m}
+  
+      Ctrl-y                 H1     H2              H3          H4(*)
+      _tasksToBeSaved                                           {}
   */
 
-  var Line;
 
-  Line = (function() {
-    /*
-     * If no arguments, returns an empty object (only methods), otherwise
-     * constructs a full line. The dom element of the line is inserted according
-     * to the previous or next line given in the arguments.
-     * @param  {Array}  Array of parameters :
-     *   [ 
-            editor        , # 
-            type          , # 
-            depthAbs      , # 
-            depthRelative , # 
-            prevLine      , # The prev line, null if nextLine is given
-            nextLine      , # The next line, null if prevLine is given
-            fragment        # [optional] a fragment to insert in the line, will
-                              add a br at the end if none in the fragment.
-          ]
-    */
-    function Line() {
-      var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
+  /** -----------------------------------------------------------------------
+   * Add html, selection markers and scrollbar positions to the history.
+   * No effect if the url popover is displayed
+  */
 
-      if (arguments.length === 0) {
-        return;
-      } else {
-        editor = arguments[0], type = arguments[1], depthAbs = arguments[2], depthRelative = arguments[3], prevLine = arguments[4], nextLine = arguments[5], fragment = arguments[6];
-      }
-      editor._highestId += 1;
-      lineID = 'CNID_' + editor._highestId;
-      newLineEl = document.createElement('div');
-      newLineEl.setAttribute('class', type + '-' + depthAbs);
-      if (fragment != null) {
-        newLineEl.appendChild(fragment);
-        if (newLineEl.lastChild.nodeName !== 'BR') {
-          newLineEl.appendChild(document.createElement('br'));
-        }
-      } else {
-        node = document.createElement('span');
-        node.appendChild(document.createTextNode(''));
-        newLineEl.appendChild(node);
-        newLineEl.appendChild(document.createElement('br'));
-      }
-      this.line$ = $(newLineEl);
-      if (prevLine != null) {
-        this.linePrev = prevLine;
-        linesDiv = prevLine.line$[0].parentNode;
-        if (prevLine.lineNext != null) {
-          nextL = prevLine.lineNext;
-          linesDiv.insertBefore(newLineEl, nextL.line$[0]);
-          this.lineNext = nextL;
-          nextL.linePrev = this;
-        } else {
-          linesDiv.appendChild(newLineEl);
-          this.lineNext = null;
-        }
-        prevLine.lineNext = this;
-      } else if (nextLine != null) {
-        linesDiv = nextLine.line$[0].parentNode;
-        this.lineNext = nextLine;
-        linesDiv.insertBefore(newLineEl, nextLine.line$[0]);
-        if (nextLine.linePrev != null) {
-          this.linePrev = nextLine.linePrev;
-          nextLine.linePrev.lineNext = this;
-        } else {
-          this.linePrev = null;
-        }
-        nextLine.linePrev = this;
-      }
-      newLineEl.id = lineID;
-      this.lineID = lineID;
-      this.lineType = type;
-      this.lineDepthAbs = depthAbs;
-      this.lineDepthRel = depthRelative;
-      editor._lines[lineID] = this;
+
+  History.prototype.addStep = function() {
+    var i;
+
+    console.info('== _addHistory()');
+    if (this.editor.urlPopover.isOn || this.editor._hotString.isPreparing) {
+      return;
     }
-
-    Line.prototype.setType = function(type) {
-      this.lineType = type;
-      return this.line$.prop('class', "" + type + "-" + this.lineDepthAbs);
-    };
-
-    Line.prototype.setDepthAbs = function(absDepth) {
-      this.lineDepthAbs = absDepth;
-      return this.line$.prop('class', "" + this.lineType + "-" + absDepth);
-    };
-
-    Line.prototype.setTypeDepth = function(type, absDepth) {
-      this.lineType = type;
-      this.lineDepthAbs = absDepth;
-      return this.line$.prop('class', "" + type + "-" + absDepth);
-    };
-
-    return Line;
-
-  })();
-
-  Line.clone = function(line) {
-    var clone;
-
-    clone = new Line();
-    clone.line$ = line.line$.clone();
-    clone.lineID = line.lineID;
-    clone.lineType = line.lineType;
-    clone.lineDepthAbs = line.lineDepthAbs;
-    clone.lineDepthRel = line.lineDepthRel;
-    clone.linePrev = line.linePrev;
-    clone.lineNext = line.lineNext;
-    return clone;
-  };
-
-  module.exports = Line;
-  
-});
-window.require.register("CNeditor/logging", function(exports, require, module) {
-  console.info = function() {};
-
-  module.exports = {
-    /** -----------------------------------------------------------------------
-     * A utility fuction for debugging
-     * @param  {string} txt A text to print in front of the log
-    */
-
-    printHistory: function(txt, history) {
-      var arrow, content, i, step, _i, _len, _ref;
-
-      if (!txt) {
-        txt = '';
+    if (this.index < HISTORY_SIZE - 1) {
+      i = HISTORY_SIZE - 1 - this.index;
+      while (i--) {
+        this.historySelect.pop();
+        this.historyScroll.pop();
+        this.historyPos.pop();
+        this.history.pop();
+        this.modifiedTask.pop();
+        this.historySelect.unshift(void 0);
+        this.historyScroll.unshift(void 0);
+        this.historyPos.unshift(void 0);
+        this.history.unshift(void 0);
+        this.modifiedTask.unshift(void 0);
       }
-      console.info(txt + ' _history.index : ' + history.index);
-      _ref = history.history;
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        step = _ref[i];
-        if (history.index === i) {
-          arrow = ' <---';
-        } else {
-          arrow = ' ';
-          content = $(step).text();
-          if (content === '') {
-            content = '_';
-          }
-        }
-        console.info(i, content, history.historySelect[i], arrow);
-      }
-      return true;
-    },
-    /** -----------------------------------------------------------------------
-     * A utility fuction for debugging
-     * @param  {string} txt A text to print in front of the log
-    */
-
-    printTasksModifStacks: function(txt, _tasksToBeSaved) {
-      var id, modif, res;
-
-      if (!txt) {
-        txt = '';
-      }
-      res = '  _tasksToBeSaved : ';
-      for (id in _tasksToBeSaved) {
-        modif = _tasksToBeSaved[id];
-        res += id + ':';
-        if (modif.created) {
-          res += 'created-';
-        }
-        if (modif.modified) {
-          res += 'modified-';
-        }
-        if (modif.deleted) {
-          res += 'deleted-';
-        }
-        if (modif.removed) {
-          res += 'removed-';
-        }
-        res = res.slice(0, -1);
-        res += ', ';
-      }
-      res = res.slice(0, -2);
-      console.info(res);
-      return true;
     }
-  };
-  
-});
-window.require.register("CNeditor/request", function(exports, require, module) {
-  exports.request = function(type, url, data, callback) {
-    return $.ajax({
-      type: type,
-      url: url,
-      data: data != null ? JSON.stringify(data) : null,
-      contentType: data != null ? "application/json" : null,
-      success: function(data) {
-        if (callback != null) {
-          return callback(null, data);
-        }
-      },
-      error: function() {
-        if (((data != null ? data.msg : void 0) != null) && (callback != null)) {
-          return callback(new Error(data.msg));
-        } else if (callback != null) {
-          return callback(new Error("Server error occured"));
-        }
-      }
+    this.historySelect.push(this.editor.saveEditorSelection());
+    this.historyScroll.push({
+      xcoord: this.editor.linesDiv.scrollTop,
+      ycoord: this.editor.linesDiv.scrollLeft
     });
+    this.historyPos.push(this.editor.newPosition);
+    this.history.push(this.editor.linesDiv.innerHTML);
+    this.modifiedTask.push(this.editor._tasksModifSinceLastHistory);
+    this.editor._tasksModifSinceLastHistory = {};
+    this.index = HISTORY_SIZE - 1;
+    this.historySelect.shift();
+    this.historyScroll.shift();
+    this.historyPos.shift();
+    this.history.shift();
+    this.modifiedTask.shift();
+    return logging.printHistory('_addHistory', this);
   };
 
-  exports.get = function(url, callbacks) {
-    return exports.request("GET", url, null, callbacks);
+  History.prototype.removeLastStep = function() {
+    this.historySelect.pop();
+    this.historyScroll.pop();
+    this.historyPos.pop();
+    this.history.pop();
+    this.modifiedTask.pop();
+    this.historySelect.unshift(void 0);
+    this.historyScroll.unshift(void 0);
+    this.historyPos.unshift(void 0);
+    this.history.unshift(void 0);
+    this.modifiedTask.unshift(void 0);
+    return this.index = HISTORY_SIZE - 1;
   };
 
-  exports.post = function(url, data, callbacks) {
-    return exports.request("POST", url, data, callbacks);
+  /* ------------------------------------------------------------------------
+  #  undoPossible
+  # Return true only if unDo can be called
+  */
+
+
+  History.prototype.undoPossible = function() {
+    var result;
+
+    result = this.index >= 0 && this.historyPos[this.index] !== void 0;
+    console.log('undoPossible', result);
+    return result;
   };
 
-  exports.put = function(url, data, callbacks) {
-    return exports.request("PUT", url, data, callbacks);
+  /* ------------------------------------------------------------------------
+  #  redoPossible
+  # Return true only if reDo can be called
+  */
+
+
+  History.prototype.redoPossible = function() {
+    return this.index < this.history.length - 2;
   };
 
-  exports.del = function(url, callbacks) {
-    return exports.request("DELETE", url, null, callbacks);
-  };
-  
+  return History;
+
+})();
+
 });
-window.require.register("CNeditor/tags", function(exports, require, module) {
-  var ContactPopover, Tags, selection,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-  selection = require('./selection');
+;require.register("CNeditor/hot-string", function(exports, require, module) {
+var AutoComplete, HotString, selection,
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-  ContactPopover = require('./contactpopover');
+AutoComplete = require('./autocomplete');
+
+selection = require('./selection');
+
+module.exports = HotString = (function() {
+  function HotString(editor) {
+    this.realtimeContacts = __bind(this.realtimeContacts, this);
+    this.showAutoAndHighLight = __bind(this.showAutoAndHighLight, this);    this.editor = editor;
+    this._isEdit = false;
+    this.container = editor.linesDiv;
+    this._auto = new AutoComplete(editor.linesDiv, editor, this);
+    this._hsTypes = ['@', '@@', '#'];
+    this._modes = {
+      '@': 'contact',
+      '@@': 'reminder'
+    };
+    this.isPreparing = false;
+    this._hsType = '';
+    this._hsRight = '';
+    this._hsLeft = '';
+    this._hsString = '';
+    this._currentMode = '';
+    this._getShortCut = editor.getShortCut;
+    this._autoToBeShowed = false;
+  }
+
+  /** -----------------------------------------------------------------------
+   * Called by the editor keydown call back, in charge of taking into account
+   * "special" keys suche as return, arrows, space etc...
+   * The detection of the start of a hotstring is done by keypresseCb()
+   * @param  {Object} shortcut cf editor.getShortcut(e)
+   * @return {Boolean}          True if keydown should be preventDefaulted
+  */
+
+
+  HotString.prototype.keyDownCb = function(shortcut) {
+    var preventDefault;
+
+    preventDefault = false;
+    switch (shortcut) {
+      case '-return':
+        this.validate();
+        preventDefault = true;
+        break;
+      case '-up':
+        this._auto.up();
+        preventDefault = true;
+        break;
+      case '-down':
+        this._auto.down();
+        preventDefault = true;
+        break;
+      case '-pgUp':
+      case '-pgDwn':
+      case '-end':
+      case '-home':
+        this.reset(false);
+        break;
+      case '-esc':
+        this.reset('end');
+    }
+    return preventDefault;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Detection on keypress if the user is starting a new hotstring.
+   * A hotstring is a "#" or "@" inserted as a word start (no characters
+   * before).
+   * Actions - Arrows, return, baskspace etc - are managed in newShortCut()
+   * If a hotString is already preparing, the editor must call updateHs() when
+   * the content of the segment containing the hotstring is changed.
+   * @param  {Event} e The keyboard event
+  */
+
+
+  HotString.prototype.keypressCb = function(e) {
+    var charCode, modes;
+
+    console.info('== hotstring.keypressCb()');
+    charCode = e.which;
+    if (this.isPreparing) {
+
+    } else if (charCode === 64) {
+      if (this.editor._isStartingWord()) {
+        modes = this.editor.getCurrentAllowedInsertions();
+        this._auto.setAllowedModes(modes);
+        if (__indexOf.call(modes, 'contact') >= 0) {
+          this._hsType = '@';
+          this.isPreparing = true;
+          this._auto.setMode('contact');
+          this._currentMode = 'contact';
+          this._autoToBeShowed = {
+            mode: 'insertion'
+          };
+        } else if (modes.length > 0) {
+          this._hsType = '@';
+          this.isPreparing = true;
+          this._auto.setMode('ttag');
+          this._currentMode = 'ttag';
+          this._autoToBeShowed = {
+            mode: 'insertion'
+          };
+        }
+      }
+    }
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Called by editor._keyupCb() if a hotstring is preparing.
+   * It will check if the content of _hsSegment has change and then take the
+   * appropriate actions (update autocomplete, change mode, reset)
+  */
+
+
+  HotString.prototype.updateHs = function(seg) {
+    var autoItem, hsType, mode, newHotStrg;
+
+    if (!seg) {
+      seg = this._hsSegment;
+    }
+    newHotStrg = this._hsSegment.textContent;
+    if (this._hsType + this._hsString === newHotStrg) {
+      return true;
+    }
+    hsType = newHotStrg.slice(0, 2);
+    if (hsType === '@@') {
+      this._hsString = newHotStrg.slice(2);
+    } else {
+      hsType = hsType[0];
+      if (hsType === '@' || hsType === '#') {
+        this._hsString = newHotStrg.slice(1);
+      } else {
+        this.reset('current', true);
+        return true;
+      }
+    }
+    if (hsType !== this._hsType) {
+      this._hsType = hsType;
+      mode = this._modes[hsType];
+      this._currentMode = mode;
+      this._auto.setMode(mode);
+      return true;
+    } else {
+      autoItem = this._isAHotString(this._hsString);
+      if (autoItem) {
+        this.editor.doHotStringAction(autoItem);
+        return false;
+      }
+      return this._auto.update(this._hsString);
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Called by editor._keyupCb() and editor._mouseupCb() which detect if the
+   * carret enters a meta segment. If yes, then we edit it.
+   * @param  {Element} seg   The segment with meta data (reminder, contact...)
+   * @param  {Range} range The range of the selection
+  */
+
+
+  HotString.prototype.edit = function(seg, range) {
+    var endOffset, modes, segClass, startOffset, type;
+
+    console.info('hotstring.edit()');
+    this._isEdit = true;
+    this.isPreparing = true;
+    type = seg.dataset.type;
+    switch (type) {
+      case 'reminder':
+        this._hsType = '@@';
+        segClass = 'CNE_reminder';
+        break;
+      case 'contact':
+        this._hsType = '@';
+        segClass = 'CNE_contact';
+        break;
+      case 'htag':
+        this._hsType = '#';
+        segClass = 'CNE_htag';
+    }
+    this._editedItem = {
+      text: seg.textContent,
+      type: seg.dataset.type,
+      id: seg.dataset.id,
+      value: seg.dataset.value
+    };
+    startOffset = range.startOffset + this._hsType.length;
+    endOffset = range.endOffset + this._hsType.length;
+    this._hsTextNode = seg.firstChild;
+    this._hsString = seg.textContent;
+    this._hsTextNode.textContent = this._hsType + this._hsString;
+    seg.classList.remove('CNE_reminder');
+    seg.classList.remove('CNE_contact');
+    seg.classList.remove('CNE_htag');
+    seg.dataset.type = '';
+    this.editor.setSelection(seg.firstChild, startOffset, seg.firstChild, endOffset);
+    modes = this.editor.getCurrentAllowedInsertions();
+    this._auto.setAllowedModes(modes);
+    this._currentMode = type;
+    this._auto.setMode(type);
+    this._autoToBeShowed = {
+      mode: 'edit',
+      segment: seg
+    };
+    this.showAutoAndHighLight();
+    return true;
+  };
+
+  HotString.prototype._isNormalChar = function(charCode) {
+    var res;
+
+    res = (96 < charCode && charCode < 123) || (63 < charCode && charCode < 91) || (47 < charCode && charCode < 58) || (charCode === 43);
+    return res;
+  };
 
   /**
-   * Helpers for Tags
-   * Tag = a segment with a .dataset.type (reminder, a button of a task, a
-   * contact ...)
+   * In charge of diplaying the hotString segment and the auto completion div
+   * when a creation or edition begins.
+   * This must be called only when the hsSegment is not empty, that's why the
+   * key event that calls it must be editor._keyupCb() and not keyPress (would
+   * have been too easy :-).
+   * edit() also calls this method (edit is called by editor._mouseupCb() and
+   * again editor._keyupCb() )
   */
 
 
-  module.exports = Tags = (function() {
-    function Tags(editor, models) {
-      this.editor = editor;
-      this.models = models;
-      this._updateReminderSegment = __bind(this._updateReminderSegment, this);
-      this._removeReminderSegment = __bind(this._removeReminderSegment, this);
-      this._updateContactSegment = __bind(this._updateContactSegment, this);
-      this._removeContactSegment = __bind(this._removeContactSegment, this);
-      this.handle = __bind(this.handle, this);
-      this.empty = __bind(this.empty, this);
-      this._tagList = [];
-      this.oldList = null;
-      this._areTagsEditable = true;
-      window.taglist = this._tagList;
-      this.contactPopover = new ContactPopover();
-      this.models.contactCollection.on({
-        'change:fn': this._updateContactSegment,
-        'destroy': this._removeContactSegment
-      });
-      this.models.alarmCollection.on({
-        'change:trigg': this._updateReminderSegment,
-        'destroy': this._removeReminderSegment
-      });
+  HotString.prototype.showAutoAndHighLight = function() {
+    var rg;
+
+    switch (this._autoToBeShowed.mode) {
+      case 'edit':
+        this._hsSegment = this._autoToBeShowed.segment;
+        this._hsTextNode = this._hsSegment.firstChild;
+        this._hsSegment.classList.add('CNE_hot_string');
+        this._hsSegment.dataset.type = 'hotString';
+        this._autoToBeShowed = false;
+        this._auto.show(this._hsSegment, this._hsString);
+        break;
+      case 'insertion':
+        rg = this.editor.getEditorSelection().getRangeAt(0);
+        this.editor.setSelection(rg.startContainer, rg.startOffset - this._hsType.length, rg.endContainer, rg.endOffset);
+        rg = this.editor._applyMetaDataOnSelection('CNE_hot_string');
+        this._hsTextNode = rg.startContainer;
+        this._hsSegment = rg.startContainer.parentElement;
+        this._hsSegment.dataset.type = 'hotString';
+        this.editor._setCaret(this._hsSegment, this._hsSegment.childNodes.length);
+        this._autoToBeShowed = false;
+        this._auto.show(this._hsSegment, '');
     }
+    return true;
+  };
 
-    /**
-     * The selection within tags is difficult. The idea is to have selection
-     * whether in a tag, or fully outside any tag. To deal the different pb,
-     * here is the logic choosen :
-     * Tags are usually "editable" (= contentEditable = true) except :
-     *   - when shift key is pressed (keydown) outside a tag : then turn all
-     *     tags un-editable. If the user modify the selection with keyboard
-     *     (shift + arrow or alike) then the browser will not let selection go
-     *     into a tag.
-     *   - when mousedown outside of a tag : then turn all tag un-editable so
-     *     that selection can not end in one of them.
-     *   - when mouseup or keyup : let all tags be editable agin and check if
-     *     the selection has an end in a tag and not the other (possible if the
-     *     change of the selection started within a tag in edition), then modify
-     *     the selection to be fully in the tag.
-     *
-    */
+  HotString.prototype._unhighLight = function(bps) {
+    var seg;
 
-
-    Tags.prototype.setTagEditable = function() {
-      var tag, _i, _len, _ref;
-
-      if (!this._areTagsEditable) {
-        _ref = this._tagList;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          tag = _ref[_i];
-          tag.contentEditable = true;
-        }
-        return this._areTagsEditable = true;
-      }
-    };
-
-    Tags.prototype.setTagUnEditable = function() {
-      var tag, _i, _len, _ref;
-
-      if (this._areTagsEditable) {
-        _ref = this._tagList;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          tag = _ref[_i];
-          tag.contentEditable = false;
-        }
-        return this._areTagsEditable = false;
-      }
-    };
-
-    Tags.prototype.create = function(type, seg) {
-      var alarm, date,
-        _this = this;
-
+    seg = this._hsSegment;
+    if (seg.parentElement) {
       seg.classList.remove('CNE_hot_string');
-      seg.contentEditable = this._areTagsEditable;
-      switch (type) {
-        case 'contact':
-          seg.classList.add('CNE_contact');
-          seg.dataset.type = 'contact';
-          return this.handle(seg);
-        case 'reminder':
-          seg.classList.add('CNE_reminder');
-          seg.dataset.type = 'reminder';
-          date = Date.create(seg.dataset.value);
-          alarm = new this.models.Alarm({
-            id: seg.dataset.id || null,
-            trigg: date.format(this.models.Alarm.dateFormat)
-          });
-          this.models.alarmCollection.add(alarm);
-          this.handle(seg);
-          return alarm.save().done(function() {
-            return seg.dataset.id = alarm.id;
-          }).fail(function(jqXHR) {
-            console.log(jqXHR);
-            console.log('failed to save CNE_reminder');
-            return _this.remove(seg);
-          });
+      seg.dataset.type = '';
+      this.editor._fusionSimilarSegments(seg.parentElement, bps);
+      this._hsTextNode = null;
+      this._hsSegment = null;
+    }
+    return true;
+  };
+
+  HotString.prototype._forceUserHotString = function(newHotString, bps) {
+    var bp, textNode, _i, _len;
+
+    textNode = this._hsTextNode;
+    textNode.textContent = newHotString;
+    for (_i = 0, _len = bps.length; _i < _len; _i++) {
+      bp = bps[_i];
+      if (bp.cont === textNode) {
+        bp.offset = newHotString.length;
       }
-    };
+    }
+    return bps;
+  };
 
-    Tags.prototype.empty = function(isFullReplaceContent) {
-      this.isFullReplaceContent = isFullReplaceContent;
-      this.oldList = _.clone(this._tagList);
-      return this._tagList = [];
-    };
+  HotString.prototype.validate = function() {
+    var item;
 
-    Tags.prototype.handle = function(seg, norefresh) {
-      return this._tagList.push(seg);
-    };
+    item = this._auto.getSelectedItem();
+    return this.editor.doHotStringAction(item);
+  };
 
-    Tags.prototype.refreshAll = function() {
-      var alarm, date, iz, newseg, oldseg, seg, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results,
-        _this = this;
-
-      iz = function(a) {
-        return function(b) {
-          return a.dataset.id === b.dataset.id;
-        };
-      };
-      if (!this.isFullReplaceContent) {
-        console.log("HERE");
-        _ref = this.oldList || [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          oldseg = _ref[_i];
-          if (!this._tagList.some(iz(oldseg))) {
-            if (oldseg.dataset.type === 'reminder') {
-              this.remove(oldseg);
-            }
-          }
-        }
-      }
-      if (this.oldList && !this.isFullReplaceContent) {
-        _ref1 = this._tagList;
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          newseg = _ref1[_j];
-          if (!this.oldList.some(iz(newseg))) {
-            if (newseg.dataset.type === 'reminder') {
-              delete newseg.dataset.id;
-              date = Date.create(newseg.dataset.value);
-              alarm = new this.models.Alarm({
-                trigg: date.format(this.models.Alarm.dateFormat)
-              });
-              this.models.alarmCollection.add(alarm);
-              alarm.save().done(function() {
-                return newseg.dataset.id = alarm.id;
-              }).fail(function(jqXHR) {
-                console.log(jqXHR);
-                console.log('failed to save CNE_reminder');
-                return _this.remove(seg);
-              });
-            }
-          }
-        }
-      }
-      _ref2 = this._tagList;
-      _results = [];
-      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-        seg = _ref2[_k];
-        _results.push(this.refresh(seg));
-      }
-      return _results;
-    };
-
-    Tags.prototype.refresh = function(seg) {
-      var model, value,
-        _this = this;
-
-      switch (seg.dataset.type) {
-        case 'reminder':
-          model = this.models.alarmCollection.get(seg.dataset.id);
-          if (model) {
-            value = Date.create(model.get('trigg')).format();
-            return seg.textContent = value;
-          } else {
-            model = new this.models.Alarm({
-              id: seg.dataset.id
-            });
-            model.fetch({
-              error: function() {
-                _this.models.alarmCollection.remove(model);
-                return _this.remove(seg);
-              }
-            });
-            return this.models.alarmCollection.add(model);
-          }
-          break;
-        case 'contact':
-          model = this.models.contactCollection.get(seg.dataset.id);
-          return seg.textContent = model.get('fn');
-      }
-    };
-
-    Tags.prototype.remove = function(seg) {
-      var model;
-
-      this._tagList = _.without(this._tagList, seg);
-      switch (seg.dataset.type) {
-        case 'reminder':
-          seg.textContent = '@@' + seg.textContent;
-          model = this.models.alarmCollection.get(seg.dataset.id);
-          if (model) {
-            model.destroy();
-          }
-          break;
-        case 'contact':
-          seg.textContent = '@' + seg.textContent;
-      }
-      seg.classList.remove('CNE_reminder');
-      seg.classList.remove('CNE_contact');
-      delete seg.dataset.id;
-      delete seg.dataset.type;
-      return delete seg.dataset.value;
-    };
-
-    /**
-     * Find and removes all tags within a range (normalize it for precaution).
-     * @param  {Range} rg The range in which the tags to remove are.
-    */
-
-
-    Tags.prototype.removeFromRange = function(rg) {
-      var endSeg, seg, startSeg;
-
-      startSeg = selection.getSegment(rg.startContainer, 0);
-      endSeg = selection.getSegment(rg.endContainer, 0);
-      console.info('_tagList at beginning', this._tagList);
-      if (startSeg === endSeg) {
-        return null;
-      }
-      seg = startSeg.nextSibling;
-      while (seg !== endSeg) {
-        if (seg.nodeName === 'BR') {
-          seg = seg.parentElement.nextSibling.firstChild;
-          if (seg === endSeg) {
-            break;
-          }
-        }
-        if (seg.dataset.type) {
-          this.remove(seg);
-        }
-        seg = seg.nextSibling;
-      }
-      return true;
-    };
-
-    Tags.prototype.clickCb = function(e) {
-      var model, oldcontactseg;
-
-      oldcontactseg = this.contactPopover.hide();
-      if (e.target.dataset.type === 'contact' && e.target !== oldcontactseg) {
-        model = this.models.contactCollection.get(e.target.dataset.id);
-        return this.contactPopover.show(e.target, model);
-      }
-    };
-
-    Tags.prototype._removeContactSegment = function(model) {
-      var seg, _i, _len, _ref, _results;
-
-      _ref = this._tagList;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        seg = _ref[_i];
-        if (seg.dataset.type === 'contact' && seg.dataset.id === model.id) {
-          _results.push(this.remove(seg));
-        } else {
-          _results.push(void 0);
-        }
-      }
-      return _results;
-    };
-
-    Tags.prototype._updateContactSegment = function(model) {
-      var seg, _i, _len, _ref, _results;
-
-      _ref = this._tagList;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        seg = _ref[_i];
-        if (seg.dataset.type === 'contact' && seg.dataset.id === model.id) {
-          _results.push(seg.textContent = model.get('fn'));
-        } else {
-          _results.push(void 0);
-        }
-      }
-      return _results;
-    };
-
-    Tags.prototype._removeReminderSegment = function(model) {
-      var seg, _i, _len, _ref, _results;
-
-      _ref = this._tagList;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        seg = _ref[_i];
-        if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
-          _results.push(this.remove(seg));
-        } else {
-          _results.push(void 0);
-        }
-      }
-      return _results;
-    };
-
-    Tags.prototype._updateReminderSegment = function(model) {
-      var seg, value, _i, _len, _ref, _results;
-
-      _ref = this._tagList;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        seg = _ref[_i];
-        if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
-          value = Date.create(model.get('trigg')).format();
-          _results.push(seg.textContent = value);
-        } else {
-          _results.push(void 0);
-        }
-      }
-      return _results;
-    };
-
-    return Tags;
-
-  })();
-  
-});
-window.require.register("CNeditor/urlpopover", function(exports, require, module) {
   /** -----------------------------------------------------------------------
-   * initialise the popover during the editor initialization.
+   * Reset hot string : the segment is removed and autocomplete hidden. In
+   * case where it was not a creation of a meta but a modification, then :
+   *   - the initial value of the meta is restored,
+   *   - except if hardReset is true .
+   * If the hsType ('@', '#' or '@@') has been deleted then the meta data
+   * segment is also removed if editing.
+   * @param  {String} dealCaret  3 values : 1/ 'current'the current caret
+   *                  position is saved and restored after. 2/ 'end' : the
+   *                  caret will be set at the end of the segment. 3/ false :
+   *                  the carret is not managed here.
+   * @param {Boolean} hardReset In the case of a meta edition, if false the
+   *                            initial value of the meta is restored, content
+   *                            of hotString segment is not modified
+   *                            otherwise.
   */
 
-  var UrlPopover,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-  module.exports = UrlPopover = (function() {
-    function UrlPopover(editor) {
-      var btnCancel, btnDelete, btnOK, textInput, urlInput, _ref, _ref1,
-        _this = this;
+  HotString.prototype.reset = function(dealCaret, hardReset) {
+    var bp, endContainer, endOffset, rg, startContainer, startOffset;
 
-      this.editor = editor;
-      this.validate = __bind(this.validate, this);
-      this.cancel = __bind(this.cancel, this);
-      this.clickOut = __bind(this.clickOut, this);
-      this.isOn = false;
-      this.el = document.createElement('div');
-      this.el.id = 'CNE_urlPopover';
-      this.el.className = 'CNE_urlpop';
-      this.el.setAttribute.contentEditable = false;
-      this.el.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">\n        (Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
-      this.el.titleElt = this.el.firstChild;
-      this.el.link = this.el.getElementsByTagName('A')[0];
-      _ref = this.el.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
-      btnOK.addEventListener('click', this.validate);
-      btnCancel.addEventListener('click', function(e) {
-        e.stopPropagation();
-        return _this.cancel(false);
-      });
-      btnDelete.addEventListener('click', function() {
-        _this.el.urlInput.value = '';
-        return _this.validate();
-      });
-      _ref1 = this.el.querySelectorAll('input'), urlInput = _ref1[0], textInput = _ref1[1];
-      this.el.urlInput = urlInput;
-      this.el.textInput = textInput;
-      this.el.addEventListener('keypress', function(e) {
-        if (e.keyCode === 13) {
-          _this.validate();
-          e.stopPropagation();
-        } else if (e.keyCode === 27) {
-          _this.cancel(false);
-        }
-        return false;
-      });
-      this.editor.editorBody.addEventListener('mouseup', this.clickOut);
+    if (!this.isPreparing) {
       return true;
     }
-
-    /** -----------------------------------------------------------------------
-     * Show, positionate and initialise the popover for link edition.
-     * @param  {array} segments  An array with the segments of
-     *                           the link [<a>,...<a>]. Must be created even if
-     *                           it is a creation in order to put a background
-     *                           on the segment where the link will be.
-     * @param  {boolean} isLinkCreation True is it is a creation. In this case,
-     *                                  if the process is canceled, the initial
-     *                                  state without link will be restored.
-    */
-
-
-    UrlPopover.prototype.show = function(segments, isLinkCreation) {
-      var href, seg, txt, _i, _j, _len, _len1;
-
-      this.editor.disable();
-      this.isOn = true;
-      this.isLinkCreation = isLinkCreation;
-      this.el.initialSelRg = this.editor.currentSel.theoricalRange.cloneRange();
-      this.el.segments = segments;
-      seg = segments[0];
-      this.el.style.left = seg.offsetLeft + 'px';
-      this.el.style.top = seg.offsetTop + 20 + 'px';
-      href = seg.href;
-      if (href === '' || href === 'http:///') {
-        href = 'http://';
-      }
-      this.el.urlInput.value = href;
-      txt = '';
-      for (_i = 0, _len = segments.length; _i < _len; _i++) {
-        seg = segments[_i];
-        txt += seg.textContent;
-      }
-      this.el.textInput.value = txt;
-      this.el.initialTxt = txt;
-      if (isLinkCreation) {
-        this.el.titleElt.textContent = 'Create Link';
-        this.el.link.style.display = 'none';
+    if (this._isEdit && !hardReset) {
+      if (dealCaret === 'current') {
+        rg = this.editor.getEditorSelection().getRangeAt(0);
+        startContainer = rg.startContainer;
+        startOffset = rg.startOffset;
+        endContainer = rg.endContainer;
+        endOffset = rg.endOffset;
+        this.editor.doHotStringAction(this._editedItem);
+        this.editor.setSelection(startContainer, startOffset, endContainer, endOffset);
       } else {
-        this.el.titleElt.textContent = 'Edit Link';
-        this.el.link.style.display = 'inline-block';
-        this.el.link.href = href;
-      }
-      seg.parentElement.parentElement.appendChild(this.el);
-      this.el.urlInput.select();
-      this.el.urlInput.focus();
-      for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
-        seg = segments[_j];
-        seg.classList.add('CNE_url_in_edition');
+        this.editor.doHotStringAction(this._editedItem);
       }
       return true;
-    };
+    }
+    if (dealCaret === 'current') {
+      rg = this.editor.getEditorSelection().getRangeAt(0);
+      bp = {
+        cont: rg.startContainer,
+        offset: rg.startOffset
+      };
+      this._unhighLight([bp]);
+    } else if (dealCaret === 'end') {
+      bp = {
+        cont: this._hsTextNode,
+        offset: this._hsTextNode.length
+      };
+      this._unhighLight([bp]);
+    } else {
+      this._unhighLight([]);
+    }
+    this._reInit();
+    this._auto.hide();
+    if (dealCaret) {
+      this.editor._setCaret(bp.cont, bp.offset);
+    }
+    return true;
+  };
 
-    /** -----------------------------------------------------------------------
-     * The callback for a click outside the popover
-    */
+  HotString.prototype._reInit = function() {
+    this._hsType = '';
+    this._hsString = '';
+    this._hsRight = '';
+    this._hsLeft = '';
+    this.isPreparing = false;
+    return this._isEdit = false;
+  };
 
-
-    UrlPopover.prototype.clickOut = function(e) {
-      var elt;
-
-      elt = e.target;
-      while (elt !== this.el && elt !== this.editor.editorBody) {
-        elt = elt.parentNode;
-      }
-      if (elt === this.el) {
-        return this.cancel(true);
-      }
-    };
-
-    /** -----------------------------------------------------------------------
-     * Close the popover and revert modifications if isLinkCreation == true
-     * @param  {boolean} doNotRestoreOginalSel If true, lets the caret at its
-     *                                         position (used when you click
-     *                                         outside url popover in order not
-     *                                         to loose the new selection)
-    */
-
-
-    UrlPopover.prototype.cancel = function(doNotRestoreOginalSel) {
-      var bp1, bp2, bps, lineDiv, s0, s1, seg, segments, sel, _i, _len;
-
-      segments = this.el.segments;
-      if (!this.isOn) {
-        return;
-      }
-      this.el.parentElement.removeChild(this.el);
-      this.isOn = false;
-      for (_i = 0, _len = segments.length; _i < _len; _i++) {
-        seg = segments[_i];
-        seg.classList.remove('CNE_url_in_edition');
-      }
-      if (this.isLinkCreation) {
-        s0 = segments[0];
-        s1 = segments[segments.length - 1];
-        bp1 = {
-          cont: s0,
-          offset: 0
+  HotString.prototype._isAHotString = function(txt) {
+    switch (txt) {
+      case 'reminder':
+        return {
+          text: 'reminder',
+          type: 'ttag',
+          value: 'reminder'
         };
-        bp2 = {
-          cont: s1,
-          offset: s1.childNodes.length
+      case 'todo':
+        return {
+          text: 'todo',
+          type: 'ttag',
+          value: 'todo'
         };
-        bps = [bp1, bp2];
-        selection.normalizeBPs(bps);
-        lineDiv = selection._getLineDiv(s0);
-        this.editor._applyAhrefToSegments(s0, s1, bps, false, '');
-        this.editor._fusionSimilarSegments(lineDiv, bps);
-        if (!doNotRestoreOginalSel) {
-          this.setSelectionBp(bp1, bp2);
+      case 'tag':
+        return {
+          text: 'tag',
+          type: 'ttag',
+          value: 'htag'
+        };
+    }
+  };
+
+  HotString.prototype.mouseDownCb = function(e) {
+    if (this.isInAuto(e.target)) {
+      return e.preventDefault();
+    }
+  };
+
+  HotString.prototype.mouseUpInAutoCb = function(e) {
+    var selectedLine;
+
+    if (this._currentMode === 'reminder') {
+      return true;
+    }
+    selectedLine = e.target;
+    while (selectedLine && selectedLine.tagName !== 'LI') {
+      selectedLine = selectedLine.parentElement;
+    }
+    if (selectedLine) {
+      return this.editor.doHotStringAction(selectedLine.item);
+    } else {
+      return this.reset('end');
+    }
+  };
+
+  HotString.prototype.isInAuto = function(elt) {
+    return elt === this.el || $(elt).parents('#CNE_autocomplete').length !== 0;
+  };
+
+  HotString.prototype.realtimeContacts = function(contactCollection) {
+    var updateItems,
+      _this = this;
+
+    if (contactCollection.length === 0) {
+      contactCollection.once('sync', function() {
+        return _this.realtimeContacts(contactCollection);
+      });
+    }
+    updateItems = function() {
+      return _this._auto.setItems('contact', contactCollection.map(function(contact) {
+        return {
+          text: contact.get('fn'),
+          type: 'contact',
+          model: contact
+        };
+      }));
+    };
+    updateItems();
+    return contactCollection.on({
+      'add': updateItems,
+      'remove': updateItems,
+      'change:name': updateItems
+    });
+  };
+
+  /**
+   * Helper for debug purpose, prints the current hotstring.
+  */
+
+
+  HotString.prototype.printHotString = function() {
+    return console.info('_hsType = "' + this._hsType + '"', '_hsLeft = "' + this._hsLeft + '"', '_hsRight = "' + this._hsRight + '"');
+  };
+
+  return HotString;
+
+})();
+
+});
+
+;require.register("CNeditor/line", function(exports, require, module) {
+/** -----------------------------------------------------------------------
+ * line$        : 
+ * lineID       : 
+ * lineType     : 
+ * lineDepthAbs : 
+ * lineDepthRel : 
+ * lineNext     : 
+ * linePrev     :
+*/
+
+var Line;
+
+Line = (function() {
+  /*
+   * If no arguments, returns an empty object (only methods), otherwise
+   * constructs a full line. The dom element of the line is inserted according
+   * to the previous or next line given in the arguments.
+   * @param  {Array}  Array of parameters :
+   *   [ 
+          editor        , # 
+          type          , # 
+          depthAbs      , # 
+          depthRelative , # 
+          prevLine      , # The prev line, null if nextLine is given
+          nextLine      , # The next line, null if prevLine is given
+          fragment        # [optional] a fragment to insert in the line, will
+                            add a br at the end if none in the fragment.
+        ]
+  */
+  function Line() {
+    var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
+
+    if (arguments.length === 0) {
+      return;
+    } else {
+      editor = arguments[0], type = arguments[1], depthAbs = arguments[2], depthRelative = arguments[3], prevLine = arguments[4], nextLine = arguments[5], fragment = arguments[6];
+    }
+    editor._highestId += 1;
+    lineID = 'CNID_' + editor._highestId;
+    newLineEl = document.createElement('div');
+    newLineEl.setAttribute('class', type + '-' + depthAbs);
+    if (fragment != null) {
+      newLineEl.appendChild(fragment);
+      if (newLineEl.lastChild.nodeName !== 'BR') {
+        newLineEl.appendChild(document.createElement('br'));
+      }
+    } else {
+      node = document.createElement('span');
+      node.appendChild(document.createTextNode(''));
+      newLineEl.appendChild(node);
+      newLineEl.appendChild(document.createElement('br'));
+    }
+    this.line$ = $(newLineEl);
+    if (prevLine != null) {
+      this.linePrev = prevLine;
+      linesDiv = prevLine.line$[0].parentNode;
+      if (prevLine.lineNext != null) {
+        nextL = prevLine.lineNext;
+        linesDiv.insertBefore(newLineEl, nextL.line$[0]);
+        this.lineNext = nextL;
+        nextL.linePrev = this;
+      } else {
+        linesDiv.appendChild(newLineEl);
+        this.lineNext = null;
+      }
+      prevLine.lineNext = this;
+    } else if (nextLine != null) {
+      linesDiv = nextLine.line$[0].parentNode;
+      this.lineNext = nextLine;
+      linesDiv.insertBefore(newLineEl, nextLine.line$[0]);
+      if (nextLine.linePrev != null) {
+        this.linePrev = nextLine.linePrev;
+        nextLine.linePrev.lineNext = this;
+      } else {
+        this.linePrev = null;
+      }
+      nextLine.linePrev = this;
+    }
+    newLineEl.id = lineID;
+    this.lineID = lineID;
+    this.lineType = type;
+    this.lineDepthAbs = depthAbs;
+    this.lineDepthRel = depthRelative;
+    editor._lines[lineID] = this;
+  }
+
+  Line.prototype.setType = function(type) {
+    this.lineType = type;
+    return this.line$.prop('class', "" + type + "-" + this.lineDepthAbs);
+  };
+
+  Line.prototype.setDepthAbs = function(absDepth) {
+    this.lineDepthAbs = absDepth;
+    return this.line$.prop('class', "" + this.lineType + "-" + absDepth);
+  };
+
+  Line.prototype.setTypeDepth = function(type, absDepth) {
+    this.lineType = type;
+    this.lineDepthAbs = absDepth;
+    return this.line$.prop('class', "" + type + "-" + absDepth);
+  };
+
+  return Line;
+
+})();
+
+Line.clone = function(line) {
+  var clone;
+
+  clone = new Line();
+  clone.line$ = line.line$.clone();
+  clone.lineID = line.lineID;
+  clone.lineType = line.lineType;
+  clone.lineDepthAbs = line.lineDepthAbs;
+  clone.lineDepthRel = line.lineDepthRel;
+  clone.linePrev = line.linePrev;
+  clone.lineNext = line.lineNext;
+  return clone;
+};
+
+module.exports = Line;
+
+});
+
+;require.register("CNeditor/logging", function(exports, require, module) {
+console.info = function() {};
+
+module.exports = {
+  /** -----------------------------------------------------------------------
+   * A utility fuction for debugging
+   * @param  {string} txt A text to print in front of the log
+  */
+
+  printHistory: function(txt, history) {
+    var arrow, content, i, step, _i, _len, _ref;
+
+    if (!txt) {
+      txt = '';
+    }
+    console.info(txt + ' _history.index : ' + history.index);
+    _ref = history.history;
+    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+      step = _ref[i];
+      if (history.index === i) {
+        arrow = ' <---';
+      } else {
+        arrow = ' ';
+        content = $(step).text();
+        if (content === '') {
+          content = '_';
         }
-      } else if (!doNotRestoreOginalSel) {
-        sel = getEditorSelection();
-        sel.removeAllRanges();
-        sel.addRange(this.el.initialSelRg);
       }
+      console.info(i, content, history.historySelect[i], arrow);
+    }
+    return true;
+  },
+  /** -----------------------------------------------------------------------
+   * A utility fuction for debugging
+   * @param  {string} txt A text to print in front of the log
+  */
+
+  printTasksModifStacks: function(txt, _tasksToBeSaved) {
+    var id, modif, res;
+
+    if (!txt) {
+      txt = '';
+    }
+    res = '  _tasksToBeSaved : ';
+    for (id in _tasksToBeSaved) {
+      modif = _tasksToBeSaved[id];
+      res += id + ':';
+      if (modif.created) {
+        res += 'created-';
+      }
+      if (modif.modified) {
+        res += 'modified-';
+      }
+      if (modif.deleted) {
+        res += 'deleted-';
+      }
+      if (modif.removed) {
+        res += 'removed-';
+      }
+      res = res.slice(0, -1);
+      res += ', ';
+    }
+    res = res.slice(0, -2);
+    console.info(res);
+    return true;
+  }
+};
+
+});
+
+;require.register("CNeditor/request", function(exports, require, module) {
+exports.request = function(type, url, data, callback) {
+  return $.ajax({
+    type: type,
+    url: url,
+    data: data != null ? JSON.stringify(data) : null,
+    contentType: data != null ? "application/json" : null,
+    success: function(data) {
+      if (callback != null) {
+        return callback(null, data);
+      }
+    },
+    error: function() {
+      if (((data != null ? data.msg : void 0) != null) && (callback != null)) {
+        return callback(new Error(data.msg));
+      } else if (callback != null) {
+        return callback(new Error("Server error occured"));
+      }
+    }
+  });
+};
+
+exports.get = function(url, callbacks) {
+  return exports.request("GET", url, null, callbacks);
+};
+
+exports.post = function(url, data, callbacks) {
+  return exports.request("POST", url, data, callbacks);
+};
+
+exports.put = function(url, data, callbacks) {
+  return exports.request("PUT", url, data, callbacks);
+};
+
+exports.del = function(url, callbacks) {
+  return exports.request("DELETE", url, null, callbacks);
+};
+
+});
+
+;require.register("CNeditor/tags", function(exports, require, module) {
+var ContactPopover, Tags, selection,
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+selection = require('./selection');
+
+ContactPopover = require('./contactpopover');
+
+/**
+ * Helpers for Tags
+ * Tag = a segment with a .dataset.type (reminder, a button of a task, a
+ * contact ...)
+*/
+
+
+module.exports = Tags = (function() {
+  function Tags(editor, models) {
+    this.editor = editor;
+    this.models = models;
+    this._updateReminderSegment = __bind(this._updateReminderSegment, this);
+    this._removeReminderSegment = __bind(this._removeReminderSegment, this);
+    this._updateContactSegment = __bind(this._updateContactSegment, this);
+    this._removeContactSegment = __bind(this._removeContactSegment, this);
+    this.handle = __bind(this.handle, this);
+    this.empty = __bind(this.empty, this);
+    this._tagList = [];
+    this.oldList = null;
+    this._areTagsEditable = true;
+    window.taglist = this._tagList;
+    this.contactPopover = new ContactPopover();
+    this.models.contactCollection.on({
+      'change:fn': this._updateContactSegment,
+      'destroy': this._removeContactSegment
+    });
+    this.models.alarmCollection.on({
+      'change:trigg': this._updateReminderSegment,
+      'destroy': this._removeReminderSegment
+    });
+  }
+
+  /**
+   * The selection within tags is difficult. The idea is to have selection
+   * whether in a tag, or fully outside any tag. To deal the different pb,
+   * here is the logic choosen :
+   * Tags are usually "editable" (= contentEditable = true) except :
+   *   - when shift key is pressed (keydown) outside a tag : then turn all
+   *     tags un-editable. If the user modify the selection with keyboard
+   *     (shift + arrow or alike) then the browser will not let selection go
+   *     into a tag.
+   *   - when mousedown outside of a tag : then turn all tag un-editable so
+   *     that selection can not end in one of them.
+   *   - when mouseup or keyup : let all tags be editable agin and check if
+   *     the selection has an end in a tag and not the other (possible if the
+   *     change of the selection started within a tag in edition), then modify
+   *     the selection to be fully in the tag.
+   *
+  */
+
+
+  Tags.prototype.setTagEditable = function() {
+    var tag, _i, _len, _ref;
+
+    if (!this._areTagsEditable) {
+      _ref = this._tagList;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        tag = _ref[_i];
+        tag.contentEditable = true;
+      }
+      return this._areTagsEditable = true;
+    }
+  };
+
+  Tags.prototype.setTagUnEditable = function() {
+    var tag, _i, _len, _ref;
+
+    if (this._areTagsEditable) {
+      _ref = this._tagList;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        tag = _ref[_i];
+        tag.contentEditable = false;
+      }
+      return this._areTagsEditable = false;
+    }
+  };
+
+  Tags.prototype.create = function(type, seg) {
+    var alarm, date,
+      _this = this;
+
+    seg.classList.remove('CNE_hot_string');
+    seg.contentEditable = this._areTagsEditable;
+    switch (type) {
+      case 'contact':
+        seg.classList.add('CNE_contact');
+        seg.dataset.type = 'contact';
+        return this.handle(seg);
+      case 'reminder':
+        seg.classList.add('CNE_reminder');
+        seg.dataset.type = 'reminder';
+        date = Date.create(seg.dataset.value);
+        alarm = new this.models.Alarm({
+          id: seg.dataset.id || null,
+          trigg: date.format(this.models.Alarm.dateFormat)
+        });
+        this.models.alarmCollection.add(alarm);
+        this.handle(seg);
+        return alarm.save().done(function() {
+          return seg.dataset.id = alarm.id;
+        }).fail(function(jqXHR) {
+          console.log(jqXHR);
+          console.log('failed to save CNE_reminder');
+          return _this.remove(seg);
+        });
+    }
+  };
+
+  Tags.prototype.empty = function(isFullReplaceContent) {
+    this.isFullReplaceContent = isFullReplaceContent;
+    this.oldList = _.clone(this._tagList);
+    return this._tagList = [];
+  };
+
+  Tags.prototype.handle = function(seg, norefresh) {
+    return this._tagList.push(seg);
+  };
+
+  Tags.prototype.refreshAll = function() {
+    var alarm, date, iz, newseg, oldseg, seg, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results,
+      _this = this;
+
+    iz = function(a) {
+      return function(b) {
+        return a.dataset.id === b.dataset.id;
+      };
+    };
+    if (!this.isFullReplaceContent) {
+      console.log("HERE");
+      _ref = this.oldList || [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        oldseg = _ref[_i];
+        if (!this._tagList.some(iz(oldseg))) {
+          if (oldseg.dataset.type === 'reminder') {
+            this.remove(oldseg);
+          }
+        }
+      }
+    }
+    if (this.oldList && !this.isFullReplaceContent) {
+      _ref1 = this._tagList;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        newseg = _ref1[_j];
+        if (!this.oldList.some(iz(newseg))) {
+          if (newseg.dataset.type === 'reminder') {
+            delete newseg.dataset.id;
+            date = Date.create(newseg.dataset.value);
+            alarm = new this.models.Alarm({
+              trigg: date.format(this.models.Alarm.dateFormat)
+            });
+            this.models.alarmCollection.add(alarm);
+            alarm.save().done(function() {
+              return newseg.dataset.id = alarm.id;
+            }).fail(function(jqXHR) {
+              console.log(jqXHR);
+              console.log('failed to save CNE_reminder');
+              return _this.remove(seg);
+            });
+          }
+        }
+      }
+    }
+    _ref2 = this._tagList;
+    _results = [];
+    for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+      seg = _ref2[_k];
+      _results.push(this.refresh(seg));
+    }
+    return _results;
+  };
+
+  Tags.prototype.refresh = function(seg) {
+    var model, value,
+      _this = this;
+
+    switch (seg.dataset.type) {
+      case 'reminder':
+        model = this.models.alarmCollection.get(seg.dataset.id);
+        if (model) {
+          value = Date.create(model.get('trigg')).format();
+          return seg.textContent = value;
+        } else {
+          model = new this.models.Alarm({
+            id: seg.dataset.id
+          });
+          model.fetch({
+            error: function() {
+              _this.models.alarmCollection.remove(model);
+              return _this.remove(seg);
+            }
+          });
+          return this.models.alarmCollection.add(model);
+        }
+        break;
+      case 'contact':
+        model = this.models.contactCollection.get(seg.dataset.id);
+        return seg.textContent = model.get('fn');
+    }
+  };
+
+  Tags.prototype.remove = function(seg) {
+    var model;
+
+    this._tagList = _.without(this._tagList, seg);
+    switch (seg.dataset.type) {
+      case 'reminder':
+        seg.textContent = '@@' + seg.textContent;
+        model = this.models.alarmCollection.get(seg.dataset.id);
+        if (model) {
+          model.destroy();
+        }
+        break;
+      case 'contact':
+        seg.textContent = '@' + seg.textContent;
+    }
+    seg.classList.remove('CNE_reminder');
+    seg.classList.remove('CNE_contact');
+    delete seg.dataset.id;
+    delete seg.dataset.type;
+    return delete seg.dataset.value;
+  };
+
+  /**
+   * Find and removes all tags within a range (normalize it for precaution).
+   * @param  {Range} rg The range in which the tags to remove are.
+  */
+
+
+  Tags.prototype.removeFromRange = function(rg) {
+    var endSeg, seg, startSeg;
+
+    startSeg = selection.getSegment(rg.startContainer, 0);
+    endSeg = selection.getSegment(rg.endContainer, 0);
+    console.info('_tagList at beginning', this._tagList);
+    if (startSeg === endSeg) {
+      return null;
+    }
+    seg = startSeg.nextSibling;
+    while (seg !== endSeg) {
+      if (seg.nodeName === 'BR') {
+        seg = seg.parentElement.nextSibling.firstChild;
+        if (seg === endSeg) {
+          break;
+        }
+      }
+      if (seg.dataset.type) {
+        this.remove(seg);
+      }
+      seg = seg.nextSibling;
+    }
+    return true;
+  };
+
+  Tags.prototype.clickCb = function(e) {
+    var model, oldcontactseg;
+
+    oldcontactseg = this.contactPopover.hide();
+    if (e.target.dataset.type === 'contact' && e.target !== oldcontactseg) {
+      model = this.models.contactCollection.get(e.target.dataset.id);
+      return this.contactPopover.show(e.target, model);
+    }
+  };
+
+  Tags.prototype._removeContactSegment = function(model) {
+    var seg, _i, _len, _ref, _results;
+
+    _ref = this._tagList;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      seg = _ref[_i];
+      if (seg.dataset.type === 'contact' && seg.dataset.id === model.id) {
+        _results.push(this.remove(seg));
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
+  Tags.prototype._updateContactSegment = function(model) {
+    var seg, _i, _len, _ref, _results;
+
+    _ref = this._tagList;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      seg = _ref[_i];
+      if (seg.dataset.type === 'contact' && seg.dataset.id === model.id) {
+        _results.push(seg.textContent = model.get('fn'));
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
+  Tags.prototype._removeReminderSegment = function(model) {
+    var seg, _i, _len, _ref, _results;
+
+    _ref = this._tagList;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      seg = _ref[_i];
+      if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
+        _results.push(this.remove(seg));
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
+  Tags.prototype._updateReminderSegment = function(model) {
+    var seg, value, _i, _len, _ref, _results;
+
+    _ref = this._tagList;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      seg = _ref[_i];
+      if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
+        value = Date.create(model.get('trigg')).format();
+        _results.push(seg.textContent = value);
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
+  return Tags;
+
+})();
+
+});
+
+;require.register("CNeditor/urlpopover", function(exports, require, module) {
+var UrlPopover, selection,
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+selection = require('./selection');
+
+/** -----------------------------------------------------------------------
+ * initialise the popover during the editor initialization.
+*/
+
+
+module.exports = UrlPopover = (function() {
+  function UrlPopover(editor) {
+    var btnCancel, btnDelete, btnOK, textInput, urlInput, _ref, _ref1,
+      _this = this;
+
+    this.editor = editor;
+    this.validate = __bind(this.validate, this);
+    this.cancel = __bind(this.cancel, this);
+    this.clickOut = __bind(this.clickOut, this);
+    this.isOn = false;
+    this.el = document.createElement('div');
+    this.el.id = 'CNE_urlPopover';
+    this.el.className = 'CNE_urlpop';
+    this.el.contentEditable = false;
+    this.el.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">\n        (Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
+    this.el.titleElt = this.el.firstChild;
+    this.el.link = this.el.getElementsByTagName('A')[0];
+    _ref = this.el.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
+    btnOK.addEventListener('click', this.validate);
+    btnCancel.addEventListener('click', function(e) {
+      e.stopPropagation();
+      return _this.cancel(false);
+    });
+    btnDelete.addEventListener('click', function() {
+      _this.el.urlInput.value = '';
+      return _this.validate();
+    });
+    _ref1 = this.el.querySelectorAll('input'), urlInput = _ref1[0], textInput = _ref1[1];
+    this.el.urlInput = urlInput;
+    this.el.textInput = textInput;
+    this.el.addEventListener('keypress', function(e) {
+      if (e.keyCode === 13) {
+        _this.validate();
+        e.stopPropagation();
+      } else if (e.keyCode === 27) {
+        _this.cancel(false);
+      }
+      return false;
+    });
+    this.editor.editorBody.addEventListener('mouseup', this.clickOut);
+    return true;
+  }
+
+  /** -----------------------------------------------------------------------
+   * Show, positionate and initialise the popover for link edition.
+   * @param  {array} segments  An array with the segments of
+   *                           the link [<a>,...<a>]. Must be created even if
+   *                           it is a creation in order to put a background
+   *                           on the segment where the link will be.
+   * @param  {boolean} isLinkCreation True is it is a creation. In this case,
+   *                                  if the process is canceled, the initial
+   *                                  state without link will be restored.
+  */
+
+
+  UrlPopover.prototype.show = function(segments, isLinkCreation) {
+    var href, seg, txt, _i, _j, _len, _len1;
+
+    this.editor.disable();
+    this.isOn = true;
+    this.isLinkCreation = isLinkCreation;
+    this.el.initialSelRg = this.editor.currentSel.theoricalRange.cloneRange();
+    this.segments = segments;
+    seg = segments[0];
+    this.el.style.left = seg.offsetLeft + 'px';
+    this.el.style.top = seg.offsetTop + 20 + 'px';
+    href = seg.href;
+    if (href === '' || href === 'http:///') {
+      href = 'http://';
+    }
+    this.el.urlInput.value = href;
+    txt = '';
+    for (_i = 0, _len = segments.length; _i < _len; _i++) {
+      seg = segments[_i];
+      txt += seg.textContent;
+    }
+    this.el.textInput.value = txt;
+    this.el.initialTxt = txt;
+    if (isLinkCreation) {
+      this.el.titleElt.textContent = 'Create Link';
+      this.el.link.style.display = 'none';
+    } else {
+      this.el.titleElt.textContent = 'Edit Link';
+      this.el.link.style.display = 'inline-block';
+      this.el.link.href = href;
+    }
+    seg.parentElement.parentElement.appendChild(this.el);
+    this.el.urlInput.select();
+    this.el.urlInput.focus();
+    for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
+      seg = segments[_j];
+      seg.classList.add('CNE_url_in_edition');
+    }
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * The callback for a click outside the popover
+  */
+
+
+  UrlPopover.prototype.clickOut = function(e) {
+    var elt;
+
+    elt = e.target;
+    while (elt !== this.el && elt !== this.editor.editorBody) {
+      elt = elt.parentNode;
+    }
+    if (elt !== this.el) {
+      return this.cancel(true);
+    }
+  };
+
+  /** -----------------------------------------------------------------------
+   * Close the popover and revert modifications if isLinkCreation == true
+   * @param  {boolean} doNotRestoreOginalSel If true, lets the caret at its
+   *                                         position (used when you click
+   *                                         outside url popover in order not
+   *                                         to loose the new selection)
+  */
+
+
+  UrlPopover.prototype.cancel = function(doNotRestoreOginalSel) {
+    var bp1, bp2, bps, lineDiv, s0, s1, seg, sel, _i, _len, _ref;
+
+    if (!this.isOn) {
+      return;
+    }
+    this.el.parentElement.removeChild(this.el);
+    this.isOn = false;
+    _ref = this.segments;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      seg = _ref[_i];
+      seg.classList.remove('CNE_url_in_edition');
+    }
+    if (this.isLinkCreation) {
+      s0 = this.segments[0];
+      s1 = this.segments[this.segments.length - 1];
+      bp1 = {
+        cont: s0,
+        offset: 0
+      };
+      bp2 = {
+        cont: s1,
+        offset: s1.childNodes.length
+      };
+      bps = [bp1, bp2];
+      selection.normalizeBPs(bps);
+      lineDiv = selection._getLineDiv(s0);
+      this.editor._applyAhrefToSegments(s0, s1, bps, false, '');
+      this.editor._fusionSimilarSegments(lineDiv, bps);
+      if (!doNotRestoreOginalSel) {
+        this.editor.setSelectionBp(bp1, bp2);
+      }
+    } else if (!doNotRestoreOginalSel) {
+      sel = this.editor.getEditorSelection();
+      sel.removeAllRanges();
+      sel.addRange(this.el.initialSelRg);
+    }
+    this.editor.setFocus();
+    this.editor.enable();
+    return true;
+  };
+
+  /** -----------------------------------------------------------------------
+   * Close the popover and applies modifications to the link.
+  */
+
+
+  UrlPopover.prototype.validate = function(event) {
+    var bp, bp1, bp2, bps, i, l, lastSeg, lineDiv, parent, rg, seg, sel, _i, _j, _k, _len, _len1, _ref, _ref1, _ref2;
+
+    if (event) {
+      event.stopPropagation();
+    }
+    if (this.el.urlInput.value === '' && this.isLinkCreation) {
+      return this.cancel(false);
+    }
+    this.el.parentElement.removeChild(this.el);
+    this.isOn = false;
+    _ref = this.segments;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      seg = _ref[_i];
+      seg.classList.remove('CNE_url_in_edition');
+    }
+    if (!this.isLinkCreation) {
+      sel = this.editor.getEditorSelection();
+      sel.removeAllRanges();
+      sel.addRange(this.el.initialSelRg);
+      this.editor._history.addStep();
+    }
+    lineDiv = this.segments[0].parentElement;
+    if (this.el.urlInput.value === '') {
+      l = this.segments.length;
+      bp1 = {
+        cont: this.segments[0].firstChild,
+        offset: 0
+      };
+      bp2 = {
+        cont: this.segments[l - 1].firstChild,
+        offset: this.segments[l - 1].firstChild.length
+      };
+      bps = [bp1, bp2];
+      this.editor._applyAhrefToSegments(this.segments[0], this.segments[l - 1], bps, false, '');
+      this.editor._fusionSimilarSegments(lineDiv, bps);
+      rg = document.createRange();
+      bp1 = bps[0];
+      bp2 = bps[1];
+      rg.setStart(bp1.cont, bp1.offset);
+      rg.setEnd(bp2.cont, bp2.offset);
+      sel = this.editor.getEditorSelection();
+      sel.removeAllRanges();
+      sel.addRange(rg);
       this.editor.setFocus();
       this.editor.enable();
+      this.editor.editorTarget$.trigger(jQuery.Event('onChange'));
       return true;
-    };
-
-    /** -----------------------------------------------------------------------
-     * Close the popover and applies modifications to the link.
-    */
-
-
-    UrlPopover.prototype.validate = function(event) {
-      var bp, bp1, bp2, bps, i, l, lastSeg, lineDiv, parent, rg, seg, segments, sel, _i, _j, _k, _len, _len1, _ref;
-
-      if (event) {
-        event.stopPropagation();
-      }
-      segments = this.el.segments;
-      if (this.el.urlInput.value === '' && this.isLinkCreation) {
-        this.cancel(false);
-        return true;
-      }
-      this.el.parentElement.removeChild(this.el);
-      this.isOn = false;
-      for (_i = 0, _len = segments.length; _i < _len; _i++) {
-        seg = segments[_i];
-        seg.classList.remove('CNE_url_in_edition');
-      }
-      if (!this.isLinkCreation) {
-        sel = getEditorSelection();
-        sel.removeAllRanges();
-        sel.addRange(this.el.initialSelRg);
-        this.editor._history.addStep();
-      }
-      lineDiv = segments[0].parentElement;
-      if (this.el.urlInput.value === '') {
-        l = segments.length;
-        bp1 = {
-          cont: segments[0].firstChild,
-          offset: 0
-        };
-        bp2 = {
-          cont: segments[l - 1].firstChild,
-          offset: segments[l - 1].firstChild.length
-        };
-        bps = [bp1, bp2];
-        this.editor._applyAhrefToSegments(segments[0], segments[l - 1], bps, false, '');
-        this.editor._fusionSimilarSegments(lineDiv, bps);
-        rg = document.createRange();
-        bp1 = bps[0];
-        bp2 = bps[1];
-        rg.setStart(bp1.cont, bp1.offset);
-        rg.setEnd(bp2.cont, bp2.offset);
-        sel = getEditorSelection();
-        sel.removeAllRanges();
-        sel.addRange(rg);
-        this.editor.setFocus();
-        this.editor.enable();
-        this.editorTarget$.trigger(jQuery.Event('onChange'));
-        return true;
-      } else if (this.el.initialTxt === this.el.textInput.value) {
-        for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
-          seg = segments[_j];
-          seg.href = this.el.urlInput.value;
-        }
-        lastSeg = seg;
-      } else {
-        seg = segments[0];
+    } else if (this.el.initialTxt === this.el.textInput.value) {
+      _ref1 = this.segments;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        seg = _ref1[_j];
         seg.href = this.el.urlInput.value;
-        seg.textContent = this.el.textInput.value;
-        parent = seg.parentNode;
-        for (i = _k = 1, _ref = segments.length - 1; _k <= _ref; i = _k += 1) {
-          seg = segments[i];
-          parent.removeChild(seg);
-        }
-        lastSeg = segments[0];
       }
-      i = selection.getSegmentIndex(lastSeg);
-      i = i[1];
-      bp = selection.normalizeBP(lineDiv, i + 1);
-      this.editor._fusionSimilarSegments(lineDiv, [bp]);
-      bp = this.insertSpaceAfterUrl(selection.getNestedSegment(bp.cont));
-      this._setCaret(bp.cont, bp.offset);
-      this.setFocus();
-      this.editor.enable();
-      this.editorTarget$.trigger(jQuery.Event('onChange'));
-      if (lineDiv.dataset.type === 'task') {
-        return this._stackTaskChange(lineDiv.task, 'modified');
+      lastSeg = seg;
+    } else {
+      seg = this.segments[0];
+      seg.href = this.el.urlInput.value;
+      seg.textContent = this.el.textInput.value;
+      parent = seg.parentNode;
+      for (i = _k = 1, _ref2 = this.segments.length - 1; _k <= _ref2; i = _k += 1) {
+        seg = this.segments[i];
+        parent.removeChild(seg);
       }
-    };
+      lastSeg = this.segments[0];
+    }
+    i = selection.getSegmentIndex(lastSeg);
+    i = i[1];
+    bp = selection.normalizeBP(lineDiv, i + 1);
+    this.editor._fusionSimilarSegments(lineDiv, [bp]);
+    bp = this.insertSpaceAfterUrl(selection.getNestedSegment(bp.cont));
+    this.editor._setCaret(bp.cont, bp.offset);
+    this.editor.setFocus();
+    this.editor.enable();
+    this.editor.editorTarget$.trigger(jQuery.Event('onChange'));
+    if (lineDiv.dataset.type === 'task') {
+      return this.editor._stackTaskChange(lineDiv.task, 'modified');
+    }
+  };
 
-    /**
-     * returns a break point, collapsed after a space caracter immediately
-     * following a given segment. A segment will we inserted if required.
-     * @param  {[type]} seg [description]
-     * @return {Object}     {cont,offset} : the break point
-    */
+  /**
+   * returns a break point, collapsed after a space caracter immediately
+   * following a given segment. A segment will we inserted if required.
+   * @param  {[type]} seg [description]
+   * @return {Object}     {cont,offset} : the break point
+  */
 
 
-    UrlPopover.prototype.insertSpaceAfterUrl = function(seg) {
-      var bp, index, nextSeg, span, txtNode;
+  UrlPopover.prototype.insertSpaceAfterUrl = function(seg) {
+    var bp, index, nextSeg, span, txtNode;
 
-      nextSeg = seg.nextSibling;
-      if (nextSeg.nodeName === 'BR') {
-        span = this.editor._insertSegmentAfterSeg(seg);
-        bp = {
-          cont: span.firstChild,
-          offset: 1
-        };
-      } else {
-        index = selection.getSegmentIndex(seg)[1] + 1;
-        bp = selection.normalizeBP(seg.parentElement, index, true);
-        txtNode = bp.cont;
-        bp.offset = 0;
-      }
-      return bp;
-    };
+    nextSeg = seg.nextSibling;
+    if (nextSeg.nodeName === 'BR') {
+      span = this.editor._insertSegmentAfterSeg(seg);
+      bp = {
+        cont: span.firstChild,
+        offset: 1
+      };
+    } else {
+      index = selection.getSegmentIndex(seg)[1] + 1;
+      bp = selection.normalizeBP(seg.parentElement, index, true);
+      txtNode = bp.cont;
+      bp.offset = 0;
+    }
+    return bp;
+  };
 
-    return UrlPopover;
+  return UrlPopover;
 
-  })();
-  
+})();
+
 });
+
+;
+//@ sourceMappingURL=CNeditor.js.map
