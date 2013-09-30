@@ -63,7 +63,7 @@ Note.patchAllPathes = function(callback) {
         path: note.path,
         version: '2'
       };
-      return note.updateAttributes(updates, callback);
+      return note.updateAttributes(updates, cb);
     }, callback);
   });
 };

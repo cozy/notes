@@ -36,7 +36,7 @@ Note.patchAllPathes = (callback) ->
                 path: note.path
                 version: '2'
 
-            note.updateAttributes updates, callback
+            note.updateAttributes updates, cb
 
         , callback
 
