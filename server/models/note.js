@@ -35,7 +35,7 @@ module.exports = Note = americano.getModel('Note', {
   parent_id: String,
   path: Auto,
   tags: Auto,
-  humanPath: [String],
+  humanPath: Auto,
   _attachments: Object,
   version: String
 });
@@ -66,6 +66,7 @@ Note.patchAllPathes = function(callback) {
       updates = {
         tags: note.tags,
         path: note.path,
+        humanPath: note.humanPath,
         version: '2'
       };
       console.log("UPDATES = ", updates);

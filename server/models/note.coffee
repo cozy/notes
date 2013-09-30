@@ -12,7 +12,7 @@ module.exports = Note = americano.getModel 'Note',
     parent_id               : String
     path                    : Auto # v2: [String] or v1: String
     tags                    : Auto
-    humanPath               : [String]
+    humanPath               : Auto
     _attachments            : Object
     version                 : String
 
@@ -39,6 +39,7 @@ Note.patchAllPathes = (callback) ->
             updates =
                 tags: note.tags
                 path: note.path
+                humanPath: note.humanPath
                 version: '2'
 
             console.log "UPDATES = ", updates

@@ -53,6 +53,7 @@ module.exports.createOldNote = (done) ->
         parent_id               : String
         path                    : String
         tags                    : String
+        humanPath               : String
         version                 : String
 
     old =
@@ -61,6 +62,7 @@ module.exports.createOldNote = (done) ->
         tags      : "[]"
         parent_id : "tree-node-all"
         path      : JSON.stringify ["test"]
+        humanPath : []
         version   : "1"
 
     # create one instance
@@ -74,6 +76,7 @@ module.exports.createOldNote = (done) ->
             tags      : []
             parent_id : @oldnoteid
             path      : JSON.stringify ["test", "toast"]
+            humanPath : "[]"
             version   : "1"
 
         Note.create old, (err, note2) =>
