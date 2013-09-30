@@ -8,7 +8,7 @@
   "repository": "https://github.com/mycozycloud/cozy-notes.git",
   "main": "server.js",
   "dependencies": {
-    "async": "=0.1.22",
+    "async": "=0.2.9",
     "americano": "=0.2.8",
     "americano-cozy": "=0.1.3",
     "cozy-realtime-adapter": "=0.12.0"
