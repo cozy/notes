@@ -48,7 +48,7 @@ describe "patching old notes (with stringified path)", ->
     before helpers.createOldNote
     before helpers.cleanModelCache
 
-    it "should unstringify all pathes", (done) ->
+    it "should unstringify all pathes 1/2", (done) ->
         # Force reloading / redefinition of new Note definition
         delete require.cache[require.resolve('../server/models/note')]
         Note = require '../server/models/note'
@@ -59,6 +59,15 @@ describe "patching old notes (with stringified path)", ->
                 note.path.should.be.an.array
                 note.path[0].should.eql "test"
                 note.destroy done
+
+    it "should unstringify all pathes 2/2", (done) ->
+        Note = require '../server/models/note'
+        Note.find @oldnoteid2, (err, note) ->
+            return done err if err
+            note.path.should.be.an.array
+            note.path[0].should.eql "test"
+            note.path[1].should.eql "toast"
+            note.destroy done
 
 describe 'NOTES', ->
 

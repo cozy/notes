@@ -53,17 +53,33 @@ Note.patchAllPathes = function(callback) {
     if (err) {
       return callback(err);
     }
-    return async.each(notes, function(note, cb) {
+    console.log("BEGIN PATCH");
+    console.log("there is " + notes.length + " notes");
+    return async.eachSeries(notes, function(note, cb) {
       var updates;
 
+      console.log("patching note " + note.id + " ?");
       if (note.version === '2') {
         return cb(null);
       }
+      console.log("YES, need patch");
       updates = {
         path: note.path,
         version: '2'
       };
-      return note.updateAttributes(updates, cb);
+      console.log("UPDATES = ", updates);
+      return note.updateAttributes(updates, function(err, updated) {
+        var id, parent_id, path;
+
+        console.log("ERR = ", err);
+        parent_id = updated.parent_id, id = updated.id, path = updated.path;
+        console.log("UPDATED = ", {
+          parent_id: parent_id,
+          id: id,
+          path: path
+        });
+        return cb(err);
+      });
     }, callback);
   });
 };

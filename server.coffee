@@ -11,4 +11,5 @@ americano.start
     Note.patchAllPathes (err) ->
         if err
             console.log "Failled to patch notes"
+            console.log err.stack
             process.exit 1

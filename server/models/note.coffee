@@ -29,14 +29,24 @@ Note.destroyAll = (callback) ->
 Note.patchAllPathes = (callback) ->
     Note.all (err, notes) ->
         return callback err if err
-        async.each notes, (note, cb) ->
+        console.log "BEGIN PATCH"
+        console.log "there is #{notes.length} notes"
+        async.eachSeries notes, (note, cb) ->
+            console.log "patching note #{note.id} ?"
             return cb null if note.version is '2'
+            console.log "YES, need patch"
 
             updates =
                 path: note.path
                 version: '2'
 
-            note.updateAttributes updates, cb
+            console.log "UPDATES = ", updates
+
+            note.updateAttributes updates, (err, updated) ->
+                console.log "ERR = ", err
+                {parent_id, id, path} = updated
+                console.log "UPDATED = ", {parent_id, id, path}
+                cb(err)
 
         , callback
 

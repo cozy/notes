@@ -17,6 +17,7 @@ americano.start({
   return Note.patchAllPathes(function(err) {
     if (err) {
       console.log("Failled to patch notes");
+      console.log(err.stack);
       return process.exit(1);
     }
   });

@@ -65,4 +65,15 @@ module.exports.createOldNote = (done) ->
     Note.create old, (err, note) =>
         return done err if err
         @oldnoteid = note.id
-        done()
+
+        old =
+            title     : "toast"
+            content   : "ctoast"
+            parent_id : @oldnoteid
+            path      : JSON.stringify ["test", "toast"]
+            version   : "1"
+
+        Note.create old, (err, note2) =>
+            return done err if err
+            @oldnoteid2 = note2.id
+            done()
