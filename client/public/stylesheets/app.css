@@ -200,6 +200,7 @@ input:invalid, textarea:invalid { background-color: #f0dddd; }
 
 table { border-collapse: collapse; border-spacing: 0; }
 td { vertical-align: top; }
+
 /*!
  * Bootstrap v2.2.2
  *
@@ -6242,6 +6243,7 @@ a.badge:hover {
 
 
 
+
 /*!
  * Datepicker for Bootstrap
  *
@@ -6425,7 +6427,8 @@ a.badge:hover {
   cursor: pointer;
   width: 16px;
   height: 16px;
-}.reminder-title {
+}
+.reminder-title {
   border-top-left-radius: 5px;
   border-top-right-radius: 5px;
   border-bottom-left-radius: 0px;
@@ -6560,6 +6563,7 @@ span.b {
 .SUGG_selected > span {
   color: #464646;
 }
+
 @font-face {
   font-family: 'fontello';
   src: url("../font/fontello.eot?68878619");
@@ -7265,7 +7269,7 @@ a {
   cursor: pointer;
 }
 .CNE_url_in_edition {
-  background-color: #f00;
+  background-color: #fe8800;
 }
 .CNE_strong {
   font-weight: bold;
@@ -7372,6 +7376,9 @@ a {
   font-size: 13px;
   width: 250px;
 }
+
+
+/*@ sourceMappingURL=CNeditor.css.map*/
 /*
  * Default Layout Theme
  *
@@ -7490,6 +7497,7 @@ p {
 		color:			#666;
 		padding-bottom: 0.35ex; /* to 'vertically center' text inside text-span */
 	}
+
 
 
 
@@ -8057,7 +8065,8 @@ button.ui-button::-moz-focus-inner { border: 0; padding: 0; } /* reset extra pad
  * http://docs.jquery.com/UI/Progressbar#theming
  */
 .ui-progressbar { height:2em; text-align: left; overflow: hidden; }
-.ui-progressbar .ui-progressbar-value {margin: -1px; height:100%; }::selection {
+.ui-progressbar .ui-progressbar-value {margin: -1px; height:100%; }
+::selection {
   background: #fe8800;
 }
 ::-moz-selection {
@@ -8120,6 +8129,7 @@ h5 {
 .tooltip.bottom .tooltip-arrow {
   border-bottom-color: #1283ff;
 }
+
 #editor #editor-container:focus {
   outline: 0;
   border: 0;
@@ -8152,6 +8162,7 @@ div[data-state="done"][data-type="task"] {
 div[data-state="done"] > .CNE_task_btn:hover {
   background-color: #fe8800;
 }
+
 #nav {
   padding: 0;
   background: #f4f4f4;
@@ -8362,6 +8373,7 @@ div[data-state="done"] > .CNE_task_btn:hover {
 .ui-layout-resizer-open:hover .ui-layout-toggler {
   background-color: #bfbfbf;
 }
+
 iframe {
   border: 0;
 }
@@ -8745,9 +8757,11 @@ iframe {
     padding-top: 53px;
   }
 }
+
 @font-facefont-family: main {
   src: url("../fonts/signika-light.ttf");
 }
+
 /* ==|== non-semantic helper classes ========================================
    Please define your styles before this section.
    ========================================================================== */
@@ -8794,3 +8808,6 @@ iframe {
   p, h2, h3 { orphans: 3; widows: 3; }
   h2, h3 { page-break-after: avoid; }
 }
+
+
+/*@ sourceMappingURL=app.css.map*/
