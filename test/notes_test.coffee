@@ -88,6 +88,7 @@ describe 'NOTES', ->
                 if needFakeIndexer
                     @indexer = helpers.fakeIndexer()
                     @indexer.listen 9104
+                done()
 
 
     after (done) ->
