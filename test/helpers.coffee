@@ -8,18 +8,18 @@ module.exports.cleanDB = (callback) ->
     Client = require('request-json').JsonClient
 
     Note.requestDestroy 'all', (err) ->
+        return callback err if err
         Task.requestDestroy 'all', (err) ->
+            return callback err if err
             Contact.requestDestroy 'all', (err) ->
+                return callback err if err
                 Alarm.requestDestroy 'all', (err) ->
-
-                    if err
-                        console.log err
-                        return callback err
+                    return callback err if err
 
                     indexer = new Client("http://localhost:9102/")
                     indexer.del "clear-all/", (err, response) ->
                         console.log err if err
-                        callback err
+                        callback null
                     , false #do not parse
 
 module.exports.createThreeContacts = (done) ->
