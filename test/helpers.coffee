@@ -19,8 +19,26 @@ module.exports.cleanDB = (callback) ->
                     indexer = new Client("http://localhost:9102/")
                     indexer.del "clear-all/", (err, response) ->
                         console.log err if err
-                        callback null
+                        callback null, err?.code is 'ECONNREFUSED'
+
                     , false #do not parse
+
+module.exports.fakeIndexer = ->
+    http = require 'http'
+    server = http.createServer (req, res) ->
+        firstcall = true
+        body = ""
+        req.on 'data', (chunk) ->
+            body += chunk
+        req.on 'end', ->
+            firstcall = false
+            if firstcall
+                res.writeHead code, 'Content-Type': 'application/json'
+                res.end JSON.stringify [id: server.expectedId]
+            else
+                res.writeHead code, 'Content-Type': 'application/json'
+                res.end JSON.stringify []
+    return server
 
 module.exports.createThreeContacts = (done) ->
     Contact = require '../server/models/contact'

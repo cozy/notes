@@ -83,10 +83,16 @@ describe 'NOTES', ->
             root: __dirname + '/..'
         , (app, server) =>
             @server = server
-            helpers.cleanDB done
+            helpers.cleanDB (err, needFakeIndexer) =>
+                return done err if err
+                if needFakeIndexer
+                    @indexer = helpers.fakeIndexer()
+                    @indexer.listen 9104
+
 
     after (done) ->
         @server.close()
+        @indexer.close()
         helpers.cleanDB done
 
 
@@ -426,6 +432,7 @@ describe 'NOTES', ->
 
             it "should returned the note with special content", (done) ->
                 data = query: "special"
+                @indexer.expectedId = note7.id if @indexer
                 client.post "notes/search", data, (err, resp, notes) ->
                     notes.length.should.not.equal 0
                     note = notes[0]

@@ -31865,7 +31865,6 @@ module.exports.Contact = Contact = (function(_super) {
   Contact.prototype.getFN = function() {
     var familly, given, middle, prefix, suffix, _ref2;
 
-    console.log("getFN", this.get('fn'), this.get('n'));
     if (this.has('fn')) {
       return this.get('fn');
     }
@@ -32887,7 +32886,7 @@ module.exports = Tags = (function() {
         date = Date.create(seg.dataset.value);
         alarm = new this.models.Alarm({
           id: seg.dataset.id || null,
-          trigg: date.format(this.models.Alarm.dateFormat)
+          trigg: date.utc().format(this.models.Alarm.dateFormat)
         });
         this.models.alarmCollection.add(alarm);
         this.handle(seg);
@@ -32940,7 +32939,7 @@ module.exports = Tags = (function() {
             delete newseg.dataset.id;
             date = Date.create(newseg.dataset.value);
             alarm = new this.models.Alarm({
-              trigg: date.format(this.models.Alarm.dateFormat)
+              trigg: date.utc().format(this.models.Alarm.dateFormat)
             });
             this.models.alarmCollection.add(alarm);
             alarm.save().done(function() {
@@ -32971,7 +32970,7 @@ module.exports = Tags = (function() {
       case 'reminder':
         model = this.models.alarmCollection.get(seg.dataset.id);
         if (model) {
-          value = Date.create(model.get('trigg')).format();
+          value = Date.utc.create(model.get('trigg')).utc(false).format();
           return seg.textContent = value;
         } else {
           model = new this.models.Alarm({
@@ -33111,7 +33110,7 @@ module.exports = Tags = (function() {
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       seg = _ref[_i];
       if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
-        value = Date.create(model.get('trigg')).format();
+        value = Date.utc.create(model.get('trigg')).utc(false).format();
         _results.push(seg.textContent = value);
       } else {
         _results.push(void 0);
