@@ -31,13 +31,18 @@ module.exports.fakeIndexer = ->
         req.on 'data', (chunk) ->
             body += chunk
         req.on 'end', ->
-            firstcall = false
+            unless server.expectedId
+                res.writeHead 200, 'Content-Type': 'application/json'
+                res.end JSON.stringify 'OK'
+                return
+
             if firstcall
-                res.writeHead code, 'Content-Type': 'application/json'
-                res.end JSON.stringify [id: server.expectedId]
+                firstcall = false
+                res.writeHead 200, 'Content-Type': 'application/json'
+                res.end JSON.stringify ids:[server.expectedId]
             else
-                res.writeHead code, 'Content-Type': 'application/json'
-                res.end JSON.stringify []
+                res.writeHead 200, 'Content-Type': 'application/json'
+                res.end JSON.stringify ids:[]
     return server
 
 module.exports.createThreeContacts = (done) ->
