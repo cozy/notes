@@ -435,6 +435,7 @@ describe 'NOTES', ->
                 data = query: "special"
                 @indexer.expectedId = note7.id if @indexer
                 client.post "notes/search", data, (err, resp, notes) ->
+                    console.log notes
                     notes.length.should.not.equal 0
                     note = notes[0]
                     note.id.should.equal note7.id

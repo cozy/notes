@@ -23,3 +23,6 @@ before_install:
     - cd ..
     - export NAME=notes
     - export TOKEN=apptoken
+
+after_failure:
+    - cat cozy-data-system/forever-ds.log

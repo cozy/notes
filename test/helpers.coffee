@@ -33,7 +33,7 @@ module.exports.fakeIndexer = ->
         req.on 'end', ->
             unless server.expectedId
                 res.writeHead 200, 'Content-Type': 'application/json'
-                res.end JSON.stringify 'OK'
+                res.end JSON.stringify success: true
                 return
 
             if firstcall
