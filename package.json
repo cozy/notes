@@ -1,6 +1,6 @@
 {
   "name": "cozy-notes",
-  "version": "0.8.0",
+  "version": "1.0.0",
   "description": "Cozy Notes is a simple and powerful note manager. Its specificity resides in its note editor which helps you to structure efficiently your notes. It also provide classical text editor shortcuts which make you ultra-efficient at typing notes.",
   "author": "Cozy Cloud <contact@cozycloud.cc> (http://cozycloud.cc)",
   "licenses": [
@@ -35,7 +35,7 @@
       "description": "Creates and edits your note documents."
     },
     "Tree": {
-      "description": "Sorts your notes within a tree structure."
+      "description": "Find the Inbox TodoList"
     },
     "Contact": {
       "description": "Create meta-tag to a contact"
@@ -48,9 +48,6 @@
     },
     "TodoList": {
       "description": "Create the \"inbox\" TodoList"
-    },
-    "Tree": {
-      "description": "Find the Inbox TodoList"
     }
   }
 }
