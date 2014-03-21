@@ -1,6 +1,6 @@
 # [Cozy](http://cozy.io) Notes
 
-Cozy Notes makes your photo management easy. Main features are: 
+Cozy Notes makes your note management easy. Main features are: 
 
 * Structured notes
 * Note search
