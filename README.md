@@ -33,7 +33,7 @@ You can contribute to the Cozy Notes in many ways:
 
 ## Hack
 
-Hacking the Notes app requires you [setup a dev environment](http://cozy.io/hack/getting-started/). Once it's done you can hack Cozy Contact just like it was your own app.
+Hacking the Notes app requires you [setup a dev environment](http://cozy.io/hack/getting-started/). Once it's done you can hack Cozy Notes just like it was your own app.
 
     git clone https://github.com/mycozycloud/cozy-notes.git
 
