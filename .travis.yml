@@ -13,12 +13,17 @@ before_install:
     - npm install forever coffee-script -g
     - npm install # data-system
     - pwd
+<<<<<<< HEAD
     - forever start -o forever-ds.log server.js
+=======
+    - NAME=data-system TOKEN=token forever start -o forever-ds.log build/server.js
+>>>>>>> 523457330f27a39c81561372feed15325336e8c4
     - ps aux | grep server.js
     - sleep 5
     - cat forever-ds.log
     - sudo netstat -plunt
     - curl http://localhost:9101/
+<<<<<<< HEAD
     - coffee commands.coffee test-install notes
     - cd ..
     - export NAME=notes
@@ -26,3 +31,9 @@ before_install:
 
 after_failure:
     - cat cozy-data-system/forever-ds.log
+=======
+    - coffee commands.coffee test-install agenda
+    - cd ..
+    - export NAME=notes
+    - export TOKEN=apptoken
+>>>>>>> 523457330f27a39c81561372feed15325336e8c4
