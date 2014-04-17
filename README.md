@@ -41,10 +41,10 @@ Run it with:
 
     node server.js
 
-Each modification of the server requires a new build, here is how to run a
-build:
+Each modification of the server coffee files requires them to be compiled into JS, here's
+how to do it:
 
-    cake build
+    cake convert
 
 Each modification of the client requires a specific build too.
 
