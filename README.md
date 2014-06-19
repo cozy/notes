@@ -1,21 +1,90 @@
-# Cozy Notes
+# [Cozy](http://cozy.io) Notes
 
-Cozy Notes is a simple and powerful note manager. Its specificity resides in
-its note editor which helps you to structure efficiently your notes. It also
-provide classical text editor shortcuts which make you ultra-efficient at
-typing notes.
+Cozy Notes makes your note management easy. Main features are: 
+
+* Structured notes
+* Note search
+* File attachment
+* Todo-list
+* Contact linking
+
+## Install
+
+We assume here that the Cozy platform is correctly [installed](http://cozy.io/host/install.html)
+ on your server.
+
+You can simply install the Notes application via the app registry. Click on ythe *Chose Your Apps* button located on the right of your Cozy Home.
+
+From the command line you can type this command:
+
+    cozy-monitor install notes
 
 
-# About Cozy
+## Contribution
 
-Cozy Notes is suited to be deployed on the Cozy platform. Cozy is the personal
-server for everyone. It allows you to install your every day web applications 
-easily on your server, a single place you control. This means you can manage 
-efficiently your data while protecting your privacy without technical skills.
+You can contribute to the Cozy Notes in many ways:
 
-More informations and hosting services on:
-https://cozycloud.cc
+* Pick up an [issue](https://github.com/mycozycloud/cozy-notes/issues?state=open) and solve it.
+* Translate it in [a new language](https://github.com/mycozycloud/cozy-notes/tree/master/client/app/locales).
+* Note tagging
+* Note sharing
+* Collaboration writing
 
-# Cozy on IRC
 
-Feel free to check out our IRC channel (#cozycloud on irc.freenode.org) if you have any technical issues/inquiries or simply to speak about Cozy cloud in general.
+## Hack
+
+Hacking the Notes app requires you [setup a dev environment](http://cozy.io/hack/getting-started/). Once it's done you can hack Cozy Notes just like it was your own app.
+
+    git clone https://github.com/mycozycloud/cozy-notes.git
+
+Run it with:
+
+    node server.js
+
+Each modification of the server coffee files requires them to be compiled into JS, here's
+how to do it:
+
+    cake convert
+
+Each modification of the client requires a specific build too.
+
+    cd client
+    brunch build
+
+## Tests
+
+![Build
+Status](https://travis-ci.org/mycozycloud/cozy-notes.png?branch=master)
+
+To run tests type the following command into the Cozy Notes folder:
+
+    cake tests
+
+In order to run the tests, you must only have the Data System started.
+
+## Icons
+
+by [iconmonstr](http://iconmonstr.com/)
+
+## License
+
+Cozy Notes is developed by Cozy Cloud and distributed under the AGPL v3 license.
+
+## What is Cozy?
+
+![Cozy Logo](https://raw.github.com/mycozycloud/cozy-setup/gh-pages/assets/images/happycloud.png)
+
+[Cozy](http://cozy.io) is a platform that brings all your web services in the
+same private space.  With it, your web apps and your devices can share data
+easily, providing you
+with a new experience. You can install Cozy on your own hardware where no one
+profiles you.
+
+## Community
+
+You can reach the Cozy Community by:
+
+* Chatting with us on IRC #cozycloud on irc.freenode.net
+* Posting on our [Forum](https://groups.google.com/forum/?fromgroups#!forum/cozy-cloud)
+* Posting issues on the [Github repos](https://github.com/mycozycloud/)
+* Mentioning us on [Twitter](http://twitter.com/mycozycloud)
