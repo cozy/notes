@@ -43,20 +43,20 @@
 
   var initModule = function(name, definition) {
     var module = {id: name, exports: {}};
+    cache[name] = module;
     definition(module.exports, localRequire(name), module);
-    var exports = cache[name] = module.exports;
-    return exports;
+    return module.exports;
   };
 
   var require = function(name, loaderPath) {
     var path = expand(name, '.');
     if (loaderPath == null) loaderPath = '/';
 
-    if (has(cache, path)) return cache[path];
+    if (has(cache, path)) return cache[path].exports;
     if (has(modules, path)) return initModule(path, modules[path]);
 
     var dirIndex = expand(path, './index');
-    if (has(cache, dirIndex)) return cache[dirIndex];
+    if (has(cache, dirIndex)) return cache[dirIndex].exports;
     if (has(modules, dirIndex)) return initModule(dirIndex, modules[dirIndex]);
 
     throw new Error('Cannot find module "' + name + '" from '+ '"' + loaderPath + '"');
@@ -41002,9 +41002,13 @@ module.exports = AutoComplete = (function() {
       it = items[_k];
       if (this._shouldDisp(it, typedTxt)) {
         nbrOfSuggestions += 1;
-        it.line.style.display = 'block';
+        if (it.line) {
+          it.line.style.display = 'block';
+        }
       } else {
-        it.line.style.display = 'none';
+        if (it.line) {
+          it.line.style.display = 'none';
+        }
       }
     }
     this._sortItems();
@@ -41143,6 +41147,9 @@ module.exports = AutoComplete = (function() {
       regText = typedTxt.replace(/\W/g, '').split('').join('[\\w ]*');
       reg = new RegExp(regText, 'i');
       this.regexStore[typedTxt] = reg;
+    }
+    if (!item.text) {
+      return false;
     }
     if (item.text.match(reg)) {
       typedCar = typedTxt.toLowerCase().split('');
@@ -43160,7 +43167,7 @@ module.exports = CNeditor = (function() {
       }
     }
     if (id.slice(0, 12) === 'CNE_task_id_') {
-      this._createTaskForLine(lineDiv);
+      this._turneTaskIntoLine(lineDiv);
       this.editorTarget$.trigger(jQuery.Event('onChange'));
     } else {
       t = new Task({
@@ -43169,7 +43176,6 @@ module.exports = CNeditor = (function() {
       this._internalTaskCounter += 1;
       t.internalId = 'CNE_task_id_' + this._internalTaskCounter;
       lineDiv.task = t;
-      lineDiv.dataset.id = t.internalId;
       t.lineDiv = lineDiv;
       t.fetch({
         silent: true
@@ -47536,7 +47542,8 @@ CNeditor = exports.CNeditor;
 ;require.register("CNeditor/externalmodels", function(exports, require, module) {
 var Alarm, Contact, Task, request, _ref, _ref1, _ref2,
   __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 request = require('./request');
 
@@ -47604,11 +47611,24 @@ module.exports.Contact = Contact = (function(_super) {
   __extends(Contact, _super);
 
   function Contact() {
-    _ref1 = Contact.__super__.constructor.apply(this, arguments);
+    this.getFN = __bind(this.getFN, this);    _ref1 = Contact.__super__.constructor.apply(this, arguments);
     return _ref1;
   }
 
   Contact.prototype.urlRoot = 'contacts';
+
+  Contact.prototype.getFN = function() {
+    var familly, given, middle, prefix, suffix, _ref2;
+
+    if (this.has('fn')) {
+      return this.get('fn');
+    }
+    if (!this.get('n')) {
+      return '';
+    }
+    _ref2 = this.get('n').split(';'), familly = _ref2[0], given = _ref2[1], middle = _ref2[2], prefix = _ref2[3], suffix = _ref2[4];
+    return "" + given + " " + middle + " " + familly;
+  };
 
   Contact.load = function(cb) {
     return module.exports.contactCollection.fetch({
@@ -48250,11 +48270,12 @@ module.exports = HotString = (function() {
       contactCollection.once('sync', function() {
         return _this.realtimeContacts(contactCollection);
       });
+      return true;
     }
     updateItems = function() {
       return _this._auto.setItems('contact', contactCollection.map(function(contact) {
         return {
-          text: contact.get('fn'),
+          text: contact.getFN(),
           type: 'contact',
           model: contact
         };
@@ -48620,7 +48641,7 @@ module.exports = Tags = (function() {
         date = Date.create(seg.dataset.value);
         alarm = new this.models.Alarm({
           id: seg.dataset.id || null,
-          trigg: date.format(this.models.Alarm.dateFormat)
+          trigg: date.utc().format(this.models.Alarm.dateFormat)
         });
         this.models.alarmCollection.add(alarm);
         this.handle(seg);
@@ -48654,7 +48675,6 @@ module.exports = Tags = (function() {
       };
     };
     if (!this.isFullReplaceContent) {
-      console.log("HERE");
       _ref = this.oldList || [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         oldseg = _ref[_i];
@@ -48674,7 +48694,7 @@ module.exports = Tags = (function() {
             delete newseg.dataset.id;
             date = Date.create(newseg.dataset.value);
             alarm = new this.models.Alarm({
-              trigg: date.format(this.models.Alarm.dateFormat)
+              trigg: date.utc().format(this.models.Alarm.dateFormat)
             });
             this.models.alarmCollection.add(alarm);
             alarm.save().done(function() {
@@ -48705,7 +48725,7 @@ module.exports = Tags = (function() {
       case 'reminder':
         model = this.models.alarmCollection.get(seg.dataset.id);
         if (model) {
-          value = Date.create(model.get('trigg')).format();
+          value = Date.utc.create(model.get('trigg')).utc(false).format();
           return seg.textContent = value;
         } else {
           model = new this.models.Alarm({
@@ -48845,7 +48865,7 @@ module.exports = Tags = (function() {
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       seg = _ref[_i];
       if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
-        value = Date.create(model.get('trigg')).format();
+        value = Date.utc.create(model.get('trigg')).utc(false).format();
         _results.push(seg.textContent = value);
       } else {
         _results.push(void 0);
@@ -62599,4 +62619,4 @@ exports.rethrow = function rethrow(err, filename, lineno){
 })({});
 
 ;
-//@ sourceMappingURL=vendor.js.map
+//# sourceMappingURL=vendor.js.map
