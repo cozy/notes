@@ -170,7 +170,7 @@
 }
 .datepicker th.next,
 .datepicker th.prev {
-  font-size: 21px;
+  font-size: 1.2em;
 }
 .datepicker thead tr:first-child th {
   cursor: pointer;
@@ -271,7 +271,7 @@
 }
 .SUGG_mention {
   font-weight: lighter;
-  font-size: 0.65em;
+  font-size: 0.7em;
   float: right;
   margin-left: 10px;
   color: #808080;
@@ -1095,7 +1095,7 @@ a {
   margin-left: 40px;
 }
 .CNE_urlpop_shortcuts {
-  font-size: 0.6em;
+  font-size: 0.7em;
   opacity: 0.5;
 }
 .CNE_urlpop-content > span {
