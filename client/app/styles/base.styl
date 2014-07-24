@@ -22,7 +22,7 @@ lightorange = #FFC47F
     background: orange
 
 html
-body  
+body
 #home-view
   height 100%
   padding 0
@@ -33,6 +33,7 @@ body
 body
   color: darkgrey
   background-color: whitegrey
+  line-height: 1.25em
 
 a:focus, a:hover
   text-decoration: underline
@@ -63,3 +64,19 @@ h1, h2, h3, h4, h5
     border-left-color: #1283FF
 .tooltip.bottom .tooltip-arrow
     border-bottom-color: #1283FF
+
+@media (max-width: 10in)
+    body
+        font-size: 0.17in
+
+@media (min-width: 10.01in)
+    body
+        font-size: 0.19in
+
+@media (min-width: 16in)
+    body
+        font-size: 0.21in
+
+@media (min-width: 24in)
+    body
+        font-size: 0.23in
