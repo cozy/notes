@@ -194,7 +194,6 @@
   color: #ebebec;
   text-align: center;
   padding: 2px;
-  font-size: 16px;
   padding: 3px;
 }
 .reminder-title:hover {
@@ -212,7 +211,7 @@
   display: block;
 }
 .reminder-input > input {
-  font-size: 14px;
+  font-size: 0.8em;
   margin-bottom: 4px;
   margin-top: 4px;
   box-shadow: none;
@@ -225,7 +224,7 @@
   position: relative;
 }
 .datepicker table {
-  font-size: 14px;
+  font-size: 0.8em;
 }
 .datepicker td.day:hover {
   background: #d6ff00;
@@ -249,7 +248,7 @@
   _moz_resizing: false;
   border-radius-top-right: 5px;
   border-radius-top-left: 5px;
-  font-size: 14px;
+  font-size: 0.8em;
   background-color: whiteSmoke;
   border-color: #000;
   border-style: solid;
@@ -272,7 +271,7 @@
 }
 .SUGG_mention {
   font-weight: lighter;
-  font-size: 11px;
+  font-size: 0.65em;
   float: right;
   margin-left: 10px;
   color: #808080;
@@ -339,7 +338,6 @@ span.b {
   background: #fe8800;
 }
 #editor-frame {
-  font-family: main;
   position: absolute;
   margin: 0;
   top: 0;
@@ -348,16 +346,12 @@ span.b {
   bottom: 0;
   color: #525252;
   background-color: #fdfdfd;
-  font: normal main, "Helvetica Neue", Arial, Helvetica, sans-serif;
-  font-family: main;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
 #editor-lines {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  font: normal main, "Helvetica Neue", Arial, Helvetica, sans-serif;
-  font-family: main;
   color: #525252;
   padding-top: 4px;
   padding-bottom: 8px;
@@ -434,7 +428,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   -webkit-box-sizing: border-box;
   font-weight: bold;
   font-variant: small-caps;
-  font-size: 17px;
   color: #34a6ff;
   border-bottom: 1px solid #dadada;
   line-height: 19px;
@@ -465,7 +458,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   margin-top: 0px;
   font-weight: bold;
   font-variant: small-caps;
-  font-size: 15px;
   color: #34a6ff;
   padding-bottom: 0px;
   counter-reset: section4;
@@ -496,7 +488,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
   counter-reset: section4;
   counter-increment: section3;
@@ -525,7 +516,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
   counter-increment: section4;
 }
@@ -553,7 +543,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-5 {
@@ -580,7 +569,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-6 {
@@ -607,7 +595,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-7 {
@@ -634,7 +621,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-8 {
@@ -661,7 +647,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-9 {
@@ -688,7 +673,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-10 {
@@ -715,7 +699,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-11 {
@@ -742,7 +725,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-12 {
@@ -769,7 +751,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-13 {
@@ -796,7 +777,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-14 {
@@ -823,7 +803,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-15 {
@@ -850,7 +829,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-16 {
@@ -877,7 +855,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-17 {
@@ -904,7 +881,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-18 {
@@ -931,7 +907,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-19 {
@@ -958,7 +933,6 @@ div[ data-state = "done"] > .CNE_task_btn {
   color: #34a6ff;
   font-style: italic;
   font-weight: normal;
-  font-size: 15px;
   padding-bottom: 0px;
 }
 .To-20 {
@@ -1103,7 +1077,7 @@ a {
   display: block;
   position: absolute;
   _moz_resizing: false;
-  font-size: 14px;
+  font-size: 0.8em;
   background-color: whiteSmoke;
   border-radius: 5px;
   border-color: #cdcdd6;
@@ -1121,7 +1095,7 @@ a {
   margin-left: 40px;
 }
 .CNE_urlpop_shortcuts {
-  font-size: 10px;
+  font-size: 0.6em;
   opacity: 0.5;
 }
 .CNE_urlpop-content > span {
@@ -1131,7 +1105,7 @@ a {
 }
 .CNE_urlpop input {
   margin-left: 7px;
-  font-size: 13px;
+  font-size: 0.8em;
   width: 250px;
 }
 
