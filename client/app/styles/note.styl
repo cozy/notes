@@ -65,7 +65,8 @@ iframe
     background-image: url('../img/background-note.jpg')
 
 #note-style
-    margin: 40px 2%
+    max-width: 40em
+    margin: 3em auto
     padding: 20px 50px
     border: 1px solid #DDD
     background: #FDFDFD
@@ -244,14 +245,21 @@ iframe
     padding: 0 0 10px 0
     margin: 0
     min-width: 250px
-    right: 14%
-    top: 50px
+    top: 3.5em
     border: 1px solid #EEE
     text-align: center
     background: white
     box-shadow: 1px 1px 2px #EEE
     color: softgrey
     z-index: 55
+    @media (max-width: 10in)
+        right: 5%
+    @media (min-width: 10.01in)
+        right: 20%
+    @media (min-width: 16in)
+        right: 30%
+    @media (min-width: 24in)
+        right: 40%
 
     .note-file
         display: none
