@@ -43,16 +43,17 @@ iframe
 
 #note-full-breadcrumb.topaffix
     position fixed
-    top 2em
-    padding-left: 3em
+    top: 0
 
-    @media (max-width: 10in)
+    @media (max-width: 16in)
         top: 0
 
 #note-full
     padding: 0
     border: 0
     box-shadow: 0
+    max-width: 42em
+    margin: auto
 
 #editor
     padding: 0
@@ -63,12 +64,11 @@ iframe
 
 #note-area
     height: 100%
-    margin: 0
+    margin: auto
     background: #F5F5F5
     background-image: url('../img/background-note.jpg')
 
 #note-style
-    max-width: 38em
     margin: 3em auto
     padding: 1.4em 3em
     border: 0.1em solid #DDD
@@ -141,7 +141,7 @@ iframe
 
 #note-full-title.topaffix
     position fixed
-    top 2.5em
+    top 3em
 
 // Buttons
 
@@ -238,19 +238,10 @@ iframe
     margin: 0
     top: 3.5em
     border: 0.1em solid #EEE
-    text-align: center
     background: white
     box-shadow: 0.1em 0.1em 0.1em #EEE
     color: softgrey
     z-index: 55
-    @media (max-width: 10in)
-        right: 5%
-    @media (min-width: 10.01in)
-        right: 20%
-    @media (min-width: 16in)
-        right: 30%
-    @media (min-width: 24in)
-        right: 40%
 
     .note-file
         display: none
@@ -278,13 +269,12 @@ iframe
             color: lightgrey - 20%
 
     #file-number
-        // float: left
         text-align: left
         padding: 0.2em
 
     #file-pic
         position: absolute !important
-        left: 60%
+        left: 65%
         top: -16px
         height: 40px
         width: 27px
@@ -295,18 +285,7 @@ iframe
 
 #note-file-list.topaffix
     position fixed
-    top 0.75em
-    right 3.5%
-    margin-right: 1.4em
-
-    @media (max-width: 10in)
-        top: 2em
-
-    #file-pic
-        left auto
-        right -10px
-        top 0
-        transform: rotate(90deg)
+    top 2em
 
 
 // Misc
@@ -378,4 +357,3 @@ iframe
 
     #editor
         padding-top: 53px
-
