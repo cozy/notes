@@ -978,7 +978,7 @@ else
 }
 .CNE_reminder:before {
   content: '\23f2\00a0\00a0';
-  font-family: 'fontello';
+  /*font-family: 'fontello';*/
   color: #f85656;
 }
 .CNE_reminder:hover {
