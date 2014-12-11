@@ -1092,27 +1092,13 @@ exports.HomeView = (function(_super) {
   };
 
   HomeView.prototype.onWindowScrolled = function() {
-    var fileList, fileListLeft, ns, nsLeft, scrollTop;
+    var scrollTop;
     scrollTop = $('#note-area').scrollTop();
     this.handleAffix($('#note-full-breadcrumb'), scrollTop, 30);
     this.handleAffix($('#note-file-list'), scrollTop, 30);
     this.handleAffix($('#note-full-title'), scrollTop, 30);
     this.handleAffix($('#faketop'), scrollTop, 30);
-    this.handleAffix($('#faketop-grad'), scrollTop, 30);
-    ns = $('#note-style');
-    nsLeft = ns.offset().left;
-    fileList = $('#note-file-list');
-    if (this.faketop.hasClass('topaffix')) {
-      fileListLeft = nsLeft + ns.width() - 200;
-      return fileList.css({
-        left: fileListLeft
-      });
-    } else {
-      fileListLeft = nsLeft + ns.width() - 600;
-      return fileList.css({
-        left: fileListLeft
-      });
-    }
+    return this.handleAffix($('#faketop-grad'), scrollTop, 30);
   };
 
   HomeView.prototype.handleAffix = function(el, scrollTop, limit) {
