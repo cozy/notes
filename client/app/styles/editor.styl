@@ -1,5 +1,5 @@
 // The main styl of the editor content is in:
-// client/app/vendor/styles/CNeditor.css
+// client/vendor/styles/CNeditor.css
 // This one is updated with CNeditor
 
 orange = #fe8800
@@ -16,14 +16,14 @@ green = #5C5
     #editor-lines:focus
         border: 0
         box-shadow: none
-        outline: 1px solid lightblue
-     
+        outline: 0.1em solid lightblue
+
     #editor-lines:hover:not(:focus)
-        outline: 1px solid lightorange 
+        outline: 0.1em solid lightorange
 
 div[data-type="task"]
     background: lightblue + 70%
-    border: 1px solid lightblue
+    border: 0.1em solid lightblue
     z-index: 10
 
 .CNE_task_btn
@@ -35,7 +35,7 @@ div[data-state="done"] > .CNE_task_btn
 
 div[data-state="done"][data-type="task"]
     background: green + 90%
-    border: 1px solid #CCC
+    border: 0.1em solid #CCC
     z-index: -10
 
 div[data-state="done"] > .CNE_task_btn:hover

@@ -24,13 +24,12 @@ iframe
 
 #note-full-breadcrumb
     position: absolute;
-    top: 20px
-    margin-top: 10px
-    margin-bottom: 10px
+    top: 1.25em
+    margin-top: 0.6em
+    margin-bottom: 0.6em
     margin-left: 2.2%
     margin-right: 2%
-    font-family: main
-    font-size: 14px
+    font-size: 0.85em
     border: 0
     color: grey + 20%
     z-index: 51
@@ -44,66 +43,70 @@ iframe
 
 #note-full-breadcrumb.topaffix
     position fixed
-    top 35px
-    padding-left: 50px
+    top: 0
+
+    @media (max-width: 16in)
+        top: 0
 
 #note-full
     padding: 0
     border: 0
     box-shadow: 0
+    max-width: 42em
+    margin: auto
 
 #editor
     padding: 0
-    padding-top: 83px
+    padding-top: 5em
     margin: 0
     width: 100%
     height: 70%
 
 #note-area
     height: 100%
-    margin: 0
+    margin: auto
     background: #F5F5F5
     background-image: url('../img/background-note.jpg')
 
 #note-style
-    margin: 40px 2%
-    padding: 20px 50px
-    border: 1px solid #DDD
+    margin: 3em auto
+    padding: 1.4em 3em
+    border: 0.1em solid #DDD
     background: #FDFDFD
     background-position: right top
     background-repeat: no-repeat
-    box-shadow: 1px 1px 2px #DDD
-    min-height: 300px
+    box-shadow: 0.1em 0.1em 0.1em #DDD
+    min-height: 20em
 
 @media(max-height: 500px)
     #note-style
-        min-height: 150px
+        min-height: 10em
 
 #faketop
-    padding-top: 50px
-    margin-top: 40px
-    border-right: 0px
+    padding-top: 3em
+    margin-top: 2.5em
+    border-right: 0
     background: #FDFDFD
     background-position: right top
     background-repeat: no-repeat
-    height: 60px
+    height: 3.6em
     padding-bottom: 0
     margin-top: 0
     border-bottom: 0
     position: fixed
-    top: -130px
+    top: -7.5em
     z-index: 50
 
 #faketop.topaffix
-    top:0px
+    top: 0
 
 #faketop-grad
     position: absolute
-    margin: 0px 50px
-    bottom: -15px
-    height: 15px
+    margin: 0 3em
+    bottom: -1em
+    height: 1em
     width: 100%
-    left: -50px
+    left: -3em
     background -webkit-linear-gradient(top, softgrey, rgba(255, 255, 255, 0))
     background -ms-linear-gradient(top, softgrey, rgba(255, 255, 255, 0))
     background -o-linear-gradient(top, softgrey, rgba(255, 255, 255, 0))
@@ -114,39 +117,31 @@ iframe
     visibility:visible
 
 #editor-container
-    margin-left: 0
-    margin-right: 0
     height: 100%
     width: 100%
-    position: relative
-    margin-top: 15px
 
 #note-full-title
-    height: 35px
     margin: 0
-    padding-left: 10px
     color: #222
-    border: 0px
+    border: 0
     background: none repeat scroll 0 0 transparent
-    font-family: main
-    font-size: 30px
-    letter-spacing: -2px
+    font-size: 1.6em
     position:absolute
-    top: 115px
+    top: 4.5em
     z-index: 53
 
 #note-full-title:hover
-    outline: 1px solid lightorange
+    outline: 0.1em solid lightorange
 
 #note-full-title:active
 #note-full-title:focus
     background-color: white
-    outline: 1px solid lightblue
+    outline: 0.1em solid lightblue
     box-shadow: none
 
 #note-full-title.topaffix
     position fixed
-    top 65px
+    top 3em
 
 // Buttons
 
@@ -155,14 +150,14 @@ iframe
     opacity: 1
     z-index: 200
     left: 3.5%;
-    top 150px
+    top: 16%
 
     .btn
-        border: 1px solid #F2F2F2
+        border: 0.1em solid #F2F2F2
         background-color: #FCFCFC
         background-image: none
         box-shadow: 0
-        padding: 8px 8px 8px 8px
+        padding: 0.5em 0.5em 0.5em 0.5em
 
 
         i
@@ -212,12 +207,12 @@ iframe
     .btn:active
     .active
         background-color: #EAEAEA
-        box-shadow: inset 4px 0px 3px #EAEAEA - 10%
+        box-shadow: inset 0.2em 0 0.2em #EAEAEA - 10%
 
 #editor-button-bar:hover
     .btn
-        box-shadow: inset -4px 0px 3px #F5F5F5
-        border: 1px solid #DDD
+        box-shadow: inset -0.25em 0 0.2em #F5F5F5
+        border: 0.1em solid #DDD
 
         i
             background-position: 0 0
@@ -226,11 +221,7 @@ iframe
     .btn:active
     .active
         background-color: #EAEAEA
-        box-shadow: inset 4px 0px 3px #EAEAEA - 10%
-
-@media(max-height:500px)
-    #editor-button-bar
-        top 80px
+        box-shadow: inset 0.25em 0 0.2em #EAEAEA - 10%
 
 
 // File list
@@ -242,28 +233,23 @@ iframe
     display: none
 
 #note-file-list
-    width: 300px
+    width: 16em
     position: absolute
-    padding: 0 0 10px 0
     margin: 0
-    min-width: 250px
-    right: 14%
-    top: 50px
-    border: 1px solid #EEE
-    text-align: center
+    top: 3.5em
+    border: 0.1em solid #EEE
     background: white
-    box-shadow: 1px 1px 2px #EEE
-    font-family: main, helvetica
+    box-shadow: 0.1em 0.1em 0.1em #EEE
     color: softgrey
     z-index: 55
 
     .note-file
         display: none
-        padding-left: 10px
-        padding-bottom: 3px
-        margin-top: 5px
+        padding-left: 0.6em
+        padding-bottom: 0.15em
+        margin-top: 0.25em
         z-index: 10
-        border-top: 1px solid softgrey
+        border-top: 0.1em solid softgrey
 
         a
             font-size: 0.9em
@@ -275,7 +261,7 @@ iframe
         button
             border: none
             background: white
-            font-size: 0.6em
+            font-size: 0.7em
             color: lightgrey
 
         button:hover
@@ -283,13 +269,12 @@ iframe
             color: lightgrey - 20%
 
     #file-number
-        // float: left
         text-align: left
-        padding: 6px
+        padding: 0.2em
 
     #file-pic
         position: absolute !important
-        left: 60%
+        left: 65%
         top: -16px
         height: 40px
         width: 27px
@@ -300,15 +285,7 @@ iframe
 
 #note-file-list.topaffix
     position fixed
-    top 17px
-    right 3.5%
-    margin-right: 20px
-
-    #file-pic
-        left auto
-        right -10px
-        top 0px
-        transform: rotate(90deg)
+    top 2.5em
 
 
 // Misc
@@ -324,14 +301,12 @@ iframe
 // Search view
 
 #search-view, #latest-view
-    font-family: main, helvetica
 
     span
-        font-style: italic
+        font-family: 'Source Sans Pro regular-italic'
 
     h1
-        font-size: 16px
-        padding: 10px
+        padding: 0.6em
 
 
     a
@@ -339,18 +314,16 @@ iframe
         color: #222
 
     h2
-        font-size: 25px
         span.date
             float right
-            font-style normal
-            font-size 20px
+            font-family 'Source Sans Pro regular'
             color black + 30%
 
     .search-result
-        margin: 10px
-        padding: 0 20px
-        border: 1px solid lightgrey
-        box-shadow: 1px 1px 2px #EEE
+        margin: 0.6em
+        padding: 0 1.25em
+        border: 0.1em solid lightgrey
+        box-shadow: 0.1em 0.1em 0.1em #EEE
         background: white
         box-shadow: none
 
@@ -384,4 +357,3 @@ iframe
 
     #editor
         padding-top: 53px
-

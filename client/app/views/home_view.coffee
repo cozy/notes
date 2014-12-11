@@ -161,18 +161,6 @@ class exports.HomeView extends Backbone.View
         @handleAffix $('#faketop'), scrollTop, 30
         @handleAffix $('#faketop-grad'), scrollTop, 30
 
-        ns = $('#note-style')
-        nsLeft = ns.offset().left
-        fileList = $('#note-file-list')
-        if @faketop.hasClass 'topaffix'
-            fileListLeft =  nsLeft  + ns.width() - 200
-            fileList.css
-                left: fileListLeft
-        else
-            fileListLeft = nsLeft  + ns.width() - 600
-            fileList.css
-                left: fileListLeft
-
     handleAffix: (el, scrollTop, limit) ->
         if scrollTop > limit
             if not el.hasClass('topaffix')
@@ -324,4 +312,3 @@ class exports.HomeView extends Backbone.View
         note.url = "notes/#{note.id}"
         @currentNote = note
         @noteView.setModel note, data
-
