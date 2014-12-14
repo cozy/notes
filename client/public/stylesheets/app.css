@@ -8755,8 +8755,7 @@ iframe {
     display: none;
   }
   #note-full-title {
-    width: 80%;
-    max-width: 80%;
+    position: static;
   }
   #note-area {
     padding: 0 0 0 10px;
@@ -8765,6 +8764,7 @@ iframe {
     padding: 0;
   }
   #note-full-breadcrumb {
+    position: static;
     padding-left: 10px;
   }
   #note-style {
@@ -8775,7 +8775,7 @@ iframe {
     left: 0;
   }
   #editor {
-    padding-top: 53px;
+    padding-top: 10px;
   }
 }
 
