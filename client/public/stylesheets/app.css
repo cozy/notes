@@ -8757,6 +8757,9 @@ iframe {
   #note-full-title {
     position: static;
   }
+  #note-full-title.topaffix {
+    top: 1.4em;
+  }
   #note-area {
     padding: 0 0 0 10px;
   }
@@ -8775,6 +8778,9 @@ iframe {
     left: 0;
   }
   #editor {
+    padding-top: 10px;
+  }
+  #faketop {
     padding-top: 10px;
   }
 }
