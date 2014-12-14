@@ -8197,6 +8197,9 @@ h5 {
 #editor #editor-lines:hover:not(:focus) {
   outline: 0.1em solid #ffc47f;
 }
+#editor .Tu-1 {
+  margin-left: 0.4em;
+}
 div[data-type="task"] {
   background: #eff7fe;
   border: 0.1em solid #cbe4fb;
@@ -8246,7 +8249,7 @@ div[data-state="done"] > .CNE_task_btn:hover {
   border-top: 0.1em solid #e8e8e8;
   border-bottom: 0.1em solid #e8e8e8;
   background-color: transparent;
-  font-size: 0.9em;
+  font-size: 0.8em;
 }
 #tree #tree-node-all > ins:first-child {
   display: none;
@@ -8503,7 +8506,7 @@ iframe {
   background: #fdfdfd;
   background-position: right top;
   background-repeat: no-repeat;
-  height: 3.6em;
+  height: 4.3em;
   padding-bottom: 0;
   margin-top: 0;
   border-bottom: 0;
