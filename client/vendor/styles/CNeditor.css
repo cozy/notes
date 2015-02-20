@@ -392,30 +392,6 @@ div[ data-state = "done"] > span {
   color: #5c5;
 }
 
-/*.CNE_task_btn {
-  display: inline-block;
-  width: 0.6em;
-  font-size: 0;
-  margin-right: 0.45em;
-  margin-left: 0.25em;
-  height: 0.6em;
-  border: 0.1em solid #34a6ff;
-  border-radius: 0.2em;
-  background-color: #fff;
-  color: #fff;
-  box-shadow: none;
-  cursor: pointer;
-}
-div[ data-state = "done"] > .CNE_task_btn {
-  background-color: #e6e6e6;
-  border-color: #b1b1b1;
-}
-.CNE_task_btn:hover {
-  background: #ffa032;
-  border-color: #ffa032;
-  font-weight: bold;
-}*/
-
 .Th-1 {
   margin-left: 0;
   padding-left: 0;
