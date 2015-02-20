@@ -6,55 +6,6 @@
  * by the browser, instead of using the font designer's original work.
  */
 
-@font-face {
-    font-family: 'Source Sans Pro bold';
-    src: url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bold.eot');
-    src: url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bold.eot?#iefix') format('embedded-opentype'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bold.woff2') format('woff2'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bold.woff') format('woff'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bold.ttf') format('truetype'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bold.svg#source_sans_probold') format('svg');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Source Sans Pro bold-italic';
-    src: url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bolditalic.eot');
-    src: url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bolditalic.eot?#iefix') format('embedded-opentype'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bolditalic.woff2') format('woff2'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bolditalic.woff') format('woff'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bolditalic.ttf') format('truetype'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-bolditalic.svg#source_sans_probold_italic') format('svg');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Source Sans Pro regular';
-    src: url('/fonts/source-sans-pro-webfontkit/sourcesanspro-regular.eot');
-    src: url('/fonts/source-sans-pro-webfontkit/sourcesanspro-regular.eot?#iefix') format('embedded-opentype'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-regular.woff2') format('woff2'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-regular.woff') format('woff'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-regular.ttf') format('truetype'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-regular.svg#source_sans_proregular') format('svg');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Source Sans Pro regular-italic';
-    src: url('/fonts/source-sans-pro-webfontkit/sourcesanspro-italic.eot');
-    src: url('/fonts/source-sans-pro-webfontkit/sourcesanspro-italic.eot?#iefix') format('embedded-opentype'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-italic.woff2') format('woff2'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-italic.woff') format('woff'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-italic.ttf') format('truetype'),
-         url('/fonts/source-sans-pro-webfontkit/sourcesanspro-italic.svg#source_sans_proitalic') format('svg');
-    font-weight: normal;
-    font-style: normal;
-}
-
-
 // Functions
 @import 'nib'
 
@@ -88,22 +39,10 @@ body
   box-sizing border-box
 
 body
-  font-family: 'Source Sans Pro regular', sans-serif
+  font-family: 'Source Sans Pro', sans-serif
   line-height: 1.35em
   color: darkgrey
   background-color: whitegrey
-
-em
-  font-style: normal
-  font-family: 'Source Sans Pro regular-italic'
-
-strong
-  font-weight: normal
-  font-family: 'Source Sans Pro bold'
-
-em strong
-strong em
-  font-family: 'Source Sans Pro bold-italic'
 
 a:focus, a:hover
   text-decoration: underline
@@ -149,3 +88,6 @@ h5
     border-left-color: #1283FF
 .tooltip.bottom .tooltip-arrow
     border-bottom-color: #1283FF
+
+input
+  font-family 'Source Sans Pro', sans-serif
