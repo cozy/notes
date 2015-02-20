@@ -29,17 +29,16 @@ div[data-type="task"]
     border: 0.1em solid lightblue
     z-index: 10
 
-.CNE_task_btn
-    background: blue
-    content: "todo"
-
-div[data-state="done"] > .CNE_task_btn
-    background: green
-
 div[data-state="done"][data-type="task"]
     background: green + 90%
     border: 0.1em solid #CCC
     z-index: -10
 
-div[data-state="done"] > .CNE_task_btn:hover
-    background-color: orange
+.CNE_task_btn
+    display inline-block
+    margin 0 0.3em
+    font-size: 0
+    cursor pointer
+
+    &::before
+        font-size 16px

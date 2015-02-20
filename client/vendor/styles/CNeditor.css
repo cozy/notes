@@ -369,7 +369,30 @@ div[ data-state = "done"] {
 div[ data-state = "done"] > span {
   color: #777;
 }
-.CNE_task_btn {
+
+.CNE_task_btn::before {
+  content: "\f0c8";
+  color: #34a6ff;
+  /* Font-awesome styles */
+  display:inline-block;
+  font:normal normal normal 14px/1 FontAwesome;
+  font-size:inherit;
+  text-rendering:auto;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  transform:translate(0, 0);
+}
+
+.CNE_task_btn:hover::before {
+  color: #fe8800;
+}
+
+[data-state=done] .CNE_task_btn::before {
+  content: "\f14a";
+  color: #5c5;
+}
+
+/*.CNE_task_btn {
   display: inline-block;
   width: 0.6em;
   font-size: 0;
@@ -391,15 +414,8 @@ div[ data-state = "done"] > .CNE_task_btn {
   background: #ffa032;
   border-color: #ffa032;
   font-weight: bold;
-}
-.CNE_task_btn::-moz-selection {
-  color: #fff;
-  background: #fff;
-}
-.CNE_task_btn::selection {
-  color: #fff;
-  background: #fff;
-}
+}*/
+
 .Th-1 {
   margin-left: 0;
   padding-left: 0;
@@ -1077,6 +1093,3 @@ a {
   font-size: 0.8em;
   width: 15em;
 }
-
-
-/*@ sourceMappingURL=CNeditor.css.map*/
