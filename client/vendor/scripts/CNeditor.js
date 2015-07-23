@@ -43,20 +43,20 @@
 
   var initModule = function(name, definition) {
     var module = {id: name, exports: {}};
+    cache[name] = module;
     definition(module.exports, localRequire(name), module);
-    var exports = cache[name] = module.exports;
-    return exports;
+    return module.exports;
   };
 
   var require = function(name, loaderPath) {
     var path = expand(name, '.');
     if (loaderPath == null) loaderPath = '/';
 
-    if (has(cache, path)) return cache[path];
+    if (has(cache, path)) return cache[path].exports;
     if (has(modules, path)) return initModule(path, modules[path]);
 
     var dirIndex = expand(path, './index');
-    if (has(cache, dirIndex)) return cache[dirIndex];
+    if (has(cache, dirIndex)) return cache[dirIndex].exports;
     if (has(modules, dirIndex)) return initModule(dirIndex, modules[dirIndex]);
 
     throw new Error('Cannot find module "' + name + '" from '+ '"' + loaderPath + '"');
@@ -95,25 +95,24 @@ var µ;
 
 µ = {};
 
+
 /* ------------------------------------------------------------------------
-# UTILITY FUNCTIONS
-# used to set ranges and help normalize selection
-#
-# parameters: elt  :  a dom object with only textNode children
-#
-# note: with google chrome, it seems that non visible elements
-#       cannot be selected with rangy (that's where 'blank' comes in)
-*/
+ * UTILITY FUNCTIONS
+ * used to set ranges and help normalize selection
+ *
+ * parameters: elt  :  a dom object with only textNode children
+ *
+ * note: with google chrome, it seems that non visible elements
+ *       cannot be selected with rangy (that's where 'blank' comes in)
+ */
 
 
 /**
  * Called only once from the editor - TODO : role to be verified
-*/
-
+ */
 
 µ.cleanSelection = function(startLine, endLine, range) {
   var endNode, startNode;
-
   if (startLine === null) {
     startLine = endLine;
     endLine = endLine.lineNext;
@@ -130,7 +129,6 @@ var µ;
 
 µ.selectAll = function(editor) {
   var range, sel;
-
   range = document.createRange();
   range.setStartBefore(editor.linesDiv.firstChild);
   range.setEndAfter(editor.linesDiv.lastChild);
@@ -140,30 +138,30 @@ var µ;
   return sel.addRange(range);
 };
 
+
 /**
  * Called only once from the editor - TODO : role to be verified
-*/
-
+ */
 
 µ.cloneEndFragment = function(range, endLine) {
   var range4fragment;
-
   range4fragment = rangy.createRangyRange();
   range4fragment.setStart(range.endContainer, range.endOffset);
   range4fragment.setEndAfter(endLine.line$[0].lastChild);
   return range4fragment.cloneContents();
 };
 
+
 /* ------------------------------------------------------------------------
-#  normalize(range)
-#
-#  Modify 'range' containers and offsets so it represent a clean selection
-#  that starts and ends inside a textNode.
-#
-#  Set the flag isEmptyLine to true if an empty line is being normalized
-#  so further suppr ~ backspace work properly.
-#
-#  All possible breakpoints :
+ *  normalize(range)
+ *
+ *  Modify 'range' containers and offsets so it represent a clean selection
+ *  that starts and ends inside a textNode.
+ *
+ *  Set the flag isEmptyLine to true if an empty line is being normalized
+ *  so further suppr ~ backspace work properly.
+ *
+ *  All possible breakpoints :
     - <span>|<nodeText>|Text |node content|</nodeText>|<any>...</nodeText>|</span>
            BP1        BP2   BP3          BP4         BP5             BP6
 
@@ -257,12 +255,10 @@ var µ;
         |----------------------|-----------------------|
         | cont = body          | bpEnd(cont.lastChild) |
         | offset = cont.length |                       |
-*/
-
+ */
 
 µ.normalize = function(rg, preferNext) {
   var isCollapsed, newEndBP, newStartBP;
-
   isCollapsed = rg.collapsed;
   newStartBP = µ.normalizeBP(rg.startContainer, rg.startOffset, preferNext);
   rg.setStart(newStartBP.cont, newStartBP.offset);
@@ -276,6 +272,7 @@ var µ;
   return [newStartBP, newEndBP];
 };
 
+
 /**
  * Returns a break point in the most pertinent text node given a random bp.
  * @param  {element} cont   the container of the break point
@@ -284,18 +281,16 @@ var µ;
  *                              to go in next sibling - if it exists - rather
  *                              than in the previous one.
  * @return {object} the suggested break point : {cont:newCont,offset:newOffset}
-*/
-
+ */
 
 µ.normalizeBP = function(cont, offset, preferNext) {
-  var newCont, newOffset, res, _ref;
-
+  var newCont, newOffset, ref, res;
   if (cont.nodeName === '#text') {
     res = {
       cont: cont,
       offset: offset
     };
-  } else if ((_ref = cont.nodeName) === 'SPAN' || _ref === 'A') {
+  } else if ((ref = cont.nodeName) === 'SPAN' || ref === 'A') {
     if (offset > 0) {
       newCont = cont.childNodes[offset - 1];
       newOffset = newCont.length;
@@ -362,6 +357,7 @@ var µ;
   return res;
 };
 
+
 /**
  * Normalize an array of breakpoints.
  * @param  {Array} bps   An array of break points to normalize
@@ -369,14 +365,12 @@ var µ;
  *                              to go in next sibling - if it exists - rather
  *                              than in the previous one.
  * @return {Array} A ref to the array of normalized bp.
-*/
-
+ */
 
 µ.normalizeBPs = function(bps, preferNext) {
-  var bp, newBp, _i, _len;
-
-  for (_i = 0, _len = bps.length; _i < _len; _i++) {
-    bp = bps[_i];
+  var bp, j, len, newBp;
+  for (j = 0, len = bps.length; j < len; j++) {
+    bp = bps[j];
     newBp = µ.normalizeBP(bp.cont, bp.offset, preferNext);
     bp.cont = newBp.cont;
     bp.offset = newBp.offset;
@@ -384,18 +378,17 @@ var µ;
   return bps;
 };
 
+
 /**
  * return the div corresponding to an element inside a line and tells wheter
  * the breabk point is at the end or at the beginning of the line
  * @param  {element} cont   the container of the break point
  * @param  {number} offset offset of the break point
  * @return {object}        {div[element], isStart[bool], isEnd[bool]}
-*/
-
+ */
 
 µ.getLineDivIsStartIsEnd = function(cont, offset) {
-  var index, isEnd, isStart, n, nodeI, parent, segmentI, _ref;
-
+  var index, isEnd, isStart, n, nodeI, parent, ref, segmentI;
   if (cont.nodeName === 'DIV' && (cont.id != null) && cont.id.substr(0, 5) === 'CNID_') {
     if (cont.textContent === '') {
       return {
@@ -436,7 +429,7 @@ var µ;
       isEnd: true
     };
   }
-  _ref = µ.getSegmentIndex(cont), segmentI = _ref[0], nodeI = _ref[1];
+  ref = µ.getSegmentIndex(cont), segmentI = ref[0], nodeI = ref[1];
   n = parent.childNodes.length;
   isStart = isStart && (segmentI === 0);
   isEnd = isEnd && ((nodeI === n - 1) || (nodeI === n - 2));
@@ -449,7 +442,6 @@ var µ;
 
 µ.putStartOnStart = function(range, elt) {
   var blank, offset;
-
   if ((elt != null ? elt.firstChild : void 0) != null) {
     offset = elt.firstChild.textContent.length;
     if (offset === 0) {
@@ -465,7 +457,6 @@ var µ;
 
 µ.putEndOnStart = function(range, elt) {
   var blank, offset;
-
   if ((elt != null ? elt.firstChild : void 0) != null) {
     offset = elt.firstChild.textContent.length;
     if (offset === 0) {
@@ -479,17 +470,16 @@ var µ;
   }
 };
 
+
 /**
  * Returns the DIV of the line where the break point is.
  * @param  {element} cont   The contener of the break point
  * @param  {number} offset Offset of the break point.
  * @return {element}        The DIV of the line where the break point is.
-*/
-
+ */
 
 µ.getLineDiv = function(cont, offset) {
   var startDiv;
-
   if (cont.nodeName === 'DIV') {
     if (cont.id === 'editor-lines') {
       startDiv = cont.children[offset];
@@ -504,13 +494,13 @@ var µ;
 
 µ._getLineDiv = function(elt) {
   var parent;
-
   parent = elt;
   while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
     parent = parent.parentNode;
   }
   return parent;
 };
+
 
 /**
  * Returns the segment (span or a or lineDiv) of the line where the break
@@ -520,12 +510,10 @@ var µ;
  * @param  {number} offset  Offset of the break point. Optional if cont is a
  *                          text node
  * @return {element}        The DIV of the line where the break point is.
-*/
-
+ */
 
 µ.getSegment = function(cont, offset) {
   var startDiv;
-
   if (cont.nodeName === 'DIV') {
     if (cont.id === 'editor-lines') {
       startDiv = cont.children[Math.min(offset, cont.children.length - 1)];
@@ -542,7 +530,6 @@ var µ;
 
 µ.getNestedSegment = function(elt) {
   var parent;
-
   parent = elt.parentNode;
   while (!((parent.nodeName === 'DIV' && (parent.id != null) && (parent.id.substr(0, 5) === 'CNID_' || parent.id === 'editor-lines')) && parent.parentNode !== null)) {
     elt = parent;
@@ -563,12 +550,12 @@ var µ;
   return seg;
 };
 
+
 /**
  * returns previous segment if one, none otherwise
  * @param  {Element} seg The source segment
  * @return {element}     Returns previous segment if one, none otherwise
-*/
-
+ */
 
 µ.getPrevSegment = function(seg) {
   seg = seg.previousSibling;
@@ -578,50 +565,47 @@ var µ;
   return seg;
 };
 
+
 /**
  * Returns the normalized break point at the end of the previous segment of the
  * segment of an element.
  * @param {[type]} elmt [description]
-*/
-
+ */
 
 µ.setBpPreviousSegEnd = function(elmt) {
   var bp, index, seg;
-
   seg = µ.getNestedSegment(elmt);
   index = µ.getNodeIndex(seg);
   return bp = µ.normalizeBP(seg.parentNode, index);
 };
 
+
 /**
  * Returns the normalized break point at the start of the next segment of the
  * segment of an element.
  * @param {[type]} elmt [description]
-*/
-
+ */
 
 µ.setBpNextSegEnd = function(elmt) {
   var bp, index, seg;
-
   seg = µ.getNestedSegment(elmt);
   index = µ.getNodeIndex(seg) + 1;
   return bp = µ.normalizeBP(seg.parentNode, index, true);
 };
 
+
 /**
  * Returns [segmentIndex,nodeIndex]
  * @param  {Element} segment The segment to find it's indexes
  * @return {Array}         [segmentIndex,nodeIndex]
-*/
-
+ */
 
 µ.getSegmentIndex = function(segment) {
-  var i, segmentI, sibling, _i, _len, _ref;
-
+  var i, j, len, ref, segmentI, sibling;
   segmentI = 0;
-  _ref = segment.parentNode.childNodes;
-  for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-    sibling = _ref[i];
+  ref = segment.parentNode.childNodes;
+  for (i = j = 0, len = ref.length; j < len; i = ++j) {
+    sibling = ref[i];
     if (sibling.classList.contains('CNE_task_btn')) {
       segmentI += -1;
     }
@@ -634,11 +618,10 @@ var µ;
 };
 
 µ.getNodeIndex = function(node) {
-  var i, index, sibling, _i, _len, _ref;
-
-  _ref = node.parentNode.childNodes;
-  for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-    sibling = _ref[i];
+  var i, index, j, len, ref, sibling;
+  ref = node.parentNode.childNodes;
+  for (i = j = 0, len = ref.length; j < len; i = ++j) {
+    sibling = ref[i];
     if (sibling === node) {
       index = i;
       break;
@@ -651,15 +634,15 @@ module.exports = µ;
 
 });
 
-;require.register("CNeditor/md2cozy", function(exports, require, module) {
-/* ------------------------------------------------------------------------
-#  MARKUP LANGUAGE CONVERTERS
-# _cozy2md (Read a string of editor html code format and turns it into a
-#           string in markdown format)
-# _md2cozy (Read a string of html code given by showdown and turns it into
-#           a string of editor html code)
-*/
+require.register("CNeditor/md2cozy", function(exports, require, module) {
 
+/* ------------------------------------------------------------------------
+ *  MARKUP LANGUAGE CONVERTERS
+ * _cozy2md (Read a string of editor html code format and turns it into a
+ *           string in markdown format)
+ * _md2cozy (Read a string of html code given by showdown and turns it into
+ *           a string of editor html code)
+ */
 var md2cozy;
 
 md2cozy = {};
@@ -670,21 +653,20 @@ if (!String.prototype.trim) {
   };
 }
 
-/* ------------------------------------------------------------------------
-#  _cozy2md
-# Turns line elements form editor into a string in markdown format
-*/
 
+/* ------------------------------------------------------------------------
+ *  _cozy2md
+ * Turns line elements form editor into a string in markdown format
+ */
 
 md2cozy.cozy2md = function(linesDiv) {
-  var line, lineMetaData, lines, markCode, prevLineMetaData, segment, _i, _j, _len, _len1, _ref, _ref1;
-
+  var j, k, len, len1, line, lineMetaData, lines, markCode, prevLineMetaData, ref, ref1, segment;
   md2cozy.currentDepth = 0;
   lines = [];
   prevLineMetaData = null;
-  _ref = linesDiv.children();
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    line = _ref[_i];
+  ref = linesDiv.children();
+  for (j = 0, len = ref.length; j < len; j++) {
+    line = ref[j];
     if (line.id === 'CNE_urlPopover') {
       continue;
     }
@@ -692,9 +674,9 @@ md2cozy.cozy2md = function(linesDiv) {
     lineMetaData = md2cozy.getLineMetadata(line.attr('class'));
     markCode = md2cozy.buildMarkdownPrefix(lineMetaData, prevLineMetaData);
     prevLineMetaData = lineMetaData;
-    _ref1 = line.children();
-    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-      segment = _ref1[_j];
+    ref1 = line.children();
+    for (k = 0, len1 = ref1.length; k < len1; k++) {
+      segment = ref1[k];
       if (segment.nodeType === 1) {
         markCode += md2cozy.convertInlineEltToMarkdown($(segment));
       } else {
@@ -708,7 +690,6 @@ md2cozy.cozy2md = function(linesDiv) {
 
 md2cozy.getLineMetadata = function(name) {
   var data, depth, type;
-
   if (name != null) {
     data = name.split("-");
     type = data[0];
@@ -726,17 +707,16 @@ md2cozy.getLineMetadata = function(name) {
 };
 
 md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
-  var blanks, dieses, i, nbBlanks, prefix, _i, _j, _k, _ref, _ref1, _ref2;
-
+  var blanks, dieses, i, j, k, l, nbBlanks, prefix, ref, ref1, ref2;
   blanks = "";
   switch (metadata.type) {
     case 'Th':
       dieses = '';
-      for (i = _i = 1, _ref = metadata.depth; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
+      for (i = j = 1, ref = metadata.depth; 1 <= ref ? j <= ref : j >= ref; i = 1 <= ref ? ++j : --j) {
         dieses += '#';
       }
       md2cozy.currentDepth = metadata.depth;
-      prefix = "" + dieses + " ";
+      prefix = dieses + " ";
       if (prevMetadata != null) {
         prefix = "\n\n" + prefix;
       }
@@ -746,11 +726,11 @@ md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
     case 'Tu':
       nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
       if (nbBlanks > 0) {
-        for (i = _j = 0, _ref1 = nbBlanks - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+        for (i = k = 0, ref1 = nbBlanks - 1; 0 <= ref1 ? k <= ref1 : k >= ref1; i = 0 <= ref1 ? ++k : --k) {
           blanks += '    ';
         }
       }
-      prefix = "" + blanks + "* ";
+      prefix = blanks + "* ";
       if ((prevMetadata != null ? prevMetadata.type : void 0) === "Tu" || (prevMetadata != null ? prevMetadata.type : void 0) === "Lu") {
         prefix = "\n" + prefix;
       } else if (prevMetadata != null) {
@@ -760,7 +740,7 @@ md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
     case 'Lu':
       nbBlanks = metadata.depth - md2cozy.currentDepth - 1;
       if (nbBlanks > 0) {
-        for (i = _k = 0, _ref2 = nbBlanks - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
+        for (i = l = 0, ref2 = nbBlanks - 1; 0 <= ref2 ? l <= ref2 : l >= ref2; i = 0 <= ref2 ? ++l : --l) {
           blanks += '    ';
         }
       }
@@ -772,7 +752,6 @@ md2cozy.buildMarkdownPrefix = function(metadata, prevMetadata) {
 
 md2cozy.convertInlineEltToMarkdown = function(obj) {
   var alt, classList, href, src, title;
-
   switch (obj[0].nodeName) {
     case 'A':
       title = obj.attr('title') != null ? obj.attr('title') : "";
@@ -798,15 +777,14 @@ md2cozy.convertInlineEltToMarkdown = function(obj) {
   }
 };
 
-/* ------------------------------------------------------------------------
-# Read a string of html code given by showdown and turns it into a string
-# of editor html code
-*/
 
+/* ------------------------------------------------------------------------
+ * Read a string of html code given by showdown and turns it into a string
+ * of editor html code
+ */
 
 md2cozy.md2cozy = function(text) {
   var conv, cozyCode, htmlCode;
-
   conv = new Showdown.converter();
   htmlCode = $(conv.makeHtml(text));
   cozyCode = '';
@@ -823,7 +801,6 @@ md2cozy.md2cozy = function(text) {
 
 md2cozy.parseLine = function(obj) {
   var tag;
-
   tag = obj[0].tagName;
   if ((tag != null) && tag[0] === "H") {
     md2cozy.editorDepth = parseInt(tag[1], 10);
@@ -837,13 +814,11 @@ md2cozy.parseLine = function(obj) {
 
 md2cozy.buildEditorLine = function(type, depth, obj) {
   var code;
-
   md2cozy.currentId++;
   code = '';
   if (obj != null) {
     obj.contents().each(function() {
       var name;
-
       name = this.nodeName;
       if (name === "#text") {
         return code += "<span>" + ($(this).text()) + "</span>";
@@ -861,8 +836,7 @@ md2cozy.buildEditorLine = function(type, depth, obj) {
 };
 
 md2cozy.parseList = function(obj) {
-  var child, cozyCode, i, nodeName, tag, type, _i, _len, _ref;
-
+  var child, cozyCode, i, j, len, nodeName, ref, tag, type;
   tag = obj[0].tagName;
   cozyCode = "";
   if ((tag != null) && tag === "UL") {
@@ -872,9 +846,9 @@ md2cozy.parseList = function(obj) {
     });
     md2cozy.editorDepth--;
   } else if ((tag != null) && tag === "LI" && (obj.contents().get(0) != null)) {
-    _ref = obj[0].childNodes;
-    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-      child = _ref[i];
+    ref = obj[0].childNodes;
+    for (i = j = 0, len = ref.length; j < len; i = ++j) {
+      child = ref[i];
       child = $(child);
       type = "Lu";
       if (i === 0) {
@@ -900,19 +874,18 @@ exports.md2cozy = md2cozy;
 
 });
 
-;require.register("CNeditor/realtimer", function(exports, require, module) {
-var ExternalModels, SocketListener, realtimer, _ref,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+require.register("CNeditor/realtimer", function(exports, require, module) {
+var ExternalModels, SocketListener, realtimer,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
 
 ExternalModels = require('./externalmodels');
 
-SocketListener = (function(_super) {
-  __extends(SocketListener, _super);
+SocketListener = (function(superClass) {
+  extend(SocketListener, superClass);
 
   function SocketListener() {
-    _ref = SocketListener.__super__.constructor.apply(this, arguments);
-    return _ref;
+    return SocketListener.__super__.constructor.apply(this, arguments);
   }
 
   SocketListener.prototype.models = {
@@ -924,19 +897,18 @@ SocketListener = (function(_super) {
   SocketListener.prototype.events = ['alarm.update', 'alarm.delete', 'contact.create', 'contact.update', 'contact.delete', 'task.update', 'task.delete'];
 
   SocketListener.prototype.onRemoteCreate = function(model) {
-    var collection, _i, _len, _ref1, _results;
-
-    _ref1 = this.collections;
-    _results = [];
-    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-      collection = _ref1[_i];
+    var collection, i, len, ref, results;
+    ref = this.collections;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      collection = ref[i];
       if (model instanceof collection.model) {
-        _results.push(collection.add(model));
+        results.push(collection.add(model));
       } else {
-        _results.push(void 0);
+        results.push(void 0);
       }
     }
-    return _results;
+    return results;
   };
 
   SocketListener.prototype.onRemoteDelete = function(model) {
@@ -957,7 +929,7 @@ module.exports = realtimer;
 
 });
 
-;
+
 jade = (function(exports){
 /*!
  * Jade - runtime
@@ -1137,7 +1109,7 @@ exports.rethrow = function rethrow(err, filename, lineno){
 
 })({});
 
-;/*!
+/*!
  * jQuery JavaScript Library v1.8.2
  * http://jquery.com/
  *
@@ -10578,7 +10550,7 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 })( window );
 
-;/**
+/**
  * @license Rangy, a cross-browser JavaScript range and selection library
  * http://code.google.com/p/rangy/
  *
@@ -13803,7 +13775,7 @@ rangy.createModule("DomUtil", function(api, module) {
     });
 });
 
-;/*
+/*
  Serializer module for Rangy.
  Serializes Ranges and Selections. An example use would be to store a user's selection on a particular page in a
  cookie or local storage and restore it on the user's next visit to the same page.
@@ -13826,7 +13798,7 @@ c.split("|");for(var e=g.getSelection(b),d=[],f=0,h=c.length;f<h;++f)d[f]=q(c[f]
 b.push(f>>12|224,f>>6&63|128,f&63|128)}a=-1;if(!c){e=[];d=0;for(var h;d<256;++d){h=d;for(f=8;f--;)if((h&1)==1)h=h>>>1^3988292384;else h>>>=1;e[d]=h>>>0}c=e}e=c;d=0;for(f=b.length;d<f;++d){h=(a^b[d])&255;a=a>>>8^e[h]}return(a^-1)>>>0}}(),i=g.dom;g.serializePosition=l;g.deserializePosition=m;g.serializeRange=p;g.deserializeRange=q;g.canDeserializeRange=r;g.serializeSelection=s;g.deserializeSelection=t;g.canDeserializeSelection=function(c,a,b){var e;if(a)e=b?b.document:i.getDocument(a);else{b=b||window;
 a=b.document.documentElement}c=c.split("|");b=0;for(var d=c.length;b<d;++b)if(!r(c[b],a,e))return false;return true};g.restoreSelectionFromCookie=function(c){c=c||window;var a;a:{a=c.document.cookie.split(/[;,]/);for(var b=0,e=a.length,d;b<e;++b){d=a[b].split("=");if(d[0].replace(/^\s+/,"")=="rangySerializedSelection")if(d=d[1]){a=decodeURIComponent(d.replace(/\s+$/,""));break a}}a=null}a&&t(a,c.doc)};g.saveSelectionCookie=function(c,a){c=c||window;a=typeof a=="object"?a:{};var b=a.expires?";expires="+
 a.expires.toUTCString():"",e=a.path?";path="+a.path:"",d=a.domain?";domain="+a.domain:"",f=a.secure?";secure":"",h=s(g.getSelection(c));c.document.cookie=encodeURIComponent("rangySerializedSelection")+"="+encodeURIComponent(h)+b+e+d+f};g.getElementChecksum=j});
-;//
+//
 // showdown.js -- A javascript port of Markdown.
 //
 // Copyright (c) 2007 John Fraser.
@@ -15167,7 +15139,7 @@ var escapeCharacters_callback = function(wholeMatch,m1) {
 
 // export
 if (typeof module !== 'undefined') module.exports = Showdown;
-;// Generated by CoffeeScript 1.6.2
+// Generated by CoffeeScript 1.6.2
 (function() {
   var CozySocketListener, global,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
@@ -15416,7 +15388,7 @@ if (typeof module !== 'undefined') module.exports = Showdown;
 
 }).call(this);
 
-;/*
+/*
  *  Sugar Library v1.3.9
  *
  *  Freely distributable and licensed under the MIT-style license.
@@ -19971,6 +19943,396 @@ Date.addLocale('zh-TW', {
   });
 
 })();
+/*!
+ * © 2014 Second Street, MIT License <http://opensource.org/licenses/MIT>
+ * Talker.js 1.0.1 <http://github.com/secondstreet/talker.js>
+ */
+//region Constants
+var TALKER_TYPE = 'application/x-talkerjs-v1+json';
+var TALKER_ERR_TIMEOUT = 'timeout';
+//endregion Constants
+
+//region Third-Party Libraries
+/*
+ * PinkySwear.js 2.1 - Minimalistic implementation of the Promises/A+ spec
+ * Modified slightly for embedding in Talker.js
+ *
+ * Public Domain. Use, modify and distribute it any way you like. No attribution required.
+ *
+ * NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+ *
+ * PinkySwear is a very small implementation of the Promises/A+ specification. After compilation with the
+ * Google Closure Compiler and gzipping it weighs less than 500 bytes. It is based on the implementation for
+ * Minified.js and should be perfect for embedding.
+ *
+ * https://github.com/timjansen/PinkySwear.js
+ */
+var pinkySwearPromise = (function() {
+  var undef;
+
+  function isFunction(f) {
+    return typeof f == 'function';
+  }
+  function isObject(f) {
+    return typeof f == 'object';
+  }
+  function defer(callback) {
+    if (typeof setImmediate != 'undefined')
+  setImmediate(callback);
+    else if (typeof process != 'undefined' && process['nextTick'])
+  process['nextTick'](callback);
+    else
+  setTimeout(callback, 0);
+  }
+
+  return function pinkySwear() {
+    var state;           // undefined/null = pending, true = fulfilled, false = rejected
+    var values = [];     // an array of values as arguments for the then() handlers
+    var deferred = [];   // functions to call when set() is invoked
+
+    var set = function(newState, newValues) {
+      if (state == null && newState != null) {
+        state = newState;
+        values = newValues;
+        if (deferred.length)
+          defer(function() {
+            for (var i = 0; i < deferred.length; i++)
+            deferred[i]();
+          });
+      }
+      return state;
+    };
+
+    set['then'] = function (onFulfilled, onRejected) {
+      var promise2 = pinkySwear();
+      var callCallbacks = function() {
+        try {
+          var f = (state ? onFulfilled : onRejected);
+          if (isFunction(f)) {
+            function resolve(x) {
+              var then, cbCalled = 0;
+              try {
+                if (x && (isObject(x) || isFunction(x)) && isFunction(then = x['then'])) {
+                  if (x === promise2)
+                    throw new TypeError();
+                  then['call'](x,
+                      function() { if (!cbCalled++) resolve.apply(undef,arguments); } ,
+                      function(value){ if (!cbCalled++) promise2(false,[value]);});
+                }
+                else
+                  promise2(true, arguments);
+              }
+              catch(e) {
+                if (!cbCalled++)
+                  promise2(false, [e]);
+              }
+            }
+            resolve(f.apply(undef, values || []));
+          }
+          else
+            promise2(state, values);
+        }
+        catch (e) {
+          promise2(false, [e]);
+        }
+      };
+      if (state != null)
+        defer(callCallbacks);
+      else
+        deferred.push(callCallbacks);
+      return promise2;
+    };
+    return set;
+  };
+})();
+/**
+ * Object Create
+ */
+var objectCreate = function(proto) {
+    function ctor () { }
+    ctor.prototype = proto;
+    return new ctor();
+};
+//endregion
+
+//region Public Methods
+/**
+ * Talker
+ * Used to open a communication line between this window and a remote window via postMessage.
+ * @param remoteWindow - The remote `window` object to post/receive messages to/from.
+ * @property {Window} remoteWindow - The remote window object this Talker is communicating with
+ * @property {string} remoteOrigin - The protocol, host, and port you expect the remote to be
+ * @property {number} timeout - The number of milliseconds to wait before assuming no response will be received.
+ * @property {boolean} handshaken - Whether we've received a handshake from the remote window
+ * @property {function(Talker.Message)} onMessage - Will be called with every non-handshake, non-response message from the remote window
+ * @property {Promise} handshake - Will be resolved when a handshake is newly established with the remote window.
+ * @returns {Talker}
+ * @constructor
+ */
+var Talker = function(remoteWindow, remoteOrigin) {
+    this.remoteWindow = remoteWindow;
+    this.remoteOrigin = remoteOrigin;
+    this.timeout = 3000;
+
+    this.handshaken = false;
+    this.handshake = pinkySwearPromise();
+    this._id = 0;
+    this._queue = [];
+    this._sent = {};
+
+    var _this = this;
+    window.addEventListener('message', function(messageEvent) { _this._receiveMessage(messageEvent) }, false);
+    this._sendHandshake();
+
+    return this;
+};
+
+/**
+ * Send
+ * Sends a message and returns a promise
+ * @param namespace - The namespace the message is in
+ * @param data - The data to send, must be a JSON.stringify-able object
+ * @param [responseToId=null] - If this is a response to a previous message, its ID.
+ * @public
+ * @returns {Promise} - May resolve with a {@link Talker.IncomingMessage}, or rejects with an Error
+ */
+Talker.prototype.send = function(namespace, data, responseToId) {
+    var message = new Talker.OutgoingMessage(this, namespace, data, responseToId);
+
+    var promise = pinkySwearPromise();
+    this._sent[message.id] = promise;
+
+    this._queue.push(message);
+    this._flushQueue();
+
+    setTimeout(function() {
+        promise(false, [new Error(TALKER_ERR_TIMEOUT)]); // Reject the promise
+    }, this.timeout);
+
+    return promise;
+};
+//endregion Public Methods
+
+//region Private Methods
+/**
+ * Handles receipt of a message via postMessage
+ * @param {MessageEvent} messageEvent
+ * @private
+ */
+Talker.prototype._receiveMessage = function(messageEvent) {
+    var object, isHandshake;
+
+    try {
+        object = JSON.parse(messageEvent.data);
+    }
+    catch (e) {
+        object = {};
+    }
+    if (!this._isSafeMessage(messageEvent.source, messageEvent.origin, object.type)) { return false; }
+
+    isHandshake = object.handshake || object.handshakeConfirmation;
+    return isHandshake ? this._handleHandshake(object) : this._handleMessage(object);
+};
+
+/**
+ * Determines whether it is safe and appropriate to parse a postMessage messageEvent
+ * @param {Window} source - Source window object
+ * @param {string} origin - Protocol, host, and port
+ * @param {string} type - Internet Media Type
+ * @returns {boolean}
+ * @private
+ */
+Talker.prototype._isSafeMessage = function(source, origin, type) {
+    var safeSource, safeOrigin, safeType;
+
+    safeSource = source === this.remoteWindow;
+    safeOrigin = (this.remoteOrigin === '*') || (origin === this.remoteOrigin);
+    safeType = type === TALKER_TYPE;
+
+    return safeSource && safeOrigin && safeType;
+};
+
+/**
+ * Handle a handshake message
+ * @param {Object} object - The postMessage content, parsed into an Object
+ * @private
+ */
+Talker.prototype._handleHandshake = function(object) {
+    if (object.handshake) { this._sendHandshake(this.handshaken); } // One last handshake in case the remote window (which we now know is ready) hasn't seen ours yet
+    this.handshaken = true;
+    this.handshake(true, [this.handshaken]);
+    this._flushQueue();
+};
+
+/**
+ * Handle a non-handshake message
+ * @param {Object} rawObject - The postMessage content, parsed into an Object
+ * @private
+ */
+Talker.prototype._handleMessage = function(rawObject) {
+    var message = new Talker.IncomingMessage(this, rawObject.namespace, rawObject.data, rawObject.id);
+    var responseId = rawObject.responseToId;
+    return responseId ? this._respondToMessage(responseId, message) : this._broadcastMessage(message);
+};
+
+/**
+ * Send a response message back to an awaiting promise
+ * @param {number} id - Message ID of the waiting promise
+ * @param {Talker.Message} message - Message that is responding to that ID
+ * @private
+ */
+Talker.prototype._respondToMessage = function(id, message) {
+    if (this._sent[id]) {
+        this._sent[id](true, [message]); // Resolve the promise
+        delete this._sent[id];
+    }
+};
+
+/**
+ * Send a non-response message to awaiting hooks/callbacks
+ * @param {Talker.Message} message - Message that arrived
+ * @private
+ */
+Talker.prototype._broadcastMessage = function(message) {
+    if (this.onMessage) { this.onMessage.call(this, message); }
+};
+
+/**
+ * Send a handshake message to the remote window
+ * @param {boolean} [confirmation] - Is this a confirmation handshake?
+ * @private
+ */
+Talker.prototype._sendHandshake = function(confirmation) {
+    var message = { type: TALKER_TYPE };
+    var handshakeType = confirmation ? 'handshakeConfirmation' : 'handshake';
+    message[handshakeType] = true;
+    this._postMessage(message);
+};
+
+/**
+ * Increment the internal ID and return a new one.
+ * @returns {number}
+ * @private
+ */
+Talker.prototype._nextId = function() {
+    return this._id += 1;
+};
+
+/**
+ * Wrapper around window.postMessage to only send if we have the necessary objects
+ * @param {Object} data - A JSON.stringify'able object
+ * @private
+ */
+Talker.prototype._postMessage = function(data) {
+    if (this.remoteWindow && this.remoteOrigin) {
+        this.remoteWindow.postMessage(JSON.stringify(data), this.remoteOrigin);
+    }
+};
+
+/**
+ * Flushes the internal queue of outgoing messages, sending each one.
+ * @returns {Array} - Returns the queue for recursion
+ * @private
+ */
+Talker.prototype._flushQueue = function() {
+    if (this.handshaken) {
+        var message = this._queue.shift();
+        if (!message) { return this._queue; }
+        this._postMessage(message);
+        if (this._queue.length > 0) { return this._flushQueue(); }
+    }
+    return this._queue;
+};
+//endregion Private Methods
+
+//region Talker Message
+/**
+ * Talker Message
+ * Used to wrap a message for Talker with some extra metadata and methods
+ * @param {Talker} talker - A {@link Talker} instance that will be used to send responses
+ * @param {string} namespace - A namespace to with which to categorize messages
+ * @param {Object} data - A JSON.stringify-able object
+ * @property {number} id
+ * @property {number} responseToId
+ * @property {string} namespace
+ * @property {Object} data
+ * @property {string} type
+ * @property {Talker} talker
+ * @returns {Talker.Message}
+ * @constructor
+ */
+Talker.Message = function(talker, namespace, data) {
+    this.talker = talker;
+    this.namespace = namespace;
+    this.data = data;
+    this.type = TALKER_TYPE;
+
+    return this;
+};
+//endregion Talker Message
+
+//region Talker Outgoing Message
+/**
+ * Talker Outgoing Message
+ * @extends Talker.Message
+ * @param {Talker} talker - A {@link Talker} instance that will be used to send responses
+ * @param {string} namespace - A namespace to with which to categorize messages
+ * @param {Object} data - A JSON.stringify-able object
+ * @param [responseToId=null] - If this is a response to a previous message, its ID.
+ * @constructor
+ */
+Talker.OutgoingMessage = function(talker, namespace, data, responseToId) {
+    Talker.Message.call(this, talker, namespace, data);
+    this.responseToId = responseToId || null;
+    this.id = this.talker._nextId();
+};
+Talker.OutgoingMessage.prototype = objectCreate(Talker.Message.prototype);
+Talker.OutgoingMessage.prototype.constructor = Talker.Message;
+
+/**
+ * @returns {Object}
+ * @public
+ */
+Talker.OutgoingMessage.prototype.toJSON = function() {
+    return {
+        id: this.id,
+        responseToId: this.responseToId,
+        namespace: this.namespace,
+        data: this.data,
+        type: this.type
+    };
+};
+//endregion Talker Outgoing Message
+
+//region Talker Incoming Message
+/**
+ * Talker Incoming Message
+ * @extends Talker.Message
+ * @param {Talker} talker - A {@link Talker} instance that will be used to send responses
+ * @param {string} namespace - A namespace to with which to categorize messages
+ * @param {Object} data - A JSON.stringify-able object
+ * @param {number} id - The ID received from the other side
+ * @constructor
+ */
+Talker.IncomingMessage = function(talker, namespace, data, id) {
+    Talker.Message.call(this, talker, namespace, data);
+    this.id = id;
+};
+Talker.IncomingMessage.prototype = objectCreate(Talker.Message.prototype);
+Talker.IncomingMessage.prototype.constructor = Talker.Message;
+
+/**
+ * Respond
+ * Responds to a message
+ * @param {Object} data - A JSON.stringify-able object
+ * @public
+ * @returns {Promise} - Resolves with a {@link Talker.IncomingMessage}, or rejects with an Error
+ */
+Talker.IncomingMessage.prototype.respond = function(data) {
+    return this.talker.send(null, data, this.id);
+};
+//endregion Talker Incoming Message
+
 ;//     Backbone.js 1.0.0
 
 //     (c) 2010-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -21543,7 +21905,7 @@ Date.addLocale('zh-TW', {
 
 }).call(this);
 
-;/*
+/*
 
  CSS Beautifier
 ---------------
@@ -21742,7 +22104,7 @@ function css_beautify(source_text, options) {
 if (typeof exports !== "undefined")
     exports.css_beautify = css_beautify;
 
-;/*
+/*
 
  Style HTML
 ---------------
@@ -23500,13 +23862,13 @@ function js_beautify(js_source_text, options) {
 if (typeof exports !== "undefined")
     exports.js_beautify = js_beautify;
 
-;/*!
+/*!
 * Bootstrap.js by @fat & @mdo
 * Copyright 2012 Twitter, Inc.
 * http://www.apache.org/licenses/LICENSE-2.0.txt
 */
 !function($){"use strict";$(function(){$.support.transition=function(){var transitionEnd=function(){var name,el=document.createElement("bootstrap"),transEndEventNames={WebkitTransition:"webkitTransitionEnd",MozTransition:"transitionend",OTransition:"oTransitionEnd otransitionend",transition:"transitionend"};for(name in transEndEventNames)if(void 0!==el.style[name])return transEndEventNames[name]}();return transitionEnd&&{end:transitionEnd}}()})}(window.jQuery),!function($){"use strict";var dismiss='[data-dismiss="alert"]',Alert=function(el){$(el).on("click",dismiss,this.close)};Alert.prototype.close=function(e){function removeElement(){$parent.trigger("closed").remove()}var $parent,$this=$(this),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),e&&e.preventDefault(),$parent.length||($parent=$this.hasClass("alert")?$this:$this.parent()),$parent.trigger(e=$.Event("close")),e.isDefaultPrevented()||($parent.removeClass("in"),$.support.transition&&$parent.hasClass("fade")?$parent.on($.support.transition.end,removeElement):removeElement())};var old=$.fn.alert;$.fn.alert=function(option){return this.each(function(){var $this=$(this),data=$this.data("alert");data||$this.data("alert",data=new Alert(this)),"string"==typeof option&&data[option].call($this)})},$.fn.alert.Constructor=Alert,$.fn.alert.noConflict=function(){return $.fn.alert=old,this},$(document).on("click.alert.data-api",dismiss,Alert.prototype.close)}(window.jQuery),!function($){"use strict";var Button=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.button.defaults,options)};Button.prototype.setState=function(state){var d="disabled",$el=this.$element,data=$el.data(),val=$el.is("input")?"val":"html";state+="Text",data.resetText||$el.data("resetText",$el[val]()),$el[val](data[state]||this.options[state]),setTimeout(function(){"loadingText"==state?$el.addClass(d).attr(d,d):$el.removeClass(d).removeAttr(d)},0)},Button.prototype.toggle=function(){var $parent=this.$element.closest('[data-toggle="buttons-radio"]');$parent&&$parent.find(".active").removeClass("active"),this.$element.toggleClass("active")};var old=$.fn.button;$.fn.button=function(option){return this.each(function(){var $this=$(this),data=$this.data("button"),options="object"==typeof option&&option;data||$this.data("button",data=new Button(this,options)),"toggle"==option?data.toggle():option&&data.setState(option)})},$.fn.button.defaults={loadingText:"loading..."},$.fn.button.Constructor=Button,$.fn.button.noConflict=function(){return $.fn.button=old,this},$(document).on("click.button.data-api","[data-toggle^=button]",function(e){var $btn=$(e.target);$btn.hasClass("btn")||($btn=$btn.closest(".btn")),$btn.button("toggle")})}(window.jQuery),!function($){"use strict";var Carousel=function(element,options){this.$element=$(element),this.options=options,"hover"==this.options.pause&&this.$element.on("mouseenter",$.proxy(this.pause,this)).on("mouseleave",$.proxy(this.cycle,this))};Carousel.prototype={cycle:function(e){return e||(this.paused=!1),this.options.interval&&!this.paused&&(this.interval=setInterval($.proxy(this.next,this),this.options.interval)),this},to:function(pos){var $active=this.$element.find(".item.active"),children=$active.parent().children(),activePos=children.index($active),that=this;if(!(pos>children.length-1||0>pos))return this.sliding?this.$element.one("slid",function(){that.to(pos)}):activePos==pos?this.pause().cycle():this.slide(pos>activePos?"next":"prev",$(children[pos]))},pause:function(e){return e||(this.paused=!0),this.$element.find(".next, .prev").length&&$.support.transition.end&&(this.$element.trigger($.support.transition.end),this.cycle()),clearInterval(this.interval),this.interval=null,this},next:function(){return this.sliding?void 0:this.slide("next")},prev:function(){return this.sliding?void 0:this.slide("prev")},slide:function(type,next){var e,$active=this.$element.find(".item.active"),$next=next||$active[type](),isCycling=this.interval,direction="next"==type?"left":"right",fallback="next"==type?"first":"last",that=this;if(this.sliding=!0,isCycling&&this.pause(),$next=$next.length?$next:this.$element.find(".item")[fallback](),e=$.Event("slide",{relatedTarget:$next[0]}),!$next.hasClass("active")){if($.support.transition&&this.$element.hasClass("slide")){if(this.$element.trigger(e),e.isDefaultPrevented())return;$next.addClass(type),$next[0].offsetWidth,$active.addClass(direction),$next.addClass(direction),this.$element.one($.support.transition.end,function(){$next.removeClass([type,direction].join(" ")).addClass("active"),$active.removeClass(["active",direction].join(" ")),that.sliding=!1,setTimeout(function(){that.$element.trigger("slid")},0)})}else{if(this.$element.trigger(e),e.isDefaultPrevented())return;$active.removeClass("active"),$next.addClass("active"),this.sliding=!1,this.$element.trigger("slid")}return isCycling&&this.cycle(),this}}};var old=$.fn.carousel;$.fn.carousel=function(option){return this.each(function(){var $this=$(this),data=$this.data("carousel"),options=$.extend({},$.fn.carousel.defaults,"object"==typeof option&&option),action="string"==typeof option?option:options.slide;data||$this.data("carousel",data=new Carousel(this,options)),"number"==typeof option?data.to(option):action?data[action]():options.interval&&data.cycle()})},$.fn.carousel.defaults={interval:5e3,pause:"hover"},$.fn.carousel.Constructor=Carousel,$.fn.carousel.noConflict=function(){return $.fn.carousel=old,this},$(document).on("click.carousel.data-api","[data-slide]",function(e){var href,$this=$(this),$target=$($this.attr("data-target")||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")),options=$.extend({},$target.data(),$this.data());$target.carousel(options),e.preventDefault()})}(window.jQuery),!function($){"use strict";var Collapse=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.collapse.defaults,options),this.options.parent&&(this.$parent=$(this.options.parent)),this.options.toggle&&this.toggle()};Collapse.prototype={constructor:Collapse,dimension:function(){var hasWidth=this.$element.hasClass("width");return hasWidth?"width":"height"},show:function(){var dimension,scroll,actives,hasData;if(!this.transitioning){if(dimension=this.dimension(),scroll=$.camelCase(["scroll",dimension].join("-")),actives=this.$parent&&this.$parent.find("> .accordion-group > .in"),actives&&actives.length){if(hasData=actives.data("collapse"),hasData&&hasData.transitioning)return;actives.collapse("hide"),hasData||actives.data("collapse",null)}this.$element[dimension](0),this.transition("addClass",$.Event("show"),"shown"),$.support.transition&&this.$element[dimension](this.$element[0][scroll])}},hide:function(){var dimension;this.transitioning||(dimension=this.dimension(),this.reset(this.$element[dimension]()),this.transition("removeClass",$.Event("hide"),"hidden"),this.$element[dimension](0))},reset:function(size){var dimension=this.dimension();return this.$element.removeClass("collapse")[dimension](size||"auto")[0].offsetWidth,this.$element[null!==size?"addClass":"removeClass"]("collapse"),this},transition:function(method,startEvent,completeEvent){var that=this,complete=function(){"show"==startEvent.type&&that.reset(),that.transitioning=0,that.$element.trigger(completeEvent)};this.$element.trigger(startEvent),startEvent.isDefaultPrevented()||(this.transitioning=1,this.$element[method]("in"),$.support.transition&&this.$element.hasClass("collapse")?this.$element.one($.support.transition.end,complete):complete())},toggle:function(){this[this.$element.hasClass("in")?"hide":"show"]()}};var old=$.fn.collapse;$.fn.collapse=function(option){return this.each(function(){var $this=$(this),data=$this.data("collapse"),options="object"==typeof option&&option;data||$this.data("collapse",data=new Collapse(this,options)),"string"==typeof option&&data[option]()})},$.fn.collapse.defaults={toggle:!0},$.fn.collapse.Constructor=Collapse,$.fn.collapse.noConflict=function(){return $.fn.collapse=old,this},$(document).on("click.collapse.data-api","[data-toggle=collapse]",function(e){var href,$this=$(this),target=$this.attr("data-target")||e.preventDefault()||(href=$this.attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,""),option=$(target).data("collapse")?"toggle":$this.data();$this[$(target).hasClass("in")?"addClass":"removeClass"]("collapsed"),$(target).collapse(option)})}(window.jQuery),!function($){"use strict";function clearMenus(){$(toggle).each(function(){getParent($(this)).removeClass("open")})}function getParent($this){var $parent,selector=$this.attr("data-target");return selector||(selector=$this.attr("href"),selector=selector&&/#/.test(selector)&&selector.replace(/.*(?=#[^\s]*$)/,"")),$parent=$(selector),$parent.length||($parent=$this.parent()),$parent}var toggle="[data-toggle=dropdown]",Dropdown=function(element){var $el=$(element).on("click.dropdown.data-api",this.toggle);$("html").on("click.dropdown.data-api",function(){$el.parent().removeClass("open")})};Dropdown.prototype={constructor:Dropdown,toggle:function(){var $parent,isActive,$this=$(this);if(!$this.is(".disabled, :disabled"))return $parent=getParent($this),isActive=$parent.hasClass("open"),clearMenus(),isActive||$parent.toggleClass("open"),$this.focus(),!1},keydown:function(e){var $this,$items,$parent,isActive,index;if(/(38|40|27)/.test(e.keyCode)&&($this=$(this),e.preventDefault(),e.stopPropagation(),!$this.is(".disabled, :disabled"))){if($parent=getParent($this),isActive=$parent.hasClass("open"),!isActive||isActive&&27==e.keyCode)return $this.click();$items=$("[role=menu] li:not(.divider):visible a",$parent),$items.length&&(index=$items.index($items.filter(":focus")),38==e.keyCode&&index>0&&index--,40==e.keyCode&&$items.length-1>index&&index++,~index||(index=0),$items.eq(index).focus())}}};var old=$.fn.dropdown;$.fn.dropdown=function(option){return this.each(function(){var $this=$(this),data=$this.data("dropdown");data||$this.data("dropdown",data=new Dropdown(this)),"string"==typeof option&&data[option].call($this)})},$.fn.dropdown.Constructor=Dropdown,$.fn.dropdown.noConflict=function(){return $.fn.dropdown=old,this},$(document).on("click.dropdown.data-api touchstart.dropdown.data-api",clearMenus).on("click.dropdown touchstart.dropdown.data-api",".dropdown form",function(e){e.stopPropagation()}).on("touchstart.dropdown.data-api",".dropdown-menu",function(e){e.stopPropagation()}).on("click.dropdown.data-api touchstart.dropdown.data-api",toggle,Dropdown.prototype.toggle).on("keydown.dropdown.data-api touchstart.dropdown.data-api",toggle+", [role=menu]",Dropdown.prototype.keydown)}(window.jQuery),!function($){"use strict";var Modal=function(element,options){this.options=options,this.$element=$(element).delegate('[data-dismiss="modal"]',"click.dismiss.modal",$.proxy(this.hide,this)),this.options.remote&&this.$element.find(".modal-body").load(this.options.remote)};Modal.prototype={constructor:Modal,toggle:function(){return this[this.isShown?"hide":"show"]()},show:function(){var that=this,e=$.Event("show");this.$element.trigger(e),this.isShown||e.isDefaultPrevented()||(this.isShown=!0,this.escape(),this.backdrop(function(){var transition=$.support.transition&&that.$element.hasClass("fade");that.$element.parent().length||that.$element.appendTo(document.body),that.$element.show(),transition&&that.$element[0].offsetWidth,that.$element.addClass("in").attr("aria-hidden",!1),that.enforceFocus(),transition?that.$element.one($.support.transition.end,function(){that.$element.focus().trigger("shown")}):that.$element.focus().trigger("shown")}))},hide:function(e){e&&e.preventDefault(),e=$.Event("hide"),this.$element.trigger(e),this.isShown&&!e.isDefaultPrevented()&&(this.isShown=!1,this.escape(),$(document).off("focusin.modal"),this.$element.removeClass("in").attr("aria-hidden",!0),$.support.transition&&this.$element.hasClass("fade")?this.hideWithTransition():this.hideModal())},enforceFocus:function(){var that=this;$(document).on("focusin.modal",function(e){that.$element[0]===e.target||that.$element.has(e.target).length||that.$element.focus()})},escape:function(){var that=this;this.isShown&&this.options.keyboard?this.$element.on("keyup.dismiss.modal",function(e){27==e.which&&that.hide()}):this.isShown||this.$element.off("keyup.dismiss.modal")},hideWithTransition:function(){var that=this,timeout=setTimeout(function(){that.$element.off($.support.transition.end),that.hideModal()},500);this.$element.one($.support.transition.end,function(){clearTimeout(timeout),that.hideModal()})},hideModal:function(){this.$element.hide().trigger("hidden"),this.backdrop()},removeBackdrop:function(){this.$backdrop.remove(),this.$backdrop=null},backdrop:function(callback){var animate=this.$element.hasClass("fade")?"fade":"";if(this.isShown&&this.options.backdrop){var doAnimate=$.support.transition&&animate;this.$backdrop=$('<div class="modal-backdrop '+animate+'" />').appendTo(document.body),this.$backdrop.click("static"==this.options.backdrop?$.proxy(this.$element[0].focus,this.$element[0]):$.proxy(this.hide,this)),doAnimate&&this.$backdrop[0].offsetWidth,this.$backdrop.addClass("in"),doAnimate?this.$backdrop.one($.support.transition.end,callback):callback()}else!this.isShown&&this.$backdrop?(this.$backdrop.removeClass("in"),$.support.transition&&this.$element.hasClass("fade")?this.$backdrop.one($.support.transition.end,$.proxy(this.removeBackdrop,this)):this.removeBackdrop()):callback&&callback()}};var old=$.fn.modal;$.fn.modal=function(option){return this.each(function(){var $this=$(this),data=$this.data("modal"),options=$.extend({},$.fn.modal.defaults,$this.data(),"object"==typeof option&&option);data||$this.data("modal",data=new Modal(this,options)),"string"==typeof option?data[option]():options.show&&data.show()})},$.fn.modal.defaults={backdrop:!0,keyboard:!0,show:!0},$.fn.modal.Constructor=Modal,$.fn.modal.noConflict=function(){return $.fn.modal=old,this},$(document).on("click.modal.data-api",'[data-toggle="modal"]',function(e){var $this=$(this),href=$this.attr("href"),$target=$($this.attr("data-target")||href&&href.replace(/.*(?=#[^\s]+$)/,"")),option=$target.data("modal")?"toggle":$.extend({remote:!/#/.test(href)&&href},$target.data(),$this.data());e.preventDefault(),$target.modal(option).one("hide",function(){$this.focus()})})}(window.jQuery),!function($){"use strict";var Tooltip=function(element,options){this.init("tooltip",element,options)};Tooltip.prototype={constructor:Tooltip,init:function(type,element,options){var eventIn,eventOut;this.type=type,this.$element=$(element),this.options=this.getOptions(options),this.enabled=!0,"click"==this.options.trigger?this.$element.on("click."+this.type,this.options.selector,$.proxy(this.toggle,this)):"manual"!=this.options.trigger&&(eventIn="hover"==this.options.trigger?"mouseenter":"focus",eventOut="hover"==this.options.trigger?"mouseleave":"blur",this.$element.on(eventIn+"."+this.type,this.options.selector,$.proxy(this.enter,this)),this.$element.on(eventOut+"."+this.type,this.options.selector,$.proxy(this.leave,this))),this.options.selector?this._options=$.extend({},this.options,{trigger:"manual",selector:""}):this.fixTitle()},getOptions:function(options){return options=$.extend({},$.fn[this.type].defaults,options,this.$element.data()),options.delay&&"number"==typeof options.delay&&(options.delay={show:options.delay,hide:options.delay}),options},enter:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return self.options.delay&&self.options.delay.show?(clearTimeout(this.timeout),self.hoverState="in",this.timeout=setTimeout(function(){"in"==self.hoverState&&self.show()},self.options.delay.show),void 0):self.show()},leave:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);return this.timeout&&clearTimeout(this.timeout),self.options.delay&&self.options.delay.hide?(self.hoverState="out",this.timeout=setTimeout(function(){"out"==self.hoverState&&self.hide()},self.options.delay.hide),void 0):self.hide()},show:function(){var $tip,inside,pos,actualWidth,actualHeight,placement,tp;if(this.hasContent()&&this.enabled){switch($tip=this.tip(),this.setContent(),this.options.animation&&$tip.addClass("fade"),placement="function"==typeof this.options.placement?this.options.placement.call(this,$tip[0],this.$element[0]):this.options.placement,inside=/in/.test(placement),$tip.detach().css({top:0,left:0,display:"block"}).insertAfter(this.$element),pos=this.getPosition(inside),actualWidth=$tip[0].offsetWidth,actualHeight=$tip[0].offsetHeight,inside?placement.split(" ")[1]:placement){case"bottom":tp={top:pos.top+pos.height,left:pos.left+pos.width/2-actualWidth/2};break;case"top":tp={top:pos.top-actualHeight,left:pos.left+pos.width/2-actualWidth/2};break;case"left":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left-actualWidth};break;case"right":tp={top:pos.top+pos.height/2-actualHeight/2,left:pos.left+pos.width}}$tip.offset(tp).addClass(placement).addClass("in")}},setContent:function(){var $tip=this.tip(),title=this.getTitle();$tip.find(".tooltip-inner")[this.options.html?"html":"text"](title),$tip.removeClass("fade in top bottom left right")},hide:function(){function removeWithAnimation(){var timeout=setTimeout(function(){$tip.off($.support.transition.end).detach()},500);$tip.one($.support.transition.end,function(){clearTimeout(timeout),$tip.detach()})}var $tip=this.tip();return $tip.removeClass("in"),$.support.transition&&this.$tip.hasClass("fade")?removeWithAnimation():$tip.detach(),this},fixTitle:function(){var $e=this.$element;($e.attr("title")||"string"!=typeof $e.attr("data-original-title"))&&$e.attr("data-original-title",$e.attr("title")||"").removeAttr("title")},hasContent:function(){return this.getTitle()},getPosition:function(inside){return $.extend({},inside?{top:0,left:0}:this.$element.offset(),{width:this.$element[0].offsetWidth,height:this.$element[0].offsetHeight})},getTitle:function(){var title,$e=this.$element,o=this.options;return title=$e.attr("data-original-title")||("function"==typeof o.title?o.title.call($e[0]):o.title)},tip:function(){return this.$tip=this.$tip||$(this.options.template)},validate:function(){this.$element[0].parentNode||(this.hide(),this.$element=null,this.options=null)},enable:function(){this.enabled=!0},disable:function(){this.enabled=!1},toggleEnabled:function(){this.enabled=!this.enabled},toggle:function(e){var self=$(e.currentTarget)[this.type](this._options).data(this.type);self[self.tip().hasClass("in")?"hide":"show"]()},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}};var old=$.fn.tooltip;$.fn.tooltip=function(option){return this.each(function(){var $this=$(this),data=$this.data("tooltip"),options="object"==typeof option&&option;data||$this.data("tooltip",data=new Tooltip(this,options)),"string"==typeof option&&data[option]()})},$.fn.tooltip.Constructor=Tooltip,$.fn.tooltip.defaults={animation:!0,placement:"top",selector:!1,template:'<div class="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',trigger:"hover",title:"",delay:0,html:!1},$.fn.tooltip.noConflict=function(){return $.fn.tooltip=old,this}}(window.jQuery),!function($){"use strict";var Popover=function(element,options){this.init("popover",element,options)};Popover.prototype=$.extend({},$.fn.tooltip.Constructor.prototype,{constructor:Popover,setContent:function(){var $tip=this.tip(),title=this.getTitle(),content=this.getContent();$tip.find(".popover-title")[this.options.html?"html":"text"](title),$tip.find(".popover-content")[this.options.html?"html":"text"](content),$tip.removeClass("fade top bottom left right in")},hasContent:function(){return this.getTitle()||this.getContent()},getContent:function(){var content,$e=this.$element,o=this.options;return content=$e.attr("data-content")||("function"==typeof o.content?o.content.call($e[0]):o.content)},tip:function(){return this.$tip||(this.$tip=$(this.options.template)),this.$tip},destroy:function(){this.hide().$element.off("."+this.type).removeData(this.type)}});var old=$.fn.popover;$.fn.popover=function(option){return this.each(function(){var $this=$(this),data=$this.data("popover"),options="object"==typeof option&&option;data||$this.data("popover",data=new Popover(this,options)),"string"==typeof option&&data[option]()})},$.fn.popover.Constructor=Popover,$.fn.popover.defaults=$.extend({},$.fn.tooltip.defaults,{placement:"right",trigger:"click",content:"",template:'<div class="popover"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"></div></div></div>'}),$.fn.popover.noConflict=function(){return $.fn.popover=old,this}}(window.jQuery),!function($){"use strict";function ScrollSpy(element,options){var href,process=$.proxy(this.process,this),$element=$(element).is("body")?$(window):$(element);this.options=$.extend({},$.fn.scrollspy.defaults,options),this.$scrollElement=$element.on("scroll.scroll-spy.data-api",process),this.selector=(this.options.target||(href=$(element).attr("href"))&&href.replace(/.*(?=#[^\s]+$)/,"")||"")+" .nav li > a",this.$body=$("body"),this.refresh(),this.process()}ScrollSpy.prototype={constructor:ScrollSpy,refresh:function(){var $targets,self=this;this.offsets=$([]),this.targets=$([]),$targets=this.$body.find(this.selector).map(function(){var $el=$(this),href=$el.data("target")||$el.attr("href"),$href=/^#\w/.test(href)&&$(href);return $href&&$href.length&&[[$href.position().top+self.$scrollElement.scrollTop(),href]]||null}).sort(function(a,b){return a[0]-b[0]}).each(function(){self.offsets.push(this[0]),self.targets.push(this[1])})},process:function(){var i,scrollTop=this.$scrollElement.scrollTop()+this.options.offset,scrollHeight=this.$scrollElement[0].scrollHeight||this.$body[0].scrollHeight,maxScroll=scrollHeight-this.$scrollElement.height(),offsets=this.offsets,targets=this.targets,activeTarget=this.activeTarget;if(scrollTop>=maxScroll)return activeTarget!=(i=targets.last()[0])&&this.activate(i);for(i=offsets.length;i--;)activeTarget!=targets[i]&&scrollTop>=offsets[i]&&(!offsets[i+1]||offsets[i+1]>=scrollTop)&&this.activate(targets[i])},activate:function(target){var active,selector;this.activeTarget=target,$(this.selector).parent(".active").removeClass("active"),selector=this.selector+'[data-target="'+target+'"],'+this.selector+'[href="'+target+'"]',active=$(selector).parent("li").addClass("active"),active.parent(".dropdown-menu").length&&(active=active.closest("li.dropdown").addClass("active")),active.trigger("activate")}};var old=$.fn.scrollspy;$.fn.scrollspy=function(option){return this.each(function(){var $this=$(this),data=$this.data("scrollspy"),options="object"==typeof option&&option;data||$this.data("scrollspy",data=new ScrollSpy(this,options)),"string"==typeof option&&data[option]()})},$.fn.scrollspy.Constructor=ScrollSpy,$.fn.scrollspy.defaults={offset:10},$.fn.scrollspy.noConflict=function(){return $.fn.scrollspy=old,this},$(window).on("load",function(){$('[data-spy="scroll"]').each(function(){var $spy=$(this);$spy.scrollspy($spy.data())})})}(window.jQuery),!function($){"use strict";var Tab=function(element){this.element=$(element)};Tab.prototype={constructor:Tab,show:function(){var previous,$target,e,$this=this.element,$ul=$this.closest("ul:not(.dropdown-menu)"),selector=$this.attr("data-target");selector||(selector=$this.attr("href"),selector=selector&&selector.replace(/.*(?=#[^\s]*$)/,"")),$this.parent("li").hasClass("active")||(previous=$ul.find(".active:last a")[0],e=$.Event("show",{relatedTarget:previous}),$this.trigger(e),e.isDefaultPrevented()||($target=$(selector),this.activate($this.parent("li"),$ul),this.activate($target,$target.parent(),function(){$this.trigger({type:"shown",relatedTarget:previous})})))},activate:function(element,container,callback){function next(){$active.removeClass("active").find("> .dropdown-menu > .active").removeClass("active"),element.addClass("active"),transition?(element[0].offsetWidth,element.addClass("in")):element.removeClass("fade"),element.parent(".dropdown-menu")&&element.closest("li.dropdown").addClass("active"),callback&&callback()}var $active=container.find("> .active"),transition=callback&&$.support.transition&&$active.hasClass("fade");transition?$active.one($.support.transition.end,next):next(),$active.removeClass("in")}};var old=$.fn.tab;$.fn.tab=function(option){return this.each(function(){var $this=$(this),data=$this.data("tab");data||$this.data("tab",data=new Tab(this)),"string"==typeof option&&data[option]()})},$.fn.tab.Constructor=Tab,$.fn.tab.noConflict=function(){return $.fn.tab=old,this},$(document).on("click.tab.data-api",'[data-toggle="tab"], [data-toggle="pill"]',function(e){e.preventDefault(),$(this).tab("show")})}(window.jQuery),!function($){"use strict";var Typeahead=function(element,options){this.$element=$(element),this.options=$.extend({},$.fn.typeahead.defaults,options),this.matcher=this.options.matcher||this.matcher,this.sorter=this.options.sorter||this.sorter,this.highlighter=this.options.highlighter||this.highlighter,this.updater=this.options.updater||this.updater,this.source=this.options.source,this.$menu=$(this.options.menu),this.shown=!1,this.listen()};Typeahead.prototype={constructor:Typeahead,select:function(){var val=this.$menu.find(".active").attr("data-value");return this.$element.val(this.updater(val)).change(),this.hide()},updater:function(item){return item},show:function(){var pos=$.extend({},this.$element.position(),{height:this.$element[0].offsetHeight});return this.$menu.insertAfter(this.$element).css({top:pos.top+pos.height,left:pos.left}).show(),this.shown=!0,this},hide:function(){return this.$menu.hide(),this.shown=!1,this},lookup:function(){var items;return this.query=this.$element.val(),!this.query||this.query.length<this.options.minLength?this.shown?this.hide():this:(items=$.isFunction(this.source)?this.source(this.query,$.proxy(this.process,this)):this.source,items?this.process(items):this)},process:function(items){var that=this;return items=$.grep(items,function(item){return that.matcher(item)}),items=this.sorter(items),items.length?this.render(items.slice(0,this.options.items)).show():this.shown?this.hide():this},matcher:function(item){return~item.toLowerCase().indexOf(this.query.toLowerCase())},sorter:function(items){for(var item,beginswith=[],caseSensitive=[],caseInsensitive=[];item=items.shift();)item.toLowerCase().indexOf(this.query.toLowerCase())?~item.indexOf(this.query)?caseSensitive.push(item):caseInsensitive.push(item):beginswith.push(item);return beginswith.concat(caseSensitive,caseInsensitive)},highlighter:function(item){var query=this.query.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g,"\\$&");return item.replace(RegExp("("+query+")","ig"),function($1,match){return"<strong>"+match+"</strong>"})},render:function(items){var that=this;return items=$(items).map(function(i,item){return i=$(that.options.item).attr("data-value",item),i.find("a").html(that.highlighter(item)),i[0]}),items.first().addClass("active"),this.$menu.html(items),this},next:function(){var active=this.$menu.find(".active").removeClass("active"),next=active.next();next.length||(next=$(this.$menu.find("li")[0])),next.addClass("active")},prev:function(){var active=this.$menu.find(".active").removeClass("active"),prev=active.prev();prev.length||(prev=this.$menu.find("li").last()),prev.addClass("active")},listen:function(){this.$element.on("blur",$.proxy(this.blur,this)).on("keypress",$.proxy(this.keypress,this)).on("keyup",$.proxy(this.keyup,this)),this.eventSupported("keydown")&&this.$element.on("keydown",$.proxy(this.keydown,this)),this.$menu.on("click",$.proxy(this.click,this)).on("mouseenter","li",$.proxy(this.mouseenter,this))},eventSupported:function(eventName){var isSupported=eventName in this.$element;return isSupported||(this.$element.setAttribute(eventName,"return;"),isSupported="function"==typeof this.$element[eventName]),isSupported},move:function(e){if(this.shown){switch(e.keyCode){case 9:case 13:case 27:e.preventDefault();break;case 38:e.preventDefault(),this.prev();break;case 40:e.preventDefault(),this.next()}e.stopPropagation()}},keydown:function(e){this.suppressKeyPressRepeat=~$.inArray(e.keyCode,[40,38,9,13,27]),this.move(e)},keypress:function(e){this.suppressKeyPressRepeat||this.move(e)},keyup:function(e){switch(e.keyCode){case 40:case 38:case 16:case 17:case 18:break;case 9:case 13:if(!this.shown)return;this.select();break;case 27:if(!this.shown)return;this.hide();break;default:this.lookup()}e.stopPropagation(),e.preventDefault()},blur:function(){var that=this;setTimeout(function(){that.hide()},150)},click:function(e){e.stopPropagation(),e.preventDefault(),this.select()},mouseenter:function(e){this.$menu.find(".active").removeClass("active"),$(e.currentTarget).addClass("active")}};var old=$.fn.typeahead;$.fn.typeahead=function(option){return this.each(function(){var $this=$(this),data=$this.data("typeahead"),options="object"==typeof option&&option;data||$this.data("typeahead",data=new Typeahead(this,options)),"string"==typeof option&&data[option]()})},$.fn.typeahead.defaults={source:[],items:8,menu:'<ul class="typeahead dropdown-menu"></ul>',item:'<li><a href="#"></a></li>',minLength:1},$.fn.typeahead.Constructor=Typeahead,$.fn.typeahead.noConflict=function(){return $.fn.typeahead=old,this},$(document).on("focus.typeahead.data-api",'[data-provide="typeahead"]',function(e){var $this=$(this);$this.data("typeahead")||(e.preventDefault(),$this.typeahead($this.data()))})}(window.jQuery),!function($){"use strict";var Affix=function(element,options){this.options=$.extend({},$.fn.affix.defaults,options),this.$window=$(window).on("scroll.affix.data-api",$.proxy(this.checkPosition,this)).on("click.affix.data-api",$.proxy(function(){setTimeout($.proxy(this.checkPosition,this),1)},this)),this.$element=$(element),this.checkPosition()};Affix.prototype.checkPosition=function(){if(this.$element.is(":visible")){var affix,scrollHeight=$(document).height(),scrollTop=this.$window.scrollTop(),position=this.$element.offset(),offset=this.options.offset,offsetBottom=offset.bottom,offsetTop=offset.top,reset="affix affix-top affix-bottom";"object"!=typeof offset&&(offsetBottom=offsetTop=offset),"function"==typeof offsetTop&&(offsetTop=offset.top()),"function"==typeof offsetBottom&&(offsetBottom=offset.bottom()),affix=null!=this.unpin&&scrollTop+this.unpin<=position.top?!1:null!=offsetBottom&&position.top+this.$element.height()>=scrollHeight-offsetBottom?"bottom":null!=offsetTop&&offsetTop>=scrollTop?"top":!1,this.affixed!==affix&&(this.affixed=affix,this.unpin="bottom"==affix?position.top-scrollTop:null,this.$element.removeClass(reset).addClass("affix"+(affix?"-"+affix:"")))}};var old=$.fn.affix;$.fn.affix=function(option){return this.each(function(){var $this=$(this),data=$this.data("affix"),options="object"==typeof option&&option;data||$this.data("affix",data=new Affix(this,options)),"string"==typeof option&&data[option]()})},$.fn.affix.Constructor=Affix,$.fn.affix.defaults={offset:0},$.fn.affix.noConflict=function(){return $.fn.affix=old,this},$(window).on("load",function(){$('[data-spy="affix"]').each(function(){var $spy=$(this),data=$spy.data();data.offset=data.offset||{},data.offsetBottom&&(data.offset.bottom=data.offsetBottom),data.offsetTop&&(data.offset.top=data.offsetTop),$spy.affix(data)})})}(window.jQuery);
-;/*! jQuery UI - v1.8.23 - 2012-08-15
+/*! jQuery UI - v1.8.23 - 2012-08-15
 * https://github.com/jquery/jquery-ui
 * Includes: jquery.ui.core.js
 * Copyright (c) 2012 AUTHORS.txt; Licensed MIT, GPL */
@@ -23523,7 +23885,7 @@ if (typeof exports !== "undefined")
 * Includes: jquery.ui.draggable.js
 * Copyright (c) 2012 AUTHORS.txt; Licensed MIT, GPL */
 (function(a,b){a.widget("ui.draggable",a.ui.mouse,{widgetEventPrefix:"drag",options:{addClasses:!0,appendTo:"parent",axis:!1,connectToSortable:!1,containment:!1,cursor:"auto",cursorAt:!1,grid:!1,handle:!1,helper:"original",iframeFix:!1,opacity:!1,refreshPositions:!1,revert:!1,revertDuration:500,scope:"default",scroll:!0,scrollSensitivity:20,scrollSpeed:20,snap:!1,snapMode:"both",snapTolerance:20,stack:!1,zIndex:!1},_create:function(){this.options.helper=="original"&&!/^(?:r|a|f)/.test(this.element.css("position"))&&(this.element[0].style.position="relative"),this.options.addClasses&&this.element.addClass("ui-draggable"),this.options.disabled&&this.element.addClass("ui-draggable-disabled"),this._mouseInit()},destroy:function(){if(!this.element.data("draggable"))return;return this.element.removeData("draggable").unbind(".draggable").removeClass("ui-draggable ui-draggable-dragging ui-draggable-disabled"),this._mouseDestroy(),this},_mouseCapture:function(b){var c=this.options;return this.helper||c.disabled||a(b.target).is(".ui-resizable-handle")?!1:(this.handle=this._getHandle(b),this.handle?(c.iframeFix&&a(c.iframeFix===!0?"iframe":c.iframeFix).each(function(){a('<div class="ui-draggable-iframeFix" style="background: #fff;"></div>').css({width:this.offsetWidth+"px",height:this.offsetHeight+"px",position:"absolute",opacity:"0.001",zIndex:1e3}).css(a(this).offset()).appendTo("body")}),!0):!1)},_mouseStart:function(b){var c=this.options;return this.helper=this._createHelper(b),this.helper.addClass("ui-draggable-dragging"),this._cacheHelperProportions(),a.ui.ddmanager&&(a.ui.ddmanager.current=this),this._cacheMargins(),this.cssPosition=this.helper.css("position"),this.scrollParent=this.helper.scrollParent(),this.offset=this.positionAbs=this.element.offset(),this.offset={top:this.offset.top-this.margins.top,left:this.offset.left-this.margins.left},a.extend(this.offset,{click:{left:b.pageX-this.offset.left,top:b.pageY-this.offset.top},parent:this._getParentOffset(),relative:this._getRelativeOffset()}),this.originalPosition=this.position=this._generatePosition(b),this.originalPageX=b.pageX,this.originalPageY=b.pageY,c.cursorAt&&this._adjustOffsetFromHelper(c.cursorAt),c.containment&&this._setContainment(),this._trigger("start",b)===!1?(this._clear(),!1):(this._cacheHelperProportions(),a.ui.ddmanager&&!c.dropBehaviour&&a.ui.ddmanager.prepareOffsets(this,b),this._mouseDrag(b,!0),a.ui.ddmanager&&a.ui.ddmanager.dragStart(this,b),!0)},_mouseDrag:function(b,c){this.position=this._generatePosition(b),this.positionAbs=this._convertPositionTo("absolute");if(!c){var d=this._uiHash();if(this._trigger("drag",b,d)===!1)return this._mouseUp({}),!1;this.position=d.position}if(!this.options.axis||this.options.axis!="y")this.helper[0].style.left=this.position.left+"px";if(!this.options.axis||this.options.axis!="x")this.helper[0].style.top=this.position.top+"px";return a.ui.ddmanager&&a.ui.ddmanager.drag(this,b),!1},_mouseStop:function(b){var c=!1;a.ui.ddmanager&&!this.options.dropBehaviour&&(c=a.ui.ddmanager.drop(this,b)),this.dropped&&(c=this.dropped,this.dropped=!1);var d=this.element[0],e=!1;while(d&&(d=d.parentNode))d==document&&(e=!0);if(!e&&this.options.helper==="original")return!1;if(this.options.revert=="invalid"&&!c||this.options.revert=="valid"&&c||this.options.revert===!0||a.isFunction(this.options.revert)&&this.options.revert.call(this.element,c)){var f=this;a(this.helper).animate(this.originalPosition,parseInt(this.options.revertDuration,10),function(){f._trigger("stop",b)!==!1&&f._clear()})}else this._trigger("stop",b)!==!1&&this._clear();return!1},_mouseUp:function(b){return this.options.iframeFix===!0&&a("div.ui-draggable-iframeFix").each(function(){this.parentNode.removeChild(this)}),a.ui.ddmanager&&a.ui.ddmanager.dragStop(this,b),a.ui.mouse.prototype._mouseUp.call(this,b)},cancel:function(){return this.helper.is(".ui-draggable-dragging")?this._mouseUp({}):this._clear(),this},_getHandle:function(b){var c=!this.options.handle||!a(this.options.handle,this.element).length?!0:!1;return a(this.options.handle,this.element).find("*").andSelf().each(function(){this==b.target&&(c=!0)}),c},_createHelper:function(b){var c=this.options,d=a.isFunction(c.helper)?a(c.helper.apply(this.element[0],[b])):c.helper=="clone"?this.element.clone().removeAttr("id"):this.element;return d.parents("body").length||d.appendTo(c.appendTo=="parent"?this.element[0].parentNode:c.appendTo),d[0]!=this.element[0]&&!/(fixed|absolute)/.test(d.css("position"))&&d.css("position","absolute"),d},_adjustOffsetFromHelper:function(b){typeof b=="string"&&(b=b.split(" ")),a.isArray(b)&&(b={left:+b[0],top:+b[1]||0}),"left"in b&&(this.offset.click.left=b.left+this.margins.left),"right"in b&&(this.offset.click.left=this.helperProportions.width-b.right+this.margins.left),"top"in b&&(this.offset.click.top=b.top+this.margins.top),"bottom"in b&&(this.offset.click.top=this.helperProportions.height-b.bottom+this.margins.top)},_getParentOffset:function(){this.offsetParent=this.helper.offsetParent();var b=this.offsetParent.offset();this.cssPosition=="absolute"&&this.scrollParent[0]!=document&&a.ui.contains(this.scrollParent[0],this.offsetParent[0])&&(b.left+=this.scrollParent.scrollLeft(),b.top+=this.scrollParent.scrollTop());if(this.offsetParent[0]==document.body||this.offsetParent[0].tagName&&this.offsetParent[0].tagName.toLowerCase()=="html"&&a.browser.msie)b={top:0,left:0};return{top:b.top+(parseInt(this.offsetParent.css("borderTopWidth"),10)||0),left:b.left+(parseInt(this.offsetParent.css("borderLeftWidth"),10)||0)}},_getRelativeOffset:function(){if(this.cssPosition=="relative"){var a=this.element.position();return{top:a.top-(parseInt(this.helper.css("top"),10)||0)+this.scrollParent.scrollTop(),left:a.left-(parseInt(this.helper.css("left"),10)||0)+this.scrollParent.scrollLeft()}}return{top:0,left:0}},_cacheMargins:function(){this.margins={left:parseInt(this.element.css("marginLeft"),10)||0,top:parseInt(this.element.css("marginTop"),10)||0,right:parseInt(this.element.css("marginRight"),10)||0,bottom:parseInt(this.element.css("marginBottom"),10)||0}},_cacheHelperProportions:function(){this.helperProportions={width:this.helper.outerWidth(),height:this.helper.outerHeight()}},_setContainment:function(){var b=this.options;b.containment=="parent"&&(b.containment=this.helper[0].parentNode);if(b.containment=="document"||b.containment=="window")this.containment=[b.containment=="document"?0:a(window).scrollLeft()-this.offset.relative.left-this.offset.parent.left,b.containment=="document"?0:a(window).scrollTop()-this.offset.relative.top-this.offset.parent.top,(b.containment=="document"?0:a(window).scrollLeft())+a(b.containment=="document"?document:window).width()-this.helperProportions.width-this.margins.left,(b.containment=="document"?0:a(window).scrollTop())+(a(b.containment=="document"?document:window).height()||document.body.parentNode.scrollHeight)-this.helperProportions.height-this.margins.top];if(!/^(document|window|parent)$/.test(b.containment)&&b.containment.constructor!=Array){var c=a(b.containment),d=c[0];if(!d)return;var e=c.offset(),f=a(d).css("overflow")!="hidden";this.containment=[(parseInt(a(d).css("borderLeftWidth"),10)||0)+(parseInt(a(d).css("paddingLeft"),10)||0),(parseInt(a(d).css("borderTopWidth"),10)||0)+(parseInt(a(d).css("paddingTop"),10)||0),(f?Math.max(d.scrollWidth,d.offsetWidth):d.offsetWidth)-(parseInt(a(d).css("borderLeftWidth"),10)||0)-(parseInt(a(d).css("paddingRight"),10)||0)-this.helperProportions.width-this.margins.left-this.margins.right,(f?Math.max(d.scrollHeight,d.offsetHeight):d.offsetHeight)-(parseInt(a(d).css("borderTopWidth"),10)||0)-(parseInt(a(d).css("paddingBottom"),10)||0)-this.helperProportions.height-this.margins.top-this.margins.bottom],this.relative_container=c}else b.containment.constructor==Array&&(this.containment=b.containment)},_convertPositionTo:function(b,c){c||(c=this.position);var d=b=="absolute"?1:-1,e=this.options,f=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,g=/(html|body)/i.test(f[0].tagName);return{top:c.top+this.offset.relative.top*d+this.offset.parent.top*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollTop():g?0:f.scrollTop())*d),left:c.left+this.offset.relative.left*d+this.offset.parent.left*d-(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:(this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():g?0:f.scrollLeft())*d)}},_generatePosition:function(b){var c=this.options,d=this.cssPosition=="absolute"&&(this.scrollParent[0]==document||!a.ui.contains(this.scrollParent[0],this.offsetParent[0]))?this.offsetParent:this.scrollParent,e=/(html|body)/i.test(d[0].tagName),f=b.pageX,g=b.pageY;if(this.originalPosition){var h;if(this.containment){if(this.relative_container){var i=this.relative_container.offset();h=[this.containment[0]+i.left,this.containment[1]+i.top,this.containment[2]+i.left,this.containment[3]+i.top]}else h=this.containment;b.pageX-this.offset.click.left<h[0]&&(f=h[0]+this.offset.click.left),b.pageY-this.offset.click.top<h[1]&&(g=h[1]+this.offset.click.top),b.pageX-this.offset.click.left>h[2]&&(f=h[2]+this.offset.click.left),b.pageY-this.offset.click.top>h[3]&&(g=h[3]+this.offset.click.top)}if(c.grid){var j=c.grid[1]?this.originalPageY+Math.round((g-this.originalPageY)/c.grid[1])*c.grid[1]:this.originalPageY;g=h?j-this.offset.click.top<h[1]||j-this.offset.click.top>h[3]?j-this.offset.click.top<h[1]?j+c.grid[1]:j-c.grid[1]:j:j;var k=c.grid[0]?this.originalPageX+Math.round((f-this.originalPageX)/c.grid[0])*c.grid[0]:this.originalPageX;f=h?k-this.offset.click.left<h[0]||k-this.offset.click.left>h[2]?k-this.offset.click.left<h[0]?k+c.grid[0]:k-c.grid[0]:k:k}}return{top:g-this.offset.click.top-this.offset.relative.top-this.offset.parent.top+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollTop():e?0:d.scrollTop()),left:f-this.offset.click.left-this.offset.relative.left-this.offset.parent.left+(a.browser.safari&&a.browser.version<526&&this.cssPosition=="fixed"?0:this.cssPosition=="fixed"?-this.scrollParent.scrollLeft():e?0:d.scrollLeft())}},_clear:function(){this.helper.removeClass("ui-draggable-dragging"),this.helper[0]!=this.element[0]&&!this.cancelHelperRemoval&&this.helper.remove(),this.helper=null,this.cancelHelperRemoval=!1},_trigger:function(b,c,d){return d=d||this._uiHash(),a.ui.plugin.call(this,b,[c,d]),b=="drag"&&(this.positionAbs=this._convertPositionTo("absolute")),a.Widget.prototype._trigger.call(this,b,c,d)},plugins:{},_uiHash:function(a){return{helper:this.helper,position:this.position,originalPosition:this.originalPosition,offset:this.positionAbs}}}),a.extend(a.ui.draggable,{version:"1.8.23"}),a.ui.plugin.add("draggable","connectToSortable",{start:function(b,c){var d=a(this).data("draggable"),e=d.options,f=a.extend({},c,{item:d.element});d.sortables=[],a(e.connectToSortable).each(function(){var c=a.data(this,"sortable");c&&!c.options.disabled&&(d.sortables.push({instance:c,shouldRevert:c.options.revert}),c.refreshPositions(),c._trigger("activate",b,f))})},stop:function(b,c){var d=a(this).data("draggable"),e=a.extend({},c,{item:d.element});a.each(d.sortables,function(){this.instance.isOver?(this.instance.isOver=0,d.cancelHelperRemoval=!0,this.instance.cancelHelperRemoval=!1,this.shouldRevert&&(this.instance.options.revert=!0),this.instance._mouseStop(b),this.instance.options.helper=this.instance.options._helper,d.options.helper=="original"&&this.instance.currentItem.css({top:"auto",left:"auto"})):(this.instance.cancelHelperRemoval=!1,this.instance._trigger("deactivate",b,e))})},drag:function(b,c){var d=a(this).data("draggable"),e=this,f=function(b){var c=this.offset.click.top,d=this.offset.click.left,e=this.positionAbs.top,f=this.positionAbs.left,g=b.height,h=b.width,i=b.top,j=b.left;return a.ui.isOver(e+c,f+d,i,j,g,h)};a.each(d.sortables,function(f){this.instance.positionAbs=d.positionAbs,this.instance.helperProportions=d.helperProportions,this.instance.offset.click=d.offset.click,this.instance._intersectsWith(this.instance.containerCache)?(this.instance.isOver||(this.instance.isOver=1,this.instance.currentItem=a(e).clone().removeAttr("id").appendTo(this.instance.element).data("sortable-item",!0),this.instance.options._helper=this.instance.options.helper,this.instance.options.helper=function(){return c.helper[0]},b.target=this.instance.currentItem[0],this.instance._mouseCapture(b,!0),this.instance._mouseStart(b,!0,!0),this.instance.offset.click.top=d.offset.click.top,this.instance.offset.click.left=d.offset.click.left,this.instance.offset.parent.left-=d.offset.parent.left-this.instance.offset.parent.left,this.instance.offset.parent.top-=d.offset.parent.top-this.instance.offset.parent.top,d._trigger("toSortable",b),d.dropped=this.instance.element,d.currentItem=d.element,this.instance.fromOutside=d),this.instance.currentItem&&this.instance._mouseDrag(b)):this.instance.isOver&&(this.instance.isOver=0,this.instance.cancelHelperRemoval=!0,this.instance.options.revert=!1,this.instance._trigger("out",b,this.instance._uiHash(this.instance)),this.instance._mouseStop(b,!0),this.instance.options.helper=this.instance.options._helper,this.instance.currentItem.remove(),this.instance.placeholder&&this.instance.placeholder.remove(),d._trigger("fromSortable",b),d.dropped=!1)})}}),a.ui.plugin.add("draggable","cursor",{start:function(b,c){var d=a("body"),e=a(this).data("draggable").options;d.css("cursor")&&(e._cursor=d.css("cursor")),d.css("cursor",e.cursor)},stop:function(b,c){var d=a(this).data("draggable").options;d._cursor&&a("body").css("cursor",d._cursor)}}),a.ui.plugin.add("draggable","opacity",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("opacity")&&(e._opacity=d.css("opacity")),d.css("opacity",e.opacity)},stop:function(b,c){var d=a(this).data("draggable").options;d._opacity&&a(c.helper).css("opacity",d._opacity)}}),a.ui.plugin.add("draggable","scroll",{start:function(b,c){var d=a(this).data("draggable");d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"&&(d.overflowOffset=d.scrollParent.offset())},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=!1;if(d.scrollParent[0]!=document&&d.scrollParent[0].tagName!="HTML"){if(!e.axis||e.axis!="x")d.overflowOffset.top+d.scrollParent[0].offsetHeight-b.pageY<e.scrollSensitivity?d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop+e.scrollSpeed:b.pageY-d.overflowOffset.top<e.scrollSensitivity&&(d.scrollParent[0].scrollTop=f=d.scrollParent[0].scrollTop-e.scrollSpeed);if(!e.axis||e.axis!="y")d.overflowOffset.left+d.scrollParent[0].offsetWidth-b.pageX<e.scrollSensitivity?d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft+e.scrollSpeed:b.pageX-d.overflowOffset.left<e.scrollSensitivity&&(d.scrollParent[0].scrollLeft=f=d.scrollParent[0].scrollLeft-e.scrollSpeed)}else{if(!e.axis||e.axis!="x")b.pageY-a(document).scrollTop()<e.scrollSensitivity?f=a(document).scrollTop(a(document).scrollTop()-e.scrollSpeed):a(window).height()-(b.pageY-a(document).scrollTop())<e.scrollSensitivity&&(f=a(document).scrollTop(a(document).scrollTop()+e.scrollSpeed));if(!e.axis||e.axis!="y")b.pageX-a(document).scrollLeft()<e.scrollSensitivity?f=a(document).scrollLeft(a(document).scrollLeft()-e.scrollSpeed):a(window).width()-(b.pageX-a(document).scrollLeft())<e.scrollSensitivity&&(f=a(document).scrollLeft(a(document).scrollLeft()+e.scrollSpeed))}f!==!1&&a.ui.ddmanager&&!e.dropBehaviour&&a.ui.ddmanager.prepareOffsets(d,b)}}),a.ui.plugin.add("draggable","snap",{start:function(b,c){var d=a(this).data("draggable"),e=d.options;d.snapElements=[],a(e.snap.constructor!=String?e.snap.items||":data(draggable)":e.snap).each(function(){var b=a(this),c=b.offset();this!=d.element[0]&&d.snapElements.push({item:this,width:b.outerWidth(),height:b.outerHeight(),top:c.top,left:c.left})})},drag:function(b,c){var d=a(this).data("draggable"),e=d.options,f=e.snapTolerance,g=c.offset.left,h=g+d.helperProportions.width,i=c.offset.top,j=i+d.helperProportions.height;for(var k=d.snapElements.length-1;k>=0;k--){var l=d.snapElements[k].left,m=l+d.snapElements[k].width,n=d.snapElements[k].top,o=n+d.snapElements[k].height;if(!(l-f<g&&g<m+f&&n-f<i&&i<o+f||l-f<g&&g<m+f&&n-f<j&&j<o+f||l-f<h&&h<m+f&&n-f<i&&i<o+f||l-f<h&&h<m+f&&n-f<j&&j<o+f)){d.snapElements[k].snapping&&d.options.snap.release&&d.options.snap.release.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=!1;continue}if(e.snapMode!="inner"){var p=Math.abs(n-j)<=f,q=Math.abs(o-i)<=f,r=Math.abs(l-h)<=f,s=Math.abs(m-g)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n-d.helperProportions.height,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l-d.helperProportions.width}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m}).left-d.margins.left)}var t=p||q||r||s;if(e.snapMode!="outer"){var p=Math.abs(n-i)<=f,q=Math.abs(o-j)<=f,r=Math.abs(l-g)<=f,s=Math.abs(m-h)<=f;p&&(c.position.top=d._convertPositionTo("relative",{top:n,left:0}).top-d.margins.top),q&&(c.position.top=d._convertPositionTo("relative",{top:o-d.helperProportions.height,left:0}).top-d.margins.top),r&&(c.position.left=d._convertPositionTo("relative",{top:0,left:l}).left-d.margins.left),s&&(c.position.left=d._convertPositionTo("relative",{top:0,left:m-d.helperProportions.width}).left-d.margins.left)}!d.snapElements[k].snapping&&(p||q||r||s||t)&&d.options.snap.snap&&d.options.snap.snap.call(d.element,b,a.extend(d._uiHash(),{snapItem:d.snapElements[k].item})),d.snapElements[k].snapping=p||q||r||s||t}}}),a.ui.plugin.add("draggable","stack",{start:function(b,c){var d=a(this).data("draggable").options,e=a.makeArray(a(d.stack)).sort(function(b,c){return(parseInt(a(b).css("zIndex"),10)||0)-(parseInt(a(c).css("zIndex"),10)||0)});if(!e.length)return;var f=parseInt(e[0].style.zIndex)||0;a(e).each(function(a){this.style.zIndex=f+a}),this[0].style.zIndex=f+e.length}}),a.ui.plugin.add("draggable","zIndex",{start:function(b,c){var d=a(c.helper),e=a(this).data("draggable").options;d.css("zIndex")&&(e._zIndex=d.css("zIndex")),d.css("zIndex",e.zIndex)},stop:function(b,c){var d=a(this).data("draggable").options;d._zIndex&&a(c.helper).css("zIndex",d._zIndex)}})})(jQuery);;
-;/*
+/*
  jquery.layout 1.3.0 - Release Candidate 30.62
  $Date: 2012-08-04 08:00:00 (Thu, 23 Aug 2012) $
  $Rev: 303006 $
@@ -23656,7 +24018,7 @@ b.attr("pin");if(!(h&&f===(h=="down"))){var a=a.options[d],h=a.buttonClass+"-pin
 b,d,j)},addOpenBtn:function(b,d,j){return c.addOpen(a,b,d,j)},addCloseBtn:function(b,d){return c.addClose(a,b,d)},addPinBtn:function(b,d){return c.addPin(a,b,d)}});for(var d=0;d<4;d++)a.state[b.layout.config.borderPanes[d]].pins=[];a.options.autoBindCustomButtons&&c.init(a)},_unload:function(){}};b.layout.onLoad.push(b.layout.buttons._load);b.layout.plugins.browserZoom=!0;b.layout.defaults.browserZoomCheckInterval=1E3;b.layout.optionsMap.layout.push("browserZoomCheckInterval");b.layout.browserZoom=
 {_init:function(a){b.layout.browserZoom.ratio()!==false&&b.layout.browserZoom._setTimer(a)},_setTimer:function(a){if(!a.destroyed){var c=a.options,d=a.state,f=a.hasParentLayout?5E3:Math.max(c.browserZoomCheckInterval,100);setTimeout(function(){if(!a.destroyed&&c.resizeWithWindow){var f=b.layout.browserZoom.ratio();if(f!==d.browserZoom){d.browserZoom=f;a.resizeAll()}b.layout.browserZoom._setTimer(a)}},f)}},ratio:function(){function a(a,b){return(parseInt(a,10)/parseInt(b,10)*100).toFixed()}var c=window,
 d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r,y,D;return j.msie&&m>8||!j.msie?false:d.deviceXDPI?a(d.deviceXDPI,d.systemXDPI):j.webkit&&(r=f.body.getBoundingClientRect)?a(r.left-r.right,f.body.offsetWidth):j.webkit&&(y=c.outerWidth)?a(y,c.innerWidth):(y=d.width)&&(D=h.clientWidth)?a(y,D):false}};b.layout.onReady.push(b.layout.browserZoom._init)})(jQuery);
-;// Underscore.js 1.4.4
+// Underscore.js 1.4.4
 // ===================
 
 // > http://underscorejs.org
@@ -24884,7 +25246,7 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
 
 }).call(this);
 
-;/*!
+/*!
  * Copyright (c) 2010 Chris O'Hara <cohara87@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -24906,7 +25268,7 @@ d=screen,f=document,h=f.documentElement||f.body,j=b.layout.browser,m=j.version,r
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */(function(e){function a(e){for(var t in o)e=e.replace(o[t],"");return e}function f(){return"!*$^#(@*#&"}function l(e){return e.replace(">","&gt;").replace("<","&lt;").replace("\\","\\\\")}function c(e){var t=/\/\*.*?\*\//g;return e.replace(/\s*[a-z-]+\s*=\s*'[^']*'/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*"[^"]*"/gi,function(e){return e.replace(t,"")}).replace(/\s*[a-z-]+\s*=\s*[^\s]+/gi,function(e){return e.replace(t,"")})}var t={"&nbsp;":"\u00a0","&iexcl;":"\u00a1","&cent;":"\u00a2","&pound;":"\u00a3","&curren;":"\u20ac","&yen;":"\u00a5","&brvbar;":"\u0160","&sect;":"\u00a7","&uml;":"\u0161","&copy;":"\u00a9","&ordf;":"\u00aa","&laquo;":"\u00ab","&not;":"\u00ac","&shy;":"\u00ad","&reg;":"\u00ae","&macr;":"\u00af","&deg;":"\u00b0","&plusmn;":"\u00b1","&sup2;":"\u00b2","&sup3;":"\u00b3","&acute;":"\u017d","&micro;":"\u00b5","&para;":"\u00b6","&middot;":"\u00b7","&cedil;":"\u017e","&sup1;":"\u00b9","&ordm;":"\u00ba","&raquo;":"\u00bb","&frac14;":"\u0152","&frac12;":"\u0153","&frac34;":"\u0178","&iquest;":"\u00bf","&Agrave;":"\u00c0","&Aacute;":"\u00c1","&Acirc;":"\u00c2","&Atilde;":"\u00c3","&Auml;":"\u00c4","&Aring;":"\u00c5","&AElig;":"\u00c6","&Ccedil;":"\u00c7","&Egrave;":"\u00c8","&Eacute;":"\u00c9","&Ecirc;":"\u00ca","&Euml;":"\u00cb","&Igrave;":"\u00cc","&Iacute;":"\u00cd","&Icirc;":"\u00ce","&Iuml;":"\u00cf","&ETH;":"\u00d0","&Ntilde;":"\u00d1","&Ograve;":"\u00d2","&Oacute;":"\u00d3","&Ocirc;":"\u00d4","&Otilde;":"\u00d5","&Ouml;":"\u00d6","&times;":"\u00d7","&Oslash;":"\u00d8","&Ugrave;":"\u00d9","&Uacute;":"\u00da","&Ucirc;":"\u00db","&Uuml;":"\u00dc","&Yacute;":"\u00dd","&THORN;":"\u00de","&szlig;":"\u00df","&agrave;":"\u00e0","&aacute;":"\u00e1","&acirc;":"\u00e2","&atilde;":"\u00e3","&auml;":"\u00e4","&aring;":"\u00e5","&aelig;":"\u00e6","&ccedil;":"\u00e7","&egrave;":"\u00e8","&eacute;":"\u00e9","&ecirc;":"\u00ea","&euml;":"\u00eb","&igrave;":"\u00ec","&iacute;":"\u00ed","&icirc;":"\u00ee","&iuml;":"\u00ef","&eth;":"\u00f0","&ntilde;":"\u00f1","&ograve;":"\u00f2","&oacute;":"\u00f3","&ocirc;":"\u00f4","&otilde;":"\u00f5","&ouml;":"\u00f6","&divide;":"\u00f7","&oslash;":"\u00f8","&ugrave;":"\u00f9","&uacute;":"\u00fa","&ucirc;":"\u00fb","&uuml;":"\u00fc","&yacute;":"\u00fd","&thorn;":"\u00fe","&yuml;":"\u00ff","&quot;":'"',"&lt;":"<","&gt;":">","&apos;":"'","&minus;":"\u2212","&circ;":"\u02c6","&tilde;":"\u02dc","&Scaron;":"\u0160","&lsaquo;":"\u2039","&OElig;":"\u0152","&lsquo;":"\u2018","&rsquo;":"\u2019","&ldquo;":"\u201c","&rdquo;":"\u201d","&bull;":"\u2022","&ndash;":"\u2013","&mdash;":"\u2014","&trade;":"\u2122","&scaron;":"\u0161","&rsaquo;":"\u203a","&oelig;":"\u0153","&Yuml;":"\u0178","&fnof;":"\u0192","&Alpha;":"\u0391","&Beta;":"\u0392","&Gamma;":"\u0393","&Delta;":"\u0394","&Epsilon;":"\u0395","&Zeta;":"\u0396","&Eta;":"\u0397","&Theta;":"\u0398","&Iota;":"\u0399","&Kappa;":"\u039a","&Lambda;":"\u039b","&Mu;":"\u039c","&Nu;":"\u039d","&Xi;":"\u039e","&Omicron;":"\u039f","&Pi;":"\u03a0","&Rho;":"\u03a1","&Sigma;":"\u03a3","&Tau;":"\u03a4","&Upsilon;":"\u03a5","&Phi;":"\u03a6","&Chi;":"\u03a7","&Psi;":"\u03a8","&Omega;":"\u03a9","&alpha;":"\u03b1","&beta;":"\u03b2","&gamma;":"\u03b3","&delta;":"\u03b4","&epsilon;":"\u03b5","&zeta;":"\u03b6","&eta;":"\u03b7","&theta;":"\u03b8","&iota;":"\u03b9","&kappa;":"\u03ba","&lambda;":"\u03bb","&mu;":"\u03bc","&nu;":"\u03bd","&xi;":"\u03be","&omicron;":"\u03bf","&pi;":"\u03c0","&rho;":"\u03c1","&sigmaf;":"\u03c2","&sigma;":"\u03c3","&tau;":"\u03c4","&upsilon;":"\u03c5","&phi;":"\u03c6","&chi;":"\u03c7","&psi;":"\u03c8","&omega;":"\u03c9","&thetasym;":"\u03d1","&upsih;":"\u03d2","&piv;":"\u03d6","&ensp;":"\u2002","&emsp;":"\u2003","&thinsp;":"\u2009","&zwnj;":"\u200c","&zwj;":"\u200d","&lrm;":"\u200e","&rlm;":"\u200f","&sbquo;":"\u201a","&bdquo;":"\u201e","&dagger;":"\u2020","&Dagger;":"\u2021","&hellip;":"\u2026","&permil;":"\u2030","&prime;":"\u2032","&Prime;":"\u2033","&oline;":"\u203e","&frasl;":"\u2044","&euro;":"\u20ac","&image;":"\u2111","&weierp;":"\u2118","&real;":"\u211c","&alefsym;":"\u2135","&larr;":"\u2190","&uarr;":"\u2191","&rarr;":"\u2192","&darr;":"\u2193","&harr;":"\u2194","&crarr;":"\u21b5","&lArr;":"\u21d0","&uArr;":"\u21d1","&rArr;":"\u21d2","&dArr;":"\u21d3","&hArr;":"\u21d4","&forall;":"\u2200","&part;":"\u2202","&exist;":"\u2203","&empty;":"\u2205","&nabla;":"\u2207","&isin;":"\u2208","&notin;":"\u2209","&ni;":"\u220b","&prod;":"\u220f","&sum;":"\u2211","&lowast;":"\u2217","&radic;":"\u221a","&prop;":"\u221d","&infin;":"\u221e","&ang;":"\u2220","&and;":"\u2227","&or;":"\u2228","&cap;":"\u2229","&cup;":"\u222a","&int;":"\u222b","&there4;":"\u2234","&sim;":"\u223c","&cong;":"\u2245","&asymp;":"\u2248","&ne;":"\u2260","&equiv;":"\u2261","&le;":"\u2264","&ge;":"\u2265","&sub;":"\u2282","&sup;":"\u2283","&nsub;":"\u2284","&sube;":"\u2286","&supe;":"\u2287","&oplus;":"\u2295","&otimes;":"\u2297","&perp;":"\u22a5","&sdot;":"\u22c5","&lceil;":"\u2308","&rceil;":"\u2309","&lfloor;":"\u230a","&rfloor;":"\u230b","&lang;":"\u2329","&rang;":"\u232a","&loz;":"\u25ca","&spades;":"\u2660","&clubs;":"\u2663","&hearts;":"\u2665","&diams;":"\u2666"},n=function(e){if(!~e.indexOf("&"))return e;for(var n in t)e=e.replace(new RegExp(n,"g"),t[n]);return e=e.replace(/&#x(0*[0-9a-f]{2,5});?/gi,function(e,t){return String.fromCharCode(parseInt(+t,16))}),e=e.replace(/&#([0-9]{2,4});?/gi,function(e,t){return String.fromCharCode(+t)}),e=e.replace(/&amp;/g,"&"),e},r=function(e){e=e.replace(/&/g,"&amp;"),e=e.replace(/'/g,"&#39;");for(var n in t)e=e.replace(new RegExp(t[n],"g"),n);return e};e.entities={encode:r,decode:n};var i={"document.cookie":"","document.write":"",".parentNode":"",".innerHTML":"","window.location":"","-moz-binding":"","<!--":"&lt;!--","-->":"--&gt;","<![CDATA[":"&lt;![CDATA["},s={"javascript\\s*:":"","expression\\s*(\\(|&\\#40;)":"","vbscript\\s*:":"","Redirect\\s+302":""},o=[/%0[0-8bcef]/g,/%1[0-9a-f]/g,/[\x00-\x08]/g,/\x0b/g,/\x0c/g,/[\x0e-\x1f]/g],u=["javascript","expression","vbscript","script","applet","alert","document","write","cookie","window"];e.xssClean=function(t,n){if(typeof t=="object"){for(var r in t)t[r]=e.xssClean(t[r]);return t}t=a(t),t=t.replace(/\&([a-z\_0-9]+)\=([a-z\_0-9]+)/i,f()+"$1=$2"),t=t.replace(/(&\#?[0-9a-z]{2,})([\x00-\x20])*;?/i,"$1;$2"),t=t.replace(/(&\#x?)([0-9A-F]+);?/i,"$1;$2"),t=t.replace(f(),"&");try{t=decodeURIComponent(t)}catch(o){}t=t.replace(/[a-z]+=([\'\"]).*?\1/gi,function(e,t){return e.replace(t,l(t))}),t=a(t),t=t.replace("  "," ");var h=t;for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);for(var r in u){var p=u[r].split("").join("\\s*")+"\\s*";t=t.replace(new RegExp("("+p+")(\\W)","ig"),function(e,t,n){return t.replace(/\s+/g,"")+n})}do{var d=t;t.match(/<a/i)&&(t=t.replace(/<a\s+([^>]*?)(>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/href=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))})),t.match(/<img/i)&&(t=t.replace(/<img\s+([^>]*?)(\s?\/?>|$)/gi,function(e,t,n){return t=c(t.replace("<","").replace(">","")),e.replace(t,t.replace(/src=.*?(alert\(|alert&\#40;|javascript\:|charset\=|window\.|document\.|\.cookie|<script|<xss|base64\s*,)/gi,""))}));if(t.match(/script/i)||t.match(/xss/i))t=t.replace(/<(\/*)(script|xss)(.*?)\>/gi,"")}while(d!=t);event_handlers=["[^a-z_-]on\\w*"],n||event_handlers.push("xmlns"),t=t.replace(new RegExp("<([^><]+?)("+event_handlers.join("|")+")(\\s*=\\s*[^><]*)([><]*)","i"),"<$1$4"),naughty="alert|applet|audio|basefont|base|behavior|bgsound|blink|body|embed|expression|form|frameset|frame|head|html|ilayer|iframe|input|isindex|layer|link|meta|object|plaintext|style|script|textarea|title|video|xml|xss",t=t.replace(new RegExp("<(/*\\s*)("+naughty+")([^><]*)([><]*)","gi"),function(e,t,n,r,i){return"&lt;"+t+n+r+i.replace(">","&gt;").replace("<","&lt;")}),t=t.replace(/(alert|cmd|passthru|eval|exec|expression|system|fopen|fsockopen|file|file_get_contents|readfile|unlink)(\s*)\((.*?)\)/gi,"$1$2&#40;$3&#41;");for(var r in i)t=t.replace(r,i[r]);for(var r in s)t=t.replace(new RegExp(r,"i"),s[r]);if(n&&t!==h)throw new Error("Image may contain XSS");return t};var h=e.Validator=function(){};h.prototype.check=function(e,t){return this.str=e===null||isNaN(e)&&e.length===undefined?"":e+"",this.msg=t,this._errors=this._errors||[],this},h.prototype.validate=h.prototype.check,h.prototype.assert=h.prototype.check,h.prototype.error=function(e){throw new Error(e)},h.prototype.isEmail=function(){return this.str.match(/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/)?this:this.error(this.msg||"Invalid email")},h.prototype.isCreditCard=function(){this.str=this.str.replace(/[^0-9]+/g,"");if(!this.str.match(/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/))return this.error(this.msg||"Invalid credit card");var e=0,t,n,r=!1;for(var i=this.length-1;i>=0;i--)t=this.substring(i,i+1),n=parseInt(t,10),r?(n*=2,n>=10?e+=n%10+1:e+=n):e+=n,r?r=!1:r=!0;return e%10!==0?this.error(this.msg||"Invalid credit card"):this},h.prototype.isUrl=function(){return!this.str.match(/^(?:(?:ht|f)tp(?:s?)\:\/\/|~\/|\/)?(?:\w+:\w+@)?((?:(?:[-\w\d{1-3}]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|edu|co\.uk|ac\.uk|it|fr|tv|museum|asia|local|travel|[a-z]{2}))|((\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)(\.(\b25[0-5]\b|\b[2][0-4][0-9]\b|\b[0-1]?[0-9]?[0-9]\b)){3}))(?::[\d]{1,5})?(?:(?:(?:\/(?:[-\w~!$+|.,=]|%[a-f\d]{2})+)+|\/)+|\?|#)?(?:(?:\?(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)(?:&(?:[-\w~!$+|.,*:]|%[a-f\d{2}])+=?(?:[-\w~!$+|.,*:=]|%[a-f\d]{2})*)*)*(?:#(?:[-\w~!$ |\/.,*:;=]|%[a-f\d]{2})*)?$/i)||this.str.length>2083?this.error(this.msg||"Invalid URL"):this},h.prototype.isIP=function(){return this.str.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)?this:this.error(this.msg||"Invalid IP")},h.prototype.isAlpha=function(){return this.str.match(/^[a-zA-Z]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isAlphanumeric=function(){return this.str.match(/^[a-zA-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isNumeric=function(){return this.str.match(/^-?[0-9]+$/)?this:this.error(this.msg||"Invalid number")},h.prototype.isLowercase=function(){return this.str.match(/^[a-z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isUppercase=function(){return this.str.match(/^[A-Z0-9]+$/)?this:this.error(this.msg||"Invalid characters")},h.prototype.isInt=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))$/)?this:this.error(this.msg||"Invalid integer")},h.prototype.isDecimal=function(){return this.str.match(/^(?:-?(?:0|[1-9][0-9]*))?(?:\.[0-9]*)?$/)?this:this.error(this.msg||"Invalid decimal")},h.prototype.isFloat=function(){return this.isDecimal()},h.prototype.notNull=function(){return this.str===""?this.error(this.msg||"Invalid characters"):this},h.prototype.isNull=function(){return this.str!==""?this.error(this.msg||"Invalid characters"):this},h.prototype.notEmpty=function(){return this.str.match(/^[\s\t\r\n]*$/)?this.error(this.msg||"String is whitespace"):this},h.prototype.equals=function(e){return this.str!=e?this.error(this.msg||"Not equal"):this},h.prototype.contains=function(e){return this.str.indexOf(e)===-1?this.error(this.msg||"Invalid characters"):this},h.prototype.notContains=function(e){return this.str.indexOf(e)>=0?this.error(this.msg||"Invalid characters"):this},h.prototype.regex=h.prototype.is=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)?this:this.error(this.msg||"Invalid characters")},h.prototype.notRegex=h.prototype.not=function(e,t){return Object.prototype.toString.call(e).slice(8,-1)!=="RegExp"&&(e=new RegExp(e,t)),this.str.match(e)&&this.error(this.msg||"Invalid characters"),this},h.prototype.len=function(e,t){return this.str.length<e?this.error(this.msg||"String is too small"):typeof t!==undefined&&this.str.length>t?this.error(this.msg||"String is too large"):this},h.prototype.isUUID=function(e){var t;return e==3||e=="v3"?t=/[0-9A-F]{8}-[0-9A-F]{4}-3[0-9A-F]{3}-[0-9A-F]{4}-[0-9A-F]{12}$/i:e==4||e=="v4"?t=/[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/i:t=/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i,this.str.match(t)?this:this.error(this.msg||"Not a UUID")},h.prototype.isDate=function(){var e=Date.parse(this.str);return isNaN(e)?this.error(this.msg||"Not a date"):this},h.prototype.isIn=function(e){return e&&typeof e.indexOf=="function"?~e.indexOf(this.str)?this:this.error(this.msg||"Unexpected value"):this.error(this.msg||"Invalid in() argument")},h.prototype.notIn=function(e){return e&&typeof e.indexOf=="function"?e.indexOf(this.str)!==-1?this.error(this.msg||"Unexpected value"):this:this.error(this.msg||"Invalid notIn() argument")},h.prototype.min=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t<e?this.error(this.msg||"Invalid number"):this},h.prototype.max=function(e){var t=parseFloat(this.str);return!isNaN(t)&&t>e?this.error(this.msg||"Invalid number"):this},h.prototype.isArray=function(){return Array.isArray(this.str)?this:this.error(this.msg||"Not an array")};var p=e.Filter=function(){},d="\\r\\n\\t\\s";p.prototype.modify=function(e){this.str=e},p.prototype.convert=p.prototype.sanitize=function(e){return this.str=e,this},p.prototype.xss=function(t){return this.modify(e.xssClean(this.str,t)),this.str},p.prototype.entityDecode=function(){return this.modify(n(this.str)),this.str},p.prototype.entityEncode=function(){return this.modify(r(this.str)),this.str},p.prototype.ltrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+","g"),"")),this.str},p.prototype.rtrim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("["+e+"]+$","g"),"")),this.str},p.prototype.trim=function(e){return e=e||d,this.modify(this.str.replace(new RegExp("^["+e+"]+|["+e+"]+$","g"),"")),this.str},p.prototype.ifNull=function(e){return(!this.str||this.str==="")&&this.modify(e),this.str},p.prototype.toFloat=function(){return this.modify(parseFloat(this.str)),this.str},p.prototype.toInt=function(e){return e=e||10,this.modify(parseInt(this.str),e),this.str},p.prototype.toBoolean=function(){return!this.str||this.str=="0"||this.str=="false"||this.str==""?this.modify(!1):this.modify(!0),this.str},p.prototype.toBooleanStrict=function(){return this.str=="1"||this.str=="true"?this.modify(!0):this.modify(!1),this.str},e.sanitize=e.convert=function(t){var n=new e.Filter;return n.sanitize(t)},e.check=e.validate=e.assert=function(t,n){var r=new e.Validator;return r.check(t,n)}})(typeof exports=="undefined"?window:exports);
-;require.register("CNeditor/autocomplete", function(exports, require, module) {
+require.register("CNeditor/autocomplete", function(exports, require, module) {
 var AutoComplete;
 
 require('./bootstrap-datepicker');
@@ -24915,9 +25277,7 @@ require('./bootstrap-timepicker');
 
 module.exports = AutoComplete = (function() {
   function AutoComplete(container, editor, hotString) {
-    var auto, reminderTitle,
-      _this = this;
-
+    var auto, reminderTitle;
     this.container = container;
     this.editor = editor;
     this.hotString = hotString;
@@ -24931,16 +25291,16 @@ module.exports = AutoComplete = (function() {
     this.reminderDiv.innerHTML = "<div class=\"reminder-title\">Add a reminder</div>\n<div class=\"date\" data-date=\"12-02-2012\" data-date-format=\"dd-mm-yyyy\">\n    <div class=\"reminder-input\">\n        <input class=\"datepicker-input\" size=\"16\" type=\"text\" value=\"12-02-2012\"/>\n        <input id=\"timepicker\" data-template=\"modal\" data-minute-step=\"1\" data-modal-backdrop=\"true\" type=\"text\"/>\n    </div>\n</div>";
     this.datePick = $(this.reminderDiv.lastChild).datepicker();
     this.datePick.show();
-    this.datePick.on('changeDate', function(e) {
-      var _ref;
-
-      if ((_ref = _this._currentDate) == null) {
-        _this._currentDate = new Date();
-      }
-      _this._currentDate.setDate(e.date.getDate());
-      _this._currentDate.setMonth(e.date.getMonth());
-      return _this._currentDate.setFullYear(e.date.getFullYear());
-    });
+    this.datePick.on('changeDate', (function(_this) {
+      return function(e) {
+        if (_this._currentDate == null) {
+          _this._currentDate = new Date();
+        }
+        _this._currentDate.setDate(e.date.getDate());
+        _this._currentDate.setMonth(e.date.getMonth());
+        return _this._currentDate.setFullYear(e.date.getFullYear());
+      };
+    })(this));
     this.timePick = $(this.reminderDiv.childNodes[2].firstElementChild.lastElementChild);
     this.timePick.timepicker({
       minuteStep: 1,
@@ -24949,9 +25309,7 @@ module.exports = AutoComplete = (function() {
       showMeridian: false
     });
     this.timePick.timepicker().on('changeTime.timepicker', function(e) {
-      var _ref;
-
-      if ((_ref = this._currentDate) == null) {
+      if (this._currentDate == null) {
         this._currentDate = new Date();
       }
       this._currentDate.setHours(e.time.hours);
@@ -24959,24 +25317,28 @@ module.exports = AutoComplete = (function() {
       return this._currentDate.setSeconds(e.time.seconds);
     });
     reminderTitle = this.reminderDiv.querySelector('.reminder-title');
-    reminderTitle.addEventListener('click', function() {
-      return _this.hotString.validate();
-    });
+    reminderTitle.addEventListener('click', (function(_this) {
+      return function() {
+        return _this.hotString.validate();
+      };
+    })(this));
     this.regexStore = {};
     this.isVisible = false;
     auto = document.createElement('div');
     auto.id = 'CNE_autocomplete';
     auto.className = 'CNE_autocomplete';
     auto.setAttribute('contentEditable', 'false');
-    auto.addEventListener('keypress', function(e) {
-      if (e.keyCode === 13) {
-        _this._validateUrlPopover();
-        e.stopPropagation();
-      } else if (e.keyCode === 27) {
-        _this._cancelUrlPopover(false);
-      }
-      return false;
-    });
+    auto.addEventListener('keypress', (function(_this) {
+      return function(e) {
+        if (e.keyCode === 13) {
+          _this._validateUrlPopover();
+          e.stopPropagation();
+        } else if (e.keyCode === 27) {
+          _this._cancelUrlPopover(false);
+        }
+        return false;
+      };
+    })(this));
     auto.appendChild(this.tTagsDiv);
     this.el = auto;
     this._currentMode = 'contact';
@@ -24996,22 +25358,46 @@ module.exports = AutoComplete = (function() {
         type: 'ttag',
         value: 'reminder',
         mention: ' (@@)'
+      }, {
+        text: 'tag',
+        type: 'ttag',
+        value: 'htag',
+        mention: ' (#)'
       }
     ]);
-    this.setItems('contact', []);
+    this.setItems('contact', [
+      {
+        text: 'tata',
+        type: 'contact',
+        model: {
+          id: 123
+        }
+      }
+    ]);
+    this.setItems('htag', [
+      {
+        text: 'tag1',
+        type: 'htag'
+      }, {
+        text: 'tag2',
+        type: 'htag'
+      }, {
+        text: 'tug2',
+        type: 'htag'
+      }
+    ]);
     return this;
   }
+
 
   /**
    * Set items for a type of suggestions
    * @param {String} type  'tTags', 'contact', 'htag'
    * @param {Object} items Object {text, type, [mention]}
-  */
-
+   */
 
   AutoComplete.prototype.setItems = function(type, items) {
-    var it, line, lines, _i, _len;
-
+    var it, j, len, line, lines;
     switch (type) {
       case 'tTags':
         this.tTags = items;
@@ -25028,8 +25414,8 @@ module.exports = AutoComplete = (function() {
     while (lines.firstChild) {
       lines.removeChild(lines.firstChild);
     }
-    for (_i = 0, _len = items.length; _i < _len; _i++) {
-      it = items[_i];
+    for (j = 0, len = items.length; j < len; j++) {
+      it = items[j];
       line = this._createLine(it);
       if (line) {
         lines.appendChild(line);
@@ -25038,16 +25424,15 @@ module.exports = AutoComplete = (function() {
     return true;
   };
 
+
   /**
    * Insert a suggestion line in the list of possible suggestions
    * @param  {Object} item The item which can be suggested.
    * @return {Object}      A ref to the created line.
-  */
-
+   */
 
   AutoComplete.prototype._createLine = function(item) {
-    var c, line, span, t, type, _i, _len, _ref;
-
+    var c, j, len, line, ref, span, t, type;
     if (!item.text) {
       return null;
     }
@@ -25063,9 +25448,9 @@ module.exports = AutoComplete = (function() {
       case 'htag':
         line.className = 'SUGG_line_htag';
     }
-    t = ((_ref = item.text) != null ? _ref.split('') : void 0) || [];
-    for (_i = 0, _len = t.length; _i < _len; _i++) {
-      c = t[_i];
+    t = ((ref = item.text) != null ? ref.split('') : void 0) || [];
+    for (j = 0, len = t.length; j < len; j++) {
+      c = t[j];
       span = document.createElement('SPAN');
       span.textContent = c;
       line.appendChild(span);
@@ -25081,17 +25466,16 @@ module.exports = AutoComplete = (function() {
     return line;
   };
 
+
   /**
    * Show the suggestion list
    * @param  {Object} seg The segment of the editor to be positionned next to.
    * @param  {String} typedTxt   The string typed by the user (hotstring)
    * @param  {[type]} edLineDiv  The editor line div where the user is typing
-  */
-
+   */
 
   AutoComplete.prototype.show = function(seg, typedTxt) {
     var edLineDiv;
-
     edLineDiv = seg.parentElement;
     this.isVisible = true;
     this.update(typedTxt);
@@ -25100,15 +25484,14 @@ module.exports = AutoComplete = (function() {
   };
 
   AutoComplete.prototype.setAllowedModes = function(modes) {
-    var m, ttag, _i, _j, _len, _len1, _ref;
-
+    var j, k, len, len1, m, ref, ttag;
     this._modes = modes;
-    _ref = this.tTags;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      ttag = _ref[_i];
+    ref = this.tTags;
+    for (j = 0, len = ref.length; j < len; j++) {
+      ttag = ref[j];
       ttag.isInMode = false;
-      for (_j = 0, _len1 = modes.length; _j < _len1; _j++) {
-        m = modes[_j];
+      for (k = 0, len1 = modes.length; k < len1; k++) {
+        m = modes[k];
         if (ttag.value === m) {
           ttag.isInMode = true;
           break;
@@ -25118,15 +25501,14 @@ module.exports = AutoComplete = (function() {
     return true;
   };
 
+
   /**
    * set the autocomplete popover to a mode : contact, htag, reminder.
    * @param {String} mode 'contact', 'htag', 'reminder'.
-  */
-
+   */
 
   AutoComplete.prototype.setMode = function(mode) {
     var now;
-
     this._unSelectLine();
     switch (mode) {
       case 'ttag':
@@ -25197,17 +25579,16 @@ module.exports = AutoComplete = (function() {
   };
 
   AutoComplete.prototype.update = function(typedTxt) {
-    var it, items, nbrOfSuggestions, newdate, time, ttag, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
-
+    var it, items, j, k, len, len1, len2, n, nbrOfSuggestions, newdate, ref, ref1, time, ttag;
     if (!this.isVisible) {
       return;
     }
     nbrOfSuggestions = 0;
     switch (this._currentMode) {
       case 'ttag':
-        _ref = this.tTags;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          ttag = _ref[_i];
+        ref = this.tTags;
+        for (j = 0, len = ref.length; j < len; j++) {
+          ttag = ref[j];
           if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
             nbrOfSuggestions += 1;
             ttag.line.style.display = 'block';
@@ -25218,9 +25599,9 @@ module.exports = AutoComplete = (function() {
         items = [];
         break;
       case 'contact':
-        _ref1 = this.tTags;
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          ttag = _ref1[_j];
+        ref1 = this.tTags;
+        for (k = 0, len1 = ref1.length; k < len1; k++) {
+          ttag = ref1[k];
           if (ttag.isInMode && this._shouldDisp(ttag, typedTxt)) {
             nbrOfSuggestions += 1;
             ttag.line.style.display = 'block';
@@ -25243,8 +25624,8 @@ module.exports = AutoComplete = (function() {
         }
         return;
     }
-    for (_k = 0, _len2 = items.length; _k < _len2; _k++) {
-      it = items[_k];
+    for (n = 0, len2 = items.length; n < len2; n++) {
+      it = items[n];
       if (this._shouldDisp(it, typedTxt)) {
         nbrOfSuggestions += 1;
         if (it.line) {
@@ -25272,7 +25653,6 @@ module.exports = AutoComplete = (function() {
 
   AutoComplete.prototype._addLine = function(item) {
     var line;
-
     line = document.createElement('LI');
     this._updateLine(line, item);
     this.el.appendChild(line);
@@ -25280,8 +25660,7 @@ module.exports = AutoComplete = (function() {
   };
 
   AutoComplete.prototype._updateLine = function(line, item, typedTxt) {
-    var c, span, t, type, _i, _len;
-
+    var c, j, len, span, t, type;
     console.info('_updateLine');
     type = item.type;
     switch (type) {
@@ -25295,8 +25674,8 @@ module.exports = AutoComplete = (function() {
       line.innerHTML = '';
     }
     t = item.text.split('');
-    for (_i = 0, _len = t.length; _i < _len; _i++) {
-      c = t[_i];
+    for (j = 0, len = t.length; j < len; j++) {
+      c = t[j];
       span = document.createElement('SPAN');
       span.textContent = c;
       line.appendChild(span);
@@ -25318,7 +25697,6 @@ module.exports = AutoComplete = (function() {
 
   AutoComplete.prototype._unSelectLine = function() {
     var line;
-
     line = this._selectedLine;
     if (line) {
       line.classList.remove('SUGG_selected');
@@ -25331,15 +25709,14 @@ module.exports = AutoComplete = (function() {
     return this.el.removeChild(line);
   };
 
+
   /**
    * Hide auto complete and returns the current selected item, null if none.
    * @return {[type]} [description]
-  */
-
+   */
 
   AutoComplete.prototype.hide = function() {
     var item;
-
     if (!this.isVisible) {
       return false;
     }
@@ -25351,7 +25728,6 @@ module.exports = AutoComplete = (function() {
 
   AutoComplete.prototype.getSelectedItem = function() {
     var date, item;
-
     switch (this._currentMode) {
       case 'ttag':
       case 'contact':
@@ -25385,7 +25761,6 @@ module.exports = AutoComplete = (function() {
 
   AutoComplete.prototype._shouldDisp = function(item, typedTxt) {
     var c, i, l, reg, regText, s, spans, typedCar;
-
     if (this.regexStore[typedTxt]) {
       reg = this.regexStore[typedTxt];
     } else {
@@ -25426,15 +25801,14 @@ module.exports = AutoComplete = (function() {
     }
   };
 
+
   /**
    * select previous suggestion in auto complete. Behaviour depends on the
    * mode (reminder is different from contact for instance)
-  */
-
+   */
 
   AutoComplete.prototype.up = function() {
     var line, prev;
-
     if (this.nbrOfSuggestions === 0) {
       return;
     }
@@ -25466,15 +25840,14 @@ module.exports = AutoComplete = (function() {
     return true;
   };
 
+
   /**
    * select next suggestion in auto complete. Behaviour depends on the mode
    * (reminder is different from contact for instance)
-  */
-
+   */
 
   AutoComplete.prototype.down = function() {
     var line, next;
-
     if (this.nbrOfSuggestions === 0) {
       return;
     }
@@ -25510,11 +25883,10 @@ module.exports = AutoComplete = (function() {
   };
 
   AutoComplete.prototype.isInTTags = function(text) {
-    var tag, _i, _len, _ref;
-
-    _ref = this.tTags;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      tag = _ref[_i];
+    var j, len, ref, tag;
+    ref = this.tTags;
+    for (j = 0, len = ref.length; j < len; j++) {
+      tag = ref[j];
       if (text === tag.text) {
         return tag;
       }
@@ -25528,7 +25900,7 @@ module.exports = AutoComplete = (function() {
 
 });
 
-;require.register("CNeditor/bootstrap-datepicker", function(exports, require, module) {
+require.register("CNeditor/bootstrap-datepicker", function(exports, require, module) {
 /* =========================================================
  * bootstrap-datepicker.js 
  * http://www.eyecon.ro/bootstrap-datepicker
@@ -26007,7 +26379,7 @@ module.exports = AutoComplete = (function() {
 }( window.jQuery );
 });
 
-;require.register("CNeditor/bootstrap-timepicker", function(exports, require, module) {
+require.register("CNeditor/bootstrap-timepicker", function(exports, require, module) {
 /*!
  * Timepicker Component for Twitter Bootstrap
  *
@@ -26894,19 +27266,24 @@ module.exports = AutoComplete = (function() {
 
 });
 
-;require.register("CNeditor/contactpopover", function(exports, require, module) {
+require.register("CNeditor/contactpopover", function(exports, require, module) {
 var ContactPopover;
 
 module.exports = ContactPopover = (function() {
   function ContactPopover() {
+    this.talker = new Talker(window.parent, '*');
     this.el = document.createElement('DIV');
     this.el.id = 'contactpopover';
     this.isOn = false;
   }
 
+  ContactPopover.prototype.send = function(nameSpace, intent, timeout) {
+    this.talker.timeout = timeout ? timeout : TIMEOUT;
+    return this.talker.send('nameSpace', intent);
+  };
+
   ContactPopover.prototype.hide = function() {
     var oldcontactseg;
-
     oldcontactseg = null;
     if (this.isOn && (oldcontactseg = this.el.parentNode)) {
       oldcontactseg.removeChild(this.el);
@@ -26916,25 +27293,45 @@ module.exports = ContactPopover = (function() {
   };
 
   ContactPopover.prototype.show = function(segment, model) {
-    var datapoints, dp, html, _i, _len;
-
+    var datapoints, dp, html, i, len;
     datapoints = model.get('datapoints');
     html = '<dl class="dl-horizontal">';
-    for (_i = 0, _len = datapoints.length; _i < _len; _i++) {
-      dp = datapoints[_i];
+    for (i = 0, len = datapoints.length; i < len; i++) {
+      dp = datapoints[i];
       html += this.dp2html(dp);
     }
     html += '</dl>';
+    html += "<a>(edit)</a>";
     this.el.innerHTML = html;
     segment.appendChild(this.el);
+    this.el.addEventListener('click', (function(_this) {
+      return function(e) {
+        var choosePhoto_answer, intent, target, timeout;
+        if (e.ctrlKey) {
+          target = '_blank';
+        } else {
+          target = '_parent';
+        }
+        intent = {
+          type: 'goto',
+          params: {
+            appUrl: 'contacts/contact/' + model.id,
+            target: target
+          }
+        };
+        timeout = 10800000;
+        choosePhoto_answer = _this.choosePhoto_answer;
+        _this.send('nameSpace', intent, timeout);
+        return console.log("turlututu");
+      };
+    })(this));
     return this.isOn = true;
   };
 
   ContactPopover.prototype.dp2html = function(dp) {
-    var name, value, _ref;
-
+    var name, ref, value;
     value = dp.value.replace("\n", '<br />');
-    if ((_ref = dp.name) === 'other' || _ref === 'about') {
+    if ((ref = dp.name) === 'other' || ref === 'about') {
       name = dp.type;
     } else {
       name = dp.type + ' ' + dp.name;
@@ -26948,32 +27345,32 @@ module.exports = ContactPopover = (function() {
 
 });
 
-;require.register("CNeditor/editor", function(exports, require, module) {
-/* ------------------------------------------------------------------------
-# CLASS FOR THE COZY NOTE EDITOR
-#
-# usage :
-#
-# newEditor = new CNEditor( iframeTarget,callBack )
-#   iframeTarget = iframe where the editor will be nested
-#   callBack     = launched when editor ready, the context
-#                  is set to the editorCtrl (callBack.call(this))
-# properties & methods :
-#   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
-#   _keyDownCb : (e) =>
-#   _insertLineAfter  : (param) ->
-#   _insertLineBefore : (param) ->
-#
-#   editorIframe      : the iframe element where is nested the editor
-#   editorBody$       : the jquery pointer on the body of the iframe
-#   _lines            : {} an objet, each property refers a line
-#   _highestId        :
-#   _firstLine        : points the first line : TODO : not taken into account
-*/
+require.register("CNeditor/editor", function(exports, require, module) {
 
+/* ------------------------------------------------------------------------
+ * CLASS FOR THE COZY NOTE EDITOR
+ *
+ * usage :
+ *
+ * newEditor = new CNEditor( iframeTarget,callBack )
+ *   iframeTarget = iframe where the editor will be nested
+ *   callBack     = launched when editor ready, the context
+ *                  is set to the editorCtrl (callBack.call(this))
+ * properties & methods :
+ *   replaceContent    : (htmlContent) ->  # TODO: replace with markdown
+ *   _keyDownCb : (e) =>
+ *   _insertLineAfter  : (param) ->
+ *   _insertLineBefore : (param) ->
+ *
+ *   editorIframe      : the iframe element where is nested the editor
+ *   editorBody$       : the jquery pointer on the body of the iframe
+ *   _lines            : {} an objet, each property refers a line
+ *   _highestId        :
+ *   _firstLine        : points the first line : TODO : not taken into account
+ */
 var Alarm, CNeditor, Contact, ExternalModels, History, HotString, Line, Tags, Task, UrlPopover, logging, md2cozy, realtimer, selection,
-  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-  __slice = [].slice;
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  slice = [].slice;
 
 logging = require('./logging');
 
@@ -26998,56 +27395,56 @@ ExternalModels = require('./externalmodels');
 Alarm = ExternalModels.Alarm, Contact = ExternalModels.Contact, Task = ExternalModels.Task;
 
 module.exports = CNeditor = (function() {
-  /*
-  #   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
-  #       iframeTarget = iframe where the editor will be nested
-  #       callBack     = launched when editor ready, the context
-  #                      is set to the editorCtrl (callBack.call(this))
-  */
-  function CNeditor(editorTarget, callBack) {
-    this._processPaste = __bind(this._processPaste, this);
-    this._waitForPasteData = __bind(this._waitForPasteData, this);
-    this._keyupCb = __bind(this._keyupCb, this);
-    this._keypressCb = __bind(this._keypressCb, this);
-    this._keyDownCb = __bind(this._keyDownCb, this);
-    this.registerKeyDownCbForTest = __bind(this.registerKeyDownCbForTest, this);
-    this._keyDownCbTry = __bind(this._keyDownCbTry, this);
-    this._toggleTaskCB = __bind(this._toggleTaskCB, this);
-    this._pasteCB = __bind(this._pasteCB, this);
-    this._clickCB = __bind(this._clickCB, this);
-    this._mouseupCb = __bind(this._mouseupCb, this);
-    this._mousedownCb = __bind(this._mousedownCb, this);
-    this.loadEditor = __bind(this.loadEditor, this);
-    var _this = this;
 
+  /*
+   *   Constructor : newEditor = new CNEditor( iframeTarget,callBack )
+   *       iframeTarget = iframe where the editor will be nested
+   *       callBack     = launched when editor ready, the context
+   *                      is set to the editorCtrl (callBack.call(this))
+   */
+  function CNeditor(editorTarget, callBack) {
+    this._processPaste = bind(this._processPaste, this);
+    this._waitForPasteData = bind(this._waitForPasteData, this);
+    this._keyupCb = bind(this._keyupCb, this);
+    this._keypressCb = bind(this._keypressCb, this);
+    this._keyDownCb = bind(this._keyDownCb, this);
+    this.registerKeyDownCbForTest = bind(this.registerKeyDownCbForTest, this);
+    this._keyDownCbTry = bind(this._keyDownCbTry, this);
+    this._toggleTaskCB = bind(this._toggleTaskCB, this);
+    this._pasteCB = bind(this._pasteCB, this);
+    this._clickCB = bind(this._clickCB, this);
+    this._mouseupCb = bind(this._mouseupCb, this);
+    this._mousedownCb = bind(this._mousedownCb, this);
+    this.loadEditor = bind(this.loadEditor, this);
     this.editorTarget = editorTarget;
     this.editorTarget$ = $(this.editorTarget);
     this._internalTaskCounter = 0;
     this._taskList = [];
     this._tasksToBeSaved = {};
     this._tasksModifSinceLastHistory = {};
-    ExternalModels.initialize(function(err) {
-      if (err) {
-        console.log(err);
-      }
-      realtimer.watch(ExternalModels.contactCollection);
-      if (_this.editorTarget.nodeName === "IFRAME") {
-        _this.isInIframe = true;
-        _this.editorTarget$.on('load', function() {
+    ExternalModels.initialize((function(_this) {
+      return function(err) {
+        if (err) {
+          console.log(err);
+        }
+        realtimer.watch(ExternalModels.contactCollection);
+        if (_this.editorTarget.nodeName === "IFRAME") {
+          _this.isInIframe = true;
+          _this.editorTarget$.on('load', function() {
+            return _this.loadEditor(callBack);
+          });
+          return _this.editorTarget.src = '';
+        } else if (_this.editorTarget.nodeName === "DIV") {
+          _this.isInIframe = false;
           return _this.loadEditor(callBack);
-        });
-        return _this.editorTarget.src = '';
-      } else if (_this.editorTarget.nodeName === "DIV") {
-        _this.isInIframe = false;
-        return _this.loadEditor(callBack);
-      }
-    });
+        }
+      };
+    })(this));
     return this;
   }
 
   CNeditor.prototype.loadEditor = function(callback) {
     var cssLink, editor_head$, editor_html$;
-
     if (this.isInIframe) {
       editor_html$ = this.editorTarget$.contents().find("html");
       this.editorBody$ = editor_html$.find("body");
@@ -27102,7 +27499,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._mousedownCb = function(e) {
     var startCont, startSeg;
-
     if (!this.isEnabled) {
       return true;
     }
@@ -27116,15 +27512,14 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /**
    * When the user click in the editor, mouseup event will set @newPosition to
    * true and take actions depending on selection location and editor state.
-  */
-
+   */
 
   CNeditor.prototype._mouseupCb = function(e) {
-    var endSeg, rg, startSeg, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
-
+    var endSeg, ref, ref1, ref2, ref3, ref4, ref5, ref6, rg, startSeg;
     if (!this.isEnabled) {
       return true;
     }
@@ -27139,22 +27534,22 @@ module.exports = CNeditor = (function() {
     rg = this.getEditorSelection().getRangeAt(0);
     startSeg = selection.getSegment(rg.startContainer);
     endSeg = selection.getSegment(rg.endContainer);
-    if (((_ref = startSeg.dataset) != null ? _ref.type : void 0) === 'taskBtn') {
+    if (((ref = startSeg.dataset) != null ? ref.type : void 0) === 'taskBtn') {
       this._setCaret(startSeg.nextSibling, 0);
-    } else if (((_ref1 = endSeg.dataset) != null ? _ref1.type : void 0) === 'taskBtn') {
+    } else if (((ref1 = endSeg.dataset) != null ? ref1.type : void 0) === 'taskBtn') {
       this._setCaret(endSeg.nextSibling, 0);
     }
-    if (((_ref2 = startSeg.dataset) != null ? _ref2.type : void 0) && !((_ref3 = endSeg.dataset) != null ? _ref3.type : void 0)) {
+    if (((ref2 = startSeg.dataset) != null ? ref2.type : void 0) && !((ref3 = endSeg.dataset) != null ? ref3.type : void 0)) {
       this.setSelection(rg.startContainer, rg.startOffset, startSeg, startSeg.childNodes.length);
       endSeg = startSeg;
-    } else if (!((_ref4 = startSeg.dataset) != null ? _ref4.type : void 0) && ((_ref5 = endSeg.dataset) != null ? _ref5.type : void 0)) {
+    } else if (!((ref4 = startSeg.dataset) != null ? ref4.type : void 0) && ((ref5 = endSeg.dataset) != null ? ref5.type : void 0)) {
       this.setSelection(endSeg, 0, rg.endContainer, rg.endOffset);
       startSeg = endSeg;
     }
     if (this._hotString.isPreparing && startSeg !== this._hotString._hsSegment) {
       this._hotString.reset('current');
     }
-    switch ((_ref6 = startSeg.dataset) != null ? _ref6.type : void 0) {
+    switch ((ref6 = startSeg.dataset) != null ? ref6.type : void 0) {
       case 'reminder':
       case 'htag':
         if (!this._hotString.isPreparing) {
@@ -27170,7 +27565,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._clickCB = function(e) {
     var segments, url;
-
     if (!this.isEnabled) {
       return true;
     }
@@ -27220,24 +27614,25 @@ module.exports = CNeditor = (function() {
     return this.isEnabled = true;
   };
 
+
   /** -----------------------------------------------------------------------
    * Set focus on the editor
-  */
-
+   */
 
   CNeditor.prototype.setFocus = function() {
     return this.linesDiv.focus();
   };
 
+
   /** -----------------------------------------------------------------------
    * Get the selection from the editor's document
    * @return {selection} The selection on the editor.
-  */
-
+   */
 
   CNeditor.prototype.getEditorSelection = function() {
     return this.document.getSelection();
   };
+
 
   /** -----------------------------------------------------------------------
    * this method is modified during construction if the editor target is not
@@ -27246,8 +27641,7 @@ module.exports = CNeditor = (function() {
    *                  editor. In case serialisation is impossible (for
    *                  instance if there is no selectio within editor), then
    *                  false is returned.
-  */
-
+   */
 
   CNeditor.prototype.saveEditorSelection = function() {
     return this.serializeSel();
@@ -27255,7 +27649,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._initTaskContent = function(taskDiv) {
     var segment, span, txt;
-
     segment = taskDiv.firstChild.nextSibling;
     while (segment.nodeName !== 'BR') {
       segment = segment.nextSibling;
@@ -27270,12 +27663,12 @@ module.exports = CNeditor = (function() {
     return this._history.addStep();
   };
 
+
   /**
    * Turns a lineDiv in a task, creates the model of the task and link it to
    * the lineDiv
    * @param  {Element} lineDiv The lineDiv
-  */
-
+   */
 
   CNeditor.prototype._turnIntoTask = function(lineDiv) {
     if (lineDiv == null) {
@@ -27286,7 +27679,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._turneLineIntoTask = function(lineDiv) {
     var btn, text;
-
     if (!ExternalModels.taskCanBeUsed) {
       return false;
     }
@@ -27310,7 +27702,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._turneTaskIntoLine = function(taskDiv) {
     var btn;
-
     btn = taskDiv.firstChild;
     btn.removeEventListener('click', this._toggleTaskCB);
     this.Tags.remove(btn);
@@ -27323,7 +27714,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._toggleTaskCB = function(e) {
     var btn, lineDiv;
-
     this._history.addStep();
     lineDiv = selection.getLineDiv(e.target);
     btn = lineDiv.firstChild;
@@ -27342,7 +27732,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._detectTaskChange = function() {
     var isTask, lineDiv, sel;
-
     lineDiv = this.currentSel.startLineDiv;
     if (lineDiv) {
       isTask = this.currentSel.isStartInTask;
@@ -27357,18 +27746,17 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * When a line is a task (its div has dataset.type = task) and we don't have
    * the corresponding model of task, we then create this Task.
    * It for instance happens when we create a task within the editor.
    * @param  {Element} lineDiv The line div we will attach the task to..
    * @param {Boolean} isRedo True if the task is re-created by a reDo.
-  */
-
+   */
 
   CNeditor.prototype._createTaskForLine = function(lineDiv, isRedo) {
     var t;
-
     t = new Task({
       description: lineDiv.textContent.slice(1)
     });
@@ -27386,25 +27774,23 @@ module.exports = CNeditor = (function() {
     return t;
   };
 
+
   /** -----------------------------------------------------------------------
    * Called only by readHtml() (called by setEditorContent() and undo/redo)
    * When an html is loaded by readHtml(), if a line corresponds to a task, we
    * must find if the model of the task line already exists. If yes, link it
    * to the lineDiv, otherwiser fetch if from server.
    * @param {Element} lineDiv The lineDiv turned into a task.
-  */
-
+   */
 
   CNeditor.prototype._setTaskToLine = function(lineDiv) {
-    var btn, id, t, _i, _len, _ref,
-      _this = this;
-
+    var btn, id, j, len, ref, t;
     btn = lineDiv.firstChild;
     btn.addEventListener('click', this._toggleTaskCB);
     id = lineDiv.dataset.id;
-    _ref = this._taskList;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      t = _ref[_i];
+    ref = this._taskList;
+    for (j = 0, len = ref.length; j < len; j++) {
+      t = ref[j];
       if (t.internalId === id) {
         lineDiv.task = t;
         t.lineDiv = lineDiv;
@@ -27424,34 +27810,43 @@ module.exports = CNeditor = (function() {
       t.lineDiv = lineDiv;
       t.fetch({
         silent: true
-      }).done(function() {
-        t.isFromServer = true;
-        realtimer.watchOne(t);
-        return _this._updateTaskLine(t);
-      }).fail(function(resp) {
-        if (resp.status === 404) {
+      }).done((function(_this) {
+        return function() {
+          t.isFromServer = true;
+          realtimer.watchOne(t);
+          return _this._updateTaskLine(t);
+        };
+      })(this)).fail((function(_this) {
+        return function(resp) {
+          if (resp.status === 404) {
+            return _this._turneTaskIntoLine(t.lineDiv);
+          } else {
+            t.set({
+              done: t.lineDiv.dataset.state === 'done',
+              description: t.lineDiv.firstChild.nextSibling.textContent
+            }, {
+              silent: true
+            });
+            return t.isFromServer = false;
+          }
+        };
+      })(this));
+      t.on('change', (function(_this) {
+        return function(t) {
+          t.isFromServer = true;
+          return _this._updateTaskLine(t);
+        };
+      })(this));
+      t.on('destroy', (function(_this) {
+        return function(t) {
           return _this._turneTaskIntoLine(t.lineDiv);
-        } else {
-          t.set({
-            done: t.lineDiv.dataset.state === 'done',
-            description: t.lineDiv.firstChild.nextSibling.textContent
-          }, {
-            silent: true
-          });
-          return t.isFromServer = false;
-        }
-      });
-      t.on('change', function(t) {
-        t.isFromServer = true;
-        return _this._updateTaskLine(t);
-      });
-      t.on('destroy', function(t) {
-        return _this._turneTaskIntoLine(t.lineDiv);
-      });
+        };
+      })(this));
       this._taskList.push(t);
     }
     return true;
   };
+
 
   /** -----------------------------------------------------------------------
    * update a line div of a task with the attributes values of a model.
@@ -27459,12 +27854,10 @@ module.exports = CNeditor = (function() {
    * @param  {Model}  t        A task backbone model
    * @param  {Boolean} isRevert If True, it will use previous attributes
    *                            values instead of its current values.
-  */
-
+   */
 
   CNeditor.prototype._updateTaskLine = function(t, isRevert) {
     var attrib, currentTaskState, newState;
-
     if (isRevert) {
       attrib = t.previousAttributes();
     } else {
@@ -27506,6 +27899,7 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * When a task is modified or a undo/redo has modified its state, this
    * function stacks the information so that when a save is triggered, then we
@@ -27514,12 +27908,10 @@ module.exports = CNeditor = (function() {
    * @param  {Task} t      The task model concerned
    * @param  {String} action 'modified', 'done', 'undone', 'created', 'deleted'
    *                         or 'removed'
-  */
-
+   */
 
   CNeditor.prototype._stackTaskForSave = function(id, t, action) {
     var modif;
-
     modif = this._tasksToBeSaved[id];
     if (!this._tasksToBeSaved[id]) {
       modif = {
@@ -27556,6 +27948,7 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * Saves the creations/modification/deletion not yet saved.
    * a modif can b
@@ -27566,17 +27959,14 @@ module.exports = CNeditor = (function() {
    * modif.action  | N N N N N N N N | N N | D D | M | C C | N
    * (N D C = Nothing, Create, Delete)
    * @return {[type]} [description]
-  */
-
+   */
 
   CNeditor.prototype.saveTasks = function() {
-    var i, id, l, lineDiv, modif, t, _i, _len, _ref, _ref1,
-      _this = this;
-
+    var i, id, j, l, len, lineDiv, modif, ref, ref1, t;
     console.info('== saveTasks()');
-    _ref = this._tasksToBeSaved;
-    for (id in _ref) {
-      modif = _ref[id];
+    ref = this._tasksToBeSaved;
+    for (id in ref) {
+      modif = ref[id];
       if (modif.deleted) {
         modif.t.destroy({
           silent: true
@@ -27594,19 +27984,21 @@ module.exports = CNeditor = (function() {
         }, {
           ignoreMySocketNotification: true,
           silent: true,
-          error: function(t) {
-            window.alert('Cozy Todo is not responding, save ' + 'of tasks is not possible so we cancel ' + 'modifications.');
-            return _this._updateTaskLine(t, true);
-          }
+          error: (function(_this) {
+            return function(t) {
+              window.alert('Cozy Todo is not responding, save ' + 'of tasks is not possible so we cancel ' + 'modifications.');
+              return _this._updateTaskLine(t, true);
+            };
+          })(this)
         });
         t.isFromServer = false;
       } else if (modif.created && !modif.t.id) {
         this._saveTaskCreation(modif.t);
       } else if (modif.created && modif.t.id) {
         i = this._taskList;
-        _ref1 = this._taskList;
-        for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
-          t = _ref1[i];
+        ref1 = this._taskList;
+        for (i = j = 0, len = ref1.length; j < len; i = ++j) {
+          t = ref1[i];
           if (t.internalId === id) {
             this._taskList.splice(i, 1);
             break;
@@ -27623,9 +28015,7 @@ module.exports = CNeditor = (function() {
   };
 
   CNeditor.prototype._saveTaskCreation = function(t) {
-    var l,
-      _this = this;
-
+    var l;
     l = t.lineDiv;
     t.save({
       done: l.dataset.state === 'done',
@@ -27633,42 +28023,46 @@ module.exports = CNeditor = (function() {
     }, {
       ignoreMySocketNotification: true,
       silent: true,
-      success: function(t) {
-        realtimer.watchOne(t);
-        _this.editorTarget$.trigger(jQuery.Event('onChange'));
-        t.lineDiv.dataset.id = t.id;
-        t.on('change', function() {
-          t.isFromServer = true;
-          return _this._updateTaskLine(t);
-        });
-        return t.on('destroy', function(t) {
+      success: (function(_this) {
+        return function(t) {
+          realtimer.watchOne(t);
+          _this.editorTarget$.trigger(jQuery.Event('onChange'));
+          t.lineDiv.dataset.id = t.id;
+          t.on('change', function() {
+            t.isFromServer = true;
+            return _this._updateTaskLine(t);
+          });
+          return t.on('destroy', function(t) {
+            return _this._turneTaskIntoLine(t.lineDiv);
+          });
+        };
+      })(this),
+      error: (function(_this) {
+        return function(t) {
+          window.alert('Cozy Todo is not responding, save ' + 'of tasks is not possible so we cancel ' + 'the task creation.');
           return _this._turneTaskIntoLine(t.lineDiv);
-        });
-      },
-      error: function(t) {
-        window.alert('Cozy Todo is not responding, save ' + 'of tasks is not possible so we cancel ' + 'the task creation.');
-        return _this._turneTaskIntoLine(t.lineDiv);
-      }
+        };
+      })(this)
     });
     return t.isFromServer = false;
   };
+
 
   /** -----------------------------------------------------------------------
    * Tests if there is a modification between the model and the lineDiv
    * @param  {[type]}  task [description]
    * @return {Boolean}      [description]
-  */
-
+   */
 
   CNeditor.prototype._isTaskUnchanged = function(task) {
     var line, res;
-
     res = true;
     line = task.lineDiv;
     res = res && task.get('done') === (line.dataset.state === 'done');
     res = res && task.get('description') === line.textContent.slice(1);
     return res;
   };
+
 
   /** -----------------------------------------------------------------------
    * Returns true if the selection is at the start of a word. Ex :
@@ -27678,12 +28072,10 @@ module.exports = CNeditor = (function() {
    *     . xxxx y|yyyy  : false
    *     . xxxx| yyyy   : false
    * @return {Boolean} True if the selection starts at the beginning of a word
-  */
-
+   */
 
   CNeditor.prototype._isStartingWord = function() {
     var char, rg, rg2, sel, txt;
-
     sel = this.updateCurrentSelIsStartIsEnd();
     rg = sel.theoricalRange;
     if (sel.rangeIsStartLine) {
@@ -27712,7 +28104,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype.getCurrentAllowedInsertions = function() {
     var line, metaSelector, out;
-
     line = this.updateCurrentSel().startLineDiv;
     out = [];
     if (line.dataset.type === 'task') {
@@ -27728,63 +28119,62 @@ module.exports = CNeditor = (function() {
     if (ExternalModels.alarmCanBeUsed) {
       out.push('reminder');
     }
+    out.push('htag');
     return out;
   };
 
-  /* ------------------------------------------------------------------------
-  # EXTENSION : _updateDeepest
-  #
-  # Find the maximal deep (thus the deepest line) of the text
-  # TODO: improve it so it only calculates the new depth from the modified
-  #       lines (not all of them)
-  # TODO: set a class system rather than multiple CSS files. Thus titles
-  #       classes look like "Th-n depth3" for instance if max depth is 3
-  # note: These todos arent our priority for now
-  */
 
+  /* ------------------------------------------------------------------------
+   * EXTENSION : _updateDeepest
+   *
+   * Find the maximal deep (thus the deepest line) of the text
+   * TODO: improve it so it only calculates the new depth from the modified
+   *       lines (not all of them)
+   * TODO: set a class system rather than multiple CSS files. Thus titles
+   *       classes look like "Th-n depth3" for instance if max depth is 3
+   * note: These todos arent our priority for now
+   */
 
   CNeditor.prototype._updateDeepest = function() {
-    var c, lines, max, _results;
-
+    var c, lines, max, results;
     max = 1;
     lines = this._lines;
-    _results = [];
+    results = [];
     for (c in lines) {
       if (this.editorBody$.children("#" + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th" && lines[c].lineDepthAbs > max) {
-        _results.push(max = this._lines[c].lineDepthAbs);
+        results.push(max = this._lines[c].lineDepthAbs);
       } else {
-        _results.push(void 0);
+        results.push(void 0);
       }
     }
-    return _results;
+    return results;
   };
 
-  /*-----------------------------------------------------------------------
-  # Set the editor description and related to be used when creating
-  # reminders
-  */
 
+  /*-----------------------------------------------------------------------
+   * Set the editor description and related to be used when creating
+   * reminders
+   */
 
   CNeditor.prototype.setReminderCf = function(description, related) {
     return Alarm.setDefaultCf(description, related);
   };
+
 
   /** -----------------------------------------------------------------------
    * Initialize the editor content from a html string
    * The html string should not been pretified because of the spaces and
    * charriage return.
    * If unPretify = true then a regex tries to set up things
-  */
-
+   */
 
   CNeditor.prototype.replaceContent = function(htmlString, unPretify) {
-    var _ref;
-
+    var ref;
     if (unPretify) {
       htmlString = htmlString.replace(/>[\n ]*</g, "><");
     }
-    if ((_ref = this.urlPopover) != null) {
-      _ref.cancel();
+    if ((ref = this.urlPopover) != null) {
+      ref.cancel();
     }
     this.linesDiv.innerHTML = htmlString;
     this._taskList = [];
@@ -27794,26 +28184,24 @@ module.exports = CNeditor = (function() {
     return this.hotString = '';
   };
 
-  /* ------------------------------------------------------------------------
-  # Clear editor content
-  */
 
+  /* ------------------------------------------------------------------------
+   * Clear editor content
+   */
 
   CNeditor.prototype.deleteContent = function() {
     var emptyLine;
-
     emptyLine = '<div id="CNID_1" class="Tu-1"><span></span><br></div>';
     return this.replaceContent(emptyLine);
   };
 
-  /* ------------------------------------------------------------------------
-  # Returns an html string representing the editor content
-  */
 
+  /* ------------------------------------------------------------------------
+   * Returns an html string representing the editor content
+   */
 
   CNeditor.prototype.getEditorContent = function() {
-    var clone, lineDiv, seg, segment, segments, txt, _i, _j, _len, _len1;
-
+    var clone, j, k, len, len1, lineDiv, seg, segment, segments, txt;
     this.Tags.contactPopover.hide();
     if (this._hotString.isPreparing || this.urlPopover.isOn) {
       clone = this.linesDiv.cloneNode(true);
@@ -27830,14 +28218,14 @@ module.exports = CNeditor = (function() {
         segment = clone.querySelector('#CNE_urlPopover');
         segment.parentElement.removeChild(segment);
         segments = clone.querySelectorAll('.CNE_url_in_edition');
-        for (_i = 0, _len = segments.length; _i < _len; _i++) {
-          seg = segments[_i];
+        for (j = 0, len = segments.length; j < len; j++) {
+          seg = segments[j];
           seg.classList.remove('CNE_url_in_edition');
         }
         if (this.urlPopover.isLinkCreation) {
           lineDiv = selection._getLineDiv(segments[0]);
-          for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
-            seg = segments[_j];
+          for (k = 0, len1 = segments.length; k < len1; k++) {
+            seg = segments[k];
             this._applyAhrefToSegments(seg, seg, [], false, '');
           }
           this._fusionSimilarSegments(lineDiv, []);
@@ -27850,27 +28238,27 @@ module.exports = CNeditor = (function() {
     return txt;
   };
 
-  /* ------------------------------------------------------------------------
-  # Sets the editor content from a html string
-  */
 
+  /* ------------------------------------------------------------------------
+   * Sets the editor content from a html string
+   */
 
   CNeditor.prototype.setEditorContent = function(htmlContent) {
     return this.replaceContent(htmlContent);
   };
 
-  /* ------------------------------------------------------------------------
-  # DEPRECATED - USED ONLY FOR REVERSE COMPATIBILITY
-  # Sets the editor content from a markdown string
-  */
 
+  /* ------------------------------------------------------------------------
+   * DEPRECATED - USED ONLY FOR REVERSE COMPATIBILITY
+   * Sets the editor content from a markdown string
+   */
 
   CNeditor.prototype.setEditorContentFromMD = function(mdContent) {
     var cozyContent;
-
     cozyContent = md2cozy.md2cozy(mdContent);
     return this.replaceContent(cozyContent);
   };
+
 
   /** -----------------------------------------------------------------------
    * Return [metaKeyCode,keyCode] corresponding to the key strike combinaison.
@@ -27885,12 +28273,10 @@ module.exports = CNeditor = (function() {
    *   * "" & "other"
    * @param  {[type]} e [description]
    * @return {[type]}   [description]
-  */
-
+   */
 
   CNeditor.prototype.getShortCut = function(e) {
     var isAction, key, keyCode, metaKey, shortcut;
-
     metaKey = (e.altKey ? "Alt" : "") +
                               (e.ctrlKey ? "Ctrl" : "") +
                               (e.shiftKey ? "Shift" : "");
@@ -28024,17 +28410,16 @@ module.exports = CNeditor = (function() {
     };
   };
 
+
   /** -----------------------------------------------------------------------
    * Callback to be used in production.
    * In case of error thrown by the editor, we catch it and undo the content
    * to avoid to loose data.
    * @param  {event} e  The key event
-  */
-
+   */
 
   CNeditor.prototype._keyDownCbTry = function(e) {
     var error;
-
     if (!this.isEnabled) {
       return;
     }
@@ -28049,17 +28434,18 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Change the callback called by keydown event for the "test" callback.
    * The aim is that during test we don't want to intercept errors so that
    * the test can detect the error.
-  */
-
+   */
 
   CNeditor.prototype.registerKeyDownCbForTest = function() {
     this.linesDiv.removeEventListener('keydown', this._keyDownCbTry, true);
     return this.linesDiv.addEventListener('keydown', this._keyDownCb, true);
   };
+
 
   /**------------------------------------------------------------------------
    *
@@ -28086,12 +28472,10 @@ module.exports = CNeditor = (function() {
    *     tab(keyCode:9)
    *   ex : shortcut = 'CtrlShift-up', 'Ctrl-115' (ctrl+s), '-115' (s),
    *                   'Ctrl-'
-  */
-
+   */
 
   CNeditor.prototype._keyDownCb = function(e) {
     var lastShortcut, rg, sel, shortcut, winAltGr;
-
     if (!this.isEnabled) {
       return true;
     }
@@ -28262,6 +28646,7 @@ module.exports = CNeditor = (function() {
     return this._hotString.keypressCb(e);
   };
 
+
   /** -----------------------------------------------------------------------
    * Detects where the carret is after a keyup in order to launch required
    * actions :
@@ -28283,12 +28668,10 @@ module.exports = CNeditor = (function() {
    * D/ Deal hot string.
    * E/ Fire the editor onKeyUp event
    * @param  {Event} e The key event
-  */
-
+   */
 
   CNeditor.prototype._keyupCb = function(e) {
-    var bp, endSeg, line, newCont, rg, startSeg, _ref;
-
+    var bp, endSeg, line, newCont, ref, rg, startSeg;
     if (!this.isEnabled) {
       return true;
     }
@@ -28348,7 +28731,7 @@ module.exports = CNeditor = (function() {
     if (this._hotString.isPreparing) {
       if (this._hotString._autoToBeShowed) {
         this._hotString.showAutoAndHighLight();
-      } else if (!(e.shiftKey && ((_ref = e.keyCode) === 17 || _ref === 37 || _ref === 38 || _ref === 36 || _ref === 33 || _ref === 40 || _ref === 39 || _ref === 34 || _ref === 35))) {
+      } else if (!(e.shiftKey && ((ref = e.keyCode) === 17 || ref === 37 || ref === 38 || ref === 36 || ref === 33 || ref === 40 || ref === 39 || ref === 34 || ref === 35))) {
         if (startSeg === this._hotString._hsSegment) {
           this._hotString.updateHs();
         } else {
@@ -28366,6 +28749,7 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
+
   /**
    *   In Chrome, the insertion of a caracter by the browser may be out of
    *   a span.
@@ -28376,20 +28760,17 @@ module.exports = CNeditor = (function() {
    *   a caracter, the browser inserts it at the start break point, ie outside
    *   the span... this function detects after each keyup is there is a text
    *   node outside a span and move its content and the carret.
-  */
-
+   */
 
   CNeditor.prototype._chromeCorrection = function() {
     var curSel, line;
-
     curSel = this.updateCurrentSel();
     line = curSel.startLine.line$[0];
     return this._fixLine(line);
   };
 
   CNeditor.prototype._fixLine = function(line) {
-    var brNode, i, l, newSpan, nextSeg, node, nodes, prevSeg, spanNode, t, _ref, _ref1, _ref2;
-
+    var brNode, i, l, newSpan, nextSeg, node, nodes, prevSeg, ref, ref1, ref2, spanNode, t;
     nodes = line.childNodes;
     l = nodes.length;
     i = 0;
@@ -28399,31 +28780,29 @@ module.exports = CNeditor = (function() {
         t = node.textContent;
         prevSeg = selection.getPrevSegment(node);
         if (prevSeg) {
-          if ((_ref = prevSeg.nodeName) === 'SPAN' || _ref === 'A') {
+          if ((ref = prevSeg.nodeName) === 'SPAN' || ref === 'A') {
             prevSeg.textContent += t;
             this._setCaret(prevSeg, prevSeg.childNodes.length);
             line.removeChild(node);
             l -= 1;
           } else {
-            throw new Error('A line should be constituted of\
-                            only <span> and <a>');
+            throw new Error('A line should be constituted of only <span> and <a>');
           }
         } else {
           nextSeg = selection.getNextSegment(node);
           if (nextSeg) {
-            if ((_ref1 = nextSeg.nodeName) === 'SPAN' || _ref1 === 'A' || _ref1 === '#text') {
+            if ((ref1 = nextSeg.nodeName) === 'SPAN' || ref1 === 'A' || ref1 === '#text') {
               nextSeg.textContent = t + nextSeg.textContent;
               this._setCaret(nextSeg.firstChild, t.length);
               line.removeChild(node);
               l -= 1;
-            } else if ((_ref2 = nextSeg.nodeName) === '#text') {
+            } else if ((ref2 = nextSeg.nodeName) === '#text') {
               nextSeg.textContent = t + nextSeg.textContent;
               this._setCaret(nextSeg, t.length);
               line.removeChild(node);
               l -= 1;
             } else {
-              throw new Error('A line should be constituted of\
-                                only <span> and <a>');
+              throw new Error('A line should be constituted of only <span> and <a>');
             }
           } else {
             newSpan = document.createElement('span');
@@ -28449,6 +28828,7 @@ module.exports = CNeditor = (function() {
     line.appendChild(brNode);
     return true;
   };
+
 
   /** -----------------------------------------------------------------------
    * updates @currentSel =
@@ -28476,16 +28856,14 @@ module.exports = CNeditor = (function() {
      We also normalize if in Chrome because in order to have a range wit
      break points in text nodes.
    * @return {object} @currentSel
-  */
-
+   */
 
   CNeditor.prototype.updateCurrentSel = function() {
-    var endLine, endLineDiv, isStartInTask, newEndBP, newStartBP, range, sel, startLine, startLineDiv, theoricalRange, _ref;
-
+    var endLine, endLineDiv, isStartInTask, newEndBP, newStartBP, range, ref, sel, startLine, startLineDiv, theoricalRange;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
     if (this.newPosition || this.isChromeOrSafari) {
-      _ref = selection.normalize(range), newStartBP = _ref[0], newEndBP = _ref[1];
+      ref = selection.normalize(range), newStartBP = ref[0], newEndBP = ref[1];
       theoricalRange = document.createRange();
       theoricalRange.setStart(newStartBP.cont, newStartBP.offset);
       theoricalRange.setEnd(newEndBP.cont, newEndBP.offset);
@@ -28511,6 +28889,7 @@ module.exports = CNeditor = (function() {
     };
     return this.currentSel;
   };
+
 
   /** -----------------------------------------------------------------------
    * updates @currentSel and check if range is at the start of begin of the
@@ -28538,16 +28917,14 @@ module.exports = CNeditor = (function() {
      We also normalize if in Chrome because in order to have a range wit
      break points in text nodes.
    * @return {object} @currentSel
-  */
-
+   */
 
   CNeditor.prototype.updateCurrentSelIsStartIsEnd = function() {
-    var div, endContainer, endDiv, endLine, firstLineIsEnd, initialEndOffset, initialStartOffset, isEnd, isStart, isStartInTask, lastLineIsStart, newEndBP, newStartBP, range, rangeIsEndLine, rangeIsStartLine, sel, startContainer, startDiv, startLine, theoricalRange, _ref, _ref1, _ref2;
-
+    var div, endContainer, endDiv, endLine, firstLineIsEnd, initialEndOffset, initialStartOffset, isEnd, isStart, isStartInTask, lastLineIsStart, newEndBP, newStartBP, range, rangeIsEndLine, rangeIsStartLine, ref, ref1, ref2, sel, startContainer, startDiv, startLine, theoricalRange;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
     if (this.newPosition || this.isChromeOrSafari) {
-      _ref = selection.normalize(range), newStartBP = _ref[0], newEndBP = _ref[1];
+      ref = selection.normalize(range), newStartBP = ref[0], newEndBP = ref[1];
       theoricalRange = document.createRange();
       theoricalRange.setStart(newStartBP.cont, newStartBP.offset);
       theoricalRange.setEnd(newEndBP.cont, newEndBP.offset);
@@ -28558,13 +28935,13 @@ module.exports = CNeditor = (function() {
     endContainer = range.endContainer;
     initialStartOffset = range.startOffset;
     initialEndOffset = range.endOffset;
-    _ref1 = selection.getLineDivIsStartIsEnd(startContainer, initialStartOffset), div = _ref1.div, isStart = _ref1.isStart, isEnd = _ref1.isEnd;
+    ref1 = selection.getLineDivIsStartIsEnd(startContainer, initialStartOffset), div = ref1.div, isStart = ref1.isStart, isEnd = ref1.isEnd;
     startDiv = div;
     startLine = this._lines[startDiv.id];
     rangeIsStartLine = isStart;
     firstLineIsEnd = isEnd;
     isStartInTask = startDiv.dataset.type === 'task';
-    _ref2 = selection.getLineDivIsStartIsEnd(endContainer, initialEndOffset), div = _ref2.div, isStart = _ref2.isStart, isEnd = _ref2.isEnd;
+    ref2 = selection.getLineDivIsStartIsEnd(endContainer, initialEndOffset), div = ref2.div, isStart = ref2.isStart, isEnd = ref2.isEnd;
     endDiv = div;
     endLine = this._lines[endDiv.id];
     rangeIsEndLine = isEnd;
@@ -28586,18 +28963,17 @@ module.exports = CNeditor = (function() {
     return this.currentSel;
   };
 
+
   /** -----------------------------------------------------------------------
    * Check if the first range of the selection is NOT in the editor
    * @param  {Boolean}  expectWide [optional] If true, tests if the first
    *                               range of the selection is collapsed. If it
    *                               is the case, then return false
    * @return {Boolean} True if there is a selection, false otherwise.
-  */
-
+   */
 
   CNeditor.prototype.hasNoSelection = function(expectWide) {
     var cont, rg, sel;
-
     sel = this.getEditorSelection();
     if (sel.rangeCount > 0) {
       rg = sel.getRangeAt(0);
@@ -28629,16 +29005,15 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Put a strong (bold) css class on the selection of the editor.
    * History is incremented before action and focus is set on the editor.
    * @return {[type]} [description]
-  */
-
+   */
 
   CNeditor.prototype.strong = function() {
     var rg;
-
     if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
       return true;
     }
@@ -28653,7 +29028,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype.underline = function() {
     var rg;
-
     if (!this.isEnabled || this.hasNoSelection(true) || this._hotString.isPreparing) {
       return true;
     }
@@ -28668,7 +29042,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype.linkifySelection = function() {
     var currentSel, range, rg, segments;
-
     if (!this.isEnabled || this.hasNoSelection() || this._hotString.isPreparing) {
       return true;
     }
@@ -28701,6 +29074,7 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * Tests if a the start break point of the selection or of a range is in a
    * segment being a link. If yes returns the array of the segments
@@ -28711,12 +29085,10 @@ module.exports = CNeditor = (function() {
    * this function.
    * @param {Range} rg [optionnal] The range to use instead of selection.
    * @return {Boolean} The segment if in a link, false otherwise
-  */
-
+   */
 
   CNeditor.prototype._getLinkSegments = function(rg) {
     var segment1, segments, sibling;
-
     if (!rg) {
       rg = this.currentSel.theoricalRange;
     }
@@ -28741,14 +29113,13 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Go to end of line and emulate @ pressed
-  */
-
+   */
 
   CNeditor.prototype.emulateAt = function() {
     var currentSel, newCont;
-
     currentSel = this.updateCurrentSelIsStartIsEnd();
     newCont = currentSel.endLine.line$[0].lastChild.previousSibling;
     newCont.innerHTML += '@';
@@ -28759,19 +29130,18 @@ module.exports = CNeditor = (function() {
     return this._hotString.showAutoAndHighLight();
   };
 
+
   /** -----------------------------------------------------------------------
    * Applies a metadata such as STRONG, UNDERLINED, A/href etc... on the
    * selected text. The selection must not be collapsed.
    * @param  {string} metaData  The css class of the meta data or 'A' if link
    * @param  {string} others... Other params if metadata requires
    *                            some (href for instance)
-  */
-
+   */
 
   CNeditor.prototype._applyMetaDataOnSelection = function() {
-    var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, line, linesRanges, metaData, nextSegment, others, prevSegment, range, rangeIsToNormalize, rg, rgEnd, rgStart, seg, sel, _i, _j, _len, _len1;
-
-    metaData = arguments[0], others = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+    var addMeta, bp1, bp2, bps, currentSel, endLine, isAlreadyMeta, j, k, len, len1, line, linesRanges, metaData, nextSegment, others, prevSegment, range, rangeIsToNormalize, rg, rgEnd, rgStart, seg, sel;
+    metaData = arguments[0], others = 2 <= arguments.length ? slice.call(arguments, 1) : [];
     currentSel = this.updateCurrentSelIsStartIsEnd();
     range = currentSel.theoricalRange;
     if (range.collapsed) {
@@ -28847,14 +29217,14 @@ module.exports = CNeditor = (function() {
       linesRanges.push(rgEnd);
     }
     isAlreadyMeta = true;
-    for (_i = 0, _len = linesRanges.length; _i < _len; _i++) {
-      range = linesRanges[_i];
+    for (j = 0, len = linesRanges.length; j < len; j++) {
+      range = linesRanges[j];
       isAlreadyMeta = isAlreadyMeta && this._checkIfMetaIsEverywhere(range, metaData, others);
     }
     addMeta = !isAlreadyMeta;
     bps = [];
-    for (_j = 0, _len1 = linesRanges.length; _j < _len1; _j++) {
-      range = linesRanges[_j];
+    for (k = 0, len1 = linesRanges.length; k < len1; k++) {
+      range = linesRanges[k];
       bps.push(this._applyMetaOnLineRange(range, addMeta, metaData, others));
     }
     rg = this.document.createRange();
@@ -28868,6 +29238,7 @@ module.exports = CNeditor = (function() {
     return rg;
   };
 
+
   /** -----------------------------------------------------------------------
    * Walk though the segments delimited by the range (which must be in a
    * single line) to check if the meta si on all of them.
@@ -28880,8 +29251,7 @@ module.exports = CNeditor = (function() {
    *                        required (href value for a 'A' meta)
    * @return {boolean}       true if the meta data is already on all the
    *                         segments delimited by the range.
-  */
-
+   */
 
   CNeditor.prototype._checkIfMetaIsEverywhere = function(range, meta, others) {
     if (meta === 'A') {
@@ -28893,7 +29263,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._checkIfCSSIsEverywhere = function(range, CssClass) {
     var endSegment, segment, stopNext;
-
     segment = range.startContainer.parentNode;
     endSegment = range.endContainer.parentNode;
     stopNext = segment === endSegment;
@@ -28912,7 +29281,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._checkIfAhrefIsEverywhere = function(range, href) {
     var endSegment, segment, stopNext;
-
     segment = range.startContainer.parentNode;
     endSegment = range.endContainer.parentNode;
     stopNext = segment === endSegment;
@@ -28928,6 +29296,7 @@ module.exports = CNeditor = (function() {
       }
     }
   };
+
 
   /** -----------------------------------------------------------------------
    * Add or remove a meta data to the segments delimited by the range. The
@@ -28951,12 +29320,10 @@ module.exports = CNeditor = (function() {
    *                       null (not optionnal)
    * @return {array}          [bp1,bp2] : the breakpoints corresponding to the
    *                          initial range after the line transformation.
-  */
-
+   */
 
   CNeditor.prototype._applyMetaOnLineRange = function(range, addMeta, metaData, others) {
     var bp1, bp2, bps, breakPoints, endSeg, frag1, frag2, isAlreadyMeta, lineDiv, rg, span, startSeg;
-
     lineDiv = selection.getLineDiv(range.startContainer, range.startOffset);
     startSeg = range.startContainer.parentNode;
     endSeg = range.endContainer.parentNode;
@@ -29052,6 +29419,7 @@ module.exports = CNeditor = (function() {
     return [bp1, bp2];
   };
 
+
   /** -----------------------------------------------------------------------
    * Test if a segment already has the meta : same type, same class and other
    * for complex meta (for instance href for <a>)
@@ -29061,8 +29429,7 @@ module.exports = CNeditor = (function() {
    *                           for instance si metaData == 'A',
    *                           others[0] == href
    * @return {Boolean}          True if the segment already have the meta data
-  */
-
+   */
 
   CNeditor.prototype._isAlreadyMeta = function(segment, metaData, others) {
     if (metaData === 'A') {
@@ -29071,6 +29438,7 @@ module.exports = CNeditor = (function() {
       return segment.classList.contains(metaData);
     }
   };
+
 
   /** -----------------------------------------------------------------------
    * Applies or remove a meta data of type "A" (link) on a succession of
@@ -29085,12 +29453,10 @@ module.exports = CNeditor = (function() {
    *                              while applying the meta data.
    * @param  {Boolean} addMeta      True to apply the meta, False to remove
    * @param  {string} href         the href to use if addMeta is true.
-  */
-
+   */
 
   CNeditor.prototype._applyAhrefToSegments = function(startSegment, endSegment, bps, addMeta, href) {
-    var a, bp, segment, span, stopNext, _i, _j, _len, _len1;
-
+    var a, bp, j, k, len, len1, segment, span, stopNext;
     segment = startSegment;
     stopNext = segment === endSegment;
     while (true) {
@@ -29102,8 +29468,8 @@ module.exports = CNeditor = (function() {
           a.href = href;
           a.textContent = segment.textContent;
           a.className = segment.className;
-          for (_i = 0, _len = bps.length; _i < _len; _i++) {
-            bp = bps[_i];
+          for (j = 0, len = bps.length; j < len; j++) {
+            bp = bps[j];
             if (bp.cont.parentNode === segment) {
               bp.cont = a.firstChild;
             }
@@ -29115,8 +29481,8 @@ module.exports = CNeditor = (function() {
         span = document.createElement('SPAN');
         span.textContent = segment.textContent;
         span.className = segment.className;
-        for (_j = 0, _len1 = bps.length; _j < _len1; _j++) {
-          bp = bps[_j];
+        for (k = 0, len1 = bps.length; k < len1; k++) {
+          bp = bps[k];
           if (bp.cont.parentNode === segment) {
             bp.cont = span.firstChild;
           }
@@ -29133,6 +29499,7 @@ module.exports = CNeditor = (function() {
     return null;
   };
 
+
   /** -----------------------------------------------------------------------
    * Applies or remove a CSS class to a succession of segments (from
    * startsegment to endSegment which must be on the same line)
@@ -29141,12 +29508,10 @@ module.exports = CNeditor = (function() {
    *                                same line as startSegment)
    * @param  {Boolean} addMeta      True to apply the meta, False to remove
    * @param  {String} cssClass     The name of the CSS class to add or remove
-  */
-
+   */
 
   CNeditor.prototype._applyCssToSegments = function(startSegment, endSegment, addMeta, cssClass) {
     var segment, stopNext;
-
     segment = startSegment;
     stopNext = segment === endSegment;
     while (true) {
@@ -29163,6 +29528,7 @@ module.exports = CNeditor = (function() {
     }
     return null;
   };
+
 
   /** -----------------------------------------------------------------------
    * Walk through a line div in order to :
@@ -29181,12 +29547,10 @@ module.exports = CNeditor = (function() {
    *                              bp might be between segments, ie NOT
    *                              normalized since not in a textNode.
    * @return {Array}             A reference to the updated breakpoint.
-  */
-
+   */
 
   CNeditor.prototype._fusionSimilarSegments = function(lineDiv, breakPoints) {
     var nextSegment, segment;
-
     segment = lineDiv.firstChild;
     nextSegment = segment.nextSibling;
     if (nextSegment.nodeName === 'BR') {
@@ -29215,6 +29579,7 @@ module.exports = CNeditor = (function() {
     return breakPoints;
   };
 
+
   /** -----------------------------------------------------------------------
    * Removes a segment and returns a reference to previous sibling or,
    * if doesn't exist, to the next sibling.
@@ -29225,20 +29590,18 @@ module.exports = CNeditor = (function() {
    *                             textNode)
    * @return {element}       A reference to the previous sibling or,
    *                         if doesn't exist, to the next sibling.
-  */
-
+   */
 
   CNeditor.prototype._removeSegment = function(segment, breakPoints) {
-    var bp, newRef, offset, _i, _j, _len, _len1;
-
+    var bp, j, k, len, len1, newRef, offset;
     if (breakPoints.length > 0) {
-      for (_i = 0, _len = breakPoints.length; _i < _len; _i++) {
-        bp = breakPoints[_i];
+      for (j = 0, len = breakPoints.length; j < len; j++) {
+        bp = breakPoints[j];
         bp.seg = selection.getNestedSegment(bp.cont);
       }
     }
-    for (_j = 0, _len1 = breakPoints.length; _j < _len1; _j++) {
-      bp = breakPoints[_j];
+    for (k = 0, len1 = breakPoints.length; k < len1; k++) {
+      bp = breakPoints[k];
       if (bp.seg === segment) {
         offset = selection.getNodeIndex(segment);
         bp.cont = segment.parentNode;
@@ -29253,6 +29616,7 @@ module.exports = CNeditor = (function() {
     return newRef;
   };
 
+
   /** -----------------------------------------------------------------------
    * Imports the content of segment2 in segment1 and updates the breakpoint if
    * this on is  inside segment2
@@ -29264,24 +29628,22 @@ module.exports = CNeditor = (function() {
    *                              update if cont is in segment2. /!\ The
    *                              breakpoint must be normalized, ie containers
    *                              must be in textnodes.
-  */
-
+   */
 
   CNeditor.prototype._fusionSegments = function(segment1, segment2, breakPoints) {
-    var bp, child, children, txtNode1, txtNode2, _i, _j, _len, _len1, _ref;
-
+    var bp, child, children, j, k, len, len1, ref, txtNode1, txtNode2;
     children = Array.prototype.slice.call(segment2.childNodes);
-    _ref = segment2.childNodes;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      child = _ref[_i];
+    ref = segment2.childNodes;
+    for (j = 0, len = ref.length; j < len; j++) {
+      child = ref[j];
       segment1.appendChild(child);
     }
     txtNode1 = segment1.firstChild;
     txtNode2 = txtNode1.nextSibling;
     while (txtNode2 !== null) {
       if ((txtNode1.nodeName === '#text' && '#text' === txtNode2.nodeName)) {
-        for (_j = 0, _len1 = breakPoints.length; _j < _len1; _j++) {
-          bp = breakPoints[_j];
+        for (k = 0, len1 = breakPoints.length; k < len1; k++) {
+          bp = breakPoints[k];
           if (bp.cont === txtNode2) {
             bp.cont = txtNode1;
             bp.offset = txtNode1.length + bp.offset;
@@ -29300,8 +29662,7 @@ module.exports = CNeditor = (function() {
   };
 
   CNeditor.prototype._haveSameMeta = function(segment1, segment2) {
-    var clas, list1, list2, _i, _len;
-
+    var clas, j, len, list1, list2;
     if (segment1.nodeName !== segment2.nodeName) {
       return false;
     } else if (segment1.nodeName === 'A') {
@@ -29317,8 +29678,8 @@ module.exports = CNeditor = (function() {
     if (list1.length === 0) {
       return true;
     }
-    for (_i = 0, _len = list2.length; _i < _len; _i++) {
-      clas = list2[_i];
+    for (j = 0, len = list2.length; j < len; j++) {
+      clas = list2[j];
       if (!list1.contains(clas)) {
         return false;
       }
@@ -29326,24 +29687,22 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
-  /* ------------------------------------------------------------------------
-  #  _suppr :
-  #
-  # Manage deletions when suppr key is pressed
-  */
 
+  /* ------------------------------------------------------------------------
+   *  _suppr :
+   *
+   * Manage deletions when suppr key is pressed
+   */
 
   CNeditor.prototype._suppr = function() {
     var bp, result, sel, startLine, startOffset, textNode, txt;
-
     sel = this.currentSel;
     startLine = sel.startLine;
     if (sel.range.collapsed) {
       if (sel.rangeIsEndLine) {
         if (startLine.lineNext !== null) {
           if (sel.startLineDiv.nextSibling.dataset.type === 'task') {
-            result = window.confirm('Do you want to remove\
-                            the task from todos ?');
+            result = window.confirm('Do you want to remove the task from todos ?');
             if (result) {
               this._history.addStep();
               this._stackTaskChange(sel.startLineDiv.nextSibling.task, 'deleted');
@@ -29401,24 +29760,22 @@ module.exports = CNeditor = (function() {
     return false;
   };
 
-  /* ------------------------------------------------------------------------
-  #  _backspace
-  #
-  # Manage deletions when backspace key is pressed
-  */
 
+  /* ------------------------------------------------------------------------
+   *  _backspace
+   *
+   * Manage deletions when backspace key is pressed
+   */
 
   CNeditor.prototype._backspace = function() {
     var bp, cloneRg, result, sel, startLine, startOffset, textNode, txt;
-
     sel = this.currentSel;
     startLine = sel.startLine;
     if (sel.range.collapsed) {
       if (sel.rangeIsStartLine) {
         if (startLine.linePrev !== null) {
           if (sel.isStartInTask) {
-            result = window.confirm('Do you want to remove the\
-                                                 task from todos?');
+            result = window.confirm('Do you want to remove the task from todos?');
             if (result) {
               this._history.addStep();
               this._stackTaskChange(sel.startLineDiv.task, 'deleted');
@@ -29480,15 +29837,14 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * Turn selected lines in a title List (Th). History is incremented.
    * @param  {Line} l [optionnal] The line to convert in Th
-  */
-
+   */
 
   CNeditor.prototype.titleList = function(l) {
-    var endDiv, endLineID, line, range, startDiv, startDivID, _results;
-
+    var endDiv, endLineID, line, range, results, startDiv, startDivID;
     if (!this.isEnabled || this.hasNoSelection()) {
       return true;
     }
@@ -29504,7 +29860,7 @@ module.exports = CNeditor = (function() {
       endLineID = endDiv.id;
     }
     line = this._lines[startDivID];
-    _results = [];
+    results = [];
     while (true) {
       switch (line.lineType) {
         case 'Tu':
@@ -29521,21 +29877,20 @@ module.exports = CNeditor = (function() {
       if (line.lineID === endLineID) {
         break;
       }
-      _results.push(line = line.lineNext);
+      results.push(line = line.lineNext);
     }
-    return _results;
+    return results;
   };
+
 
   /** -----------------------------------------------------------------------
    * Turn selected lines or the one given in parameter in a
    * Marker List line (Tu)
    * @param  {Line} l [optional] The line to turn in to a Tu
-  */
-
+   */
 
   CNeditor.prototype.markerList = function(l) {
-    var endDiv, endLineID, line, range, startDiv, startDivID, _results;
-
+    var endDiv, endLineID, line, range, results, startDiv, startDivID;
     if (!this.isEnabled || this.hasNoSelection()) {
       return true;
     }
@@ -29551,7 +29906,7 @@ module.exports = CNeditor = (function() {
       endLineID = endDiv.id;
     }
     line = this._lines[startDivID];
-    _results = [];
+    results = [];
     while (true) {
       switch (line.lineType) {
         case 'Th':
@@ -29568,25 +29923,24 @@ module.exports = CNeditor = (function() {
       if (line.lineID === endLineID) {
         break;
       }
-      _results.push(line = line.lineNext);
+      results.push(line = line.lineNext);
     }
-    return _results;
+    return results;
   };
 
-  /* ------------------------------------------------------------------------
-  #  _findDepthRel
-  #
-  # Calculates the relative depth of the line
-  #   usage   : cycle : Tu => To => Lx => Th
-  #   param   : line : the line we want to find the relative depth
-  #   returns : a number
-  #
-  */
 
+  /* ------------------------------------------------------------------------
+   *  _findDepthRel
+   *
+   * Calculates the relative depth of the line
+   *   usage   : cycle : Tu => To => Lx => Th
+   *   param   : line : the line we want to find the relative depth
+   *   returns : a number
+   *
+   */
 
   CNeditor.prototype._findDepthRel = function(line) {
     var linePrev;
-
     if (line.lineDepthAbs === 1) {
       if (line.lineType[1] === "h") {
         return 0;
@@ -29606,17 +29960,16 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Toggle the type of the selected lines.
    * Lx => Tx and Tu <=> Th
    * Increments history.
    * @return {[type]} [description]
-  */
-
+   */
 
   CNeditor.prototype.toggleType = function() {
     var currentDepth, depthIsTreated, done, endDiv, endLineID, line, range, sel, startDiv;
-
     if (!this.isEnabled || this.hasNoSelection()) {
       return true;
     }
@@ -29650,7 +30003,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._toggleLineType = function(line) {
     var l, lineTypeTarget;
-
     switch (line.lineType) {
       case 'Tu':
         lineTypeTarget = 'Th';
@@ -29723,16 +30075,15 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * Indent selection. History is incremented.
    * @param  {[type]} l [description]
    * @return {[type]}   [description]
-  */
-
+   */
 
   CNeditor.prototype.tab = function(l) {
-    var endDiv, endLineID, line, range, sel, startDiv, _results;
-
+    var endDiv, endLineID, line, range, results, sel, startDiv;
     if (!this.isEnabled || this.hasNoSelection()) {
       return true;
     }
@@ -29748,21 +30099,20 @@ module.exports = CNeditor = (function() {
     }
     endLineID = endDiv.id;
     line = this._lines[startDiv.id];
-    _results = [];
+    results = [];
     while (true) {
       this._tabLine(line);
       if (line.lineID === endLineID) {
         break;
       } else {
-        _results.push(line = line.lineNext);
+        results.push(line = line.lineNext);
       }
     }
-    return _results;
+    return results;
   };
 
   CNeditor.prototype._tabLine = function(line) {
     var depthAbsTarget, nextSib, nextSibType, prevSib, prevSibType, prevSibling, typeTarget;
-
     switch (line.lineType) {
       case 'Tu':
       case 'Th':
@@ -29802,7 +30152,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._chooseTypeTarget = function(prevSibType, nextSibType) {
     var typeTarget;
-
     if ((prevSibType === nextSibType && nextSibType === null)) {
       typeTarget = 'Tu';
     } else if (prevSibType === nextSibType) {
@@ -29817,15 +30166,14 @@ module.exports = CNeditor = (function() {
     return typeTarget;
   };
 
+
   /** -----------------------------------------------------------------------
    * Un-indent the selection. History is incremented.
    * @param  {Range} range [optional] A range containing the lines to un-indent
-  */
-
+   */
 
   CNeditor.prototype.shiftTab = function(range) {
     var endDiv, endLineID, line, sel, startDiv;
-
     if (!this.isEnabled || this.hasNoSelection()) {
       return true;
     }
@@ -29849,15 +30197,14 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * un-tab a single line
    * @param  {line} line the line to un-tab
-  */
-
+   */
 
   CNeditor.prototype._shiftTabLine = function(line) {
     var depthAbsTarget, nextL, nextSib, nextSibType, parnt, prevSib, prevSibType, typeTarget;
-
     switch (line.lineType) {
       case 'Tu':
       case 'Th':
@@ -29903,10 +30250,9 @@ module.exports = CNeditor = (function() {
   };
 
   CNeditor.prototype.adjustSiblingsToType = function(line) {
-    var lineIt, _results;
-
+    var lineIt, results;
     lineIt = line;
-    _results = [];
+    results = [];
     while (true) {
       if (lineIt.lineDepthAbs === line.lineDepthAbs) {
         if (lineIt.lineType[1] !== line.lineType[1]) {
@@ -29917,21 +30263,20 @@ module.exports = CNeditor = (function() {
       if (lineIt === null || lineIt.lineDepthAbs < line.lineDepthAbs) {
         break;
       } else {
-        _results.push(void 0);
+        results.push(void 0);
       }
     }
-    return _results;
+    return results;
   };
+
 
   /** -----------------------------------------------------------------------
    * Return on the carret position. Selection must be normalized but not
    * necessarily collapsed.
-  */
-
+   */
 
   CNeditor.prototype._return = function() {
-    var bp1, currSel, dh, endLine, endOfLineFragment, isInTask, l, newLine, p, rg, startLine, _ref;
-
+    var bp1, currSel, dh, endLine, endOfLineFragment, isInTask, l, newLine, p, ref, rg, startLine;
     currSel = this.currentSel;
     startLine = currSel.startLine;
     endLine = currSel.endLine;
@@ -29995,16 +30340,16 @@ module.exports = CNeditor = (function() {
     l = newLine.line$[0];
     p = l.parentNode;
     dh = p.getBoundingClientRect().height;
-    if (!(((l.offsetTop + 20 - dh) < (_ref = p.scrollTop) && _ref < l.offsetTop))) {
+    if (!(((l.offsetTop + 20 - dh) < (ref = p.scrollTop) && ref < l.offsetTop))) {
       return l.scrollIntoView(false);
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Returns the first line of the editor.
    * @return {Line} First line of the editor.
-  */
-
+   */
 
   CNeditor.prototype.getFirstline = function() {
     return this._lines[this.linesDiv.childNodes[0].id];
@@ -30012,29 +30357,27 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._getSelectedLineDiv = function() {
     var cont;
-
     cont = this.getEditorSelection().getRangeAt(0).startContainer;
     return selection.getLineDiv(cont);
   };
 
-  /* ------------------------------------------------------------------------
-  #  _findParent1stSibling
-  #
-  # find the sibling line of the parent of line that is the first of the list
-  # ex :
-  #   . Sibling1 <= _findParent1stSibling(line)
-  #   . Sibling2
-  #   . Parent
-  #      . child1
-  #      . line     : the line in argument
-  # returns null if no previous sibling, the line otherwise
-  # the sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
-  */
 
+  /* ------------------------------------------------------------------------
+   *  _findParent1stSibling
+   *
+   * find the sibling line of the parent of line that is the first of the list
+   * ex :
+   *   . Sibling1 <= _findParent1stSibling(line)
+   *   . Sibling2
+   *   . Parent
+   *      . child1
+   *      . line     : the line in argument
+   * returns null if no previous sibling, the line otherwise
+   * the sibling is a title (Th, Tu or To), not a line (Lh nor Lu nor Lo)
+   */
 
   CNeditor.prototype._findParent1stSibling = function(line) {
     var lineDepthAbs, linePrev;
-
     lineDepthAbs = line.lineDepthAbs;
     linePrev = line.linePrev;
     if (linePrev === null) {
@@ -30053,6 +30396,7 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Find the next sibling line.
    * Returns null if no next sibling, the line otherwise.
@@ -30061,12 +30405,10 @@ module.exports = CNeditor = (function() {
    * @param  {number} depthAbs [optional] If the siblings we search is not
    *                           of the same absolute depth
    * @return {line}          The next sibling if one, null otherwise
-  */
-
+   */
 
   CNeditor.prototype._findNextSibling = function(line, depth) {
     var nextSib;
-
     if (depth == null) {
       depth = line.lineDepthAbs;
     }
@@ -30083,6 +30425,7 @@ module.exports = CNeditor = (function() {
     return nextSib;
   };
 
+
   /** -----------------------------------------------------------------------
    * Find the previous sibling line being a Title.
    * Returns null if no previous sibling, the line otherwise.
@@ -30091,12 +30434,10 @@ module.exports = CNeditor = (function() {
    * @param  {number} depthAbs [optional] If the siblings we search is not
    *                           of the same absolute depth
    * @return {line}          The previous sibling if one, null otherwise
-  */
-
+   */
 
   CNeditor.prototype._findPrevSiblingT = function(line, depth) {
     var prevSib;
-
     if (!depth) {
       depth = line.lineDepthAbs;
     }
@@ -30113,6 +30454,7 @@ module.exports = CNeditor = (function() {
     return prevSib;
   };
 
+
   /** -----------------------------------------------------------------------
    * Find the previous sibling line (can be a line 'Lx' or a title 'Tx').
    * Returns null if no previous sibling, the line otherwise.
@@ -30120,12 +30462,10 @@ module.exports = CNeditor = (function() {
    * @param  {number} depthAbs [optional] If the siblings we search is not
    *                           of the same absolute depth
    * @return {line}          The previous sibling if one, null otherwise
-  */
-
+   */
 
   CNeditor.prototype._findPrevSibling = function(line, depth) {
     var prevSib;
-
     if (!depth) {
       depth = line.lineDepthAbs;
     }
@@ -30141,6 +30481,7 @@ module.exports = CNeditor = (function() {
     }
     return prevSib;
   };
+
 
   /** -----------------------------------------------------------------------
    * Delete the user multi line selection :
@@ -30159,12 +30500,10 @@ module.exports = CNeditor = (function() {
    * @param  {[line]} endLine   [optional] if exists, the whole line will be
    *                                       deleted
    * @return {[none]}           [nothing]
-  */
-
+   */
 
   CNeditor.prototype._deleteMultiLinesSelections = function(startLine, endLine) {
     var bp, currentDelta, deltaInserted, endLineDepth, endOfLineFragment, firstNextLine, firstNextLineDepth, line, range, replaceCaret, startContainer, startLineDepth, startOffset;
-
     if (startLine === null || endLine === null) {
       throw new Error('CEeditor._deleteMultiLinesSelections called with a null param');
     }
@@ -30220,6 +30559,7 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * After an insertion or deletion of a bloc of lines, the lines following
    * the bloc might be incoherent (depth and type of the lines)
@@ -30233,12 +30573,10 @@ module.exports = CNeditor = (function() {
    * @param  {Number} minDepth      The depth under wich (this one included)
    *                                we are sure the structure is valid and
    *                                there is no need to check.
-  */
-
+   */
 
   CNeditor.prototype._adaptDepth = function(startLine, deltaInserted, currentDelta, minDepth) {
     var firstNextLine, lineIt;
-
     if (startLine.lineNext === null) {
       return;
     }
@@ -30255,7 +30593,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._adaptType = function(startLine) {
     var lineIt, prev;
-
     lineIt = startLine.lineNext;
     while (lineIt !== null) {
       prev = this._findPrevSibling(lineIt);
@@ -30273,7 +30610,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._unIndentBlock = function(firstLine, delta) {
     var firstLineDepth, line, newDepth;
-
     line = firstLine;
     firstLineDepth = firstLine.lineDepthAbs;
     newDepth = Math.max(1, line.lineDepthAbs - delta);
@@ -30287,8 +30623,7 @@ module.exports = CNeditor = (function() {
   };
 
   CNeditor.prototype._addMissingFragment = function(line, fragment) {
-    var lastNode, lineEl, newText, node, startFrag, startOffset, _ref;
-
+    var lastNode, lineEl, newText, node, ref, startFrag, startOffset;
     startFrag = fragment.childNodes[0];
     lineEl = line.line$[0];
     if (lineEl.lastChild === null) {
@@ -30299,7 +30634,7 @@ module.exports = CNeditor = (function() {
       lineEl.removeChild(lineEl.lastChild);
     }
     lastNode = lineEl.lastChild;
-    if ((startFrag.tagName === (_ref = lastNode.tagName) && _ref === 'SPAN') && startFrag.className === lastNode.className) {
+    if ((startFrag.tagName === (ref = lastNode.tagName) && ref === 'SPAN') && startFrag.className === lastNode.className) {
       startOffset = lastNode.textContent.length;
       newText = lastNode.textContent + startFrag.textContent;
       lastNode.firstChild.textContent = newText;
@@ -30321,8 +30656,7 @@ module.exports = CNeditor = (function() {
   };
 
   CNeditor.prototype._adaptEndLineType = function(startLine, endLine, endLineDepthAbs) {
-    var deltaDepth, endType, line, newDepth, startType, _results, _results1, _results2;
-
+    var deltaDepth, endType, line, newDepth, results, results1, results2, startType;
     endType = endLine.lineType;
     startType = startLine.lineType;
     deltaDepth = endLineDepthAbs - startLine.lineDepthAbs;
@@ -30330,39 +30664,40 @@ module.exports = CNeditor = (function() {
       this._toggleLineType(endLine);
       line = endLine;
       if (deltaDepth > 0) {
-        _results = [];
+        results = [];
         while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
           newDepth = line.lineDepthAbs - deltaDepth;
           line.setDepthAbs(newDepth);
-          _results.push(line = line.lineNext);
+          results.push(line = line.lineNext);
         }
-        return _results;
+        return results;
       }
     } else if (endType === 'Th' && startType === 'Tu') {
       this._toggleLineType(endLine);
       line = endLine;
       if (deltaDepth > 0) {
-        _results1 = [];
+        results1 = [];
         while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
           newDepth = line.lineDepthAbs - deltaDepth;
           line.setDepthAbs(newDepth);
-          _results1.push(line = line.lineNext);
+          results1.push(line = line.lineNext);
         }
-        return _results1;
+        return results1;
       }
     } else if (endType === 'Th' && startType === 'Th') {
       line = endLine;
       if (deltaDepth > 0) {
-        _results2 = [];
+        results2 = [];
         while (line !== null && line.lineDepthAbs >= endLineDepthAbs) {
           newDepth = line.lineDepthAbs - deltaDepth;
           line.setDepthAbs(newDepth);
-          _results2.push(line = line.lineNext);
+          results2.push(line = line.lineNext);
         }
-        return _results2;
+        return results2;
       }
     }
   };
+
 
   /** -----------------------------------------------------------------------
    * Put caret at given position. The break point will be normalized (ie put
@@ -30373,12 +30708,10 @@ module.exports = CNeditor = (function() {
    *                              choose to go in next sibling - if exists -
    *                              rather than in the previous one.
    * @return {Object} {cont,offset} the normalized break point
-  */
-
+   */
 
   CNeditor.prototype._setCaret = function(startContainer, startOffset, preferNext) {
     var bp, range, sel;
-
     bp = selection.normalizeBP(startContainer, startOffset, preferNext);
     range = this.document.createRange();
     range.setStart(bp.cont, bp.offset);
@@ -30391,7 +30724,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._setCaretAfter = function(elemt) {
     var index, nextEl, parent;
-
     nextEl = elemt;
     while (nextEl.nextSibling === null) {
       nextEl = nextEl.parentElement;
@@ -30411,7 +30743,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._setSelectionOnNode = function(node) {
     var range, sel;
-
     range = this.document.createRange();
     range.selectNodeContents(node);
     selection.normalize(range);
@@ -30423,7 +30754,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype.setSelection = function(startContainer, startOffset, endContainer, endOffset) {
     var range, sel;
-
     range = this.document.createRange();
     range.setStart(startContainer, startOffset);
     range.setEnd(endContainer, endOffset);
@@ -30436,7 +30766,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype.setSelectionFromRg = function(range, preferNext) {
     var sel;
-
     selection.normalize(range, preferNext);
     sel = this.getEditorSelection();
     sel.removeAllRanges();
@@ -30446,7 +30775,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype.setSelectionBp = function(bp1, bp2) {
     var range, sel;
-
     range = this.document.createRange();
     range.setStart(bp1.cont, bp1.offset);
     range.setEnd(bp2.cont, bp2.offset);
@@ -30457,60 +30785,57 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
-  /* ------------------------------------------------------------------------
-  #  _insertLineAfter
-  #
-  # Insert a line after a source line
-  # The line will be inserted in the parent of the source line (which can be
-  # the editor or a fragment in the case of the paste for instance)
-  # p =
-  #     sourceLine         : line after which the line will be added
-  #     fragment           : [optionnal] - an html fragment that will be added
-  #                          in the div of the line.
-  #     innerHTML          : [optionnal] - if no fragment is given, an html
-  #                          string that will be added to the new line.
-  #     targetLineType     : type of the line to add
-  #     targetLineDepthAbs : absolute depth of the line to add
-  #     targetLineDepthRel : relative depth of the line to add
-  */
 
+  /* ------------------------------------------------------------------------
+   *  _insertLineAfter
+   *
+   * Insert a line after a source line
+   * The line will be inserted in the parent of the source line (which can be
+   * the editor or a fragment in the case of the paste for instance)
+   * p =
+   *     sourceLine         : line after which the line will be added
+   *     fragment           : [optionnal] - an html fragment that will be added
+   *                          in the div of the line.
+   *     innerHTML          : [optionnal] - if no fragment is given, an html
+   *                          string that will be added to the new line.
+   *     targetLineType     : type of the line to add
+   *     targetLineDepthAbs : absolute depth of the line to add
+   *     targetLineDepthRel : relative depth of the line to add
+   */
 
   CNeditor.prototype._insertLineAfter = function(p) {
     var newLine;
-
     newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, p.sourceLine, null, p.fragment);
     return newLine;
   };
 
-  /* ------------------------------------------------------------------------
-  #  _insertLineBefore
-  #
-  # Insert a line before a source line
-  # p =
-  #     sourceLine         : Line before which a line will be added
-  #     fragment           : [optionnal] - an html fragment that will be added
-  #                          the fragment is not supposed to end with a <br>
-  #     targetLineType     : type of the line to add
-  #     targetLineDepthAbs : absolute depth of the line to add
-  #     targetLineDepthRel : relative depth of the line to add
-  */
 
+  /* ------------------------------------------------------------------------
+   *  _insertLineBefore
+   *
+   * Insert a line before a source line
+   * p =
+   *     sourceLine         : Line before which a line will be added
+   *     fragment           : [optionnal] - an html fragment that will be added
+   *                          the fragment is not supposed to end with a <br>
+   *     targetLineType     : type of the line to add
+   *     targetLineDepthAbs : absolute depth of the line to add
+   *     targetLineDepthRel : relative depth of the line to add
+   */
 
   CNeditor.prototype._insertLineBefore = function(p) {
     var newLine;
-
     newLine = new Line(this, p.targetLineType, p.targetLineDepthAbs, p.targetLineDepthRel, null, p.sourceLine, p.fragment);
     return newLine;
   };
 
+
   /** -----------------------------------------------------------------------
    * Parse a raw html inserted in the iframe in order to update the controller
-  */
-
+   */
 
   CNeditor.prototype._readHtml = function(isFullReplaceContent) {
-    var deltaDepthAbs, htmlLine, htmlLine$, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, seg, txt, _i, _len, _ref;
-
+    var deltaDepthAbs, htmlLine, htmlLine$, j, len, lineClass, lineDepthAbs, lineDepthAbs_old, lineDepthRel, lineDepthRel_old, lineID, lineID_st, lineNew, lineNext, linePrev, lineType, linesDiv$, ref, seg, txt;
     linesDiv$ = $(this.linesDiv).children();
     lineDepthAbs = 0;
     lineDepthRel = 0;
@@ -30519,10 +30844,10 @@ module.exports = CNeditor = (function() {
     linePrev = null;
     lineNext = null;
     this.Tags.empty(isFullReplaceContent);
-    for (_i = 0, _len = linesDiv$.length; _i < _len; _i++) {
-      htmlLine = linesDiv$[_i];
+    for (j = 0, len = linesDiv$.length; j < len; j++) {
+      htmlLine = linesDiv$[j];
       htmlLine$ = $(htmlLine);
-      lineClass = (_ref = htmlLine$.attr('class')) != null ? _ref : "";
+      lineClass = (ref = htmlLine$.attr('class')) != null ? ref : "";
       lineClass = lineClass.split('-');
       lineType = lineClass[0];
       if (lineType !== "") {
@@ -30579,43 +30904,42 @@ module.exports = CNeditor = (function() {
     return this._highestId = lineID;
   };
 
-  /* ------------------------------------------------------------------------
-  # LINES MOTION MANAGEMENT
-  #
-  # Functions to perform the motion of an entire block of lines
-  # BUG : when doubleclicking on an end of line then moving this line
-  #       down, selection does not behave as expected :-)
-  # TODO: correct behavior when moving the second line up
-  # TODO: correct behavior when moving the first line down
-  # TODO: improve re-insertion of the line swapped with the block
-  */
-
 
   /* ------------------------------------------------------------------------
-  # _moveLinesDown:
-  #
-  # -variables:
-  #    linePrev                                       linePrev
-  #    lineStart__________                            lineNext
-  #    |.                 | The block                 lineStart_______
-  #    |.                 | to move down      ==>     |.              |
-  #    lineEnd____________|                           |.              |
-  #    lineNext                                       lineEnd_________|
-  #
-  # -algorithm:
-  #    1.delete lineNext with _deleteMultilinesSelections()
-  #    2.insert lineNext between linePrev and lineStart
-  #    3.if lineNext is more indented than linePrev, untab lineNext
-  #      until it is ok
-  #    4.else (lineNext less indented than linePrev), select the block
-  #      (lineStart and some lines below) that is more indented than lineNext
-  #      and untab it until it is ok
-  */
+   * LINES MOTION MANAGEMENT
+   *
+   * Functions to perform the motion of an entire block of lines
+   * BUG : when doubleclicking on an end of line then moving this line
+   *       down, selection does not behave as expected :-)
+   * TODO: correct behavior when moving the second line up
+   * TODO: correct behavior when moving the first line down
+   * TODO: improve re-insertion of the line swapped with the block
+   */
 
+
+  /* ------------------------------------------------------------------------
+   * _moveLinesDown:
+   *
+   * -variables:
+   *    linePrev                                       linePrev
+   *    lineStart__________                            lineNext
+   *    |.                 | The block                 lineStart_______
+   *    |.                 | to move down      ==>     |.              |
+   *    lineEnd____________|                           |.              |
+   *    lineNext                                       lineEnd_________|
+   *
+   * -algorithm:
+   *    1.delete lineNext with _deleteMultilinesSelections()
+   *    2.insert lineNext between linePrev and lineStart
+   *    3.if lineNext is more indented than linePrev, untab lineNext
+   *      until it is ok
+   *    4.else (lineNext less indented than linePrev), select the block
+   *      (lineStart and some lines below) that is more indented than lineNext
+   *      and untab it until it is ok
+   */
 
   CNeditor.prototype._moveLinesDown = function() {
-    var cloneLine, endDiv, endLineID, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
-
+    var cloneLine, endDiv, endLineID, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, results, results1, sel, startDiv, startLineID;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
     startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
@@ -30664,12 +30988,12 @@ module.exports = CNeditor = (function() {
             numOfUntab += 1;
           }
         }
-        _results = [];
+        results = [];
         while (numOfUntab >= 0) {
           this.shiftTab(myRange);
-          _results.push(numOfUntab -= 1);
+          results.push(numOfUntab -= 1);
         }
-        return _results;
+        return results;
       } else {
         myRange = this.document.createRange();
         myRange.setStart(lineNext.line$[0], 0);
@@ -30682,41 +31006,40 @@ module.exports = CNeditor = (function() {
             numOfUntab += 1;
           }
         }
-        _results1 = [];
+        results1 = [];
         while (numOfUntab >= 0) {
           this.shiftTab(myRange);
-          _results1.push(numOfUntab -= 1);
+          results1.push(numOfUntab -= 1);
         }
-        return _results1;
+        return results1;
       }
     }
   };
 
-  /* ------------------------------------------------------------------------
-  # _moveLinesUp:
-  #
-  # -variables:
-  #    linePrev                                   lineStart_________
-  #    lineStart__________                        |.                |
-  #    |.                 | The block             |.                |
-  #    |.                 | to move up     ==>    lineEnd___________|
-  #    lineEnd____________|                       linePrev
-  #    lineNext                                   lineNext
-  #
-  # -algorithm:
-  #    1.delete linePrev with _deleteMultilinesSelections()
-  #    2.insert linePrev between lineEnd and lineNext
-  #    3.if linePrev is more indented than lineNext, untab linePrev
-  #      until it is ok
-  #    4.else (linePrev less indented than lineNext), select the block
-  #      (lineNext and some lines below) that is more indented than linePrev
-  #      and untab it until it is ok
-  */
 
+  /* ------------------------------------------------------------------------
+   * _moveLinesUp:
+   *
+   * -variables:
+   *    linePrev                                   lineStart_________
+   *    lineStart__________                        |.                |
+   *    |.                 | The block             |.                |
+   *    |.                 | to move up     ==>    lineEnd___________|
+   *    lineEnd____________|                       linePrev
+   *    lineNext                                   lineNext
+   *
+   * -algorithm:
+   *    1.delete linePrev with _deleteMultilinesSelections()
+   *    2.insert linePrev between lineEnd and lineNext
+   *    3.if linePrev is more indented than lineNext, untab linePrev
+   *      until it is ok
+   *    4.else (linePrev less indented than lineNext), select the block
+   *      (lineNext and some lines below) that is more indented than linePrev
+   *      and untab it until it is ok
+   */
 
   CNeditor.prototype._moveLinesUp = function() {
-    var cloneLine, endDiv, endLineID, isSecondLine, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, sel, startDiv, startLineID, _results, _results1;
-
+    var cloneLine, endDiv, endLineID, isSecondLine, line, lineEnd, lineNext, linePrev, lineStart, myRange, numOfUntab, range, results, results1, sel, startDiv, startLineID;
     sel = this.getEditorSelection();
     range = sel.getRangeAt(0);
     startDiv = selection.getLineDiv(range.startContainer, range.startOffset);
@@ -30770,12 +31093,12 @@ module.exports = CNeditor = (function() {
             numOfUntab += 1;
           }
         }
-        _results = [];
+        results = [];
         while (numOfUntab >= 0) {
           this.shiftTab(myRange);
-          _results.push(numOfUntab -= 1);
+          results.push(numOfUntab -= 1);
         }
-        return _results;
+        return results;
       } else {
         myRange = this.document.createRange();
         myRange.setStart(linePrev.line$[0], 0);
@@ -30788,24 +31111,23 @@ module.exports = CNeditor = (function() {
             numOfUntab += 1;
           }
         }
-        _results1 = [];
+        results1 = [];
         while (numOfUntab >= 0) {
           this.shiftTab(myRange);
-          _results1.push(numOfUntab -= 1);
+          results1.push(numOfUntab -= 1);
         }
-        return _results1;
+        return results1;
       }
     }
   };
 
+
   /**------------------------------------------------------------------------
    * Undo the previous action
-  */
-
+   */
 
   CNeditor.prototype.unDo = function() {
-    var h, id, modif, newPosition, savedScroll, savedSel, stepIndex, t, _i, _len, _ref, _ref1;
-
+    var h, id, j, len, modif, newPosition, ref, ref1, savedScroll, savedSel, stepIndex, t;
     console.info("\n== UNDO :");
     h = this._history;
     if (!(h.undoPossible() && this.isEnabled)) {
@@ -30830,9 +31152,9 @@ module.exports = CNeditor = (function() {
     this.linesDiv.scrollTop = savedScroll.xcoord;
     this.linesDiv.scrollLeft = savedScroll.ycoord;
     this._readHtml();
-    _ref = h.modifiedTask[stepIndex + 1];
-    for (id in _ref) {
-      modif = _ref[id];
+    ref = h.modifiedTask[stepIndex + 1];
+    for (id in ref) {
+      modif = ref[id];
       console.info(modif.a);
       switch (modif.a) {
         case 'modified':
@@ -30846,9 +31168,9 @@ module.exports = CNeditor = (function() {
           this._stackTaskForSave(id, modif.t, 'deleted');
       }
     }
-    _ref1 = this._taskList;
-    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-      t = _ref1[_i];
+    ref1 = this._taskList;
+    for (j = 0, len = ref1.length; j < len; j++) {
+      t = ref1[j];
       if (t.isFromServer) {
         this._updateTaskLine(t);
       }
@@ -30859,14 +31181,13 @@ module.exports = CNeditor = (function() {
     return newPosition = true;
   };
 
+
   /** -----------------------------------------------------------------------
    * Redo a undo-ed action
-  */
-
+   */
 
   CNeditor.prototype.reDo = function() {
-    var h, i, id, index, modif, savedSel, t, xcoord, ycoord, _i, _len, _ref, _ref1;
-
+    var h, i, id, index, j, len, modif, ref, ref1, savedSel, t, xcoord, ycoord;
     console.info("\n== REDO :");
     h = this._history;
     if (!(h.redoPossible() && this.isEnabled)) {
@@ -30886,14 +31207,14 @@ module.exports = CNeditor = (function() {
     this.linesDiv.scrollTop = xcoord;
     this.linesDiv.scrollLeft = ycoord;
     this._readHtml();
-    _ref = h.modifiedTask[index + 1];
-    for (id in _ref) {
-      modif = _ref[id];
+    ref = h.modifiedTask[index + 1];
+    for (id in ref) {
+      modif = ref[id];
       this._stackTaskForSave(id, modif.t, modif.a);
     }
-    _ref1 = this._taskList;
-    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-      t = _ref1[_i];
+    ref1 = this._taskList;
+    for (j = 0, len = ref1.length; j < len; j++) {
+      t = ref1[j];
       if (t.isFromServer) {
         this._updateTaskLine(t);
       }
@@ -30904,7 +31225,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._replaceInTaskHistory = function(task) {
     var i, modif;
-
     i = this.HISTORY_SIZE;
     while (i--) {
       modif = this._history.modifiedTask[i];
@@ -30917,17 +31237,16 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Deserialize a range and return it.
    * @param  {String} serial   A string corresponding to a serialized range.
    * @param  {element} rootNode The root node used for the serialization
    * @return {range}          The expected range
-  */
-
+   */
 
   CNeditor.prototype.deSerializeRange = function(serial, rootNode) {
     var endCont, endPath, i, offset, parentCont, range, serials, startCont, startPath;
-
     if (!rootNode) {
       rootNode = this.linesDiv;
     }
@@ -30962,6 +31281,7 @@ module.exports = CNeditor = (function() {
     return range;
   };
 
+
   /** -----------------------------------------------------------------------
    * Serialize a range.
    * The breakpoint are 2 strings separated by a comma.
@@ -30974,12 +31294,10 @@ module.exports = CNeditor = (function() {
    * @return {String}          The string, exemple : "10/0/2/1,3/1", or false
    *                           if the rootNode is not a parent of one of the
    *                           range's break point.
-  */
-
+   */
 
   CNeditor.prototype.serializeRange = function(range, rootNode) {
     var i, node, res, sib;
-
     if (!rootNode) {
       rootNode = this.linesDiv;
     }
@@ -31018,7 +31336,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype.serializeSel = function() {
     var s;
-
     s = this.getEditorSelection();
     if (s.rangeCount) {
       return this.serializeRange(s.getRangeAt(0));
@@ -31028,25 +31345,23 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype.deSerializeSelection = function(serial) {
     var sel;
-
     sel = this.getEditorSelection();
     sel.removeAllRanges();
     return sel.addRange(this.deSerializeRange(serial));
   };
 
-  /* ------------------------------------------------------------------------
-  # EXTENSION  :  auto-summary management and upkeep
-  #
-  # initialization
-  # TODO: avoid updating the summary too often
-  #       it would be best to make the update faster (rather than reading
-  #       every line)
-  */
 
+  /* ------------------------------------------------------------------------
+   * EXTENSION  :  auto-summary management and upkeep
+   *
+   * initialization
+   * TODO: avoid updating the summary too often
+   *       it would be best to make the update faster (rather than reading
+   *       every line)
+   */
 
   CNeditor.prototype._initSummary = function() {
     var summary;
-
     summary = this.editorBody$.children("#navi");
     if (summary.length === 0) {
       summary = $(document.createElement('div'));
@@ -31057,42 +31372,40 @@ module.exports = CNeditor = (function() {
   };
 
   CNeditor.prototype._buildSummary = function() {
-    var c, lines, summary, _results;
-
+    var c, lines, results, summary;
     summary = this.initSummary();
     this.editorBody$.children("#navi").children().remove();
     lines = this._lines;
-    _results = [];
+    results = [];
     for (c in lines) {
       if (this.editorBody$.children('#' + ("" + lines[c].lineID)).length > 0 && lines[c].lineType === "Th") {
-        _results.push(lines[c].line$.clone().appendTo(summary));
+        results.push(lines[c].line$.clone().appendTo(summary));
       } else {
-        _results.push(void 0);
+        results.push(void 0);
       }
     }
-    return _results;
+    return results;
   };
 
-  /* ------------------------------------------------------------------------
-  #  EXTENSION  :  DECORATION FUNCTIONS (bold/italic/underlined/quote)
-  #  TODO
-  */
-
 
   /* ------------------------------------------------------------------------
-  #  PASTE MANAGEMENT
-  # 0 - save selection
-  # 1 - move the cursor into an invisible sandbox
-  # 2 - redirect pasted content in this sandox
-  # 3 - sanitize and adapt pasted content to the editor's format
-  # 4 - restore selection
-  # 5 - insert cleaned content is behind the cursor position
-  */
+   *  EXTENSION  :  DECORATION FUNCTIONS (bold/italic/underlined/quote)
+   *  TODO
+   */
 
+
+  /* ------------------------------------------------------------------------
+   *  PASTE MANAGEMENT
+   * 0 - save selection
+   * 1 - move the cursor into an invisible sandbox
+   * 2 - redirect pasted content in this sandox
+   * 3 - sanitize and adapt pasted content to the editor's format
+   * 4 - restore selection
+   * 5 - insert cleaned content is behind the cursor position
+   */
 
   CNeditor.prototype.paste = function(event) {
     var mySandBox, range, sel;
-
     mySandBox = this.clipboard;
     this.updateCurrentSelIsStartIsEnd();
     range = this.document.createRange();
@@ -31121,19 +31434,18 @@ module.exports = CNeditor = (function() {
     }
   };
 
-  /** -----------------------------------------------------------------------
-  # * init the div where the browser will actualy paste.
-  # * this method is called after each refresh of the content of the editor (
-  # * replaceContent, deleteContent, setEditorContent)
-  # * TODO : should be called just once at editor init : for this the editable
-  # * content shouldn't be directly in the body of the iframe but in a div.
-  # * @return {obj} a ref to the clipboard div
-  */
 
+  /** -----------------------------------------------------------------------
+   * * init the div where the browser will actualy paste.
+   * * this method is called after each refresh of the content of the editor (
+   * * replaceContent, deleteContent, setEditorContent)
+   * * TODO : should be called just once at editor init : for this the editable
+   * * content shouldn't be directly in the body of the iframe but in a div.
+   * * @return {obj} a ref to the clipboard div
+   */
 
   CNeditor.prototype._initClipBoard = function() {
     var clipboardEl, getOffTheScreen;
-
     clipboardEl = document.createElement('div');
     clipboardEl.contentEditable = true;
     clipboardEl.id = 'editor-clipboard';
@@ -31151,14 +31463,14 @@ module.exports = CNeditor = (function() {
     return clipboardEl;
   };
 
+
   /** -----------------------------------------------------------------------
    * Function that will call itself until the browser has pasted data in the
    * clipboar div
    * @param  {element} sandbox      the div where the browser will paste data
    * @param  {function} processpaste the function to call back whan paste
    * is ok
-  */
-
+   */
 
   CNeditor.prototype._waitForPasteData = function() {
     if (this.clipboard.childNodes && this.clipboard.childNodes.length > 0) {
@@ -31168,15 +31480,14 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Called when the browser has pasted data in the clipboard div.
    * Its role is to insert the content of the clipboard into the editor.
-  */
-
+   */
 
   CNeditor.prototype._processPaste = function() {
-    var absDepth, bp, br, childNodes, currSel, currentDelta, currentLineFrag, deltaInserted, domWalkContext, dummyLine, endLine, endTargetLineFrag, firstAddedLine, frag, htmlStr, l, lastAdded, lastAddedDepth, lastFragLine, lineElements, lineNextStartLine, n, parendDiv, range, sandbox, secondAddedLine, segToInsert, startLine, startLineDepth, startOffset, targetNode, _i, _j, _len;
-
+    var absDepth, bp, br, childNodes, currSel, currentDelta, currentLineFrag, deltaInserted, domWalkContext, dummyLine, endLine, endTargetLineFrag, firstAddedLine, frag, htmlStr, j, k, l, lastAdded, lastAddedDepth, lastFragLine, len, lineElements, lineNextStartLine, n, parendDiv, range, ref, sandbox, secondAddedLine, segToInsert, startLine, startLineDepth, startOffset, targetNode;
     sandbox = this.clipboard;
     currSel = this.currentSel;
     sandbox.innerHTML = sanitize(sandbox.innerHTML).xss();
@@ -31205,15 +31516,15 @@ module.exports = CNeditor = (function() {
     htmlStr = this._domWalk(sandbox, domWalkContext);
     sandbox.innerHTML = "";
     frag.removeChild(frag.firstChild);
-    /*
-    # TODO : the following steps removes all the styles of the lines in frag
-    # Later this will be removed in order to take into account styles.
-    */
 
     /*
-    # END TODO
-    */
+     * TODO : the following steps removes all the styles of the lines in frag
+     * Later this will be removed in order to take into account styles.
+     */
 
+    /*
+     * END TODO
+     */
     startLine = currSel.startLine;
     endLine = currSel.endLine;
     if (currSel.range.collapsed) {
@@ -31229,13 +31540,13 @@ module.exports = CNeditor = (function() {
       this.newPosition = false;
       startLine = currSel.startLine;
     }
-    /* 5- Insert first line of the frag in the target line
-    # We assume that the structure of lines in frag and in the editor are :
-    #   <div><span>(TextNode)</span><br></div>
-    # what will be incorrect when styles will be taken into account.
-    #
-    */
 
+    /* 5- Insert first line of the frag in the target line
+     * We assume that the structure of lines in frag and in the editor are :
+     *   <div><span>(TextNode)</span><br></div>
+     * what will be incorrect when styles will be taken into account.
+     *
+     */
     targetNode = currSel.theoricalRange.startContainer;
     startOffset = currSel.theoricalRange.startOffset;
     bp = {
@@ -31248,8 +31559,8 @@ module.exports = CNeditor = (function() {
     } else {
       lineElements = [frag];
     }
-    for (_i = 0, _len = lineElements.length; _i < _len; _i++) {
-      segToInsert = lineElements[_i];
+    for (j = 0, len = lineElements.length; j < len; j++) {
+      segToInsert = lineElements[j];
       this._insertSegment(segToInsert, bp);
     }
     if (bp.cont.nodeName !== '#text') {
@@ -31258,11 +31569,11 @@ module.exports = CNeditor = (function() {
     this._fusionSimilarSegments(startLine.line$[0], [bp]);
     targetNode = bp.cont;
     startOffset = bp.offset;
-    /*
-    # 6- If the clipboard has more than one line, insert the end of target
-    #    line in the last line of frag and delete it
-    */
 
+    /*
+     * 6- If the clipboard has more than one line, insert the end of target
+     *    line in the last line of frag and delete it
+     */
     if (frag.childNodes.length > 1) {
       range = document.createRange();
       range.setStart(targetNode, startOffset);
@@ -31279,7 +31590,7 @@ module.exports = CNeditor = (function() {
       bp = selection.normalizeBP(lastFragLine, n);
       childNodes = endTargetLineFrag.childNodes;
       l = childNodes.length;
-      for (n = _j = 1; _j <= l; n = _j += 1) {
+      for (n = k = 1, ref = l; k <= ref; n = k += 1) {
         lastFragLine.insertBefore(childNodes[0], br);
       }
       this._fusionSimilarSegments(lastFragLine, [bp]);
@@ -31288,10 +31599,10 @@ module.exports = CNeditor = (function() {
         parendDiv = parendDiv.parentElement;
       }
     }
+
     /*
      * remove the firstAddedLine from the fragment
-    */
-
+     */
     firstAddedLine = dummyLine.lineNext;
     secondAddedLine = firstAddedLine != null ? firstAddedLine.lineNext : void 0;
     if (frag.firstChild != null) {
@@ -31300,10 +31611,10 @@ module.exports = CNeditor = (function() {
     if (firstAddedLine != null) {
       delete this._lines[firstAddedLine.lineID];
     }
+
     /*
      * 7- updates nextLine and prevLines, insert frag in the editor
-    */
-
+     */
     if (secondAddedLine != null) {
       lineNextStartLine = currSel.startLine.lineNext;
       currSel.startLine.lineNext = secondAddedLine;
@@ -31316,10 +31627,10 @@ module.exports = CNeditor = (function() {
         this.linesDiv.insertBefore(frag, lineNextStartLine.line$[0]);
       }
     }
+
     /*
      * 8- Adapt lines depth and type.
-    */
-
+     */
     lastAdded = domWalkContext.lastAddedLine;
     if (lastAdded.lineNext) {
       lastAddedDepth = lastAdded.lineDepthAbs;
@@ -31329,12 +31640,13 @@ module.exports = CNeditor = (function() {
       this._adaptDepth(domWalkContext.lastAddedLine, deltaInserted, currentDelta, lastAddedDepth);
       this._adaptType(currSel.startLine);
     }
+
     /*
      * 9- position caret
-    */
-
+     */
     return bp = this._setCaret(bp.cont, bp.offset);
   };
+
 
   /** -----------------------------------------------------------------------
    * Insert segment at the position of the breakpoint.
@@ -31350,12 +31662,10 @@ module.exports = CNeditor = (function() {
    *                          the breakpoint where to insert segment. The
    *                          breakpoint must be in a segment, ie cont or one
    *                          of its parent must be a segment.
-  */
-
+   */
 
   CNeditor.prototype._insertSegment = function(newSeg, bp) {
     var targetNode, targetSeg;
-
     targetNode = bp.cont;
     targetSeg = selection.getSegment(targetNode);
     if (targetSeg.nodeName === 'DIV') {
@@ -31377,7 +31687,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._insertTextInSegment = function(txt, bp, targetSeg) {
     var newText, offset, targetText;
-
     if (txt === '') {
       return true;
     }
@@ -31398,7 +31707,6 @@ module.exports = CNeditor = (function() {
 
   CNeditor.prototype._splitAndInsertSegment = function(newSegment, bp, targetSeg) {
     var children, frag, i, rg;
-
     if (!targetSeg) {
       targetSeg = selection.getSegment(bp.cont);
     }
@@ -31417,16 +31725,15 @@ module.exports = CNeditor = (function() {
     return bp.offset = i + 2;
   };
 
+
   /**
    * insert an segment with one space caractère after a given segment.
    * @param  {Element} seg The segment after whiche we will insert
    * @return {Element}     The created segment
-  */
-
+   */
 
   CNeditor.prototype._insertSegmentAfterSeg = function(seg) {
     var span, txt;
-
     span = document.createElement('SPAN');
     txt = document.createTextNode('\u00a0');
     span.appendChild(txt);
@@ -31434,17 +31741,16 @@ module.exports = CNeditor = (function() {
     return span;
   };
 
+
   /**
    * returns a break point, collapsed after a space caracter immediately
    * following a given segment. A segment will we inserted if required.
    * @param  {[type]} seg [description]
    * @return {[type]}     [description]
-  */
-
+   */
 
   CNeditor.prototype.insertSpaceAfterSeg = function(seg) {
     var bp, c1, index, nextSeg, span, txtNode;
-
     nextSeg = seg.nextSibling;
     if (nextSeg.nodeName === 'BR') {
       span = this._insertSegmentAfterSeg(seg);
@@ -31465,17 +31771,16 @@ module.exports = CNeditor = (function() {
     return bp;
   };
 
+
   /** -----------------------------------------------------------------------
    * Walks thoug an html tree in order to convert it in a strutured content
    * that fit to a note structure.
    * @param  {html element} elemt   Reference to an html element to be parsed
    * @param  {object} context context of execution of _domWalk (recursive).
-  */
-
+   */
 
   CNeditor.prototype._domWalk = function(elemt, context) {
     var p;
-
     this.__domWalk(elemt, context);
     if (context.currentLineFrag.childNodes.length > 0) {
       p = {
@@ -31489,6 +31794,7 @@ module.exports = CNeditor = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Walks thoug an html tree in order to convert it in a strutured content
    * that fit to a note structure.
@@ -31498,20 +31804,18 @@ module.exports = CNeditor = (function() {
    *                          execution is kept in this param instead of
    *                          using the editor context (faster and better
    *                          isolation)
-  */
-
+   */
 
   CNeditor.prototype.__domWalk = function(nodeToParse, context) {
-    var aNode, absDepth, child, clas, classes, deltaHxLevel, lastInsertedEl, newClass, prevHxLevel, spanEl, spanNode, txtNode, _i, _j, _len, _len1, _ref, _ref1;
-
+    var aNode, absDepth, child, clas, classes, deltaHxLevel, j, k, lastInsertedEl, len, len1, newClass, prevHxLevel, ref, ref1, spanEl, spanNode, txtNode;
     absDepth = context.absDepth;
     prevHxLevel = context.prevHxLevel;
-    _ref = nodeToParse.childNodes;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      child = _ref[_i];
+    ref = nodeToParse.childNodes;
+    for (j = 0, len = ref.length; j < len; j++) {
+      child = ref[j];
       switch (child.nodeName) {
         case '#text':
-          if ((_ref1 = context.currentLineEl.nodeName) === 'SPAN' || _ref1 === 'A') {
+          if ((ref1 = context.currentLineEl.nodeName) === 'SPAN' || ref1 === 'A') {
             context.currentLineEl.textContent += child.textContent;
           } else {
             txtNode = document.createTextNode(child.textContent);
@@ -31579,8 +31883,8 @@ module.exports = CNeditor = (function() {
             spanNode.textContent = child.textContent;
             classes = child.classList;
             newClass = '';
-            for (_j = 0, _len1 = classes.length; _j < _len1; _j++) {
-              clas = classes[_j];
+            for (k = 0, len1 = classes.length; k < len1; k++) {
+              clas = classes[k];
               if (clas.slice(0, 3) === 'CNE') {
                 newClass += ' ' + clas;
               }
@@ -31594,17 +31898,16 @@ module.exports = CNeditor = (function() {
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * Append to frag the currentLineFrag and prepare a new empty one.
    * @param  {Object} context  [description]
    * @param  {Number} absDepth absolute depth of the line to insert
    * @param  {Number} relDepth relative depth of the line to insert
-  */
-
+   */
 
   CNeditor.prototype._appendCurrentLineFrag = function(context, absDepth, relDepth) {
     var p, spanNode;
-
     if (context.currentLineFrag.childNodes.length === 0) {
       spanNode = document.createElement('span');
       spanNode.appendChild(document.createTextNode(''));
@@ -31623,17 +31926,16 @@ module.exports = CNeditor = (function() {
     return context.isCurrentLineBeingPopulated = false;
   };
 
+
   /** -----------------------------------------------------------------------
    * Insert in the editor a line that was copied in a cozy note editor
    * @param  {Element} elemt A div
    *                         ex : <div id="CNID_7" class="Lu-3"> ... </div>
    * @return {Line}          A ref to the line object
-  */
-
+   */
 
   CNeditor.prototype._clipBoard_Insert_InternalLine = function(elemt, context) {
     var deltaDepth, elemtFrag, i, lineClass, lineDepthAbs, n, p, seg, span;
-
     lineClass = elemt.className.split('-');
     lineDepthAbs = +lineClass[1];
     lineClass = lineClass[0];
@@ -31672,17 +31974,16 @@ module.exports = CNeditor = (function() {
     return context.lastAddedLine = this._insertLineAfter(p);
   };
 
+
   /**
    * Called by the hotString controler when return is hit or when an item of
    * the auto complete is clicked.
    * @param  {Object} autoItem
    *                  {text:'value', type:'reminder'|'contact'|..., value:{}}
-  */
-
+   */
 
   CNeditor.prototype.doHotStringAction = function(autoItem) {
     var bp, hs, line, reg, taskDiv, txt;
-
     hs = this._hotString;
     if (!(autoItem != null ? autoItem.type : void 0)) {
       hs.reset('end', true);
@@ -31738,6 +32039,7 @@ module.exports = CNeditor = (function() {
       case 'contact':
         hs._forceUserHotString(autoItem.text, []);
         hs._hsSegment.dataset.id = autoItem.model.id;
+        hs._hsSegment.src = '/#apps/contacts/contact/48b0f8a3ff022f579cabfcf276006630';
         this.Tags.create('contact', hs._hsSegment);
         bp = this.insertSpaceAfterSeg(hs._hsSegment);
         this._setCaret(bp.cont, 1);
@@ -31784,11 +32086,11 @@ CNeditor = exports.CNeditor;
 
 });
 
-;require.register("CNeditor/externalmodels", function(exports, require, module) {
-var Alarm, Contact, Task, request, _ref, _ref1, _ref2,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+require.register("CNeditor/externalmodels", function(exports, require, module) {
+var Alarm, Contact, Task, request,
+  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 request = require('./request');
 
@@ -31798,17 +32100,16 @@ module.exports.contactCanBeUsed = false;
 
 module.exports.alarmCanBeUsed = false;
 
+
 /*
-# Alarm model and collection
-*/
+ * Alarm model and collection
+ */
 
-
-module.exports.Alarm = Alarm = (function(_super) {
-  __extends(Alarm, _super);
+module.exports.Alarm = Alarm = (function(superClass) {
+  extend(Alarm, superClass);
 
   function Alarm() {
-    _ref = Alarm.__super__.constructor.apply(this, arguments);
-    return _ref;
+    return Alarm.__super__.constructor.apply(this, arguments);
   }
 
   Alarm.prototype.urlRoot = "alarms";
@@ -31818,17 +32119,17 @@ module.exports.Alarm = Alarm = (function(_super) {
   Alarm.reminderCf = {};
 
   Alarm.setDefaultCf = function(description, related) {
-    var _this = this;
-
     if (description) {
       Alarm.reminderCf.description = description;
     }
     if (related) {
       Alarm.reminderCf.related = related;
     }
-    return module.exports.alarmCollection.each(function(model) {
-      return model.save(Alarm.reminderCf);
-    });
+    return module.exports.alarmCollection.each((function(_this) {
+      return function(model) {
+        return model.save(Alarm.reminderCf);
+      };
+    })(this));
   };
 
   Alarm.prototype.defaults = function() {
@@ -31845,34 +32146,33 @@ module.exports.Alarm = Alarm = (function(_super) {
 
 module.exports.alarmCollection = new Backbone.Collection([], {
   model: Alarm
+
+  /*
+   * Contact model and collection
+   */
 });
 
-/*
-# Contact model and collection
-*/
-
-
-module.exports.Contact = Contact = (function(_super) {
-  __extends(Contact, _super);
+module.exports.Contact = Contact = (function(superClass) {
+  extend(Contact, superClass);
 
   function Contact() {
-    this.getFN = __bind(this.getFN, this);    _ref1 = Contact.__super__.constructor.apply(this, arguments);
-    return _ref1;
+    this.getFN = bind(this.getFN, this);
+    return Contact.__super__.constructor.apply(this, arguments);
   }
 
   Contact.prototype.urlRoot = 'contacts';
 
   Contact.prototype.getFN = function() {
-    var familly, given, middle, prefix, suffix, _ref2;
-
+    var familly, given, middle, prefix, ref, suffix;
+    console.log("getFN", this.get('fn'), this.get('n'));
     if (this.has('fn')) {
       return this.get('fn');
     }
     if (!this.get('n')) {
       return '';
     }
-    _ref2 = this.get('n').split(';'), familly = _ref2[0], given = _ref2[1], middle = _ref2[2], prefix = _ref2[3], suffix = _ref2[4];
-    return "" + given + " " + middle + " " + familly;
+    ref = this.get('n').split(';'), familly = ref[0], given = ref[1], middle = ref[2], prefix = ref[3], suffix = ref[4];
+    return given + " " + middle + " " + familly;
   };
 
   Contact.load = function(cb) {
@@ -31895,18 +32195,17 @@ module.exports.contactCollection = new Backbone.Collection([], {
   model: Contact
 });
 
+
 /*
-# Tasks model
-# TODO : use a collection
-*/
+ * Tasks model
+ * TODO : use a collection
+ */
 
-
-module.exports.Task = Task = (function(_super) {
-  __extends(Task, _super);
+module.exports.Task = Task = (function(superClass) {
+  extend(Task, superClass);
 
   function Task() {
-    _ref2 = Task.__super__.constructor.apply(this, arguments);
-    return _ref2;
+    return Task.__super__.constructor.apply(this, arguments);
   }
 
   Task.prototype.urlRoot = "tasks";
@@ -31921,12 +32220,12 @@ module.exports.Task = Task = (function(_super) {
 
 })(Backbone.Model);
 
-/*
-# Initializer : ask home to see what is installed
-# -> fetch contacts
-# -> get or create Inbox todolist
-*/
 
+/*
+ * Initializer : ask home to see what is installed
+ * -> fetch contacts
+ * -> get or create Inbox todolist
+ */
 
 module.exports.initialize = function(callback) {
   module.exports.contactCanBeUsed = true;
@@ -31937,7 +32236,7 @@ module.exports.initialize = function(callback) {
 
 });
 
-;require.register("CNeditor/history", function(exports, require, module) {
+require.register("CNeditor/history", function(exports, require, module) {
 var History, logging;
 
 logging = require('./logging');
@@ -31957,20 +32256,21 @@ module.exports = History = (function() {
     this.modifiedTask = new Array(HISTORY_SIZE);
   }
 
+
   /*
-  #  HISTORY MANAGEMENT:
-  # 1. _addHistory (Save html code, selection markers, positions...)
-  # 2. undoPossible (Return true only if unDo can be called)
-  # 3. redoPossible (Return true only if reDo can be called)
-  # 4. unDo (Undo the previous action)
-  # 5. reDo ( Redo a undo-ed action)
-  #
-  # What is saved in the history:
-  #  - current html content
-  #  - current selection
-  #  - current scrollbar position
-  #  - the boolean newPosition
-  */
+   *  HISTORY MANAGEMENT:
+   * 1. _addHistory (Save html code, selection markers, positions...)
+   * 2. undoPossible (Return true only if unDo can be called)
+   * 3. redoPossible (Return true only if reDo can be called)
+   * 4. unDo (Undo the previous action)
+   * 5. reDo ( Redo a undo-ed action)
+   *
+   * What is saved in the history:
+   *  - current html content
+   *  - current selection
+   *  - current scrollbar position
+   *  - the boolean newPosition
+   */
 
 
   /** -----------------------------------------------------------------------
@@ -32000,18 +32300,16 @@ module.exports = History = (function() {
   
       Ctrl-y                 H1     H2              H3          H4(*)
       _tasksToBeSaved                                           {}
-  */
+   */
 
 
   /** -----------------------------------------------------------------------
    * Add html, selection markers and scrollbar positions to the history.
    * No effect if the url popover is displayed
-  */
-
+   */
 
   History.prototype.addStep = function() {
     var i;
-
     console.info('== _addHistory()');
     if (this.editor.urlPopover.isOn || this.editor._hotString.isPreparing) {
       return;
@@ -32063,25 +32361,24 @@ module.exports = History = (function() {
     return this.index = HISTORY_SIZE - 1;
   };
 
-  /* ------------------------------------------------------------------------
-  #  undoPossible
-  # Return true only if unDo can be called
-  */
 
+  /* ------------------------------------------------------------------------
+   *  undoPossible
+   * Return true only if unDo can be called
+   */
 
   History.prototype.undoPossible = function() {
     var result;
-
     result = this.index >= 0 && this.historyPos[this.index] !== void 0;
     console.log('undoPossible', result);
     return result;
   };
 
-  /* ------------------------------------------------------------------------
-  #  redoPossible
-  # Return true only if reDo can be called
-  */
 
+  /* ------------------------------------------------------------------------
+   *  redoPossible
+   * Return true only if reDo can be called
+   */
 
   History.prototype.redoPossible = function() {
     return this.index < this.history.length - 2;
@@ -32093,10 +32390,10 @@ module.exports = History = (function() {
 
 });
 
-;require.register("CNeditor/hot-string", function(exports, require, module) {
+require.register("CNeditor/hot-string", function(exports, require, module) {
 var AutoComplete, HotString, selection,
-  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 AutoComplete = require('./autocomplete');
 
@@ -32104,15 +32401,17 @@ selection = require('./selection');
 
 module.exports = HotString = (function() {
   function HotString(editor) {
-    this.realtimeContacts = __bind(this.realtimeContacts, this);
-    this.showAutoAndHighLight = __bind(this.showAutoAndHighLight, this);    this.editor = editor;
+    this.realtimeContacts = bind(this.realtimeContacts, this);
+    this.showAutoAndHighLight = bind(this.showAutoAndHighLight, this);
+    this.editor = editor;
     this._isEdit = false;
     this.container = editor.linesDiv;
     this._auto = new AutoComplete(editor.linesDiv, editor, this);
     this._hsTypes = ['@', '@@', '#'];
     this._modes = {
       '@': 'contact',
-      '@@': 'reminder'
+      '@@': 'reminder',
+      '#': 'htag'
     };
     this.isPreparing = false;
     this._hsType = '';
@@ -32124,18 +32423,17 @@ module.exports = HotString = (function() {
     this._autoToBeShowed = false;
   }
 
+
   /** -----------------------------------------------------------------------
    * Called by the editor keydown call back, in charge of taking into account
    * "special" keys suche as return, arrows, space etc...
    * The detection of the start of a hotstring is done by keypresseCb()
    * @param  {Object} shortcut cf editor.getShortcut(e)
    * @return {Boolean}          True if keydown should be preventDefaulted
-  */
-
+   */
 
   HotString.prototype.keyDownCb = function(shortcut) {
     var preventDefault;
-
     preventDefault = false;
     switch (shortcut) {
       case '-return':
@@ -32162,6 +32460,7 @@ module.exports = HotString = (function() {
     return preventDefault;
   };
 
+
   /** -----------------------------------------------------------------------
    * Detection on keypress if the user is starting a new hotstring.
    * A hotstring is a "#" or "@" inserted as a word start (no characters
@@ -32170,12 +32469,10 @@ module.exports = HotString = (function() {
    * If a hotString is already preparing, the editor must call updateHs() when
    * the content of the segment containing the hotstring is changed.
    * @param  {Event} e The keyboard event
-  */
-
+   */
 
   HotString.prototype.keypressCb = function(e) {
     var charCode, modes;
-
     console.info('== hotstring.keypressCb()');
     charCode = e.which;
     if (this.isPreparing) {
@@ -32184,7 +32481,7 @@ module.exports = HotString = (function() {
       if (this.editor._isStartingWord()) {
         modes = this.editor.getCurrentAllowedInsertions();
         this._auto.setAllowedModes(modes);
-        if (__indexOf.call(modes, 'contact') >= 0) {
+        if (indexOf.call(modes, 'contact') >= 0) {
           this._hsType = '@';
           this.isPreparing = true;
           this._auto.setMode('contact');
@@ -32202,20 +32499,32 @@ module.exports = HotString = (function() {
           };
         }
       }
+    } else if (charCode === 35) {
+      if (this.editor._isStartingWord()) {
+        modes = this.editor.getCurrentAllowedInsertions();
+        if (indexOf.call(modes, 'htag') >= 0) {
+          this._hsType = '#';
+          this.isPreparing = true;
+          this._currentMode = 'htag';
+          this._auto.setMode('htag');
+          this._autoToBeShowed = {
+            mode: 'insertion'
+          };
+        }
+      }
     }
     return true;
   };
+
 
   /** -----------------------------------------------------------------------
    * Called by editor._keyupCb() if a hotstring is preparing.
    * It will check if the content of _hsSegment has change and then take the
    * appropriate actions (update autocomplete, change mode, reset)
-  */
-
+   */
 
   HotString.prototype.updateHs = function(seg) {
     var autoItem, hsType, mode, newHotStrg;
-
     if (!seg) {
       seg = this._hsSegment;
     }
@@ -32251,17 +32560,16 @@ module.exports = HotString = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Called by editor._keyupCb() and editor._mouseupCb() which detect if the
    * carret enters a meta segment. If yes, then we edit it.
    * @param  {Element} seg   The segment with meta data (reminder, contact...)
    * @param  {Range} range The range of the selection
-  */
-
+   */
 
   HotString.prototype.edit = function(seg, range) {
     var endOffset, modes, segClass, startOffset, type;
-
     console.info('hotstring.edit()');
     this._isEdit = true;
     this.isPreparing = true;
@@ -32309,10 +32617,10 @@ module.exports = HotString = (function() {
 
   HotString.prototype._isNormalChar = function(charCode) {
     var res;
-
     res = (96 < charCode && charCode < 123) || (63 < charCode && charCode < 91) || (47 < charCode && charCode < 58) || (charCode === 43);
     return res;
   };
+
 
   /**
    * In charge of diplaying the hotString segment and the auto completion div
@@ -32322,12 +32630,10 @@ module.exports = HotString = (function() {
    * have been too easy :-).
    * edit() also calls this method (edit is called by editor._mouseupCb() and
    * again editor._keyupCb() )
-  */
-
+   */
 
   HotString.prototype.showAutoAndHighLight = function() {
     var rg;
-
     switch (this._autoToBeShowed.mode) {
       case 'edit':
         this._hsSegment = this._autoToBeShowed.segment;
@@ -32353,7 +32659,6 @@ module.exports = HotString = (function() {
 
   HotString.prototype._unhighLight = function(bps) {
     var seg;
-
     seg = this._hsSegment;
     if (seg.parentElement) {
       seg.classList.remove('CNE_hot_string');
@@ -32366,12 +32671,11 @@ module.exports = HotString = (function() {
   };
 
   HotString.prototype._forceUserHotString = function(newHotString, bps) {
-    var bp, textNode, _i, _len;
-
+    var bp, i, len, textNode;
     textNode = this._hsTextNode;
     textNode.textContent = newHotString;
-    for (_i = 0, _len = bps.length; _i < _len; _i++) {
-      bp = bps[_i];
+    for (i = 0, len = bps.length; i < len; i++) {
+      bp = bps[i];
       if (bp.cont === textNode) {
         bp.offset = newHotString.length;
       }
@@ -32381,10 +32685,10 @@ module.exports = HotString = (function() {
 
   HotString.prototype.validate = function() {
     var item;
-
     item = this._auto.getSelectedItem();
     return this.editor.doHotStringAction(item);
   };
+
 
   /** -----------------------------------------------------------------------
    * Reset hot string : the segment is removed and autocomplete hidden. In
@@ -32401,12 +32705,10 @@ module.exports = HotString = (function() {
    *                            initial value of the meta is restored, content
    *                            of hotString segment is not modified
    *                            otherwise.
-  */
-
+   */
 
   HotString.prototype.reset = function(dealCaret, hardReset) {
     var bp, endContainer, endOffset, rg, startContainer, startOffset;
-
     if (!this.isPreparing) {
       return true;
     }
@@ -32488,7 +32790,6 @@ module.exports = HotString = (function() {
 
   HotString.prototype.mouseUpInAutoCb = function(e) {
     var selectedLine;
-
     if (this._currentMode === 'reminder') {
       return true;
     }
@@ -32508,24 +32809,26 @@ module.exports = HotString = (function() {
   };
 
   HotString.prototype.realtimeContacts = function(contactCollection) {
-    var updateItems,
-      _this = this;
-
+    var updateItems;
     if (contactCollection.length === 0) {
-      contactCollection.once('sync', function() {
-        return _this.realtimeContacts(contactCollection);
-      });
+      contactCollection.once('sync', (function(_this) {
+        return function() {
+          return _this.realtimeContacts(contactCollection);
+        };
+      })(this));
       return true;
     }
-    updateItems = function() {
-      return _this._auto.setItems('contact', contactCollection.map(function(contact) {
-        return {
-          text: contact.getFN(),
-          type: 'contact',
-          model: contact
-        };
-      }));
-    };
+    updateItems = (function(_this) {
+      return function() {
+        return _this._auto.setItems('contact', contactCollection.map(function(contact) {
+          return {
+            text: contact.getFN(),
+            type: 'contact',
+            model: contact
+          };
+        }));
+      };
+    })(this);
     updateItems();
     return contactCollection.on({
       'add': updateItems,
@@ -32534,10 +32837,10 @@ module.exports = HotString = (function() {
     });
   };
 
+
   /**
    * Helper for debug purpose, prints the current hotstring.
-  */
-
+   */
 
   HotString.prototype.printHotString = function() {
     return console.info('_hsType = "' + this._hsType + '"', '_hsLeft = "' + this._hsLeft + '"', '_hsRight = "' + this._hsRight + '"');
@@ -32549,7 +32852,8 @@ module.exports = HotString = (function() {
 
 });
 
-;require.register("CNeditor/line", function(exports, require, module) {
+require.register("CNeditor/line", function(exports, require, module) {
+
 /** -----------------------------------------------------------------------
  * line$        : 
  * lineID       : 
@@ -32558,11 +32862,11 @@ module.exports = HotString = (function() {
  * lineDepthRel : 
  * lineNext     : 
  * linePrev     :
-*/
-
+ */
 var Line;
 
 Line = (function() {
+
   /*
    * If no arguments, returns an empty object (only methods), otherwise
    * constructs a full line. The dom element of the line is inserted according
@@ -32578,10 +32882,9 @@ Line = (function() {
           fragment        # [optional] a fragment to insert in the line, will
                             add a br at the end if none in the fragment.
         ]
-  */
+   */
   function Line() {
     var depthAbs, depthRelative, editor, fragment, lineID, linesDiv, newLineEl, nextL, nextLine, node, prevLine, type;
-
     if (arguments.length === 0) {
       return;
     } else {
@@ -32638,18 +32941,18 @@ Line = (function() {
 
   Line.prototype.setType = function(type) {
     this.lineType = type;
-    return this.line$.prop('class', "" + type + "-" + this.lineDepthAbs);
+    return this.line$.prop('class', type + "-" + this.lineDepthAbs);
   };
 
   Line.prototype.setDepthAbs = function(absDepth) {
     this.lineDepthAbs = absDepth;
-    return this.line$.prop('class', "" + this.lineType + "-" + absDepth);
+    return this.line$.prop('class', this.lineType + "-" + absDepth);
   };
 
   Line.prototype.setTypeDepth = function(type, absDepth) {
     this.lineType = type;
     this.lineDepthAbs = absDepth;
-    return this.line$.prop('class', "" + type + "-" + absDepth);
+    return this.line$.prop('class', type + "-" + absDepth);
   };
 
   return Line;
@@ -32658,7 +32961,6 @@ Line = (function() {
 
 Line.clone = function(line) {
   var clone;
-
   clone = new Line();
   clone.line$ = line.line$.clone();
   clone.lineID = line.lineID;
@@ -32674,25 +32976,24 @@ module.exports = Line;
 
 });
 
-;require.register("CNeditor/logging", function(exports, require, module) {
+require.register("CNeditor/logging", function(exports, require, module) {
 console.info = function() {};
 
 module.exports = {
+
   /** -----------------------------------------------------------------------
    * A utility fuction for debugging
    * @param  {string} txt A text to print in front of the log
-  */
-
+   */
   printHistory: function(txt, history) {
-    var arrow, content, i, step, _i, _len, _ref;
-
+    var arrow, content, i, j, len, ref, step;
     if (!txt) {
       txt = '';
     }
     console.info(txt + ' _history.index : ' + history.index);
-    _ref = history.history;
-    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-      step = _ref[i];
+    ref = history.history;
+    for (i = j = 0, len = ref.length; j < len; i = ++j) {
+      step = ref[i];
       if (history.index === i) {
         arrow = ' <---';
       } else {
@@ -32706,14 +33007,13 @@ module.exports = {
     }
     return true;
   },
+
   /** -----------------------------------------------------------------------
    * A utility fuction for debugging
    * @param  {string} txt A text to print in front of the log
-  */
-
+   */
   printTasksModifStacks: function(txt, _tasksToBeSaved) {
     var id, modif, res;
-
     if (!txt) {
       txt = '';
     }
@@ -32744,7 +33044,7 @@ module.exports = {
 
 });
 
-;require.register("CNeditor/request", function(exports, require, module) {
+require.register("CNeditor/request", function(exports, require, module) {
 exports.request = function(type, url, data, callback) {
   return $.ajax({
     type: type,
@@ -32784,31 +33084,31 @@ exports.del = function(url, callbacks) {
 
 });
 
-;require.register("CNeditor/tags", function(exports, require, module) {
+require.register("CNeditor/tags", function(exports, require, module) {
 var ContactPopover, Tags, selection,
-  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 selection = require('./selection');
 
 ContactPopover = require('./contactpopover');
 
+
 /**
  * Helpers for Tags
  * Tag = a segment with a .dataset.type (reminder, a button of a task, a
  * contact ...)
-*/
-
+ */
 
 module.exports = Tags = (function() {
   function Tags(editor, models) {
     this.editor = editor;
     this.models = models;
-    this._updateReminderSegment = __bind(this._updateReminderSegment, this);
-    this._removeReminderSegment = __bind(this._removeReminderSegment, this);
-    this._updateContactSegment = __bind(this._updateContactSegment, this);
-    this._removeContactSegment = __bind(this._removeContactSegment, this);
-    this.handle = __bind(this.handle, this);
-    this.empty = __bind(this.empty, this);
+    this._updateReminderSegment = bind(this._updateReminderSegment, this);
+    this._removeReminderSegment = bind(this._removeReminderSegment, this);
+    this._updateContactSegment = bind(this._updateContactSegment, this);
+    this._removeContactSegment = bind(this._removeContactSegment, this);
+    this.handle = bind(this.handle, this);
+    this.empty = bind(this.empty, this);
     this._tagList = [];
     this.oldList = null;
     this._areTagsEditable = true;
@@ -32823,6 +33123,7 @@ module.exports = Tags = (function() {
       'destroy': this._removeReminderSegment
     });
   }
+
 
   /**
    * The selection within tags is difficult. The idea is to have selection
@@ -32840,16 +33141,14 @@ module.exports = Tags = (function() {
    *     change of the selection started within a tag in edition), then modify
    *     the selection to be fully in the tag.
    *
-  */
-
+   */
 
   Tags.prototype.setTagEditable = function() {
-    var tag, _i, _len, _ref;
-
+    var i, len, ref, tag;
     if (!this._areTagsEditable) {
-      _ref = this._tagList;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        tag = _ref[_i];
+      ref = this._tagList;
+      for (i = 0, len = ref.length; i < len; i++) {
+        tag = ref[i];
         tag.contentEditable = true;
       }
       return this._areTagsEditable = true;
@@ -32857,12 +33156,11 @@ module.exports = Tags = (function() {
   };
 
   Tags.prototype.setTagUnEditable = function() {
-    var tag, _i, _len, _ref;
-
+    var i, len, ref, tag;
     if (this._areTagsEditable) {
-      _ref = this._tagList;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        tag = _ref[_i];
+      ref = this._tagList;
+      for (i = 0, len = ref.length; i < len; i++) {
+        tag = ref[i];
         tag.contentEditable = false;
       }
       return this._areTagsEditable = false;
@@ -32870,9 +33168,7 @@ module.exports = Tags = (function() {
   };
 
   Tags.prototype.create = function(type, seg) {
-    var alarm, date,
-      _this = this;
-
+    var alarm, date;
     seg.classList.remove('CNE_hot_string');
     seg.contentEditable = this._areTagsEditable;
     switch (type) {
@@ -32886,17 +33182,21 @@ module.exports = Tags = (function() {
         date = Date.create(seg.dataset.value);
         alarm = new this.models.Alarm({
           id: seg.dataset.id || null,
-          trigg: date.utc().format(this.models.Alarm.dateFormat)
+          trigg: date.format(this.models.Alarm.dateFormat)
         });
         this.models.alarmCollection.add(alarm);
         this.handle(seg);
-        return alarm.save().done(function() {
-          return seg.dataset.id = alarm.id;
-        }).fail(function(jqXHR) {
-          console.log(jqXHR);
-          console.log('failed to save CNE_reminder');
-          return _this.remove(seg);
-        });
+        return alarm.save().done((function(_this) {
+          return function() {
+            return seg.dataset.id = alarm.id;
+          };
+        })(this)).fail((function(_this) {
+          return function(jqXHR) {
+            console.log(jqXHR);
+            console.log('failed to save CNE_reminder');
+            return _this.remove(seg);
+          };
+        })(this));
     }
   };
 
@@ -32911,18 +33211,16 @@ module.exports = Tags = (function() {
   };
 
   Tags.prototype.refreshAll = function() {
-    var alarm, date, iz, newseg, oldseg, seg, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results,
-      _this = this;
-
+    var alarm, date, i, iz, j, k, len, len1, len2, newseg, oldseg, ref, ref1, ref2, results, seg;
     iz = function(a) {
       return function(b) {
         return a.dataset.id === b.dataset.id;
       };
     };
     if (!this.isFullReplaceContent) {
-      _ref = this.oldList || [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        oldseg = _ref[_i];
+      ref = this.oldList || [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        oldseg = ref[i];
         if (!this._tagList.some(iz(oldseg))) {
           if (oldseg.dataset.type === 'reminder') {
             this.remove(oldseg);
@@ -32931,56 +33229,60 @@ module.exports = Tags = (function() {
       }
     }
     if (this.oldList && !this.isFullReplaceContent) {
-      _ref1 = this._tagList;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        newseg = _ref1[_j];
+      ref1 = this._tagList;
+      for (j = 0, len1 = ref1.length; j < len1; j++) {
+        newseg = ref1[j];
         if (!this.oldList.some(iz(newseg))) {
           if (newseg.dataset.type === 'reminder') {
             delete newseg.dataset.id;
             date = Date.create(newseg.dataset.value);
             alarm = new this.models.Alarm({
-              trigg: date.utc().format(this.models.Alarm.dateFormat)
+              trigg: date.format(this.models.Alarm.dateFormat)
             });
             this.models.alarmCollection.add(alarm);
-            alarm.save().done(function() {
-              return newseg.dataset.id = alarm.id;
-            }).fail(function(jqXHR) {
-              console.log(jqXHR);
-              console.log('failed to save CNE_reminder');
-              return _this.remove(seg);
-            });
+            alarm.save().done((function(_this) {
+              return function() {
+                return newseg.dataset.id = alarm.id;
+              };
+            })(this)).fail((function(_this) {
+              return function(jqXHR) {
+                console.log(jqXHR);
+                console.log('failed to save CNE_reminder');
+                return _this.remove(seg);
+              };
+            })(this));
           }
         }
       }
     }
-    _ref2 = this._tagList;
-    _results = [];
-    for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-      seg = _ref2[_k];
-      _results.push(this.refresh(seg));
+    ref2 = this._tagList;
+    results = [];
+    for (k = 0, len2 = ref2.length; k < len2; k++) {
+      seg = ref2[k];
+      results.push(this.refresh(seg));
     }
-    return _results;
+    return results;
   };
 
   Tags.prototype.refresh = function(seg) {
-    var model, value,
-      _this = this;
-
+    var model, value;
     switch (seg.dataset.type) {
       case 'reminder':
         model = this.models.alarmCollection.get(seg.dataset.id);
         if (model) {
-          value = Date.utc.create(model.get('trigg')).utc(false).format();
+          value = Date.create(model.get('trigg')).format();
           return seg.textContent = value;
         } else {
           model = new this.models.Alarm({
             id: seg.dataset.id
           });
           model.fetch({
-            error: function() {
-              _this.models.alarmCollection.remove(model);
-              return _this.remove(seg);
-            }
+            error: (function(_this) {
+              return function() {
+                _this.models.alarmCollection.remove(model);
+                return _this.remove(seg);
+              };
+            })(this)
           });
           return this.models.alarmCollection.add(model);
         }
@@ -32993,7 +33295,6 @@ module.exports = Tags = (function() {
 
   Tags.prototype.remove = function(seg) {
     var model;
-
     this._tagList = _.without(this._tagList, seg);
     switch (seg.dataset.type) {
       case 'reminder':
@@ -33013,15 +33314,14 @@ module.exports = Tags = (function() {
     return delete seg.dataset.value;
   };
 
+
   /**
    * Find and removes all tags within a range (normalize it for precaution).
    * @param  {Range} rg The range in which the tags to remove are.
-  */
-
+   */
 
   Tags.prototype.removeFromRange = function(rg) {
     var endSeg, seg, startSeg;
-
     startSeg = selection.getSegment(rg.startContainer, 0);
     endSeg = selection.getSegment(rg.endContainer, 0);
     console.info('_tagList at beginning', this._tagList);
@@ -33046,7 +33346,6 @@ module.exports = Tags = (function() {
 
   Tags.prototype.clickCb = function(e) {
     var model, oldcontactseg;
-
     oldcontactseg = this.contactPopover.hide();
     if (e.target.dataset.type === 'contact' && e.target !== oldcontactseg) {
       model = this.models.contactCollection.get(e.target.dataset.id);
@@ -33055,68 +33354,64 @@ module.exports = Tags = (function() {
   };
 
   Tags.prototype._removeContactSegment = function(model) {
-    var seg, _i, _len, _ref, _results;
-
-    _ref = this._tagList;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      seg = _ref[_i];
+    var i, len, ref, results, seg;
+    ref = this._tagList;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      seg = ref[i];
       if (seg.dataset.type === 'contact' && seg.dataset.id === model.id) {
-        _results.push(this.remove(seg));
+        results.push(this.remove(seg));
       } else {
-        _results.push(void 0);
+        results.push(void 0);
       }
     }
-    return _results;
+    return results;
   };
 
   Tags.prototype._updateContactSegment = function(model) {
-    var seg, _i, _len, _ref, _results;
-
-    _ref = this._tagList;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      seg = _ref[_i];
+    var i, len, ref, results, seg;
+    ref = this._tagList;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      seg = ref[i];
       if (seg.dataset.type === 'contact' && seg.dataset.id === model.id) {
-        _results.push(seg.textContent = model.get('fn'));
+        results.push(seg.textContent = model.get('fn'));
       } else {
-        _results.push(void 0);
+        results.push(void 0);
       }
     }
-    return _results;
+    return results;
   };
 
   Tags.prototype._removeReminderSegment = function(model) {
-    var seg, _i, _len, _ref, _results;
-
-    _ref = this._tagList;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      seg = _ref[_i];
+    var i, len, ref, results, seg;
+    ref = this._tagList;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      seg = ref[i];
       if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
-        _results.push(this.remove(seg));
+        results.push(this.remove(seg));
       } else {
-        _results.push(void 0);
+        results.push(void 0);
       }
     }
-    return _results;
+    return results;
   };
 
   Tags.prototype._updateReminderSegment = function(model) {
-    var seg, value, _i, _len, _ref, _results;
-
-    _ref = this._tagList;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      seg = _ref[_i];
+    var i, len, ref, results, seg, value;
+    ref = this._tagList;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      seg = ref[i];
       if (seg.dataset.type === 'reminder' && seg.dataset.id === model.id) {
-        value = Date.utc.create(model.get('trigg')).utc(false).format();
-        _results.push(seg.textContent = value);
+        value = Date.create(model.get('trigg')).format();
+        results.push(seg.textContent = value);
       } else {
-        _results.push(void 0);
+        results.push(void 0);
       }
     }
-    return _results;
+    return results;
   };
 
   return Tags;
@@ -33125,26 +33420,24 @@ module.exports = Tags = (function() {
 
 });
 
-;require.register("CNeditor/urlpopover", function(exports, require, module) {
+require.register("CNeditor/urlpopover", function(exports, require, module) {
 var UrlPopover, selection,
-  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 selection = require('./selection');
 
+
 /** -----------------------------------------------------------------------
  * initialise the popover during the editor initialization.
-*/
-
+ */
 
 module.exports = UrlPopover = (function() {
   function UrlPopover(editor) {
-    var btnCancel, btnDelete, btnOK, textInput, urlInput, _ref, _ref1,
-      _this = this;
-
+    var btnCancel, btnDelete, btnOK, ref, ref1, textInput, urlInput;
     this.editor = editor;
-    this.validate = __bind(this.validate, this);
-    this.cancel = __bind(this.cancel, this);
-    this.clickOut = __bind(this.clickOut, this);
+    this.validate = bind(this.validate, this);
+    this.cancel = bind(this.cancel, this);
+    this.clickOut = bind(this.clickOut, this);
     this.isOn = false;
     this.el = document.createElement('div');
     this.el.id = 'CNE_urlPopover';
@@ -33153,31 +33446,38 @@ module.exports = UrlPopover = (function() {
     this.el.innerHTML = "<span class=\"CNE_urlpop_head\">Link</span>\n<span  class=\"CNE_urlpop_shortcuts\">(Ctrl+K)</span>\n<div class=\"CNE_urlpop-content\">\n    <a target=\"_blank\">Open link <span class=\"CNE_urlpop_shortcuts\">\n        (Ctrl+click)</span></a></br>\n    <span>url</span><input type=\"text\"></br>\n    <span>Text</span><input type=\"text\"></br>\n    <button class=\"btn\">ok</button>\n    <button class=\"btn\">Cancel</button>\n    <button class=\"btn\">Delete</button>\n</div>";
     this.el.titleElt = this.el.firstChild;
     this.el.link = this.el.getElementsByTagName('A')[0];
-    _ref = this.el.querySelectorAll('button'), btnOK = _ref[0], btnCancel = _ref[1], btnDelete = _ref[2];
+    ref = this.el.querySelectorAll('button'), btnOK = ref[0], btnCancel = ref[1], btnDelete = ref[2];
     btnOK.addEventListener('click', this.validate);
-    btnCancel.addEventListener('click', function(e) {
-      e.stopPropagation();
-      return _this.cancel(false);
-    });
-    btnDelete.addEventListener('click', function() {
-      _this.el.urlInput.value = '';
-      return _this.validate();
-    });
-    _ref1 = this.el.querySelectorAll('input'), urlInput = _ref1[0], textInput = _ref1[1];
+    btnCancel.addEventListener('click', (function(_this) {
+      return function(e) {
+        e.stopPropagation();
+        return _this.cancel(false);
+      };
+    })(this));
+    btnDelete.addEventListener('click', (function(_this) {
+      return function() {
+        _this.el.urlInput.value = '';
+        return _this.validate();
+      };
+    })(this));
+    ref1 = this.el.querySelectorAll('input'), urlInput = ref1[0], textInput = ref1[1];
     this.el.urlInput = urlInput;
     this.el.textInput = textInput;
-    this.el.addEventListener('keypress', function(e) {
-      if (e.keyCode === 13) {
-        _this.validate();
-        e.stopPropagation();
-      } else if (e.keyCode === 27) {
-        _this.cancel(false);
-      }
-      return false;
-    });
+    this.el.addEventListener('keypress', (function(_this) {
+      return function(e) {
+        if (e.keyCode === 13) {
+          _this.validate();
+          e.stopPropagation();
+        } else if (e.keyCode === 27) {
+          _this.cancel(false);
+        }
+        return false;
+      };
+    })(this));
     this.editor.editorBody.addEventListener('mouseup', this.clickOut);
     return true;
   }
+
 
   /** -----------------------------------------------------------------------
    * Show, positionate and initialise the popover for link edition.
@@ -33188,12 +33488,10 @@ module.exports = UrlPopover = (function() {
    * @param  {boolean} isLinkCreation True is it is a creation. In this case,
    *                                  if the process is canceled, the initial
    *                                  state without link will be restored.
-  */
-
+   */
 
   UrlPopover.prototype.show = function(segments, isLinkCreation) {
-    var href, seg, txt, _i, _j, _len, _len1;
-
+    var href, j, k, len, len1, seg, txt;
     this.editor.disable();
     this.isOn = true;
     this.isLinkCreation = isLinkCreation;
@@ -33208,8 +33506,8 @@ module.exports = UrlPopover = (function() {
     }
     this.el.urlInput.value = href;
     txt = '';
-    for (_i = 0, _len = segments.length; _i < _len; _i++) {
-      seg = segments[_i];
+    for (j = 0, len = segments.length; j < len; j++) {
+      seg = segments[j];
       txt += seg.textContent;
     }
     this.el.textInput.value = txt;
@@ -33225,21 +33523,20 @@ module.exports = UrlPopover = (function() {
     seg.parentElement.parentElement.appendChild(this.el);
     this.el.urlInput.select();
     this.el.urlInput.focus();
-    for (_j = 0, _len1 = segments.length; _j < _len1; _j++) {
-      seg = segments[_j];
+    for (k = 0, len1 = segments.length; k < len1; k++) {
+      seg = segments[k];
       seg.classList.add('CNE_url_in_edition');
     }
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * The callback for a click outside the popover
-  */
-
+   */
 
   UrlPopover.prototype.clickOut = function(e) {
     var elt;
-
     elt = e.target;
     while (elt !== this.el && elt !== this.editor.editorBody) {
       elt = elt.parentNode;
@@ -33249,26 +33546,25 @@ module.exports = UrlPopover = (function() {
     }
   };
 
+
   /** -----------------------------------------------------------------------
    * Close the popover and revert modifications if isLinkCreation == true
    * @param  {boolean} doNotRestoreOginalSel If true, lets the caret at its
    *                                         position (used when you click
    *                                         outside url popover in order not
    *                                         to loose the new selection)
-  */
-
+   */
 
   UrlPopover.prototype.cancel = function(doNotRestoreOginalSel) {
-    var bp1, bp2, bps, lineDiv, s0, s1, seg, sel, _i, _len, _ref;
-
+    var bp1, bp2, bps, j, len, lineDiv, ref, s0, s1, seg, sel;
     if (!this.isOn) {
       return;
     }
     this.el.parentElement.removeChild(this.el);
     this.isOn = false;
-    _ref = this.segments;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      seg = _ref[_i];
+    ref = this.segments;
+    for (j = 0, len = ref.length; j < len; j++) {
+      seg = ref[j];
       seg.classList.remove('CNE_url_in_edition');
     }
     if (this.isLinkCreation) {
@@ -33300,14 +33596,13 @@ module.exports = UrlPopover = (function() {
     return true;
   };
 
+
   /** -----------------------------------------------------------------------
    * Close the popover and applies modifications to the link.
-  */
-
+   */
 
   UrlPopover.prototype.validate = function(event) {
-    var bp, bp1, bp2, bps, i, l, lastSeg, lineDiv, parent, rg, seg, sel, _i, _j, _k, _len, _len1, _ref, _ref1, _ref2;
-
+    var bp, bp1, bp2, bps, i, j, k, l, lastSeg, len, len1, lineDiv, m, parent, ref, ref1, ref2, rg, seg, sel;
     if (event) {
       event.stopPropagation();
     }
@@ -33316,9 +33611,9 @@ module.exports = UrlPopover = (function() {
     }
     this.el.parentElement.removeChild(this.el);
     this.isOn = false;
-    _ref = this.segments;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      seg = _ref[_i];
+    ref = this.segments;
+    for (j = 0, len = ref.length; j < len; j++) {
+      seg = ref[j];
       seg.classList.remove('CNE_url_in_edition');
     }
     if (!this.isLinkCreation) {
@@ -33354,9 +33649,9 @@ module.exports = UrlPopover = (function() {
       this.editor.editorTarget$.trigger(jQuery.Event('onChange'));
       return true;
     } else if (this.el.initialTxt === this.el.textInput.value) {
-      _ref1 = this.segments;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        seg = _ref1[_j];
+      ref1 = this.segments;
+      for (k = 0, len1 = ref1.length; k < len1; k++) {
+        seg = ref1[k];
         seg.href = this.el.urlInput.value;
       }
       lastSeg = seg;
@@ -33365,7 +33660,7 @@ module.exports = UrlPopover = (function() {
       seg.href = this.el.urlInput.value;
       seg.textContent = this.el.textInput.value;
       parent = seg.parentNode;
-      for (i = _k = 1, _ref2 = this.segments.length - 1; _k <= _ref2; i = _k += 1) {
+      for (i = m = 1, ref2 = this.segments.length - 1; m <= ref2; i = m += 1) {
         seg = this.segments[i];
         parent.removeChild(seg);
       }
@@ -33385,17 +33680,16 @@ module.exports = UrlPopover = (function() {
     }
   };
 
+
   /**
    * returns a break point, collapsed after a space caracter immediately
    * following a given segment. A segment will we inserted if required.
    * @param  {[type]} seg [description]
    * @return {Object}     {cont,offset} : the break point
-  */
-
+   */
 
   UrlPopover.prototype.insertSpaceAfterUrl = function(seg) {
     var bp, index, nextSeg, span, txtNode;
-
     nextSeg = seg.nextSibling;
     if (nextSeg.nodeName === 'BR') {
       span = this.editor._insertSegmentAfterSeg(seg);
@@ -33418,5 +33712,5 @@ module.exports = UrlPopover = (function() {
 
 });
 
-;
-//@ sourceMappingURL=CNeditor.js.map
+
+//# sourceMappingURL=CNeditor.js.map
