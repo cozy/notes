@@ -43056,7 +43056,7 @@ module.exports = ContactPopover = (function() {
       html += this.dp2html(dp);
     }
     html += '</dl>';
-    html += "<a>(edit)</a>";
+    html += "<a>éditer</a>";
     this.el.innerHTML = html;
     segment.appendChild(this.el);
     this.el.addEventListener('click', (function(_this) {
