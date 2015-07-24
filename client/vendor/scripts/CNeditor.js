@@ -25376,13 +25376,67 @@ module.exports = AutoComplete = (function() {
     ]);
     this.setItems('htag', [
       {
-        text: 'tag1',
+        text: '158 rue de Verdun',
         type: 'htag'
       }, {
-        text: 'tag2',
+        text: 'administratif',
         type: 'htag'
       }, {
-        text: 'tug2',
+        text: 'astuce',
+        type: 'htag'
+      }, {
+        text: 'boulot',
+        type: 'htag'
+      }, {
+        text: 'courses',
+        type: 'htag'
+      }, {
+        text: 'dos',
+        type: 'htag'
+      }, {
+        text: 'escalade',
+        type: 'htag'
+      }, {
+        text: 'frangin',
+        type: 'htag'
+      }, {
+        text: 'fun',
+        type: 'htag'
+      }, {
+        text: 'idée cadeaux',
+        type: 'htag'
+      }, {
+        text: 'javascript',
+        type: 'htag'
+      }, {
+        text: 'La Baule 2013',
+        type: 'htag'
+      }, {
+        text: 'lib',
+        type: 'htag'
+      }, {
+        text: 'linux',
+        type: 'htag'
+      }, {
+        text: 'mum',
+        type: 'htag'
+      }, {
+        text: 'photo',
+        type: 'htag'
+      }, {
+        text: 'réunion',
+        type: 'htag'
+      }, {
+        text: 'Sop',
+        type: 'htag'
+      }, {
+        text: 'urgent !',
+        type: 'htag'
+      }, {
+        text: 'vacances',
+        type: 'htag'
+      }, {
+        text: 'zamis',
         type: 'htag'
       }
     ]);
@@ -27304,7 +27358,7 @@ module.exports = ContactPopover = (function() {
     html += "<a>éditer</a>";
     this.el.innerHTML = html;
     segment.appendChild(this.el);
-    this.el.addEventListener('click', (function(_this) {
+    this.el.lastChild.addEventListener('click', (function(_this) {
       return function(e) {
         var choosePhoto_answer, intent, target, timeout;
         if (e.ctrlKey) {
@@ -27321,8 +27375,7 @@ module.exports = ContactPopover = (function() {
         };
         timeout = 10800000;
         choosePhoto_answer = _this.choosePhoto_answer;
-        _this.send('nameSpace', intent, timeout);
-        return console.log("turlututu");
+        return _this.send('nameSpace', intent, timeout);
       };
     })(this));
     return this.isOn = true;
@@ -32164,7 +32217,6 @@ module.exports.Contact = Contact = (function(superClass) {
 
   Contact.prototype.getFN = function() {
     var familly, given, middle, prefix, ref, suffix;
-    console.log("getFN", this.get('fn'), this.get('n'));
     if (this.has('fn')) {
       return this.get('fn');
     }
