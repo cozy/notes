@@ -3,7 +3,7 @@ slugify = require("lib/slug")
 
 ### Widget to easily manipulate data tree (navigation for cozy apps)
 Properties :
-    currentPath      = ex : /all/coutries/great_britain 
+    currentPath      = ex : /all/coutries/great_britain
                        ("great_britain" is the uglified name of the note)
     currentData      = data : jstree data obj sent by the select
     currentNote_uuid : uuid of the currently selected note
@@ -15,7 +15,7 @@ Properties :
 ###
 
 class exports.Tree
-    
+
     ###*
     # suggestionList is a global array containing all the suggestions for the
     # autocompletion plugin
@@ -24,19 +24,20 @@ class exports.Tree
     ###
     suggestionList = []
 
-       
+
     ###*
     # Initialize jsTree tree with options : sorting, create/rename/deldarkgrey
     # unique children and json data for loading.
     # params :
-    #   navEl : 
+    #   navEl :
     #   data :
-    #   homeViewCbk : 
+    #   homeViewCbk :
     ###
     constructor: (navEl, data, homeViewCbk) ->
-        
-        jstreeEl = $("#tree")
-        @jstreeEl = jstreeEl
+
+        jstreeEl     = $("#tree")
+        @jstreeEl    = jstreeEl
+        @homeViewCbk = homeViewCbk
         @searchField = $("#tree-search-field")
 
         # Create toolbar inside DOM.
@@ -92,7 +93,7 @@ class exports.Tree
             search:
                 search_method: "jstree_contains_multi"
                 show_only_matches: true
-    
+
         @setListeners(homeViewCbk)
         @setSearchField()
 
@@ -105,7 +106,7 @@ class exports.Tree
 
         __initSuggestionList data
         suggestionList.sort(@_sortFunction)
- 
+
     ###*
     # Bind listeners given in parameters with comment events (creation,
     # update, deletion, selection). Called by the constructor once.
@@ -168,7 +169,7 @@ class exports.Tree
                     homeViewCbk.onRemove nodeToDelete.id
             event.preventDefault()
             event.stopPropagation()
-           
+
     # add listeners for the tree-buttons appear & disappear when mouse is
         # over/out
         tree_buttons_target = $("#nav")
@@ -188,7 +189,7 @@ class exports.Tree
                 tree_buttons.css("display","none")
                 tree_buttons.appendTo tree_buttons_target
 
-        
+
         # Events that occured when tree state changes.
         @widget.on "create.jstree", (e, data) =>
             nodeName = data.inst.get_text data.rslt.obj
@@ -221,7 +222,7 @@ class exports.Tree
             @jstreeEl[0].focus()
 
             homeViewCbk.onSelect path, note_uuid, data
-                    
+
         @widget.on "move_node.jstree", (e, data) =>
             nodeId = data.rslt.o[0].id
             targetNodeId = data.rslt.o[0].parentElement.parentElement.id
@@ -242,16 +243,16 @@ class exports.Tree
         @searchField = $("#tree-search-field")
         searchField = @searchField
         jstreeEl = @jstreeEl
- 
+
         # Events related to search field.
         @searchField.blur ->
             jstreeEl.css "margin-top", 10
-    
+
         ###
         # this function allow to select what appears in the suggestion list
         # while the user type something in the search input
         # input : array of suggestions, current string in the search input
-        # outputs : an array containing strings corresponding to suggestions 
+        # outputs : an array containing strings corresponding to suggestions
         # depending on the searchstring
         ###
         _filterAutocomplete = (array, searchString) ->
@@ -278,9 +279,9 @@ class exports.Tree
                     nameBold = name.replace expBold, (match, pattern) ->
                         "<span class='bold-name'>#{match}</span>"
                     filteredFirst.push nameBold
-                    
+
                 else if isMatch
-                    
+
                     nameBold = name.replace expBold, (match, pattern) ->
                         "<span class='bold-name'>#{match}</span>"
 
@@ -293,7 +294,7 @@ class exports.Tree
         ###*
         #used by textext to change the render of the suggestion list
         #attach an icon to a certain type in the autocomplete list
-        #input : suggestion : a string which is the suggestion, 
+        #input : suggestion : a string which is the suggestion,
         #array : the array is suggestionList containing all the suggestions
         # possible and their nature
         ###
@@ -305,7 +306,7 @@ class exports.Tree
                 suggestion = suggestion.replace(/<.*?>/g,"")
                 while i < array.length and suggestion isnt array[i].name
                     i++
-                    
+
                 # when you add a new type, add the corresponding icon here
                 if i < array.length and array[i].type == "folder"
                     "<i class='icon-folder-open icon-suggestion'></i>"
@@ -335,7 +336,7 @@ class exports.Tree
                 dropdownMaxHeight : '200px'
                 render : (suggestion) ->
                     _selectIcon(suggestion, suggestionList) + suggestion
-                
+
             ###*
             # ext allows to rewrite a textext functionality
             ###
@@ -349,7 +350,7 @@ class exports.Tree
                         textInput = this.input().val()
                         data[0] = 'input': textInput, 'form': textInput
                         searchFunction "" if textInput is ""
-                                
+
                 autocomplete:
                     ###*
                     # when the user click on a suggestion (text, bold, icon or
@@ -363,7 +364,7 @@ class exports.Tree
 
                         if (self.core().hasPlugin('tags'))
                             self.val('')
-                    
+
                 itemManager:
                     ###*
                     #create an array with the "name" field of a suggestion list
@@ -375,7 +376,7 @@ class exports.Tree
                         retArray
 
                     ###*
-                    # changing the content of a tag to avoid the view of 
+                    # changing the content of a tag to avoid the view of
                     # balises in it
                     ###
                     itemToString: (item) ->
@@ -404,10 +405,10 @@ class exports.Tree
             query = ((if data then data.query else "")) or ""
             # create a list with the name in the suggestion list
             list = textext.itemManager().nameField(suggestionList)
-            
+
             # filter with the input's value
             list = _filterAutocomplete(list, query)
-            
+
             # add what is typing the user in the list
             list = ["\"#{searchField.val()}\""].concat(list)
             # move the tree in order to be visible with the dropdown open
@@ -415,7 +416,7 @@ class exports.Tree
             #jstreeEl.css("margin-top", treeHeight)
             $(this).trigger "setSuggestions",
             result: list
-        
+
 
         #this event trigger when the user add a tag by clicking on it or
         #pressing enter
@@ -437,6 +438,9 @@ class exports.Tree
     ###
     selectNode: (note_uuid) ->
         node = $("##{note_uuid}")
+        # notes at the root are not displayed in the tree
+        if node.length is 0
+            @homeViewCbk.onSelect '/', note_uuid, null
         if node[0]
             tree = @jstreeEl.jstree("deselect_all", null)
             tree = @jstreeEl.jstree("select_node", node)
@@ -445,7 +449,7 @@ class exports.Tree
 
 
     ###*
-     * Disable the hot key in jsTree, important when it is no longer the editor 
+     * Disable the hot key in jsTree, important when it is no longer the editor
      * which listen to the keystokes
     ###
     disable_hotkeys: () ->
@@ -458,7 +462,7 @@ class exports.Tree
     enable_hotkeys: () ->
         @jstreeEl.jstree("enable_hotkeys")
 
-    
+
 
     ###*
     # used by the .sort() method to be efficient with our structure
@@ -526,7 +530,7 @@ class exports.Tree
             nodes.unshift slugify(name)
             parent = parent.parent().parent()
         nodes
-    
+
     # Return path for a node at string format.
     _getSlugPath: (parent, nodeName) =>
         @_getPath(parent, nodeName).join("/")
