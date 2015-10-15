@@ -20,7 +20,7 @@ class exports.LatestView extends Backbone.View
         @$el.append "<h1>Latest Notes</h1>"
         if @collection.length is 0
             @$el.append "<p>You have no notes, use the tree on the left to
-create one.</p>"
+ create one.</p>"
         else
             @collection.each (note) =>
                 date = Date.create(note.lastModificationValueOf)
