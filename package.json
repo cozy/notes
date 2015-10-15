@@ -3,12 +3,7 @@
   "version": "1.0.1",
   "description": "Cozy Notes is a simple and powerful note manager. Its specificity resides in its note editor which helps you to structure efficiently your notes. It also provide classical text editor shortcuts which make you ultra-efficient at typing notes.",
   "author": "Cozy Cloud <contact@cozycloud.cc> (http://cozycloud.cc)",
-  "licenses": [
-    {
-      "type": "AGPL v3",
-      "url": "http://www.gnu.org/licenses/agpl-3.0.html"
-    }
-  ],
+  "license": "AGPL-3.0",
   "engines": [
     "node >= 0.6.0"
   ],
