@@ -206,8 +206,8 @@ class exports.NoteView extends Backbone.View
     ###
     setContent : (note) ->
         if note.content
-            # means that the note had been saved in the olf markdown format
-            if !note.version
+            # means that the note had been saved in the old markdown format
+            if !note.version or /^#/gm.test note.content
                 @editor.setEditorContentFromMD(note.content)
             # otherwise it was stored in html
             else

@@ -808,10 +808,10 @@ exports.MainRouter = (function(_super) {
 
   /**
   Routes:
-  
+
     * '': home: initialize the app
-    * '#note/{note_uuid : 25 char}/slugyPath' : unique url corresponding 
-      to a note where note_uuid is the note id and slugyPath the slugified 
+    * '#note/{note_uuid : 25 char}/slugyPath' : unique url corresponding
+      to a note where note_uuid is the note id and slugyPath the slugified
       path of a note constituted with the name of its parents.
   */
 
@@ -1663,7 +1663,7 @@ exports.NoteView = (function(_super) {
 
   NoteView.prototype.setContent = function(note) {
     if (note.content) {
-      if (!note.version) {
+      if (!note.version || /^#/gm.test(note.content)) {
         return this.editor.setEditorContentFromMD(note.content);
       } else {
         return this.editor.setEditorContent(note.content);
@@ -1785,7 +1785,8 @@ module.exports = SearchView;
 });
 
 require.register("views/templates/content-empty", function(exports, require, module) {
-module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+module.exports = function anonymous(locals, attrs, escape, rethrow, merge
+/**/) {
 attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
 var buf = [];
 with (locals || {}) {
@@ -1797,7 +1798,8 @@ return buf.join("");
 });
 
 require.register("views/templates/editor", function(exports, require, module) {
-module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+module.exports = function anonymous(locals, attrs, escape, rethrow, merge
+/**/) {
 attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
 var buf = [];
 with (locals || {}) {
@@ -1809,7 +1811,8 @@ return buf.join("");
 });
 
 require.register("views/templates/home", function(exports, require, module) {
-module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+module.exports = function anonymous(locals, attrs, escape, rethrow, merge
+/**/) {
 attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
 var buf = [];
 with (locals || {}) {
@@ -1821,7 +1824,8 @@ return buf.join("");
 });
 
 require.register("views/templates/note", function(exports, require, module) {
-module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+module.exports = function anonymous(locals, attrs, escape, rethrow, merge
+/**/) {
 attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
 var buf = [];
 with (locals || {}) {
@@ -1833,7 +1837,8 @@ return buf.join("");
 });
 
 require.register("views/templates/search_result", function(exports, require, module) {
-module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+module.exports = function anonymous(locals, attrs, escape, rethrow, merge
+/**/) {
 attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
 var buf = [];
 with (locals || {}) {
@@ -1847,7 +1852,8 @@ return buf.join("");
 });
 
 require.register("views/templates/search_view", function(exports, require, module) {
-module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+module.exports = function anonymous(locals, attrs, escape, rethrow, merge
+/**/) {
 attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
 var buf = [];
 with (locals || {}) {
@@ -1859,7 +1865,8 @@ return buf.join("");
 });
 
 require.register("views/templates/tree_buttons", function(exports, require, module) {
-module.exports = function anonymous(locals, attrs, escape, rethrow, merge) {
+module.exports = function anonymous(locals, attrs, escape, rethrow, merge
+/**/) {
 attrs = attrs || jade.attrs; escape = escape || jade.escape; rethrow = rethrow || jade.rethrow; merge = merge || jade.merge;
 var buf = [];
 with (locals || {}) {

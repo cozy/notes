@@ -1,28 +1,35 @@
 server = require './server'
 async = require "async"
+Note  = require './server/models/note'
+Tree  = require './server/models/tree'
 
-DataTree = require("./common/data-tree").DataTree
 
 ## Small script to intialize finalNote of available applications.
 
 note = new Note
     title: "Tutorial"
+    parent_id: "tree-node-all"
     path: "[\"Tutorial\"]"
     content: """
 # What is Cozy Notes ?
 
-Cozy Notes is a simple yet powerful note manager. It can be used entirely with the keyboard and its original text editor makes formating incredibly fast.
+Cozy Notes is a simple yet powerful note manager.
+It can be used entirely with the keyboard and its original text editor
+makes formating incredibly fast.
 
 # Navigation
 
 You organize your notes following a tree structure.
-* To create a top level note, click the "+" button in the left panet on the right side of "My notes" logo
-* To create a sub level note, hover the mouse on an existing note and press the "+" button
+* To create a top level note, click the "+" button in the left panet on the
+right side of "My notes" logo
+* To create a sub level note, hover the mouse on an existing note and press
+the "+" button
 
 # Layout
 
 You can structure your notes with two actions.
-* Toggle between titles and bullet points pressing Alt + A or clicking "T" button
+* Toggle between titles and bullet points pressing Alt + A or clicking
+"T" button
 * Indent and un-indent lines pressing Tab and Shift + Tab or using the buttons
 
 # Tools
@@ -47,14 +54,10 @@ Note.create note, (err, finalNote) ->
         process.exit 0
 
     finalNote.index ["title", "content"], (err) ->
-        Tree.getOrCreate (err, tree) ->
-            if err
-                console.log err
-                console.log "Initialization failed (cannot update tree)"
-                process.exit(0)
-            dataTree = new DataTree tree.struct
-            dataTree.addNode finalNote
+        if err
+            console.log err
+            console.log "Initialization failed (can't index note)"
+        else
+            console.log "Done creating tutorial"
+        process.exit 0
 
-            tree.updateAttributes struct: dataTree.toJson(), (err) ->
-                console.log "Initialization succeeds."
-                process.exit(0)
