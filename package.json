@@ -23,6 +23,7 @@
     "coffee-script": "*"
   },
   "scripts": {
+    "postinstall": "coffee init.coffee",
     "start": "node server.js",
     "test": "cake tests"
   },
