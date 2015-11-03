@@ -32,9 +32,10 @@ Note.patchAllPathes = (callback) ->
         console.log "BEGIN PATCH"
         console.log "there is #{notes.length} notes"
         async.eachSeries notes, (note, cb) ->
-            console.log "patching note #{note.id} ?"
             return cb null if note.version is '2'
-            console.log "YES, need patch"
+            console.log """
+              Note \"#{note.title}\" is in version #{note.version}, need patch
+            """
 
             updates =
                 tags: note.tags
@@ -45,9 +46,11 @@ Note.patchAllPathes = (callback) ->
             console.log "UPDATES = ", updates
 
             note.updateAttributes updates, (err, updated) ->
-                console.log "ERR = ", err
-                {parent_id, id, path} = updated
-                console.log "UPDATED = ", {parent_id, id, path}
+                if err?
+                    console.log "ERR = ", err
+                else
+                    {parent_id, id, path} = updated
+                    console.log "UPDATED = ", {parent_id, id, path}
                 cb(err)
 
         , callback
@@ -117,28 +120,12 @@ Note::updatePath = (newPath, callback) ->
         , (err) ->
             callback err, newPath
 
-###
- VERSION TO BE USED WHEN THE DS PR#34 is in production
 Note::destroyWithChildren = (callback) ->
 
-    oldPath = @path.slice(0)
-    query =
-        startkey: oldPath # [a, b, oldtitle]
-        endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
+   oldPath = @path.slice(0)
+   query =
+       startkey: oldPath # [a, b, oldtitle]
+       endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
 
-    Note.requestDestroy "path", query, callback
-###
-# TMP VERSION - to be replaced with above
-Note::destroyWithChildren = (callback) ->
+   Note.requestDestroy "path", query, callback
 
-    oldPath = @path.slice(0)
-    query =
-        startkey: oldPath # [a, b, oldtitle]
-        endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
-
-    Note.request "path", query, (err, notes) ->
-
-        destroyOne = (note, cb) -> note.destroy cb
-        async.each notes, destroyOne, (err) ->
-
-            callback err

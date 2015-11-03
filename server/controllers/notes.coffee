@@ -10,7 +10,7 @@ handleErr = (res, msg, code) ->
     code ?= 500
 
     console.log msg.stack or msg
-    res.send error: (msg.message or msg), code
+    res.status(code).send error: (msg.message or msg)
 
 
 ###
@@ -19,7 +19,7 @@ handleErr = (res, msg, code) ->
 ###
 module.exports.fetch = (req, res, next, id) ->
 
-    Note.find id, (err, note) =>
+    Note.find id, (err, note) ->
         return handleErr res, err if err
         return handleErr res, 'Note not found', 404 if note is null
 
@@ -36,14 +36,14 @@ module.exports.fetch = (req, res, next, id) ->
 ###
 module.exports.all = (req, res) ->
     Note.all (err, notes) ->
-        return res.send error: "Retrieve notes failed", 500 if err
+        return res.status(500).send error: "Retrieve notes failed" if err
         res.send length: notes.length, rows: notes
 
 ###
 # Return a note
 ###
 module.exports.show = (req, res) ->
-    res.send req.note, 200
+    res.status(200).send req.note
 
 ###
 # Create a new note from data given in the body of request
@@ -63,7 +63,7 @@ module.exports.create = (req, res) ->
             note.index ["title", "content"], (err) ->
                 console.log 'Indexing error', err if err
                 # success even if indexing error
-                res.send note, 201
+                res.status(201).send note
 
     # console.log body.parent_id
 
@@ -105,14 +105,14 @@ module.exports.update = (req, res) ->
                 body.path = newPath
                 cb err
 
-    ops.push (cb) =>
+    ops.push (cb) ->
         body.lastModificationValueOf = (new Date()).getTime()
         req.note.updateAttributes body, cb
 
 
     if changedTitle or changedContent
         # update the index
-        ops.push (cb) => req.note.index ["title", "content"], (err) ->
+        ops.push (cb) -> req.note.index ["title", "content"], (err) ->
             console.log err
             #ignore errors on indexing
             cb()
@@ -121,14 +121,14 @@ module.exports.update = (req, res) ->
         # console.log "AFTERSERIES : ", err
         return handleErr res, err if err
 
-        res.send success: 'Note updated', 200
+        res.status(200).send success: 'Note updated'
 
 
 ## Remove given note from db.
 module.exports.destroy = (req, res) ->
     req.note.destroyWithChildren (err) ->
         return handleErr res, err if err
-        res.send success: 'Note succesfuly deleted', 204
+        res.status(204).send success: 'Note succesfuly deleted'
 
 ###
 ## Perform a search for given query inside Cozy search engine.
@@ -173,7 +173,7 @@ module.exports.addFile = (req, res) ->
     req.note.attachFile file.path, {name: file.name}, (err) ->
         # return handleErr res, err if err
 
-        res.send success: true, msg:"Upload succeeds", 200
+        res.status(200).send success: true, msg:"Upload succeeds"
 
 ###
 ## Send corresponding to given name for given note.
@@ -186,7 +186,7 @@ module.exports.getFile = (req, res) ->
         return handleErr res, 'File not found', 404 if resp?.statusCode is 404
         return handleErr res if not resp? or resp.statusCode isnt 200
 
-        res.send 200
+        res.status 200
 
     .pipe(res)
 
@@ -200,4 +200,4 @@ module.exports.delFile = (req, res) ->
     req.note.removeFile name, (err, body) ->
         return handleErr res, err if err
 
-        res.send succes: true, msg: 'File deleted', 200
+        res.status(200).send succes: true, msg: 'File deleted'
