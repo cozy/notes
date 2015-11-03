@@ -122,10 +122,10 @@ Note::updatePath = (newPath, callback) ->
 
 Note::destroyWithChildren = (callback) ->
 
-   oldPath = @path.slice(0)
-   query =
-       startkey: oldPath # [a, b, oldtitle]
-       endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
+    oldPath = @path.slice(0)
+    query =
+        startkey: oldPath # [a, b, oldtitle]
+        endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
 
-   Note.requestDestroy "path", query, callback
+    Note.requestDestroy "path", query, callback
 
