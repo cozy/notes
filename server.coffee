@@ -6,7 +6,7 @@ americano.start
     name: 'Notes'
     port: process.env.PORT or 9201
 
-, (app, server) ->
+, (err, app, server) ->
     RealtimeAdapter server: server, ['note.*', 'task.*', 'alarm.*', 'contact.*']
     Note.patchAllPathes (err) ->
         if err

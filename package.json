@@ -11,9 +11,9 @@
   "main": "server.js",
   "dependencies": {
     "async": "*",
-    "americano": "=0.4.2",
-    "americano-cozy": "=0.2.11",
-    "cozy-realtime-adapter": "=1.0.1"
+    "americano": "0.4.2",
+    "americano-cozy": "0.2.11",
+    "cozy-realtime-adapter": "1.0.1"
   },
   "devDependencies": {
     "request-json": "= 0.5.3",
