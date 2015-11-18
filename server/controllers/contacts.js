@@ -6,14 +6,14 @@ Contact = require('../models/contact');
 module.exports.fetch = function(req, res, next, id) {
   return Contact.find(id, function(err, contact) {
     if (err) {
-      return res.send({
+      return res.status(500).send({
         error: err
-      }, 500);
+      });
     }
     if (!contact) {
-      return res.send({
+      return res.status(404).send({
         error: 'Contact not found'
-      }, 404);
+      });
     }
     req.contact = contact;
     return next();
@@ -23,9 +23,9 @@ module.exports.fetch = function(req, res, next, id) {
 module.exports.list = function(req, res) {
   return Contact.request('all', function(err, contacts) {
     if (err) {
-      return res.send({
+      return res.status(500).send({
         error: err
-      }, 500);
+      });
     }
     return res.send(contacts);
   });

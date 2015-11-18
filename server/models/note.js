@@ -57,11 +57,10 @@ Note.patchAllPathes = function(callback) {
     console.log("there is " + notes.length + " notes");
     return async.eachSeries(notes, function(note, cb) {
       var updates;
-      console.log("patching note " + note.id + " ?");
       if (note.version === '2') {
         return cb(null);
       }
-      console.log("YES, need patch");
+      console.log("Note \"" + note.title + "\" is in version " + note.version + ", need patch");
       updates = {
         tags: note.tags,
         path: note.path,
@@ -71,13 +70,16 @@ Note.patchAllPathes = function(callback) {
       console.log("UPDATES = ", updates);
       return note.updateAttributes(updates, function(err, updated) {
         var id, parent_id, path;
-        console.log("ERR = ", err);
-        parent_id = updated.parent_id, id = updated.id, path = updated.path;
-        console.log("UPDATED = ", {
-          parent_id: parent_id,
-          id: id,
-          path: path
-        });
+        if (err != null) {
+          console.log("ERR = ", err);
+        } else {
+          parent_id = updated.parent_id, id = updated.id, path = updated.path;
+          console.log("UPDATED = ", {
+            parent_id: parent_id,
+            id: id,
+            path: path
+          });
+        }
         return cb(err);
       });
     }, callback);
@@ -169,19 +171,6 @@ Note.prototype.updatePath = function(newPath, callback) {
   });
 };
 
-
-/*
- VERSION TO BE USED WHEN THE DS PR#34 is in production
-Note::destroyWithChildren = (callback) ->
-
-    oldPath = @path.slice(0)
-    query =
-        startkey: oldPath # [a, b, oldtitle]
-        endkey:   oldPath.concat [{}] # [a, b, oldtitle,{}]
-
-    Note.requestDestroy "path", query, callback
- */
-
 Note.prototype.destroyWithChildren = function(callback) {
   var oldPath, query;
   oldPath = this.path.slice(0);
@@ -189,13 +178,5 @@ Note.prototype.destroyWithChildren = function(callback) {
     startkey: oldPath,
     endkey: oldPath.concat([{}])
   };
-  return Note.request("path", query, function(err, notes) {
-    var destroyOne;
-    destroyOne = function(note, cb) {
-      return note.destroy(cb);
-    };
-    return async.each(notes, destroyOne, function(err) {
-      return callback(err);
-    });
-  });
+  return Note.requestDestroy("path", query, callback);
 };

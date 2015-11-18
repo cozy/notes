@@ -8,14 +8,14 @@ Todolist = require('../models/todolist');
 module.exports.fetch = function(req, res, next, id) {
   return Task.find(id, function(err, task) {
     if (err) {
-      return res.send({
+      return res.status(500).send({
         error: err
-      }, 500);
+      });
     }
     if (!task) {
-      return res.send({
+      return res.status(404).send({
         error: 'Task not found'
-      }, 404);
+      });
     }
     req.task = task;
     return next();
@@ -25,9 +25,9 @@ module.exports.fetch = function(req, res, next, id) {
 module.exports.list = function(req, res) {
   return Task.request('all', function(err, tasks) {
     if (err) {
-      return res.send({
+      return res.status(500).send({
         error: err
-      }, 500);
+      });
     }
     return res.send(tasks);
   });
@@ -43,9 +43,9 @@ module.exports.create = function(req, res) {
     };
     return Task.create(data, function(err, task) {
       if (err) {
-        return res.send({
+        return res.status(500).send({
           error: err
-        }, 500);
+        });
       }
       return res.send(task, 201);
     });
@@ -64,23 +64,23 @@ module.exports.update = function(req, res) {
   };
   return req.task.updateAttributes(updates, function(err, task) {
     if (err) {
-      return res.send({
+      return res.status(500).send({
         error: err
-      }, 500);
+      });
     }
-    return res.send(task, 200);
+    return res.status(200).send(task);
   });
 };
 
 module.exports["delete"] = function(req, res) {
   return req.task.destroy(function(err) {
     if (err) {
-      return res.send({
+      return res.status(500).send({
         error: err
-      }, 500);
+      });
     }
-    return res.send({
+    return res.status(204).send({
       success: "Task destroyed"
-    }, 204);
+    });
   });
 };

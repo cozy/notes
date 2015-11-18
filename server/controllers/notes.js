@@ -18,9 +18,9 @@ handleErr = function(res, msg, code) {
     code = 500;
   }
   console.log(msg.stack || msg);
-  return res.send({
+  return res.status(code).send({
     error: msg.message || msg
-  }, code);
+  });
 };
 
 
@@ -30,18 +30,16 @@ handleErr = function(res, msg, code) {
  */
 
 module.exports.fetch = function(req, res, next, id) {
-  return Note.find(id, (function(_this) {
-    return function(err, note) {
-      if (err) {
-        return handleErr(res, err);
-      }
-      if (note === null) {
-        return handleErr(res, 'Note not found', 404);
-      }
-      req.note = note;
-      return next();
-    };
-  })(this));
+  return Note.find(id, function(err, note) {
+    if (err) {
+      return handleErr(res, err);
+    }
+    if (note === null) {
+      return handleErr(res, 'Note not found', 404);
+    }
+    req.note = note;
+    return next();
+  });
 };
 
 
@@ -57,9 +55,9 @@ module.exports.fetch = function(req, res, next, id) {
 module.exports.all = function(req, res) {
   return Note.all(function(err, notes) {
     if (err) {
-      return res.send({
+      return res.status(500).send({
         error: "Retrieve notes failed"
-      }, 500);
+      });
     }
     return res.send({
       length: notes.length,
@@ -74,7 +72,7 @@ module.exports.all = function(req, res) {
  */
 
 module.exports.show = function(req, res) {
-  return res.send(req.note, 200);
+  return res.status(200).send(req.note);
 };
 
 
@@ -98,7 +96,7 @@ module.exports.create = function(req, res) {
         if (err) {
           console.log('Indexing error', err);
         }
-        return res.send(note, 201);
+        return res.status(201).send(note);
       });
     });
   };
@@ -140,29 +138,25 @@ module.exports.update = function(req, res) {
       });
     });
   }
-  ops.push((function(_this) {
-    return function(cb) {
-      body.lastModificationValueOf = (new Date()).getTime();
-      return req.note.updateAttributes(body, cb);
-    };
-  })(this));
+  ops.push(function(cb) {
+    body.lastModificationValueOf = (new Date()).getTime();
+    return req.note.updateAttributes(body, cb);
+  });
   if (changedTitle || changedContent) {
-    ops.push((function(_this) {
-      return function(cb) {
-        return req.note.index(["title", "content"], function(err) {
-          console.log(err);
-          return cb();
-        });
-      };
-    })(this));
+    ops.push(function(cb) {
+      return req.note.index(["title", "content"], function(err) {
+        console.log(err);
+        return cb();
+      });
+    });
   }
   return async.series(ops, function(err) {
     if (err) {
       return handleErr(res, err);
     }
-    return res.send({
+    return res.status(200).send({
       success: 'Note updated'
-    }, 200);
+    });
   });
 };
 
@@ -171,9 +165,9 @@ module.exports.destroy = function(req, res) {
     if (err) {
       return handleErr(res, err);
     }
-    return res.send({
+    return res.status(204).send({
       success: 'Note succesfuly deleted'
-    }, 204);
+    });
   });
 };
 
@@ -241,10 +235,10 @@ module.exports.addFile = function(req, res) {
   return req.note.attachFile(file.path, {
     name: file.name
   }, function(err) {
-    return res.send({
+    return res.status(200).send({
       success: true,
       msg: "Upload succeeds"
-    }, 200);
+    });
   });
 };
 
@@ -263,7 +257,7 @@ module.exports.getFile = function(req, res) {
     if ((resp == null) || resp.statusCode !== 200) {
       return handleErr(res);
     }
-    return res.send(200);
+    return res.status(200);
   }).pipe(res);
 };
 
@@ -279,9 +273,9 @@ module.exports.delFile = function(req, res) {
     if (err) {
       return handleErr(res, err);
     }
-    return res.send({
+    return res.status(200).send({
       succes: true,
       msg: 'File deleted'
-    }, 200);
+    });
   });
 };
