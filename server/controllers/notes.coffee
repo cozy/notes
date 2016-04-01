@@ -167,6 +167,7 @@ module.exports.tree = (req, res) ->
 ## Attach a file to given note.
 ###
 module.exports.addFile = (req, res) ->
+    return handleErr res, "no files", 400 unless req.files?
     file = req.files["qqfile"] or req.files["file"]
     return handleErr res, "no files", 400 unless file?
 
