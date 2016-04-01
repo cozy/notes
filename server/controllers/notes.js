@@ -228,6 +228,9 @@ module.exports.tree = function(req, res) {
 
 module.exports.addFile = function(req, res) {
   var file;
+  if (typeof req.files === 'undefined') {
+    return handleErr(res, "no files", 400);
+  }
   file = req.files["qqfile"] || req.files["file"];
   if (file == null) {
     return handleErr(res, "no files", 400);
