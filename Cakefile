@@ -78,7 +78,7 @@ task "xunit:client", "", ->
 task 'convert', 'convert coffee-script to JS', ->
     files = walk "server", []
     console.log "Convert to JS..."
-    command = "coffee -cb server.coffee #{files.join ' '} "
+    command = "coffee -cb server.coffee init.coffee #{files.join ' '} "
     exec command, (err, stdout, stderr) ->
         console.log stdout
         if err
